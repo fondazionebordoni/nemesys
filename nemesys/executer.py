@@ -74,10 +74,10 @@ class Executer():
         self._local = local
         # TODO Sistemare init del XMLRPCServer
         # TODO Spostare l'XMLRPCServer su un thread separato
-        url = ("localhost", 21401)
-        self._server = SimpleXMLRPCServer(url)
-        self._server.register_function(self._getstatus, 'getstatus')
-        self._server.serve_forever()
+        #url = ("localhost", 21401)
+        #self._server = SimpleXMLRPCServer(url)
+        #self._server.register_function(self._getstatus, 'getstatus')
+        #self._server.serve_forever()
 
         if (not path.exists(outbox)):
             logger.error('La cartella "%s" non esiste, crearla o specificare un diverso percorso.' % outbox)
