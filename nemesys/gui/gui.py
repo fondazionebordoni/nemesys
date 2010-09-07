@@ -36,34 +36,33 @@ from time import sleep
 
 
 class controllo(threading.Thread, object):
-    # TODO Implementare il controllo dello stato del server su un thread differente -> questo modifica l'icona nel vassoio
     def __init__(self, object):
         threading.Thread.__init__(self)
         self.running=False
         self.trayicon=object
         self.errore=status.__init__('icon_rossa.png', 'Impossibile contattare il demone che effettua le misure.')
+
     def stop(self):
         self.running=False
-        #print "HO INVOCATO STOP SU THREAD"
-    def run(self):#qui farò fare il controllo sullo stato del demone!
+
+    def run(self):#controllo sullo stato del demone!
         self.running=True
         sleep(10)
         while self.running:
-            #print "Sono il thread che controlla"
+
             try:
-                self.trayicon.setstatus(self._proxy.getstatus())
-            except Exception: # Catturare l'eccezione dovita a errore di comunicazione col demone
+                self.trayicon.setstatus(self.trayicon.proxy.getstatus())# TODO:sul server (executer) va implementato il metodo getstatus()
+            except Exception: # Catturare l'eccezione dovuta a errore di comunicazione col demone
                 self.trayicon.setstatus(self.errore)
 
-            print str(status.message)
             sleep(20)#il controllo sulla variazione dello stato lo faccio ogni 20 sec
             
 
 
 class TrayIcon():        
         def __init__(self, url, status):                
-                self._status = status
-                self._proxy = xmlrpclib.ServerProxy(url)
+                self.status = status
+                self.proxy = xmlrpclib.ServerProxy(url)
                 self.menu=None
                 self.crea_menu(self)
   
@@ -82,7 +81,6 @@ class TrayIcon():
                 self.icon.set_tooltip(stringa)      
                 self.icon.connect('popup-menu',self.callback,self.menu)
                 
-                #print "VA AGGIORNATA L'ICONA & IL RELATIVO MESSAGGIO"
 
         def statoMisura(self,widget):
                 global winAperta
@@ -110,18 +108,16 @@ class TrayIcon():
                 ore=dict()
                 for n in range(0,24):
                         hour=str(n)
-                        nexthour=str(n+1)
                         if(n<10):
                                 hour='0'+hour
                                 
                         hour="<small>"+hour+':00'+"</small>"
-                        #ore[n]=gtk.Label("<small>"+hour+':00 - '+nexthour+':00'+"</small>")
                         ore[n]=gtk.Label(hour)
                         ore[n].set_use_markup(True)
                         table.attach(ore[n],n,n+1,4,5,xpadding=1, ypadding=0)
   
                 
-                #creo le 24 drawing area della prima riga                
+                #creo le 24 drawing area               
                 darea_1_1 = gtk.DrawingArea()
                 darea_1_2 = gtk.DrawingArea()
                 darea_1_3 = gtk.DrawingArea()
@@ -148,11 +144,11 @@ class TrayIcon():
                 darea_1_24 = gtk.DrawingArea()
 
                 
-                #riga1 è una lista che contiene in modo ordinato tutte le drawing area della prima riga
+                #riga1 è una lista che contiene in modo ordinato tutte le drawing area
                 riga1=[darea_1_1,darea_1_2,darea_1_3,darea_1_4,darea_1_5,darea_1_6,darea_1_7,darea_1_8,darea_1_9,darea_1_10,darea_1_11,darea_1_12,darea_1_13,darea_1_14,darea_1_15,darea_1_16,darea_1_17,darea_1_18,darea_1_19,darea_1_20,darea_1_21,darea_1_22,darea_1_23,darea_1_24]
         
 
-                #inserisco in tabella le 48 drawing area che ho appena creato e le coloro di rosso
+                #inserisco in tabella le 24 drawing area che ho appena creato e le coloro di rosso
                 for i in range(0,24):
                         table.attach(riga1[i], i, i+1, 5, 6, xpadding=1, ypadding=0)
                         riga1[i].modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("red"))
@@ -201,41 +197,23 @@ class TrayIcon():
                 self.win.show_all()
                 winAperta=True
 
-                
-                
+                       
         
         def abilitaDisabilitaPopUp(self,widget):
                 global statoPopUp
-                global winAperta
-                global infoAperta
-                if(self.win==None):
-                        winAperta=False
-                else:
-                        winAperta=True
-                        
-                if(self.message==None):
-                        infoAperta=False
-                else:
-                        infoAperta=True
-                        
-                if(statoPopUp=="ON"):
-                        statoPopUp="OFF"
-                else:
-                        statoPopUp="ON"
-
-                self.item2.destroy()
+                self.item2.destroy() 
                 
                 if(statoPopUp=="ON"):
-                        self.item2 = gtk.ImageMenuItem('Disabilita Pop-up')
-                else:
+                        statoPopUp="OFF"
                         self.item2 = gtk.ImageMenuItem('Abilita Pop-up')
+                else:
+                        statoPopUp="ON"
+                        self.item2 = gtk.ImageMenuItem('Disabilita Pop-up')
 
                 self.img_sm = gtk.image_new_from_stock('gtk-dialog-warning', gtk.ICON_SIZE_MENU)
                 self.item2.set_image(self.img_sm)
                 self.item2.connect('activate', self.abilitaDisabilitaPopUp)
                 self.menu.insert(self.item2,1)
-                
-                #print "statoPopUp= "+statoPopUp
 
 
 
@@ -341,9 +319,8 @@ if __name__ == "__main__":
         statoPopUp="ON"#per discriminare fra abilita e disabilita popup
         winAperta=False#indica se è aperta o meno la finestra contenente l'andamento della misura
         infoAperta=False#indica se è aperta o meno la finestra contenente le info su nemesys
-        status=status.PAUSE
-        #print str(status.message)
-        trayicon = TrayIcon("https://localhost:21401", status)
+        status=status.PAUSE#parto dallo stato "bianco"
+        trayicon = TrayIcon("https://localhost:21401/", status)
         controllo=controllo(trayicon)
         controllo.start()
         trayicon.main()
