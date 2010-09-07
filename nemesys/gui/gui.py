@@ -24,20 +24,65 @@ import webbrowser
 import datetime
 import time
 import paths
-
+import status
+import threading
+import xmlrpclib
+import status
 from xml.dom import minidom
-
 from datetime import datetime
-
 from time import sleep
 
 
 
 
-class TrayIcon:
-        
-        def __init__(self):
+class controllo(threading.Thread, object):
+    # TODO Implementare il controllo dello stato del server su un thread differente -> questo modifica l'icona nel vassoio
+    def __init__(self, object):
+        threading.Thread.__init__(self)
+        self.running=False
+        self.trayicon=object
+        self.errore=status.__init__('icon_rossa.png', 'Impossibile contattare il demone che effettua le misure.')
+    def stop(self):
+        self.running=False
+        #print "HO INVOCATO STOP SU THREAD"
+    def run(self):#qui farò fare il controllo sullo stato del demone!
+        self.running=True
+        sleep(10)
+        while self.running:
+            #print "Sono il thread che controlla"
+            try:
+                self.trayicon.setstatus(self._proxy.getstatus())
+            except Exception: # Catturare l'eccezione dovita a errore di comunicazione col demone
+                self.trayicon.setstatus(self.errore)
+
+            print str(status.message)
+            sleep(20)#il controllo sulla variazione dello stato lo faccio ogni 20 sec
+            
+
+
+class TrayIcon():        
+        def __init__(self, url, status):                
+                self._status = status
+                self._proxy = xmlrpclib.ServerProxy(url)
+                self.menu=None
                 self.crea_menu(self)
+  
+
+        def setstatus(self, status):
+                self.status = status
+                self.updatestatus()
+
+        def updatestatus(self):#aggiorna l'icona e il messaggio nel system tray
+                self.icon.set_visible(False)
+                icona=None
+                stringa=None                
+                icona=paths.ICON_PATH+paths.DIR_SEP+status.icon
+                stringa=status.message
+                self.icon = gtk.status_icon_new_from_file(icona)
+                self.icon.set_tooltip(stringa)      
+                self.icon.connect('popup-menu',self.callback,self.menu)
+                
+                #print "VA AGGIORNATA L'ICONA & IL RELATIVO MESSAGGIO"
 
         def statoMisura(self,widget):
                 global winAperta
@@ -167,23 +212,31 @@ class TrayIcon:
                         winAperta=False
                 else:
                         winAperta=True
+                        
                 if(self.message==None):
                         infoAperta=False
                 else:
                         infoAperta=True
+                        
                 if(statoPopUp=="ON"):
                         statoPopUp="OFF"
                 else:
                         statoPopUp="ON"
-                
-                print "statoPopUp= "+statoPopUp
 
-                #DISTRUGGO L'ICONA E IL MENU E POI LI RICREO AGGIORNATI IN BASE ALLA SCELTA DELL'UTENTE
-                self.icon.set_visible(False)
-                self.item.destroy()
-                self.img_sm.destroy()
-                self.menu.destroy()
-                self.crea_menu(self)
+                self.item2.destroy()
+                
+                if(statoPopUp=="ON"):
+                        self.item2 = gtk.ImageMenuItem('Disabilita Pop-up')
+                else:
+                        self.item2 = gtk.ImageMenuItem('Abilita Pop-up')
+
+                self.img_sm = gtk.image_new_from_stock('gtk-dialog-warning', gtk.ICON_SIZE_MENU)
+                self.item2.set_image(self.img_sm)
+                self.item2.connect('activate', self.abilitaDisabilitaPopUp)
+                self.menu.insert(self.item2,1)
+                
+                #print "statoPopUp= "+statoPopUp
+
 
 
         def serviziOnline(self,widget):
@@ -206,23 +259,23 @@ class TrayIcon:
                 menu.show_all()
                 menu.popup(None, None, gtk.status_icon_position_menu, button, time, self.icon)
 
-        def destroy(self, widget, data=None):
+
+
+        def destroy(self, widget, data=None):#quando esco dal programma
                 self.icon.set_visible(False)
-                self.item.destroy()
-                self.img_sm.destroy()
                 self.menu.destroy()
                 if (self.win!=None):
                         self.win.destroy()
                 if(self.message!=None):
                         self.message.destroy()
+                controllo.stop()#fermo il thread di controllo
                 return gtk.main_quit()
 
 
         def crea_menu(self,widget):
-                global stato
                 global statoPopUp
-                global statoDemone
-                
+                if(self.menu!=None):
+                    self.menu.destroy()
                 self.menu = gtk.Menu()
                 if(winAperta==False):
                         self.win=None
@@ -231,69 +284,68 @@ class TrayIcon:
 
                 icona=None
                 stringa=None
-                
-                if stato=="v":
-                        icona=paths.ICON_PATH+paths.DIR_SEP+"icon_verde.png"
-                        stringa="NeMeSys sta effettuando una misura..."
-                elif stato=="a":
-                        icona=paths.ICON_PATH+paths.DIR_SEP+"icon_arancio.png"
-                        stringa="NeMeSys effettuera' una misura nella prossima ora"
-                elif stato=="b":
-                        icona=paths.ICON_PATH+paths.DIR_SEP+"icon_bianca.png"
-                        stringa="NeMeSys non effettuera' una misura nella prossima ora"
-                elif stato=="r":
-                        icona=paths.ICON_PATH+paths.DIR_SEP+"icon_rossa.png"
-                        stringa="NeMeSys non risponde alle richieste, riavviare manualmente"
-                elif stato=="c":
-                        icona=paths.ICON_PATH+paths.DIR_SEP+"icon_blu.png"
-                        stringa="NeMeSys ha terminato le misurazioni"
 
+                icona=paths.ICON_PATH+paths.DIR_SEP+status.icon
+                stringa=status.message
+                #print "ICONA "+str(icona)
+                #print "MESSAGGIO "+str(stringa)
+                
                 self.icon = gtk.status_icon_new_from_file(icona)
                 self.icon.set_tooltip(stringa)      
                 self.icon.connect('popup-menu',self.callback,self.menu)
 
-                self.item = gtk.ImageMenuItem('Stato misurazione')
+                self.item1 = gtk.ImageMenuItem('Stato misurazione')
                 self.img_sm = gtk.image_new_from_stock('gtk-execute', gtk.ICON_SIZE_MENU)
-                self.item.set_image(self.img_sm)
-                self.item.connect('activate', self.statoMisura)
-                self.menu.append(self.item)
+                self.item1.set_image(self.img_sm)
+                self.item1.connect('activate', self.statoMisura)
+                self.menu.append(self.item1)
                 
                 if(statoPopUp=="ON"):
-                        self.item = gtk.ImageMenuItem('Disabilita Pop-up')
+                        self.item2 = gtk.ImageMenuItem('Disabilita Pop-up')
                 else:
-                        self.item = gtk.ImageMenuItem('Abilita Pop-up')
+                        self.item2 = gtk.ImageMenuItem('Abilita Pop-up')
                 self.img_sm = gtk.image_new_from_stock('gtk-dialog-warning', gtk.ICON_SIZE_MENU)
-                self.item.set_image(self.img_sm)
-                self.item.connect('activate', self.abilitaDisabilitaPopUp)
-                self.menu.append(self.item)
+                self.item2.set_image(self.img_sm)
+                self.item2.connect('activate', self.abilitaDisabilitaPopUp)
+                self.menu.append(self.item2)
 
-                self.item = gtk.ImageMenuItem('Servizi online')
+                self.item3 = gtk.ImageMenuItem('Servizi online')
                 self.img_sm = gtk.image_new_from_stock('gtk-network', gtk.ICON_SIZE_MENU)
-                self.item.set_image(self.img_sm)
-                self.item.connect('activate', self.serviziOnline)
-                self.menu.append(self.item)
+                self.item3.set_image(self.img_sm)
+                self.item3.connect('activate', self.serviziOnline)
+                self.menu.append(self.item3)
 
-                self.item = gtk.ImageMenuItem('Info')
+                self.item4 = gtk.ImageMenuItem('Info')
                 self.img_sm = gtk.image_new_from_stock('gtk-about', gtk.ICON_SIZE_MENU)
-                self.item.set_image(self.img_sm)
-                self.item.connect('activate', self.info)
-                self.menu.append(self.item)
+                self.item4.set_image(self.img_sm)
+                self.item4.connect('activate', self.info)
+                self.menu.append(self.item4)
 
-                self.item = gtk.SeparatorMenuItem()
-                self.menu.append(self.item)
-                self.item = gtk.ImageMenuItem(stock_id=gtk.STOCK_QUIT)
-                self.item.connect('activate', self.destroy)
-                self.menu.append(self.item)
+                self.item5 = gtk.SeparatorMenuItem()
+                self.menu.append(self.item5)
+                self.item5 = gtk.ImageMenuItem(stock_id=gtk.STOCK_QUIT)
+                self.item5.connect('activate', self.destroy)
+                self.menu.append(self.item5)
                 
         def main(self):
+                gtk.gdk.threads_init()
+                gtk.gdk.threads_enter()
                 gtk.main()
+                gtk.gdk.threads_leave()
+                
+
+
                 
 
 if __name__ == "__main__":
-        stato="v"#stato mi dice se sto misurando: v=verde, a=arancio, b=bianca, r=rosso, c=blu qui decido con che stato partire
         statoPopUp="ON"#per discriminare fra abilita e disabilita popup
-        statoDemone="ON"
-        winAperta=False
-        infoAperta=False
-        trayicon = TrayIcon()
+        winAperta=False#indica se è aperta o meno la finestra contenente l'andamento della misura
+        infoAperta=False#indica se è aperta o meno la finestra contenente le info su nemesys
+        status=status.PAUSE
+        #print str(status.message)
+        trayicon = TrayIcon("https://localhost:21401", status)
+        controllo=controllo(trayicon)
+        controllo.start()
         trayicon.main()
+
+
