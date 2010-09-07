@@ -30,5 +30,8 @@ class Status:
     def message(self):
         return self._message
 
-ERROR = Status('icon_red.png', 'Impossibile contattare il demone che effettua le misure.')
-PAUSE = Status('icon_white.png', 'Il server è in pausa. Non verranno effettuate misure nella prossima ora.')
+ERROR = Status('icon_rossa.png', 'Impossibile contattare il demone che effettua le misure.')
+PAUSE = Status('icon_bianca.png', 'Il server è in pausa. Non verranno effettuate misure nella prossima ora.')
+PLAY = Status('icon_verde.png','NeMeSys sta effettuando una misura...')
+FINISHED = Status('icon_blu.png','NeMeSys ha terminato le misurazioni')
+READY = Status('icon_arancio.png','NeMeSys effettuerà una misura nella prossima ora')
