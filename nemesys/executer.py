@@ -40,19 +40,38 @@ from socket import gaierror
 from tester import Tester
 from threading import Semaphore
 from threading import Timer
+from threading import Thread
 from urlparse import urlparse
 from xmlutils import getvalues
 from xmlutils import getxml
 from xmlutils import xml2task
 import gui.status
+import gui.paths
 
-CONFIG_FILENAME = 'client.conf'
+XMLRPC_URL = ("localhost", 21401)
 
 bandwidth = Semaphore()
 logger = logging.getLogger()
+current_status = gui.status.READY
 
-def runtimewarning(signum, frame):
-    raise RuntimeWarning()
+class _XMLRPCServer(Thread):
+    
+    def __init__(self):
+        Thread.__init__(self)
+        self.running=False
+        self._server = SimpleXMLRPCServer(XMLRPC_URL)
+        self._server.register_function(self._getstatus, 'getstatus')
+
+    def _getstatus(self):
+        logger.debug("Stato: %s" % current_status.icon)
+        return current_status
+
+    def stop(self):
+        self.running=False
+
+    def run(self):
+        self.running=True
+        self._server.serve_forever()        
 
 class OptionParser (OptionParser):
 
@@ -63,7 +82,7 @@ class OptionParser (OptionParser):
 
 class Executer():
 
-    def __init__(self, client, scheduler, repository, polling=20.0, tasktimeout=60, testtimeout=30, httptimeout=60, outbox='outbox', sent='sent', local=False):
+    def __init__(self, client, scheduler, repository, polling=20.0, tasktimeout=60, testtimeout=30, httptimeout=60, local=False):
         self._client = client
         self._scheduler = scheduler
         self._repository = repository
@@ -72,25 +91,8 @@ class Executer():
         self._testtimeout = testtimeout
         self._httptimeout = httptimeout
         self._local = local
-        # TODO Sistemare init del XMLRPCServer
-        # TODO Spostare l'XMLRPCServer su un thread separato
-        #url = ("localhost", 21401)
-        #self._server = SimpleXMLRPCServer(url)
-        #self._server.register_function(self._getstatus, 'getstatus')
-        #self._server.serve_forever()
-
-        if (not path.exists(outbox)):
-            logger.error('La cartella "%s" non esiste, crearla o specificare un diverso percorso.' % outbox)
-            exit(1)
-        self._outbox = outbox
-
-        if (not path.exists(sent)):
-            logger.error('La cartella "%s" non esiste, crearla o specificare un diverso percorso.' % sent)
-            exit(1)
-        self._sent = sent
-
-    def _getstatus(self):
-        return status.PAUSE
+        self._outbox = paths.OUTBOX
+        self._sent = paths.SENT
 
     def test(self, taskfile=None):
 
@@ -114,6 +116,9 @@ class Executer():
         #signal.signal(signal.SIGALRM, runtimewarning)
 
         while True:
+            
+            # TODO Controllare se occorre ancora effettuare le misure
+            
             bandwidth.acquire() # Richiedi accesso esclusivo alla banda
             task = self._download()
             bandwidth.release() # Rilascia l'accesso esclusivo alla banda
@@ -174,13 +179,15 @@ class Executer():
     # Esegui il test richiesto dal task
     def _dotask(self, task):
         '''
-    Esegue il complesso di test prescritti dal task entro il tempo messo a
-    disposizione secondo il parametro tasktimeout
-    '''
+        Esegue il complesso di test prescritti dal task entro il tempo messo a
+        disposizione secondo il parametro tasktimeout
+        '''
+        
         bandwidth.acquire() # Acquisisci la risorsa condivisa: la banda
         # Area riservata per l'esecuzione dei test
         # TODO Inserire il timeout complessivo di task
         #logger.debug(task)
+        current_status = status.PLAY
 
         t = Tester(host=task.server, timeout=self._testtimeout, username=self._client.username, password=self._client.password)
         # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
@@ -234,13 +241,14 @@ class Executer():
             logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
             pass
 
+        current_status = status.READY
         bandwidth.release() # Rilascia la risorsa condivisa: la banda
 
     def _upload(self, file):
         '''
-    Spedisce il file di misura al repository entro il tempo messo a
-    disposizione secondo il parametro httptimeout
-    '''
+        Spedisce il file di misura al repository entro il tempo messo a
+        disposizione secondo il parametro httptimeout
+        '''
         try:
 
             # Crea il Deliverer che si occuperà della spedizione
@@ -286,8 +294,8 @@ class Executer():
 
     def _parserepositorydata(self, data):
         '''
-    Valuta l'XML ricevuto dal repository, restituisce il codice e il messaggio ricevuto
-    '''
+        Valuta l'XML ricevuto dal repository, restituisce il codice e il messaggio ricevuto
+        '''
         xml = getxml(data)
         if (xml == None):
             logger.error('Nessuna risposta ricevuta')
@@ -308,6 +316,7 @@ class Executer():
 # TODO Creare dei task per l'upload dei file rimasti nella outbox
 
 def main():
+    paths.check_paths()
     (options, args) = parse()
 
     client = getclient(options)
@@ -315,12 +324,16 @@ def main():
                  client=client, scheduler=options.scheduler, repository=options.repository,
                  polling=options.polling, tasktimeout=options.tasktimeout,
                  testtimeout=options.testtimeout, httptimeout=options.httptimeout,
-                 outbox=options.outbox, sent=options.sent, local=options.local)
+                 local=options.local)
 
     if (options.test):
         # Se è presente il flag T segui il test ed esci
         e.test(options.task)
     else:
+        xmlrpcserver = _XMLRPCServer()
+        xmlrpcserver.start()
+        logger.debug('XMLRPCServer started.')
+        
         # Altrimenti viene eseguito come demone: entra nel loop infinito
         e.loop()
 
@@ -337,8 +350,9 @@ def parse():
 
     config = ConfigParser()
   
-    if (path.exists(CONFIG_FILENAME)):
-        config.read(CONFIG_FILENAME)
+    if (path.exists(paths.CONF_MAIN)):
+        logger.debug("Trovata configurazione in %s" % paths.CONF_MAIN)
+        config.read(paths.CONF_MAIN)
 
     # TODO inserire automaticamente il numero di revisione
     parser = OptionParser(version="1.0.dev250", description='')
@@ -354,24 +368,6 @@ def parse():
     section = 'system'
     if (not config.has_section(section)):
         config.add_section(section)
-
-    option = 'sent'
-    value = 'sent'
-    try:
-        value = config.get(section, option)
-    except NoOptionError:
-        config.set(section, option, value)
-    parser.add_option('--sent', dest=option, default=value,
-                      help='folder for measure files sent to repository [%s]' % value)
-
-    option = 'outbox'
-    value = 'outbox'
-    try:
-        value = config.get(section, option)
-    except NoOptionError:
-        config.set(section, option, value)
-    parser.add_option('--outbox', dest=option, default=value,
-                      help='folder for measure files ready for sending to repository [%s]' % value)
 
     # Task options
     # ----------------------------------------------------------------------------
@@ -533,7 +529,7 @@ def parse():
     parser.add_option('--certificate', dest=option, default=value,
                       help='client certificate for schedule downloading and measure file signing [%s]' % value)
 
-    with open(CONFIG_FILENAME, 'w') as file:
+    with open(paths.CONF_MAIN, 'w') as file:
         config.write(file)
 
     (options, args) = parser.parse_args()
@@ -567,10 +563,13 @@ def parse():
             config.set('isp', 'certificate', options.certificate)
 
     finally:
-        with open(CONFIG_FILENAME, 'w') as file:
+        with open(paths.CONF_MAIN, 'w') as file:
             config.write(file)
 
     return (options, args)
+
+def runtimewarning(signum, frame):
+    raise RuntimeWarning()
 
 if __name__ == '__main__':
     main()
