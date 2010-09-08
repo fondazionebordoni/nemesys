@@ -24,7 +24,6 @@ import webbrowser
 import datetime
 import time
 import paths
-import status
 import threading
 import xmlrpclib
 import status
@@ -65,21 +64,23 @@ class TrayIcon():
                 self.proxy = xmlrpclib.ServerProxy(url)
                 self.menu=None
                 self.crea_menu(self)
-  
+
 
         def setstatus(self, status):
                 self.status = status
                 self.updatestatus()
 
-        def updatestatus(self):#aggiorna l'icona e il messaggio nel system tray
-                self.icon.set_visible(False)
-                icona=None
-                stringa=None                
-                icona=paths.ICON_PATH+paths.DIR_SEP+status.icon
-                stringa=status.message
-                self.icon = gtk.status_icon_new_from_file(icona)
-                self.icon.set_tooltip(stringa)      
-                self.icon.connect('popup-menu',self.callback,self.menu)
+        def updatestatus(self):#aggiorna l'icona e il messaggio nel system tray, l'aggiornamento viene fatto solo se lo staus è cambiato,
+                                #ovvero se è cambiata l'icona o il messaggio. In questo modo evito che l'icona "sfarfalli" se non cambia lo stato
+                self.icona=paths.ICON_PATH+paths.DIR_SEP+status.icon
+                self.stringa=status.message
+                if((self.vecchiaIcona!=self.icona)or(self.vecchiaStringa!=self.stringa)):
+                    self.icon.set_visible(False)
+                    self.icon = gtk.status_icon_new_from_file(self.icona)
+                    self.icon.set_tooltip(self.stringa)      
+                    self.icon.connect('popup-menu',self.callback,self.menu)
+                self.vecchiaIcona=self.icona
+                self.vecchiaStringa=self.stringa
                 
 
         def statoMisura(self,widget):
@@ -234,10 +235,11 @@ class TrayIcon():
                         infoAperta=False
                
         def callback(self,widget, button, time, menu):
-                menu.show_all()
-                menu.popup(None, None, gtk.status_icon_position_menu, button, time, self.icon)
-
-
+                self.menu.popdown()
+                self.menu.show_all()
+                #self.menu.popup(None, None, gtk.status_icon_position_menu, button, time, self.icon)
+                self.menu.popup(None, None, None, button, time, self.icon)#elimina la freccia per visualizzare il menu per intero
+                
 
         def destroy(self, widget, data=None):#quando esco dal programma
                 self.icon.set_visible(False)
@@ -260,16 +262,18 @@ class TrayIcon():
                 if(infoAperta==False):
                         self.message=None
 
-                icona=None
-                stringa=None
+                self.icona=None
+                self.stringa=None
+                self.vecchiaIcona=None
+                self.vecchiaStringa=None
 
-                icona=paths.ICON_PATH+paths.DIR_SEP+status.icon
-                stringa=status.message
-                #print "ICONA "+str(icona)
-                #print "MESSAGGIO "+str(stringa)
+                self.icona=paths.ICON_PATH+paths.DIR_SEP+status.icon
+                self.stringa=status.message
+                #print "ICONA "+str(self.icona)
+                #print "MESSAGGIO "+str(self.stringa)
                 
-                self.icon = gtk.status_icon_new_from_file(icona)
-                self.icon.set_tooltip(stringa)      
+                self.icon = gtk.status_icon_new_from_file(self.icona)
+                self.icon.set_tooltip(self.stringa)      
                 self.icon.connect('popup-menu',self.callback,self.menu)
 
                 self.item1 = gtk.ImageMenuItem('Stato misurazione')
