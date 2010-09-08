@@ -16,21 +16,50 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import sys
+from os import path
+from os import sep
+from os import name
+from os import mkdir
 
-DIR_SEP=os.sep
+#from logger import logging
 
-if hasattr(sys,"frozen"):
-    APP_PATH=os.path.dirname(sys.executable)
+DIR_SEP = sep
+
+if hasattr(sys, "frozen"):
+    # Dovrebbe darmi il percorso in cui sta eseguendo l'applicazione
+    _APP_PATH = path.dirname(sys.executable)
 else:
-    APP_PATH=os.path.abspath(os.path.dirname(__file__))#os.path.dirname(__file__) dovrebbe darmi il percorso in cui sta eseguendo l'applicazione
+    _APP_PATH = path.abspath(path.dirname(__file__))
 
-if(os.name!='nt'):
-    HOME_DIR=os.path.expanduser('~')
+if(name != 'nt'):
+    HOME_DIR = path.expanduser('~')
 else:
-    HOME_DIR=os.path.expanduser("~").decode(sys.getfilesystemencoding())
+    HOME_DIR = path.expanduser("~").decode(sys.getfilesystemencoding())
 
-ICON_PATH=APP_PATH+DIR_SEP+'icon'#percorso in cui trovo le icone
-XML_DIR_NAME='.config'+DIR_SEP+'nemesys'
-XML_DIR=HOME_DIR+DIR_SEP+XML_DIR_NAME #percorso in cui trovo il file measure.xml
+# Resources path
+ICONS = _APP_PATH + DIR_SEP + 'icon'
+OUTBOX = _APP_PATH + DIR_SEP + 'outbox'
+SENT = _APP_PATH + DIR_SEP + 'sent'
+MEASURE_STATUS = _APP_PATH + DIR_SEP + 'measure.xml'
+
+# Configuration dirs and files
+_CONF_DIR = _APP_PATH + DIR_SEP + "config"
+CONF_LOG = _CONF_DIR + DIR_SEP + "log.conf"
+CONF_MAIN = _CONF_DIR + DIR_SEP + "client.conf"
+
+def check_paths():
+
+    #logger = logging.getLogger()
+
+    if (not path.exists(_CONF_DIR)):
+        mkdir(_CONF_DIR)
+        #logger.debug('Creata la cartella "%s".' % _CONF_DIR)
+
+    if (not path.exists(OUTBOX)):
+        mkdir(OUTBOX)
+        #logger.debug('Creata la cartella "%s".' % OUTBOX)
+
+    if (not path.exists(SENT)):
+        mkdir(SENT)
+        #logger.debug('Creata la cartella "%s".' % SENT)
