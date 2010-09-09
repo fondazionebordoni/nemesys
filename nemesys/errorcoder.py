@@ -19,6 +19,7 @@
 import ConfigParser
 from logger import logging
 from os import path
+import paths
 
 logger = logging.getLogger()
 
@@ -84,5 +85,5 @@ class Errorcoder:
     return True
        
 if __name__ == '__main__':
-  e = Errorcoder('errorcodes.conf')
+  e = Errorcoder(paths.CONF_ERRORS)
 
