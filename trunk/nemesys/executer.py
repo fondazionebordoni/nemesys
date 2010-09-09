@@ -45,20 +45,20 @@ from urlparse import urlparse
 from xmlutils import getvalues
 from xmlutils import getxml
 from xmlutils import xml2task
-import gui.status
-import gui.paths
+import status
+import paths
 
 XMLRPC_URL = ("localhost", 21401)
 
 bandwidth = Semaphore()
 logger = logging.getLogger()
-current_status = gui.status.READY
+current_status = status.READY
 
 class _XMLRPCServer(Thread):
     
     def __init__(self):
         Thread.__init__(self)
-        self.running=False
+        self.running = False
         self._server = SimpleXMLRPCServer(XMLRPC_URL)
         self._server.register_function(self._getstatus, 'getstatus')
 
@@ -67,10 +67,10 @@ class _XMLRPCServer(Thread):
         return current_status
 
     def stop(self):
-        self.running=False
+        self.running = False
 
     def run(self):
-        self.running=True
+        self.running = True
         self._server.serve_forever()        
 
 class OptionParser (OptionParser):
