@@ -24,6 +24,7 @@ from xml.dom import Node
 from xml.dom.minidom import parseString
 from xml.parsers.expat import ExpatError
 from server import Server
+from status import Status
 
 tag_task = 'task'
 tag_id = 'id'
@@ -178,3 +179,30 @@ def nodedata(node):
       s += '%s: %s\n' % (child.nodeName, getvalues(child))
   return s.strip('\n')
 
+def xml2status(data):
+    if (len(data) < 1):
+        logger.error('Nessun dato da processare')
+        return None
+    
+    #logger.debug('Dati da convertire in XML:\n%s' % data)
+    try:
+        xml = parseString(data)
+    except ExpatError:
+        logger.error('Il dato ricevuto non è in formato XML: %s' % data)
+        return None
+    
+    nodes = xml.getElementsByTagName('status')
+    if (len(nodes) < 1):
+        logger.debug('Nessun status trovato nell\'XML:\n%s' % xml.toxml())
+        return None
+    
+    node = nodes[0]
+    
+    # Aggancio dei dati richiesti
+    try:
+        icon = getvalues(node, 'icon')
+        message = getvalues(node, 'message')
+    except IndexError:
+        logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
+        return None
+    return Status(icon, message)
