@@ -26,53 +26,65 @@ import paths
 import threading
 import xmlrpclib
 import status
+from logger import logging
 from xml.dom import minidom
 from datetime import datetime
 from time import sleep
+from xmlutils import xml2status
 
-class _Controller(threading.Thread, object):
+logger = logging.getLogger()
+
+class _Controller(threading.Thread):
     
-    def __init__(self, object):
+    def __init__(self, object, url):
         threading.Thread.__init__(self)
+        self._proxy = xmlrpclib.ServerProxy(url)
         self._running = False
         self._trayicon = object
 
     def stop(self):
         self._running = False
 
-    def run(self):#controllo sullo stato del demone!
+    def run(self):
+        '''
+        Controllo sullo stato del demone!
+        '''
         self._running = True
-        sleep(10)
         while self._running:
             try:
-                self._trayicon.setstatus(self._trayicon.proxy.getstatus())# TODO:sul server (executer) va implementato il metodo getstatus()
-            except Exception: # Catturare l'eccezione dovuta a errore di comunicazione col demone
-                self._trayicon.setstatus(status.ERROR)
-            sleep(20)#il controllo sulla variazione dello stato lo faccio ogni 20 sec
+                self._trayicon.setstatus(xml2status(self._proxy.getstatus()))
+            except Exception as e:
+                # Catturare l'eccezione dovuta a errore di comunicazione col demone
+                error = 'Errore durante la decodifica dello stato del demone: %s' % e
+                logger.error(error)
+                current_status = status.ERROR
+                current_status.message = error
+                self._trayicon.setstatus(current_status)
+                
+            #il controllo sulla variazione dello stato lo faccio ogni 20 sec
+            sleep(20)
             
 class TrayIcon():        
 
-    def __init__(self, url, status):                
+    def __init__(self, status=status.LOGO):                
         self._status = status
-        self.proxy = xmlrpclib.ServerProxy(url)
         self._menu = None
         self._crea_menu(self)
 
     def setstatus(self, status):
-        self._status = status
-        self._updatestatus()
-
-    def _updatestatus(self):#aggiorna l'icona e il messaggio nel system tray, l'aggiornamento viene fatto solo se lo staus è cambiato,
-                            #ovvero se è cambiata l'icona o il messaggio. In questo modo evito che l'icona "sfarfalli" se non cambia lo stato
-        self._icona = paths.ICONS + paths.DIR_SEP + self._status.icon
-        self._stringa = self._status._message
-        if((self._vecchiaIcona != self._icona)or(self._vecchiaStringa != self._stringa)):
+        '''
+        Aggiorna l'icona e il messaggio nel system tray, l'aggiornamento viene
+        fatto solo se lo staus è cambiato, ovvero se è cambiata l'icona o il
+        messaggio. In questo modo evito che l'icona "sfarfalli" se non cambia
+        lo stato.
+        '''
+        #logger.debug('Nuovo stato: %s, vecchio: %s' % (status, self._status))
+        if (self._status.icon != status.icon or self._status.message != status.message):
+            self._status = status
             self._icon.set_visible(False)
-            self._icon = gtk.status_icon_new_from_file(self._icona)
-            self._icon.set_tooltip(self._stringa)      
+            self._icon = gtk.status_icon_new_from_file(self._status.icon)
+            self._icon.set_tooltip(self._status.message)      
             self._icon.connect('popup-menu', self._callback, self._menu)
-        self._vecchiaIcona = self._icona
-        self._vecchiaStringa = self._stringa
                 
     #la versione 2.5 di python ha un bug nella funzione strptime che non riesce a leggere i microsecondi (%f) 
     def _str2datetime(s):
@@ -89,7 +101,7 @@ class TrayIcon():
         self._win.set_position(gtk.WIN_POS_CENTER)
         self._win.set_default_size(600, 300)
         self._win.set_resizable(False)
-        self._win.set_icon_from_file(paths.ICONS + paths.DIR_SEP + "icon.png")
+        self._win.set_icon_from_file(paths.ICONS + paths.DIR_SEP + status.LOGO.icon)
         self._win.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#FFF'))
         self._win.set_border_width(20)
         
@@ -296,8 +308,7 @@ if __name__ == "__main__":
     statoPopUp = "ON"#per discriminare fra abilita e disabilita popup
     winAperta = False#indica se è aperta o meno la finestra contenente l'andamento della misura
     infoAperta = False#indica se è aperta o meno la finestra contenente le info su nemesys
-    iniziale = status.PAUSE#parto dallo stato iniziale "bianco"
-    trayicon = TrayIcon("http://localhost:21401/", iniziale)
-    controller = _Controller(trayicon)
+    trayicon = TrayIcon()
+    controller = _Controller(trayicon, 'http://localhost:21401')
     controller.start()
     trayicon.main()
