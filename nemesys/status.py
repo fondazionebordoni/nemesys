@@ -16,6 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import paths
+from logger import logging
+from xml.dom.minidom import parseString
+from xml.parsers.expat import ExpatError
+
+logger = logging.getLogger()
+
 class Status:
 
     def __init__(self, icon, message):
@@ -24,14 +31,32 @@ class Status:
 
     @property
     def icon(self):
-        return self._icon
+        path = paths.ICONS + paths.DIR_SEP + self._icon 
+        return path
 
     @property
     def message(self):
         return self._message
+    
+    def getxml(self):
+        start = '''<status xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'/>'''
+        xml = parseString(start)
+        status = xml.getElementsByTagName('status')[0]
+        
+        icon = xml.createElement('icon')
+        icon.appendChild(xml.createTextNode(self._icon.decode('utf8', 'replace')))
+        status.appendChild(icon)
 
-ERROR = Status('icon_rossa.png', 'Impossibile contattare il demone che effettua le misure.')
-PAUSE = Status('icon_bianca.png', 'Il server è in pausa. Non verranno effettuate misure nella prossima ora.')
-PLAY = Status('icon_verde.png','NeMeSys sta effettuando una misura...')
-FINISHED = Status('icon_blu.png','NeMeSys ha terminato le misurazioni')
-READY = Status('icon_arancio.png','NeMeSys effettuerà una misura nella prossima ora')
+        message = xml.createElement('message')
+        message.appendChild(xml.createTextNode(self._message.decode('utf8', 'replace')))
+        status.appendChild(message)
+        
+        return xml.toxml()
+
+ERROR = Status(u'nemesys_red.png', 'Impossibile contattare il demone che effettua le misure.')
+PAUSE = Status(u'nemesys_white.png', 'Il server è in pausa. Non verranno effettuate misure nella prossima ora.')
+PLAY = Status(u'nemesys_green.png', 'Nemesys sta effettuando una misura...')
+FINISHED = Status(u'nemesys_cyan.png', 'Nemesys ha terminato le misurazioni')
+READY = Status(u'nemesys_amber.png', 'Nemesys effettuerà una misura nella prossima ora')
+LOGO = Status(u'nemesys_logo.png', 'Nemesys (Network Measurement System)')
+

@@ -63,8 +63,7 @@ class _XMLRPCServer(Thread):
         self._server.register_function(self._getstatus, 'getstatus')
 
     def _getstatus(self):
-        logger.debug("Stato: %s" % current_status.icon)
-        return current_status
+        return current_status.getxml()
 
     def stop(self):
         self.running = False
