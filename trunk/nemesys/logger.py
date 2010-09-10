@@ -19,8 +19,9 @@
 import logging
 import logging.config
 from os import path
+import paths
 
-configfile = 'log.conf'
+configfile = paths.CONF_LOG
 
 default = '''
 [loggers]
@@ -42,7 +43,7 @@ level=DEBUG
 formatter=formatter
 args=(sys.stdout,)
 
-[formatter_formatter]
+[formatter_formatter] 
 format=%(asctime)s %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
 datefmt=%b %d %H:%M:%S
 '''
@@ -60,4 +61,3 @@ class Logger(logging.getLoggerClass()):
 
   def __init__():
     pass
-
