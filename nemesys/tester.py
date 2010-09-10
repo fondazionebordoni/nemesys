@@ -30,6 +30,7 @@ import ping
 from fakefile import Fakefile
 from proof import Proof
 import timeit
+import paths
 
 ftp = None
 file = None
@@ -37,7 +38,7 @@ filepath = None
 size = 0
 
 logger = logging.getLogger()
-errors = Errorcoder('errorcodes.conf')
+errors = Errorcoder(paths.CONF_ERRORS)
 
 # Calcolo dei byte totali scaricati
 def totalsize(data):
