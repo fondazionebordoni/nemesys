@@ -20,17 +20,16 @@ import sys
 
 from datetime import datetime
 from errorcoder import Errorcoder
+from fakefile import Fakefile
 import ftplib
 from ftplib import FTP
 from host import Host
 from logger import logging
 from optparse import OptionParser
-import os
+import paths
 import ping
-from fakefile import Fakefile
 from proof import Proof
 import timeit
-import paths
 
 ftp = None
 file = None
@@ -59,7 +58,7 @@ class Tester:
     size = 0
     elapsed = 0
     file = Fakefile(bytes)
-    timeout = max(self._timeout,1)
+    timeout = max(self._timeout, 1)
 
     start = datetime.now() 
 
@@ -70,7 +69,7 @@ class Tester:
     except ftplib.all_errors as e:
       logger.error('Impossibile aprire la connessione FTP: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof('upload', start, elapsed, size, errorcode)					#inserire codifica codici errore
+      return Proof('upload', start, elapsed, size, errorcode)	# inserire codifica codici errore
 
     # TODO Se la connessione FTP viene invocata con timeout, il socket è non-blocking e il sistema può terminare i buffer di rete: http://bugs.python.org/issue8493
     function = '''ftp.storbinary('STOR %s' % filepath, file, callback=totalsize)'''
@@ -95,7 +94,7 @@ class Tester:
     size = 0
     elapsed = 0
     file = filename
-    timeout = max(self._timeout,1)
+    timeout = max(self._timeout, 1)
 
     start = datetime.now()
 
@@ -106,7 +105,7 @@ class Tester:
     except ftplib.all_errors as e:
       logger.error('Impossibile aprire la connessione FTP: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof('download', start, elapsed, size, errorcode)					#inserire codifica codici errore
+      return Proof('download', start, elapsed, size, errorcode)	# inserire codifica codici errore
 
     function = '''ftp.retrbinary('RETR %s' % file, totalsize)'''
     setup = 'from %s import ftp, file, totalsize' % __name__ 
@@ -131,7 +130,6 @@ class Tester:
     elapsed = 0
 
     try:
-   		# TODO gestire il trno di ping con nicmp (numero ping)
       # Il risultato deve essere espresso in millisecondi
       elapsed = ping.do_one(self._host.ip, self._timeout) * 1000
 
@@ -148,15 +146,25 @@ class Tester:
 def main():
   #Aggancio opzioni da linea di comando
     
-  parser = OptionParser(version="0.10.1.$Rev$", description="A simple bandwidth tester able to perform FTP upload/download and PING tests.")
-  parser.add_option("-t", "--type", choices=('ftpdown', 'ftpup', 'ping'), dest="testtype", default="ftpdown", help="Choose the type of test to perform: ftpdown (default), ftpup, ping", type="choice")
-  parser.add_option("-f", "--file", dest="filename", help="For FTP download, the name of the file for RETR operation")
-  parser.add_option("-b", "--byte", dest="bytes", help="For FTP upload, the size of the file for STOR operation", type="int")
-  parser.add_option("-H", "--host", dest="host", help="An ipaddress or FQDN of testing host")
-  parser.add_option("-u", "--username", dest="username", default="anonymous", help="An optional username to use when connecting to the FTP server")
-  parser.add_option("-p", "--password", dest="password", default="anonymous@", help="The password to use when connecting to the FTP server")
-  parser.add_option("-P", "--path", dest="path", default="", help="The path where put uploaded file")
-  parser.add_option("--timeout", dest="timeout", default="30", type="int", help="Timeout in seconds for FTP blocking operations like the connection attempt")
+  parser = OptionParser(version="0.10.1.$Rev$",
+                        description="A simple bandwidth tester able to perform FTP upload/download and PING tests.")
+  parser.add_option("-t", "--type", choices=('ftpdown', 'ftpup', 'ping'),
+                    dest="testtype", default="ftpdown", type="choice",
+                    help="Choose the type of test to perform: ftpdown (default), ftpup, ping")
+  parser.add_option("-f", "--file", dest="filename",
+                    help="For FTP download, the name of the file for RETR operation")
+  parser.add_option("-b", "--byte", dest="bytes", type="int",
+                    help="For FTP upload, the size of the file for STOR operation")
+  parser.add_option("-H", "--host", dest="host",
+                    help="An ipaddress or FQDN of testing host")
+  parser.add_option("-u", "--username", dest="username", default="anonymous",
+                    help="An optional username to use when connecting to the FTP server")
+  parser.add_option("-p", "--password", dest="password", default="anonymous@",
+                    help="The password to use when connecting to the FTP server")
+  parser.add_option("-P", "--path", dest="path", default="",
+                    help="The path where put uploaded file")
+  parser.add_option("--timeout", dest="timeout", default="30", type="int",
+                    help="Timeout in seconds for FTP blocking operations like the connection attempt")
     
   (options, args) = parser.parse_args()
   #TODO inserire controllo host
