@@ -17,25 +17,24 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+
+from os import mkdir
+from os import name
 from os import path
 from os import sep
-from os import name
-from os import mkdir
-
-from logger import logging
 
 DIR_SEP = sep
 
 if hasattr(sys, 'frozen'):
-    # Dovrebbe darmi il percorso in cui sta eseguendo l'applicazione
-    _APP_PATH = path.dirname(sys.executable) + DIR_SEP + '..'
+  # Dovrebbe darmi il percorso in cui sta eseguendo l'applicazione
+  _APP_PATH = path.dirname(sys.executable) + DIR_SEP + '..'
 else:
-    _APP_PATH = path.abspath(path.dirname(__file__)) + DIR_SEP + '..'
+  _APP_PATH = path.abspath(path.dirname(__file__)) + DIR_SEP + '..'
 
 if name != 'nt':
-    HOME_DIR = path.expanduser('~')
+  HOME_DIR = path.expanduser('~')
 else:
-    HOME_DIR = path.expanduser('~').decode(sys.getfilesystemencoding())
+  HOME_DIR = path.expanduser('~').decode(sys.getfilesystemencoding())
 
 # Resources path
 ICONS = _APP_PATH + DIR_SEP + 'icons'
@@ -50,20 +49,20 @@ CONF_MAIN = _CONF_DIR + DIR_SEP + 'client.conf'
 CONF_ERRORS = _CONF_DIR + DIR_SEP + 'errorcodes.conf'
 
 
+from logger import logging
 def check_paths():
 
-    logger = logging.getLogger()
+  logger = logging.getLogger()
 
-    if not path.exists(_CONF_DIR):
-        mkdir(_CONF_DIR)
-        logger.debug('Creata la cartella "%s".' % _CONF_DIR)
+  if not path.exists(_CONF_DIR):
+    mkdir(_CONF_DIR)
+    logger.debug('Creata la cartella "%s".' % _CONF_DIR)
 
-    if not path.exists(OUTBOX):
-        mkdir(OUTBOX)
-        logger.debug('Creata la cartella "%s".' % OUTBOX)
+  if not path.exists(OUTBOX):
+    mkdir(OUTBOX)
+    logger.debug('Creata la cartella "%s".' % OUTBOX)
 
-    if not path.exists(SENT):
-        mkdir(SENT)
-        logger.debug('Creata la cartella "%s".' % SENT)
-
+  if not path.exists(SENT):
+    mkdir(SENT)
+    logger.debug('Creata la cartella "%s".' % SENT)
 

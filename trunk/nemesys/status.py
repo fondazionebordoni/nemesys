@@ -16,47 +16,53 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import paths
 from logger import logging
+import paths
 from xml.dom.minidom import parseString
-from xml.parsers.expat import ExpatError
 
 logger = logging.getLogger()
 
 class Status:
 
-    def __init__(self, icon, message):
-        self._icon = icon
-        self._message = message
+  def __init__(self, icon, message):
+    if isinstance (icon, Status):
+      self._icon = icon._icon
+    else:
+      self._icon = icon
+            
+    self._message = message
 
-    @property
-    def icon(self):
-        path = paths.ICONS + paths.DIR_SEP + self._icon 
-        return path
+  @property
+  def icon(self):
+    path = paths.ICONS + paths.DIR_SEP + self._icon
+    return path
 
-    @property
-    def message(self):
-        return self._message
+  @property
+  def message(self):
+    return self._message
     
-    def getxml(self):
-        start = '''<status xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'/>'''
-        xml = parseString(start)
-        status = xml.getElementsByTagName('status')[0]
+  def __str__(self):
+    return self.getxml()
+    
+  def getxml(self):
+    start = '''<status xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'/>'''
+    xml = parseString(start)
+    status = xml.getElementsByTagName('status')[0]
         
-        icon = xml.createElement('icon')
-        icon.appendChild(xml.createTextNode(self._icon.decode('utf8', 'replace')))
-        status.appendChild(icon)
+    icon = xml.createElement('icon')
+    icon.appendChild(xml.createTextNode(self._icon.decode('utf8', 'replace')))
+    status.appendChild(icon)
 
-        message = xml.createElement('message')
-        message.appendChild(xml.createTextNode(self._message.decode('utf8', 'replace')))
-        status.appendChild(message)
+    message = xml.createElement('message')
+    message.appendChild(xml.createTextNode(self._message.decode('utf8', 'replace')))
+    status.appendChild(message)
         
-        return xml.toxml()
+    return xml.toxml()
 
-ERROR = Status(u'nemesys_red.png', 'Impossibile contattare il demone che effettua le misure.')
-PAUSE = Status(u'nemesys_white.png', 'Il server è in pausa. Non verranno effettuate misure nella prossima ora.')
-PLAY = Status(u'nemesys_green.png', 'Nemesys sta effettuando una misura...')
-FINISHED = Status(u'nemesys_cyan.png', 'Nemesys ha terminato le misurazioni')
-READY = Status(u'nemesys_amber.png', 'Nemesys effettuerà una misura nella prossima ora')
-LOGO = Status(u'nemesys_logo.png', 'Nemesys (Network Measurement System)')
+ERROR = Status('nemesys_red.png', 'Impossibile contattare il demone che effettua le misure.')
+PAUSE = Status('nemesys_white.png', 'Il server è in pausa. Non verranno effettuate misure nella prossima ora.')
+PLAY = Status('nemesys_green.png', 'Nemesys sta effettuando una misura...')
+FINISHED = Status('nemesys_cyan.png', 'Nemesys ha terminato le misurazioni')
+READY = Status('nemesys_amber.png', 'Nemesys effettuerà una misura nella prossima ora')
+LOGO = Status('nemesys_logo.png', 'Nemesys (Network Measurement System)')
 

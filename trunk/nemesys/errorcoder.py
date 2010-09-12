@@ -25,10 +25,9 @@ logger = logging.getLogger()
 
 configerror = 00000  # codice di errore utilizzato in presenza errori di errorcoder.py
 
-
 class Errorcoder:
 
-    '''
+  '''
     Nel file di configurazione di possono creare delle sezioni, al'interno
     delle quali avviene la ricerca come se fosse un dizionario si può associare
     una sezione a ciascun set di codici di errore utilizzato dai vari operatori.
@@ -36,61 +35,60 @@ class Errorcoder:
     errore, I/O FTP PING.
     '''
 
-    def __init__(self, filename):
-        self._filename = filename
+  def __init__(self, filename):
+    self._filename = filename
 
-        config = ConfigParser.ConfigParser()
-        if path.exists(filename):
-            logger.debug('Trovata configurazione d\'errore %s' % filename)
-            config.read(filename)
-        else:
-            config.add_section('Errors')
-            with open(self._filename, 'w') as configfile:
-                config.write(configfile)
+    config = ConfigParser.ConfigParser()
+    if path.exists(filename):
+      logger.debug('Trovata configurazione d\'errore %s' % filename)
+      config.read(filename)
+    else:
+      config.add_section('Errors')
+      with open(self._filename, 'w') as configfile:
+        config.write(configfile)
 
-        self._config = config
+    self._config = config
 
-    def geterrorcode(self, exception):
-        '''
-        Restituisce il codice di errore relativo al messaggio di errore (errormsg), secondo la codifica relativa all'dato operatore
-        '''
+  def geterrorcode(self, exception):
+    '''
+    Restituisce il codice di errore relativo al messaggio di errore (errormsg),
+    secondo la codifica relativa all'dato operatore.
+    '''
 
-        error = str(exception.args[00000])
+    error = str(exception.args[00000])
 
-        try:
-            errorcode = self._config.getint('Errors', error)
-        except (TypeError, ConfigParser.NoOptionError):
-            logger.warning("Codice di errore associato all'eccezione '%s' non trovato nel file %s"
-                            % (error, self._filename))
-            b = self.puterrorcode(error, 99999)
+    try:
+      errorcode = self._config.getint('Errors', error)
+    except (TypeError, ConfigParser.NoOptionError):
+      logger.warning("Codice di errore associato all'eccezione '%s' non trovato nel file %s" % (error, self._filename))
+      b = self.puterrorcode(error, 99999)
 
-            if b:
-                return 99999
-            elif not b:
-                return configerror
-        except ConfigParser.NoSectionError:
-            return configerror
+      if b:
+        return 99999
+      elif not b:
+        return configerror
+    except ConfigParser.NoSectionError:
+      return configerror
 
-        return errorcode
+    return errorcode
 
-    def puterrorcode(self, error, value):
-        '''
-        Inserisce nuovi codici di errore al termine del file di configurazione
-        '''
+  def puterrorcode(self, error, value):
+    '''
+    Inserisce nuovi codici di errore al termine del file di configurazione
+    '''
 
-        try:
-            self._config.set('Errors', error, value)
-        except ConfigParser.NoSectionError:
-            logger.error("Malfunzionamento nell'accesso al file relativo ai codici di errore %s"
-                          % self._filename)
-            return False
+    try:
+      self._config.set('Errors', error, value)
+    except ConfigParser.NoSectionError:
+      logger.error("Malfunzionamento nell'accesso al file relativo ai codici di errore %s" % self._filename)
+      return False
 
-        with open(self._filename, 'w') as configfile:
-            self._config.write(configfile)
+    with open(self._filename, 'w') as configfile:
+      self._config.write(configfile)
 
-        return True
+    return True
 
 
 if __name__ == '__main__':
-    e = Errorcoder(paths.CONF_ERRORS)
+  e = Errorcoder(paths.CONF_ERRORS)
 
