@@ -18,13 +18,13 @@
 
 from datetime import datetime
 from logger import logging
+from server import Server
+from status import Status
 from string import join
 from task import Task
 from xml.dom import Node
 from xml.dom.minidom import parseString
 from xml.parsers.expat import ExpatError
-from server import Server
-from status import Status
 
 tag_task = 'task'
 tag_id = 'id'
@@ -45,13 +45,13 @@ startformat = '%Y-%m-%d %H:%M:%S'
 logger = logging.getLogger()
 
 def getxml(data):
- try:
+  try:
     xml = parseString(data)
- except ExpatError:
+  except ExpatError:
     logger.error('Il dato ricevuto non è in formato XML: %s' % data)
     return None
 
- return xml
+  return xml
 
 # Trasforma l'XML dei task nel prossimo Task da eseguire
 def xml2task(data):
@@ -180,29 +180,31 @@ def nodedata(node):
   return s.strip('\n')
 
 def xml2status(data):
-    if (len(data) < 1):
-        logger.error('Nessun dato da processare')
-        return None
+  # TODO Meglio sollevare delle eccezioni che verrano catturate (?)
+  if (len(data) < 1):
+    logger.error('Nessun dato da processare')
+    return Status(status.ERROR, 'Errore di comunicazione con il server');
     
-    #logger.debug('Dati da convertire in XML:\n%s' % data)
-    try:
-        xml = parseString(data)
-    except ExpatError:
-        logger.error('Il dato ricevuto non è in formato XML: %s' % data)
-        return None
+  #logger.debug('Dati da convertire in XML:\n%s' % data)
+  try:
+    xml = parseString(data)
+  except ExpatError:
+    logger.error('Il dato ricevuto non è in formato XML: %s' % data)
+    return Status(status.ERROR, 'Errore di comunicazione con il server');
     
-    nodes = xml.getElementsByTagName('status')
-    if (len(nodes) < 1):
-        logger.debug('Nessun status trovato nell\'XML:\n%s' % xml.toxml())
-        return None
+  nodes = xml.getElementsByTagName('status')
+  if (len(nodes) < 1):
+    logger.debug('Nessun status trovato nell\'XML:\n%s' % xml.toxml())
+    return Status(status.ERROR, 'Errore di comunicazione con il server');
     
-    node = nodes[0]
+  node = nodes[0]
     
-    # Aggancio dei dati richiesti
-    try:
-        icon = getvalues(node, 'icon')
-        message = getvalues(node, 'message')
-    except IndexError:
-        logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
-        return None
-    return Status(icon, message)
+  # Aggancio dei dati richiesti
+  try:
+    icon = getvalues(node, 'icon')
+    message = getvalues(node, 'message')
+  except IndexError:
+    logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
+    return Status(status.ERROR, 'Errore di comunicazione con il server');
+
+  return Status(icon, message)
