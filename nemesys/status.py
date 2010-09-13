@@ -41,6 +41,9 @@ class Status:
   def message(self):
     return self._message
     
+  def setmessage(self, message):
+    self._message = message
+    
   def __str__(self):
     return self.getxml()
     
