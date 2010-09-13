@@ -20,6 +20,7 @@ from datetime import datetime
 from logger import logging
 from server import Server
 from status import Status
+import status
 from string import join
 from task import Task
 from xml.dom import Node
@@ -35,6 +36,7 @@ tag_ping = 'nping'
 att_icmp = 'icmp'
 att_delay = 'delay'
 tag_start = 'start'
+att_now = 'now'
 tag_serverid = 'srvid'
 tag_serverip = 'srvip'
 tag_servername = 'srvname'
@@ -97,11 +99,12 @@ def xml2task(data):
     multiplier = node.getElementsByTagName(tag_upload)[0].getAttribute(att_multiplier)
     nicmp = node.getElementsByTagName(tag_ping)[0].getAttribute(att_icmp)
     delay = node.getElementsByTagName(tag_ping)[0].getAttribute(att_delay)
+    now = node.getElementsByTagName(tag_start)[0].getAttribute(att_now)
   except IndexError:
     pass
 
   # Verifica che i dati siano compatibili
-  # Dati numerici
+  # Dati numerici/booleani
   try:
     if (len(upload) <= 0):
       logger.error('L\'XML non contiene il numero di upload da effettuare')
@@ -139,6 +142,12 @@ def xml2task(data):
     else:
       delay = int(delay)
 
+    if (len(now) <= 0):
+      logger.warn('L\'XML non contiene indicazione se il task deve essere iniziato subito (default = 0)')
+      now = False
+    else:
+      now = bool(now)
+
   except TypeError:
     logger.error('Errore durante la verifica della compatibilità dei dati numerici di task')
     return None
@@ -155,7 +164,7 @@ def xml2task(data):
   # TODO Controllare validità dati IP
 
   server = Server(serverid, serverip, servername)
-  return Task(id=id, start=start, server=server, ftpdownpath=ftpdownpath, ftpuppath=ftpuppath, upload=upload, download=download, multiplier=multiplier, ping=ping, nicmp=nicmp, delay=delay)
+  return Task(id=id, start=start, server=server, ftpdownpath=ftpdownpath, ftpuppath=ftpuppath, upload=upload, download=download, multiplier=multiplier, ping=ping, nicmp=nicmp, delay=delay, now=now)
 
 
 def getvalues(node, tag=None):
@@ -168,7 +177,7 @@ def getvalues(node, tag=None):
 
     #logger.debug('Value found: %s' % join(values).strip())
     return join(values).strip()
-  
+
   else:
     return getvalues(node.getElementsByTagName(tag)[0])
 
@@ -184,21 +193,21 @@ def xml2status(data):
   if (len(data) < 1):
     logger.error('Nessun dato da processare')
     return Status(status.ERROR, 'Errore di comunicazione con il server');
-    
+
   #logger.debug('Dati da convertire in XML:\n%s' % data)
   try:
     xml = parseString(data)
   except ExpatError:
     logger.error('Il dato ricevuto non è in formato XML: %s' % data)
     return Status(status.ERROR, 'Errore di comunicazione con il server');
-    
+
   nodes = xml.getElementsByTagName('status')
   if (len(nodes) < 1):
     logger.debug('Nessun status trovato nell\'XML:\n%s' % xml.toxml())
     return Status(status.ERROR, 'Errore di comunicazione con il server');
-    
+
   node = nodes[0]
-    
+
   # Aggancio dei dati richiesti
   try:
     icon = getvalues(node, 'icon')

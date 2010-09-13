@@ -22,10 +22,11 @@ from time import sleep
 from ConfigParser import ConfigParser
 from ConfigParser import NoOptionError
 import asyncore
-from client import Client
 from datetime import datetime
+from client import Client
 from deliverer import Deliverer
 from httplib import HTTPSConnection
+from httplib import HTTPConnection
 from isp import Isp
 from logger import logging
 from measure import Measure
@@ -37,7 +38,6 @@ from profile import Profile
 import re
 import shutil
 import socket
-from socket import gaierror
 import status
 from status import Status
 from tester import Tester
@@ -60,7 +60,9 @@ class _Communicator(Thread):
     self.running = False
     self._channel = _Channel(('localhost', 21401))
 
-  def sendstatus(self, status):
+  def sendstatus(self, status, message=None):
+    if (message != None):
+      status.setmessage(message)
     self._channel.sendstatus(status)
 
   def stop(self):
@@ -83,7 +85,7 @@ class _Sender(asyncore.dispatcher):
     try:
       self.buffer = status.getxml()
     except UnicodeEncodeError:
-      self.buffer = Status(Status.ERROR, 'Errore di decodifica unicode').getxml()
+      self.buffer = Status(status.ERROR, 'Errore di decodifica unicode').getxml()
 
     self.handle_write()
 
@@ -169,6 +171,7 @@ class Executer:
 
   def loop(self):
     # signal.signal(signal.SIGALRM, runtimewarning)
+    t = None
 
     while True:
 
@@ -191,9 +194,12 @@ class Executer:
           pass
 
         # Imposta il nuovo allarme
-        # TODO Se su task ho 'immediate' inizio tra un secondo
-        delta = task.start - datetime.now()
-        alarm = delta.days * 86400 + delta.seconds
+        if (task.now):
+          # Task immediato: inizio tra 5 secondi
+          alarm = 5.0
+        else:
+          delta = task.start - datetime.now()
+          alarm = delta.days * 86400 + delta.seconds
 
         if alarm > 0:
           logger.debug('Impostazione di un nuovo task tra: %s secondi (%s)' % (alarm, delta))
@@ -211,7 +217,11 @@ class Executer:
     clientid = self._client.id
     certificate = self._client.isp.certificate
 
-    connection = HTTPSConnection(url.hostname, key_file=certificate, cert_file=certificate, timeout=self._httptimeout)
+    # Se non c'è il certificato apri HTTP semplice
+    if path.exists(certificate):
+      connection = HTTPSConnection(url.hostname, key_file=certificate, cert_file=certificate, timeout=self._httptimeout)
+    else:
+      connection = HTTPConnection(url.hostname, timeout=self._httptimeout)
 
     try:
       connection.request('GET', '%s?clientid=%s' % (url.path, clientid))
@@ -221,8 +231,16 @@ class Executer:
       self._communicator.sendstatus(Status(status.ERROR, 'Impossibile dialogare con lo scheduler delle misure.'))
       return None
 
-    except gaierror as e:
+    except socket.gaierror as e:
       logger.error('Impossibile scaricare lo scheduling. Errore socket: %s' % e)
+      return None
+
+    except socket.error as e:
+      logger.error('Impossibile scaricare lo scheduling. Errore socket: %s' % e)
+      return None
+
+    except Exception as e:
+      logger.error('Impossibile scaricare lo scheduling. Errore: %s' % e)
       return None
 
     try:
