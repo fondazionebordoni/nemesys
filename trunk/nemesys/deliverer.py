@@ -79,19 +79,24 @@ class Deliverer:
     file.write('\n<!-- %s -->' % datetime.datetime.now().isoformat())
     file.close()
 
-    # Crea il file della firma
-    signature = self.sign(filename)
-    if signature == None:
-      return None
-    sign = open('%s.sign' % filename[0:-4], 'w')
-    sign.write(signature)
-    sign.close()
+    sign = None
+    if self._certificate != None and path.exists(self._certificate):
+      # Crea il file della firma
+      signature = self.sign(filename)
+      if signature == None:
+        logger.error('Impossibile eseguire la firma del file delle misure. Creazione dello zip omettendo il .sign')
+      else:
+        sign = open('%s.sign' % filename[0:-4], 'w')
+        sign.write(signature)
+        sign.close()
 
     # Crea il file zip
     zipname = '%s.zip' % filename[0:-4]
     zip = zipfile.ZipFile(zipname, 'a', zipfile.ZIP_DEFLATED)
     zip.write(file.name, path.basename(file.name))
-    zip.write(sign.name, path.basename(sign.name))
+
+    if sign != None and path.exists(sign.name):
+        zip.write(sign.name, path.basename(sign.name))
       
     if zip.testzip() != None:
       logger.error("Lo zip del file %s è corrotto" % zip.testzip())
@@ -106,7 +111,11 @@ class Deliverer:
     Restituisce la stringa contenente la firma del digest SHA1 del
     file da firmare
     '''
-    from M2Crypto import RSA
+    try:
+      from M2Crypto import RSA
+    except Exception:
+      logger.debug('Impossibile importare il modulo M2Crypto')
+      return None
 
     data = open(filename, 'r').read()
     digest = hashlib.sha1(data).digest()
