@@ -18,12 +18,10 @@
 
 class Isp:
 
+  # TODO Spostare il certificato dall'ISP al Client
   def __init__(self, id, certificate=None):
     self._id = id
-    if (certificate == None):
-      self._certificate = id + '.pem'
-    else:
-      self._certificate = certificate
+    self._certificate = certificate
 
   @property
   def id(self):
