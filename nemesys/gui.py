@@ -16,25 +16,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import pygtk
-pygtk.require('2.0')
-import gtk
-import webbrowser
-import datetime
-import paths
-import threading
-import status
-from logger import logging
-from xml.dom import minidom
 from datetime import datetime
-from time import sleep
-from xmlutils import xml2status
+from logger import logging
+from popup import NotificationStack
 from status import Status
+from time import sleep
+from xml.dom import minidom
+from xmlutils import xml2status
 import asyncore
-import socket
+import gtk
 import locale
+import paths
+import pygtk
+import socket
+import status
+import threading
+import webbrowser
+pygtk.require('2.0')
 
 LISTENING_URL = ('localhost', 21401)
+NOTIFY_COLORS = ('#ffffee', 'black')
 logger = logging.getLogger()
 
 def _iso2datetime(s):
@@ -109,6 +110,7 @@ class TrayIcon:
   def __init__(self):
     locale.setlocale(locale.LC_ALL, '')
     self._status = status.LOGO
+    self._popupenabled = True
     self._menu = None
     self._crea_menu(self)
 
@@ -123,10 +125,17 @@ class TrayIcon:
     if (self._status.icon != status.icon
         or self._status.message != status.message):
       self._status = status
-      self._icon.set_visible(False)
-      self._icon = gtk.status_icon_new_from_file(self._status.icon)
-      self._icon.set_tooltip(self._status.message)
-      self._icon.connect('popup-menu', self._callback, self._menu)
+      self._trayicon.set_visible(False)
+      self._trayicon = gtk.status_icon_new_from_file(self._status.icon)
+      self._trayicon.set_tooltip(self._status.message)
+      self._trayicon.connect('popup-menu', self._callback, self._menu)
+      # image = random.choice(images)
+      if self._popupenabled:
+        notifier.bg_color = gtk.gdk.Color(NOTIFY_COLORS[0])
+        notifier.fg_color = gtk.gdk.Color(NOTIFY_COLORS[1])
+        # mnotifier.show_timeout = random.choice((True, False))
+        notifier.edge_offset_x = 20
+        notifier.new_popup(title="Nemesys", message=self._status.message)
 
   def statomisura(self, widget):
     global winAperta
@@ -237,25 +246,24 @@ class TrayIcon:
     winAperta = True
 
   def _togglepopup(self, widget):
-    global statoPopUp
-    self._item2.destroy()
+    self._item_togglepopup.destroy()
 
-    if statoPopUp == 'ON':
-      statoPopUp = 'OFF'
-      self._item2 = gtk.ImageMenuItem('Abilita Pop-up')
+    if self._popupenabled:
+      self._popupenabled = False
+      self._item_togglepopup = gtk.ImageMenuItem('Abilita notifiche popup')
     else:
-      statoPopUp = 'ON'
-      self._item2 = gtk.ImageMenuItem('Disabilita Pop-up')
+      self._popupenabled = True
+      self._item_togglepopup = gtk.ImageMenuItem('Disabilita notifiche popup')
 
-    self._img_sm = gtk.image_new_from_stock('gtk-dialog-warning', gtk.ICON_SIZE_MENU)
-    self._item2.set_image(self._img_sm)
-    self._item2.connect('activate', self._togglepopup)
-    self._menu.insert(self._item2, 1)
+    icon = gtk.image_new_from_stock('gtk-dialog-warning', gtk.ICON_SIZE_MENU)
+    self._item_togglepopup.set_image(icon)
+    self._item_togglepopup.connect('activate', self._togglepopup)
+    self._menu.insert(self._item_togglepopup, 1)
 
   def _serviziOnline(self, widget):
     webbrowser.open('http://misurainternet.fub.it/login_form.php')
 
-  def _info(self, widget):
+  def _about(self, widget):
     global infoAperta
     if infoAperta:  # non do all'utente la possibilità di aprire n finestre info
       self._infoMessage.destroy()
@@ -277,10 +285,10 @@ Homepage del progetto su www.misurainternet.it''')
     self._menu.show_all()
     # self.menu.popup(None, None, gtk.status_icon_position_menu, button, time, self.icon)
     # elimina la freccia per visualizzare il menu per intero
-    self._menu.popup(None, None, None, button, time, self._icon)
+    self._menu.popup(None, None, None, button, time, self._trayicon)
 
-  def _destroy(self, widget, data=None):  # quando esco dal programma
-    self._icon.set_visible(False)
+  def _quit(self, widget, data=None):  # quando esco dal programma
+    self._trayicon.set_visible(False)
     self._menu.destroy()
     if (self._win != None):
       self._win.destroy()
@@ -302,48 +310,45 @@ Homepage del progetto su www.misurainternet.it''')
     if (infoAperta == False):
       self._infoMessage = None
 
-    icona = None
-    stringa = None
-
     icona = self._status.icon
     stringa = self._status.message
 
-    self._icon = gtk.status_icon_new_from_file(icona)
-    self._icon.set_tooltip(stringa)
-    self._icon.connect('popup-menu', self._callback, self._menu)
+    self._trayicon = gtk.status_icon_new_from_file(icona)
+    self._trayicon.set_tooltip(stringa)
+    self._trayicon.connect('popup-menu', self._callback, self._menu)
 
-    self._item1 = gtk.ImageMenuItem('Stato misurazione')
-    self._img_sm = gtk.image_new_from_stock('gtk-execute', gtk.ICON_SIZE_MENU)
-    self._item1.set_image(self._img_sm)
-    self._item1.connect('activate', self.statomisura)
-    self._menu.append(self._item1)
+    self._item_openmeasure = gtk.ImageMenuItem('Stato misurazione')
+    icon = gtk.image_new_from_stock('gtk-execute', gtk.ICON_SIZE_MENU)
+    self._item_openmeasure.set_image(icon)
+    self._item_openmeasure.connect('activate', self.statomisura)
+    self._menu.append(self._item_openmeasure)
 
-    if (statoPopUp == 'ON'):
-      self._item2 = gtk.ImageMenuItem('Disabilita Pop-up')
+    if self._popupenabled:
+      self._item_togglepopup = gtk.ImageMenuItem('Disabilita notifiche popup')
     else:
-      self._item2 = gtk.ImageMenuItem('Abilita Pop-up')
+      self._item_togglepopup = gtk.ImageMenuItem('Abilita notifiche popup')
 
-    self._img_sm = gtk.image_new_from_stock('gtk-dialog-warning', gtk.ICON_SIZE_MENU)
-    self._item2.set_image(self._img_sm)
-    self._item2.connect('activate', self._togglepopup)
-    self._menu.append(self._item2)
+    icon = gtk.image_new_from_stock('gtk-dialog-warning', gtk.ICON_SIZE_MENU)
+    self._item_togglepopup.set_image(icon)
+    self._item_togglepopup.connect('activate', self._togglepopup)
+    self._menu.append(self._item_togglepopup)
 
-    self._item3 = gtk.ImageMenuItem('Servizi online')
-    self._img_sm = gtk.image_new_from_stock('gtk-network', gtk.ICON_SIZE_MENU)
-    self._item3.set_image(self._img_sm)
-    self._item3.connect('activate', self._serviziOnline)
-    self._menu.append(self._item3)
+    self._item_onlineservices = gtk.ImageMenuItem('Servizi online')
+    icon = gtk.image_new_from_stock('gtk-network', gtk.ICON_SIZE_MENU)
+    self._item_onlineservices.set_image(icon)
+    self._item_onlineservices.connect('activate', self._serviziOnline)
+    self._menu.append(self._item_onlineservices)
 
-    self._item4 = gtk.ImageMenuItem('Info')
-    self._img_sm = gtk.image_new_from_stock('gtk-about', gtk.ICON_SIZE_MENU)
-    self._item4.set_image(self._img_sm)
-    self._item4.connect('activate', self._info)
-    self._menu.append(self._item4)
+    self._item_about = gtk.ImageMenuItem('Info')
+    icon = gtk.image_new_from_stock('gtk-about', gtk.ICON_SIZE_MENU)
+    self._item_about.set_image(icon)
+    self._item_about.connect('activate', self._about)
+    self._menu.append(self._item_about)
 
-    self._item5 = gtk.SeparatorMenuItem()
-    self._item5 = gtk.ImageMenuItem(stock_id=gtk.STOCK_QUIT)
-    self._item5.connect('activate', self._destroy)
-    self._menu.append(self._item5)
+    self._item_quit = gtk.SeparatorMenuItem()
+    self._item_quit = gtk.ImageMenuItem(stock_id=gtk.STOCK_QUIT)
+    self._item_quit.connect('activate', self._quit)
+    self._menu.append(self._item_quit)
 
   def main(self):
     gtk.gdk.threads_init()
@@ -355,6 +360,7 @@ if __name__ == '__main__':
   statoPopUp = 'ON' # per discriminare fra abilita e disabilita popup
   winAperta = False  # indica se è aperta o meno la finestra contenente l'andamento della misura
   infoAperta = False  # indica se è aperta o meno la finestra contenente le info su nemesys
+  notifier = NotificationStack(timeout=6)
   trayicon = TrayIcon()
   controller = _Controller(LISTENING_URL, trayicon)
   controller.start()
