@@ -26,15 +26,15 @@ class Status:
 
   def __init__(self, icon, message):
     if isinstance (icon, Status):
-      self._icon = icon._icon
+      self._trayicon = icon._trayicon
     else:
-      self._icon = icon
+      self._trayicon = icon
             
     self._message = message
 
   @property
   def icon(self):
-    path = paths.ICONS + paths.DIR_SEP + self._icon
+    path = paths.ICONS + paths.DIR_SEP + self._trayicon
     return path
 
   @property
@@ -53,7 +53,7 @@ class Status:
     status = xml.getElementsByTagName('status')[0]
         
     icon = xml.createElement('icon')
-    icon.appendChild(xml.createTextNode(self._icon.decode('utf8', 'replace')))
+    icon.appendChild(xml.createTextNode(self._trayicon.decode('utf8', 'replace')))
     status.appendChild(icon)
 
     message = xml.createElement('message')

@@ -48,7 +48,6 @@ CONF_LOG = _CONF_DIR + DIR_SEP + 'log.conf'
 CONF_MAIN = _CONF_DIR + DIR_SEP + 'client.conf'
 CONF_ERRORS = _CONF_DIR + DIR_SEP + 'errorcodes.conf'
 
-
 from logger import logging
 def check_paths():
 
