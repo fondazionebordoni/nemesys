@@ -75,8 +75,8 @@ class _Communicator(Thread):
 
 class _Sender(asyncore.dispatcher):
 
-  # def readable(self):
-  #    return False # don't have anything to read
+  def readable(self):
+    return False # don't have anything to read
 
   def writable(self):
     return len(self.buffer) > 0
@@ -87,11 +87,15 @@ class _Sender(asyncore.dispatcher):
     except UnicodeEncodeError:
       self.buffer = Status(status.ERROR, 'Errore di decodifica unicode').getxml()
 
-    self.handle_write()
+    try:
+      self.handle_write()
+    except Exception:
+      logger.debug('Impossibile inviare il messaggio di notifica.')
+      self.close()
 
-  def handle_read(self):
-    data = self.recv(2048)
-    logger.debug('Received: %s' % data)
+  # def handle_read(self):
+  #  data = self.recv(2048)
+  #  logger.debug('Received: %s' % data)
 
   def handle_write(self):
     logger.debug('Sending status "%s"' % self.buffer)
@@ -100,6 +104,9 @@ class _Sender(asyncore.dispatcher):
 
   def handle_close(self):
     self.close()
+
+  def handle_error(self):
+    self.handle_close()
 
 
 class _Channel(asyncore.dispatcher):
@@ -148,8 +155,7 @@ class Executer:
     self._local = local
     self._outbox = paths.OUTBOX
     self._sent = paths.SENT
-    self._communicator = _Communicator()
-    self._communicator.start()
+    self._communicator = None
 
   def test(self, taskfile=None):
 
@@ -172,6 +178,10 @@ class Executer:
   def loop(self):
     # signal.signal(signal.SIGALRM, runtimewarning)
     t = None
+
+    # Open socket for GUI dialog
+    self._communicator = _Communicator()
+    self._communicator.start()
 
     while True:
 
@@ -205,6 +215,9 @@ class Executer:
           logger.debug('Impostazione di un nuovo task tra: %s secondi (%s)' % (alarm, delta))
           t = Timer(alarm, self._dotask, [task])
           t.start()
+      else:
+        self._sendstatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure.'))
+
 
       # Aspetta 20 secondi
       sleep(float(self._polling))
@@ -217,18 +230,19 @@ class Executer:
     clientid = self._client.id
     certificate = self._client.isp.certificate
 
-    # Se non c'è il certificato apri HTTP semplice
-    if path.exists(certificate):
-      connection = HTTPSConnection(url.hostname, key_file=certificate, cert_file=certificate, timeout=self._httptimeout)
+    if (url.scheme != 'https'):
+      connection = HTTPConnection(host=url.hostname, timeout=self._httptimeout)
+    elif (certificate != None and path.exists(certificate)):
+      connection = HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=self._httptimeout)
     else:
-      connection = HTTPConnection(url.hostname, timeout=self._httptimeout)
+      connection = HTTPSConnection(host=url.hostname, timeout=self._httptimeout)
 
     try:
       connection.request('GET', '%s?clientid=%s' % (url.path, clientid))
 
     except SSLError as e:
       logger.error('Impossibile scaricare lo scheduling. Errore SSL: %s.' % e)
-      self._communicator.sendstatus(Status(status.ERROR, 'Impossibile dialogare con lo scheduler delle misure.'))
+      self._sendstatus(Status(status.ERROR, 'Impossibile dialogare con lo scheduler delle misure.'))
       return None
 
     except socket.gaierror as e:
@@ -267,7 +281,7 @@ class Executer:
     # TODO Inserire il timeout complessivo di task
     # TODO Inserire controllo lungo per lo stato del PC dell'utente
 
-    self._communicator.sendstatus(status.PLAY)
+    self._sendstatus(status.PLAY)
 
     t = Tester(host=task.server, timeout=self._testtimeout,
                username=self._client.username, password=self._client.password)
@@ -329,7 +343,7 @@ class Executer:
       logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
       pass
 
-    self._communicator.sendstatus(status.READY)
+    self._sendstatus(status.READY)
     bandwidth.release() # Rilascia la risorsa condivisa: la banda
 
   def _upload(self, file):
@@ -363,6 +377,12 @@ class Executer:
 
     except Exception as e:
       logger.error('Errore durante il parsing della risposta del repository: %s' % e)
+
+  def _sendstatus(self, status):
+
+    if (self._communicator != None):
+      self._communicator.sendstatus(status)
+
 
   def _movefiles(self, filename):
 
@@ -491,7 +511,7 @@ def parse():
                     help='upload URL for deliver measures\' files [%s]' % value)
 
   option = 'scheduler'
-  value = 'https://scheduling.agcom244.fub.it/'
+  value = 'https://scheduler.agcom244.fub.it/'
   try:
     value = config.get(section, option)
   except NoOptionError:
@@ -537,6 +557,7 @@ def parse():
   try:
     value = config.get(section, option)
   except NoOptionError:
+    logger.warning('Nessuna specifica geocode inserita.')
     pass
   parser.add_option('-g', '--geocode', dest=option, default=value,
                     help='geocode identification string [%s]' % value)
@@ -612,6 +633,7 @@ def parse():
   try:
     value = config.get(section, option)
   except NoOptionError:
+    logger.warning('Nessun certificato client specificato.')
     pass
   parser.add_option('--certificate', dest=option, default=value,
                     help='client certificate for schedule downloading and measure file signing [%s]' % value)
@@ -629,9 +651,6 @@ def parse():
     parser.check_required('--clientid')
     config.set('client', 'clientid', options.clientid)
 
-    parser.check_required('--geocode')
-    config.set('client', 'geocode', options.geocode)
-
     parser.check_required('--up')
     config.set('profile', 'bandwidthup', options.bandwidthup)
 
@@ -641,13 +660,8 @@ def parse():
     parser.check_required('--profileid')
     config.set('profile', 'profileid', options.profileid)
 
-    if (options.ispid == None):
-      options.ispid = options.clientid[0:6]
-      config.set('isp', 'ispid', options.ispid)
-
-    if (options.certificate == None):
-      options.certificate = options.clientid[0:6] + '.pem'
-      config.set('isp', 'certificate', options.certificate)
+    parser.check_required('--ispid')
+    config.set('isp', 'ispid', options.ispid)
 
   finally:
     with open(paths.CONF_MAIN, 'w') as file:
