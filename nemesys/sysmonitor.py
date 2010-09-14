@@ -64,7 +64,6 @@ def checkall():
     
 
   values = getvalues(_sysdata, tag_results)
-  
   threshold = getvalues(_thdata, tag_threshold)
   
   #logica di controllo del sistema
@@ -105,8 +104,8 @@ def mediumcheck():
 #    logger.debug('Errore durante il monitorig del sistema (mediumcheck): %s' % e)
 
   #parsing xml
-  values = getvalues(1)  
-  threshold = getvalues (2)
+  values = getvalues(_sysdata, tag_results)
+  threshold = getvalues(_thdata, tag_threshold)
 
   #logica di controllo del sistema
   
@@ -139,8 +138,8 @@ def fastcheck():
 #    logger.debug('Errore durante il monitorig del sistema (fastcheck): %s' % e)
 
   #parsing xml
-  values = getvalues(1)  
-  threshold = getvalues (2)
+  values = getvalues(_sysdata, tag_results)
+  threshold = getvalues(_thdata, tag_threshold)
 
   #logica di controllo del sistema
   #logica di controllo con soglie lette da xml
@@ -160,15 +159,7 @@ def fastcheck():
 
 #creazione dizionario con risposte del SystemProfiler
 def getvalues(data, tag):
-  '''
-  #parsing xml
-  if i == 1:
-    data = open('./result1.xml')
-    tag_primary = tag_results
-  if i == 2: 
-    data = open('./threshold.xml')
-    tag_primary = tag_threshold
-  '''
+  
   try:
     xml = parse(data)
   except ExpatError as e:
@@ -207,8 +198,7 @@ def connectionCheck(connActive, connList):
   
   return True
 
-
-  
+ 
 
 if __name__ == '__main__':
  import sysmonitor
