@@ -19,6 +19,8 @@ from isp import Isp
 from profile import Profile
 
 class Client:
+  
+  # TODO Spostare il certificato dall'ISP al Client 
 
   def __init__(self, id, profile, isp, geocode, username='anonymous', password='anonymous@'):
     self._id = id
