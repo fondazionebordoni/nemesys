@@ -47,6 +47,8 @@ _CONF_DIR = _APP_PATH + DIR_SEP + 'config'
 CONF_LOG = _CONF_DIR + DIR_SEP + 'log.conf'
 CONF_MAIN = _CONF_DIR + DIR_SEP + 'client.conf'
 CONF_ERRORS = _CONF_DIR + DIR_SEP + 'errorcodes.conf'
+THRESHOLD = _CONF_DIR + DIR_SEP + 'threshold.xml'
+RESULTS = _CONF_DIR + DIR_SEP + 'result1.xml'
 
 from logger import logging
 def check_paths():
