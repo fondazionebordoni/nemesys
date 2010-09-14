@@ -50,7 +50,8 @@ tag_conn = 'activeConnections'
 
 msg = '\nImpossibile effettuare la misura a causa delle condizioni non ideali del sistema!'
 
-_sysdata = open('./result1.xml') #andrà sostituita con dati passati da sysProfiler
+_sysdata = open(paths.RESULTS) #andrà sostituita con dati passati da sysProfiler
+
 _thdata = open(paths.THRESHOLD)
 
 def checkall():
@@ -62,7 +63,6 @@ def checkall():
   #except Exception as e:
   #  logger.debug('Errore durante il monitorig del sistema (checkall): %s' % e)
     
-
   values = getvalues(_sysdata, tag_results)
   threshold = getvalues(_thdata, tag_threshold)
   
@@ -92,8 +92,7 @@ def checkall():
 
     
   return True
-
-  
+ 
 
 def mediumcheck():
 
