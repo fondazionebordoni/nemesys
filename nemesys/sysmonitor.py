@@ -47,9 +47,9 @@ tag_proc = 'processList'
 th_host = 2
 th_avMem = 134217728
 th_memLoad = 80
-th_wdisk = 20971520
+th_wdisk = 104857600
 th_cpu = 60
-th_rdisk = 20971520
+th_rdisk = 104857600
 bad_conn = [80, 8080, 110, 25]
 bad_proc = ['amule', 'bittorrent']
 
