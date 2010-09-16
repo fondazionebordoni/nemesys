@@ -39,6 +39,7 @@ import re
 import shutil
 import socket
 import status
+import sysmonitor
 from status import Status
 from tester import Tester
 from threading import Semaphore
@@ -284,46 +285,58 @@ class Executer:
 
     # Area riservata per l'esecuzione dei test
     # --------------------------------------------------------------------------
-    # logger.debug(task)
 
     # TODO Inserire il timeout complessivo di task
-    # TODO Inserire controllo lungo per lo stato del PC dell'utente
-
-    self._updatestatus(status.PLAY)
-
-    t = Tester(host=task.server, timeout=self._testtimeout,
-               username=self._client.username, password=self._client.password)
-
-    # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
-    id = datetime.now().strftime('%y%m%d%H%M')
-    m = Measure(id, task.server, self._client)
-
-    # Set task timeout alarm
-    # signal.alarm(self._tasktimeout)
 
     try:
+      if not sysmonitor.checkall():
+        raise Exception('Condizioni per effettuare la misura non verificate.') 
+  
+      self._updatestatus(status.PLAY)
+  
+      t = Tester(host=task.server, timeout=self._testtimeout,
+                 username=self._client.username, password=self._client.password)
+  
+      # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
+      id = datetime.now().strftime('%y%m%d%H%M')
+      m = Measure(id, task.server, self._client)
+  
+      # Set task timeout alarm
+      # signal.alarm(self._tasktimeout)
+
       # Testa gli ftp down
       for i in range(1, task.download + 1):
-        # TODO Inserire controllo breve per lo stato del PC dell'utente, nel caso sollevare un'eccezione
+        
+        if not sysmonitor.fastcheck():
+          raise Exception('Condizioni per effettuare la misura non verificate.') 
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
         test = t.testftpdown(task.ftpdownpath)
         logger.debug('Download result: %.3f' % test.value)
         m.savetest(test)
 
-      # TODO Inserire controllo medio per lo stato del PC dell'utente, nel caso sollevare un'eccezione
+      if not sysmonitor.mediumcheck():
+        raise Exception('Condizioni per effettuare la misura non verificate.') 
 
       # Testa gli ftp down
       for i in range(1, task.upload + 1):
-        # TODO Inserire controllo breve per lo stato del PC dell'utente, nel caso sollevare un'eccezione
+
+        if not sysmonitor.fastcheck():
+          raise Exception('Condizioni per effettuare la misura non verificate.') 
+
         logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
         test = t.testftpup(self._client.profile.upload * task.multiplier * 1024 / 8, task.ftpuppath)
         logger.debug('Upload result: %.3f' % test.value)
         m.savetest(test)
 
-      # TODO Inserire controllo medio per lo stato del PC dell'utente, nel caso sollevare un'eccezione
+      if not sysmonitor.mediumcheck():
+        raise Exception('Condizioni per effettuare la misura non verificate.') 
 
       # Testa i ping
       for i in range(1, task.ping + 1):
+        
+        if not sysmonitor.fastcheck():
+          raise Exception('Condizioni per effettuare la misura non verificate.') 
+
         logger.debug('Starting ping test [%d]' % i)
         test = t.testping()
         logger.debug('Ping result: %.3f' % test.value)
@@ -340,19 +353,20 @@ class Executer:
       f.write(str(m))
       f.close()
 
-      # TODO Valutare se lasciare questa chiamata all'interno della regione critica per la banda
       if (not self._local):
         self._upload(f)
 
     except RuntimeWarning:
+      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta per timeout.'))
       logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
 
     except Exception as e:
+      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta: %s' % e))
       logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
-      pass
 
-    self._updatestatus(status.READY)
-    bandwidth.release() # Rilascia la risorsa condivisa: la banda
+    finally:
+      self._updatestatus(status.READY)
+      bandwidth.release() # Rilascia la risorsa condivisa: la banda
 
   def _upload(self, file):
     '''

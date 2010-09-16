@@ -48,13 +48,13 @@ tag_hosts = 'hostNumber'
 tag_task = 'taskList'
 tag_conn = 'activeConnections'
 
-msg = '\nImpossibile effettuare la misura a causa delle condizioni non ideali del sistema!'
-
-_sysdata = open(paths.RESULTS) #andrà sostituita con dati passati da sysProfiler
-
-_thdata = open(paths.THRESHOLD)
+msg = ''#Impossibile effettuare la misura a causa delle condizioni non ideali del sistema!'
 
 def checkall():
+  
+  _sysdata = open(paths.RESULTS) #andrà sostituita con dati passati da sysProfiler
+  _thdata = open(paths.THRESHOLD)
+
   #d = {tag_vers, tag_avMem, tag_wireless, tag_fw, tag_memLoad, tag_ip, tag_sys, tag_wdisk, tag_cpu, tag_mac, tag_rdisk, tag_release, tag_cores, tag_arch, tag_proc, tag_hosts, tag_task, tag_conn}
 
   #try 
@@ -70,28 +70,31 @@ def checkall():
   connectionCheck(values[tag_conn], threshold[tag_conn])
 
   if values[tag_hosts] != 1:
-    raise Exception, 'Presenza altri host in rete!' + str(msg)
+    raise Exception, 'Presenza altri host in rete! %s' % msg
   if values[tag_fw] != False:
-    raise Exception, 'Firewall attivo!' + str(msg)
+    raise Exception, 'Firewall attivo! %s' % msg
   if values[tag_wireless] != False:
-    raise Exception, 'Wireless LAN attiva!' + str(msg)
+    raise Exception, 'Wireless LAN attiva! %s' % msg
 
   #logica di controllo con soglie lette da xml
 
   if values[tag_avMem] > threshold[tag_avMem]:
-    raise Exception, 'Memoria non sufficiente!' + str(msg)
+    raise Exception, 'Memoria non sufficiente! %s' % msg
   if values[tag_memLoad] > threshold[tag_memLoad]:
-    raise Exception, 'Memoria non sufficiente!' + str(msg)
+    raise Exception, 'Memoria non sufficiente! %s' % msg
   if values[tag_cpu] > threshold[tag_cpu]:
-    raise Exception, 'CPU occupata!' + str(msg)
+    raise Exception, 'CPU occupata! %s' % msg
   if values[tag_wdisk] > threshold[tag_wdisk]:
-    raise Exception, 'Eccessiva attività in scrittura del disco!' + str(msg)
+    raise Exception, 'Eccessiva attività in scrittura del disco! %s' % msg
   if values[tag_rdisk] > threshold[tag_rdisk]:
-    raise Exception, 'Eccessiva attività in lettura del disco!' + str(msg)
+    raise Exception, 'Eccessiva attività in lettura del disco! %s' % msg
 
   return True
 
 def mediumcheck():
+
+  _sysdata = open(paths.RESULTS) #andrà sostituita con dati passati da sysProfiler
+  _thdata = open(paths.THRESHOLD)
 
 #  d = {tag_avMem, tag_wireless, tag_fw, tag_memLoad, tag_cpu, tag_hosts, tag_task, tag_conn}
 #  try 
@@ -108,22 +111,29 @@ def mediumcheck():
   connectionCheck(values[tag_conn], threshold[tag_conn])
 
   if values[tag_fw] != False:
-    raise Exception, 'Firewall attivo!' + str(msg)
+    raise Exception, 'Firewall attivo! %s' % msg
   if values[tag_wireless] != False:
-    raise Exception, 'Wireless LAN attiva!' + str(msg)
+    raise Exception, 'Wireless LAN attiva! %s' % msg
 
   #logica di controllo con soglie lette da xml
 
   if values[tag_avMem] > threshold[tag_avMem]:
-    raise Exception, 'Memoria non sufficiente!' + str(msg)
+    raise Exception, 'Memoria non sufficiente! %s' % msg
   if values[tag_memLoad] > threshold[tag_memLoad]:
-    raise Exception, 'Memoria non sufficiente!' + str(msg)
+    raise Exception, 'Memoria non sufficiente! %s' % msg
   if values[tag_cpu] > threshold[tag_cpu]:
-    raise Exception, 'CPU occupata!' + str(msg)
+    raise Exception, 'CPU occupata! %s' % msg
 
   return True
 
 def fastcheck():
+  '''
+  Esegue un controllo veloce dello stato del pc dell'utente.
+  Ritorna True se le condizioni per effettuare le misure sono corrette,
+  altrimenti solleva un'eccezione
+  '''
+  _sysdata = open(paths.RESULTS) #andrà sostituita con dati passati da sysProfiler
+  _thdata = open(paths.THRESHOLD)
 
 #  d = {tag_memLoad, tag_cpu, tag_task, tag_conn}
 #  try 
@@ -141,11 +151,11 @@ def fastcheck():
   connectionCheck(values[tag_conn], threshold[tag_conn])
 
   if values[tag_avMem] > threshold[tag_avMem]:
-    raise Exception, 'Memoria non sufficiente!' + str(msg)
+    raise Exception, 'Memoria non sufficiente! %s' % msg
   if values[tag_memLoad] > threshold[tag_memLoad]:
-    raise Exception, 'Memoria non sufficiente!' + str(msg)
+    raise Exception, 'Memoria non sufficiente! %s' % msg
   if values[tag_cpu] > threshold[tag_cpu]:
-    raise Exception, 'CPU occupata!' + str(msg)
+    raise Exception, 'CPU occupata! %s' % msg
 
   return True
 
@@ -187,7 +197,7 @@ def connectionCheck(connActive, connList):
 
   for i in connList.split(';'):
     if i in c:
-      raise Exception, 'Sono attive connessioni non desiderate: ' + str(msg)
+      raise Exception, 'Sono attive connessioni non desiderate. %s' % msg
 
   return True
 
