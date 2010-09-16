@@ -48,8 +48,7 @@ class Status:
     return self.getxml()
     
   def getxml(self):
-    start = '''<status xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'/>'''
-    xml = parseString(start)
+    xml = parseString('<status />')
     status = xml.getElementsByTagName('status')[0]
         
     icon = xml.createElement('icon')
@@ -62,10 +61,11 @@ class Status:
         
     return xml.toxml()
 
+# TODO Gestire TUTTI i caratteri utf8 !!!
 ERROR = Status('nemesys_red.png', 'Impossibile contattare il demone che effettua le misure.')
-PAUSE = Status('nemesys_white.png', 'Il server è in pausa. Non verranno effettuate misure nella prossima ora.')
+PAUSE = Status('nemesys_white.png', 'Nemesys non deve effettuare misure nella prossima ora.')
 PLAY = Status('nemesys_green.png', 'Nemesys sta effettuando una misura...')
 FINISHED = Status('nemesys_cyan.png', 'Nemesys ha terminato le misurazioni')
-READY = Status('nemesys_amber.png', 'Nemesys effettuerà una misura nella prossima ora')
+READY = Status('nemesys_amber.png', 'Nemesys sta per effettuare una misura')
 LOGO = Status('nemesys_logo.png', 'Nemesys (Network Measurement System)')
 
