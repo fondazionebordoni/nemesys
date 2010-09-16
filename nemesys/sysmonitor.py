@@ -42,7 +42,8 @@ tag_task = 'taskList'
 tag_conn = 'activeConnections'
 tag_proc = 'processList'
 
-#soglie di sistema
+# Soglie di sistema
+# ------------------------------------------------------------------------------
 
 th_host = 1
 th_avMem = 134217728
@@ -55,8 +56,6 @@ bad_proc = ['processo1', 'processo2', 'processo3']
 
 logger = logging.getLogger()
 
-# TODO modificare specifiche di valori booleani in stringa di SystemProfiler: 1 = True
-
 def getstatus(d):
 
   data = ''
@@ -65,7 +64,7 @@ def getstatus(d):
     from SystemProfiler import systemProfiler
     data = systemProfiler(d)
   except Exception:
-    data = open(paths.RESULTS).read() #andrà sostituita con dati passati da sysProfiler
+    data = open(paths.RESULTS).read()
 
   return getvalues(data, tag_results)
 
@@ -75,9 +74,9 @@ def checkall():
   values = getstatus(d)
   
   # Logica di controllo del sistema
+  # ----------------------------------------------------------------------------
 
   connectionCheck(values[tag_conn], bad_conn)
-  
   taskCheck(values[tag_proc], bad_proc)
 
   if int(values[tag_hosts]) > int(th_host):
@@ -88,6 +87,7 @@ def checkall():
     raise Exception('Wireless LAN attiva.')
 
   # Logica di controllo con soglie lette da xml
+  # ----------------------------------------------------------------------------
 
   if eval(values[tag_avMem]) < th_avMem:
     raise Exception('Memoria non sufficiente.')
@@ -96,9 +96,9 @@ def checkall():
   if eval(values[tag_cpu]) > th_cpu:
     raise Exception('CPU occupata.')
   if eval(values[tag_wdisk]) > th_wdisk:
-    raise Exception('Eccessiva carico in scrittura del disco.')
+    raise Exception('Eccessivo carico in scrittura del disco.')
   if eval(values[tag_rdisk]) > th_rdisk:
-    raise Exception('Eccessiva carico in lettura del disco.')
+    raise Exception('Eccessivo carico in lettura del disco.')
 
   return True
 
@@ -107,10 +107,10 @@ def mediumcheck():
   d = {tag_avMem:'', tag_wireless:'',  tag_fw:'',  tag_memLoad:'', tag_cpu:'', tag_hosts:'',  tag_task:'',  tag_conn:''}
   values = getstatus(d)
   
-  #logica di controllo del sistema
+  # Logica di controllo del sistema
+  # ----------------------------------------------------------------------------
 
   connectionCheck(values[tag_conn], bad_conn)
-
   taskCheck(values[tag_proc], bad_proc)
 
   if bool(eval(values[tag_fw])):
@@ -119,6 +119,7 @@ def mediumcheck():
     raise Exception('Wireless LAN attiva.')
 
   # Logica di controllo con soglie lette da xml
+  # ----------------------------------------------------------------------------
 
   if eval(values[tag_avMem]) < th_avMem:
     raise Exception('Memoria non sufficiente.')
@@ -136,14 +137,13 @@ def fastcheck():
   altrimenti solleva un'eccezione
   '''
 
-#  d = {tag_memLoad, tag_cpu, tag_task, tag_conn}
   d = {tag_memLoad:'', tag_cpu:'', tag_task:'', tag_conn:''}
   values = getstatus(d)
   
-  #logica di controllo del sistema
+  # Logica di controllo del sistema
+  # ----------------------------------------------------------------------------
 
   connectionCheck(values[tag_conn], bad_conn)
-
   taskCheck(values[tag_proc], bad_proc)
 
   if eval(values[tag_avMem]) < th_avMem:
@@ -155,16 +155,14 @@ def fastcheck():
   
   return True
 
-
 def getMac():
   '''
   restituisce indirizzo MAC del computer
   '''
   d = {tag_mac:''}
   values = getstatus(d)
-  
-  return values[tag_mac]
 
+  return values[tag_mac]
 
 def getSys():
   '''
@@ -179,7 +177,6 @@ def getSys():
     r.append(values[i])
   
   return r
-
 
 def getvalues(string, tag):
   '''
