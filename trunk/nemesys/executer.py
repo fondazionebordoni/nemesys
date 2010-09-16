@@ -48,11 +48,15 @@ from threading import Timer
 from urlparse import urlparse
 from xmlutils import getvalues
 from xmlutils import getxml
+from progress import Progress
 from xmlutils import xml2task
 
 bandwidth = Semaphore()
 logger = logging.getLogger()
 current_status = status.LOGO
+
+# Esegui sempre le misure anche nell'orario già coperto
+MULTIPLY_HOURS = True 
 
 class _Communicator(Thread):
 
@@ -161,6 +165,7 @@ class Executer:
     self._sent = paths.SENT
     current_status = status.LOGO
     self._communicator = None
+    self._progress = None
 
   def test(self, taskfile=None):
 
@@ -188,11 +193,9 @@ class Executer:
     self._communicator = _Communicator()
     self._communicator.start()
 
-    # self._progress = Progress()
+    self._progress = Progress(create=True)
 
-    while True:
-
-      # TODO Controllare se occorre ancora effettuare le misure
+    while self._progress.onair():
 
       bandwidth.acquire() # Richiedi accesso esclusivo alla banda
       task = self._download()
@@ -226,6 +229,10 @@ class Executer:
         self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure.'))
 
       # Aspetta 20 secondi
+      sleep(float(self._polling))
+      
+    while True:
+      self._updatestatus(status.FINISHED)
       sleep(float(self._polling))
 
   # Scarica il prossimo task dallo scheduler
@@ -286,11 +293,18 @@ class Executer:
 
     # TODO Inserire il timeout complessivo di task
 
+    hour = datetime.now().hour
+    if self._progress.isdone(hour):
+      logger.debug('La misura delle %d è già stata eseguita' % hour)
+      if not MULTIPLY_HOURS:
+        bandwidth.release() 
+        return
+      
     try:
       if not sysmonitor.checkall():
         raise Exception('Condizioni per effettuare la misura non verificate.')
       
-      logger.debug('Passato check di sysmonitor.')
+      self._updatestatus(status.PLAY)
   
       t = Tester(host=task.server, timeout=self._testtimeout,
                  username=self._client.username, password=self._client.password)
@@ -301,7 +315,6 @@ class Executer:
   
       # Set task timeout alarm
       # signal.alarm(self._tasktimeout)
-      self._updatestatus(status.PLAY)
 
       # Testa gli ftp down
       for i in range(1, task.download + 1):
@@ -313,8 +326,8 @@ class Executer:
         logger.debug('Download result: %.3f' % test.value)
         m.savetest(test)
 
-      if not sysmonitor.mediumcheck():
-        raise Exception('Condizioni per effettuare la misura non verificate.') 
+      #if not sysmonitor.mediumcheck():
+      #  raise Exception('Condizioni per effettuare la misura non verificate.') 
 
       # Testa gli ftp down
       for i in range(1, task.upload + 1):
@@ -327,8 +340,8 @@ class Executer:
         logger.debug('Upload result: %.3f' % test.value)
         m.savetest(test)
 
-      if not sysmonitor.mediumcheck():
-        raise Exception('Condizioni per effettuare la misura non verificate.') 
+      #if not sysmonitor.mediumcheck():
+      #  raise Exception('Condizioni per effettuare la misura non verificate.') 
 
       # Testa i ping
       for i in range(1, task.ping + 1):
@@ -354,18 +367,18 @@ class Executer:
 
       if (not self._local):
         self._upload(f)
+      # TODO Spostare questa chiamata insiame alla chiamata qui sopra
+      self._progress.putstamp()
 
       self._updatestatus(status.READY)
 
     except RuntimeWarning:
       self._updatestatus(status.Status(status.ERROR, 'Misura interrotta per timeout.'))
       logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
-      sleep(1)
 
     except Exception as e:
       self._updatestatus(status.Status(status.ERROR, 'Misura interrotta: %s' % e))
       logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
-      sleep(1)
 
     bandwidth.release() # Rilascia la risorsa condivisa: la banda
 
@@ -492,10 +505,23 @@ def parse():
   parser = OptionParser(version='1.0.dev250', description='')
   parser.add_option('-T', '--test', dest='test', action='store_true',
                     help='test client functionality by executing a single task')
-  parser.add_option('-L', '--local', dest='local', action='store_true',
-                    help='perform tests without sending measure files to repository')
   parser.add_option('--task', dest='task',
                     help='path of an xml file with a task to execute (valid only if -T option is enabled)')
+
+  # System options
+  # --------------------------------------------------------------------------
+  section = 'options'
+  if (not config.has_section(section)):
+    config.add_section(section)
+
+  option = 'local'
+  value = False
+  try:
+    value = config.getboolean(section, option)
+  except NoOptionError:
+    config.set(section, option, value)
+  parser.add_option('-L', '--local', dest='local', action='store_true', default=value,
+                    help='perform tests without sending measure files to repository')
 
   # System options
   # --------------------------------------------------------------------------

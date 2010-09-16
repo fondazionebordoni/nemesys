@@ -40,7 +40,6 @@ else:
 ICONS = _APP_PATH + DIR_SEP + 'icons'
 OUTBOX = _APP_PATH + DIR_SEP + 'outbox'
 SENT = _APP_PATH + DIR_SEP + 'sent'
-MEASURE_STATUS = _APP_PATH + DIR_SEP + 'measure.xml'
 
 # Configuration dirs and files
 _CONF_DIR = _APP_PATH + DIR_SEP + 'config'
@@ -49,6 +48,7 @@ CONF_MAIN = _CONF_DIR + DIR_SEP + 'client.conf'
 CONF_ERRORS = _CONF_DIR + DIR_SEP + 'errorcodes.conf'
 THRESHOLD = _CONF_DIR + DIR_SEP + 'threshold.xml'
 RESULTS = _CONF_DIR + DIR_SEP + 'result1.xml'
+MEASURE_STATUS = _CONF_DIR + DIR_SEP + 'progress.xml'
 
 from logger import logging
 def check_paths():
