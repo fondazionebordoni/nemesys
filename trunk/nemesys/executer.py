@@ -54,6 +54,7 @@ from xmlutils import xml2task
 bandwidth = Semaphore()
 logger = logging.getLogger()
 current_status = status.LOGO
+VERSION = '1.1'
 
 # Esegui sempre le misure anche nell'orario già coperto
 MULTIPLY_HOURS = True 
@@ -251,8 +252,7 @@ class Executer:
       connection = HTTPSConnection(host=url.hostname, timeout=self._httptimeout)
 
     try:
-      # TODO Inserire invio della versione del software
-      connection.request('GET', '%s?clientid=%s' % (url.path, clientid))
+      connection.request('GET', '%s?clientid=%s&version=%s' % (url.path, clientid, VERSION))
 
     except SSLError as e:
       logger.error('Impossibile scaricare lo scheduling. Errore SSL: %s.' % e)
@@ -326,8 +326,8 @@ class Executer:
         logger.debug('Download result: %.3f' % test.value)
         m.savetest(test)
 
-      #if not sysmonitor.mediumcheck():
-      #  raise Exception('Condizioni per effettuare la misura non verificate.') 
+      if not sysmonitor.mediumcheck():
+        raise Exception('Condizioni per effettuare la misura non verificate.') 
 
       # Testa gli ftp down
       for i in range(1, task.upload + 1):
@@ -367,7 +367,7 @@ class Executer:
 
       if (not self._local):
         self._upload(f)
-      # TODO Spostare questa chiamata insiame alla chiamata qui sopra
+      # TODO Spostare questa chiamata nella funzione qui sopra
       self._progress.putstamp()
 
       self._updatestatus(status.READY)
@@ -406,7 +406,7 @@ class Executer:
         # Se tutto è andato bene spostare tutti i file che iniziano per file.name nella cartella "sent"
         if (code == 0):
           self._movefiles(file.name)
-          # TODO Inserire timbro su file paths.MEASURE_STATUS
+          # TODO Inserire qui timbro su file paths.MEASURE_STATUS
 
     except TypeError as e:
       logger.error('Errore durante il parsing della risposta del repository: %s' % e)
@@ -501,8 +501,7 @@ def parse():
     logger.debug('Trovata configurazione in %s' % paths.CONF_MAIN)
     config.read(paths.CONF_MAIN)
 
-  # TODO inserire automaticamente il numero di revisione
-  parser = OptionParser(version='1.0.dev250', description='')
+  parser = OptionParser(version=VERSION, description='')
   parser.add_option('-T', '--test', dest='test', action='store_true',
                     help='test client functionality by executing a single task')
   parser.add_option('--task', dest='task',
