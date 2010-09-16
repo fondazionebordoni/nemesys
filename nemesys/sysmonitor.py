@@ -38,21 +38,20 @@ tag_cores = 'cores'
 tag_arch = 'arch'
 tag_proc = 'processor'
 tag_hosts = 'hostNumber'
-tag_task = 'taskList'
 tag_conn = 'activeConnections'
 tag_proc = 'processList'
 
 # Soglie di sistema
 # ------------------------------------------------------------------------------
 
-th_host = 1
+th_host = 2
 th_avMem = 134217728
-th_memLoad = 70
+th_memLoad = 80
 th_wdisk = 20971520
 th_cpu = 60
 th_rdisk = 20971520
-bad_conn = [8000000, 808000000, 110000000]
-bad_proc = ['processo1', 'processo2', 'processo3']
+bad_conn = [80, 8080, 110, 25]
+bad_proc = ['amule', 'bittorrent']
 
 logger = logging.getLogger()
 
@@ -68,66 +67,46 @@ def getstatus(d):
 
   return getvalues(data, tag_results)
 
-def checkall():
-
-  d = {tag_vers:'', tag_avMem:'', tag_wireless:'', tag_fw:'', tag_memLoad:'', tag_ip:'', tag_sys:'', tag_wdisk:'', tag_cpu:'', tag_mac:'', tag_rdisk:'', tag_release:'', tag_cores:'', tag_arch:'', tag_proc:'', tag_hosts:'', tag_task:'', tag_conn:''}
+def connectionCheck():
+  '''
+  Ettettua il controllo sulle connessioni attive
+  '''
+  d = {tag_conn:''}
   values = getstatus(d)
+  connActive = values[tag_conn]
   
-  # Logica di controllo del sistema
-  # ----------------------------------------------------------------------------
+  if connActive == None or len(connActive) <= 0:
+    return True
 
-  connectionCheck(values[tag_conn], bad_conn)
-  taskCheck(values[tag_proc], bad_proc)
-
-  if int(values[tag_hosts]) > int(th_host):
-    raise Exception('Presenza altri host in rete.')
-  if bool(eval(values[tag_fw])):
-    raise Exception('Firewall attivo.')
-  if bool(eval(values[tag_wireless])):
-    raise Exception('Wireless LAN attiva.')
-
-  # Logica di controllo con soglie lette da xml
-  # ----------------------------------------------------------------------------
-
-  if eval(values[tag_avMem]) < th_avMem:
-    raise Exception('Memoria non sufficiente.')
-  if eval(values[tag_memLoad]) > th_memLoad:
-    raise Exception('Memoria non sufficiente.')
-  if eval(values[tag_cpu]) > th_cpu:
-    raise Exception('CPU occupata.')
-  if eval(values[tag_wdisk]) > th_wdisk:
-    raise Exception('Eccessivo carico in scrittura del disco.')
-  if eval(values[tag_rdisk]) > th_rdisk:
-    raise Exception('Eccessivo carico in lettura del disco.')
+  c = []
+  for j in connActive.split(';'):
+    c.append(int(j.split(':')[1]))
+  
+  for i in bad_conn:
+    if i in c:
+      raise Exception, 'Sono attive connessioni non desiderate.'
 
   return True
 
-def mediumcheck():
-
-  d = {tag_avMem:'', tag_wireless:'',  tag_fw:'',  tag_memLoad:'', tag_cpu:'', tag_hosts:'',  tag_task:'',  tag_conn:''}
+def taskCheck():
+  '''
+  Ettettua il controllo sui processi
+  '''
+  d = {tag_proc:''}
   values = getstatus(d)
+  taskActive = values[tag_proc]
   
-  # Logica di controllo del sistema
-  # ----------------------------------------------------------------------------
+  if taskActive == None or len(taskActive) <= 0:
+    return True
 
-  connectionCheck(values[tag_conn], bad_conn)
-  taskCheck(values[tag_proc], bad_proc)
+  t = []
+  for j in taskActive.split(';'):
+    t.append(str(j))
 
-  if bool(eval(values[tag_fw])):
-    raise Exception('Firewall attivo.')
-  if bool(eval(values[tag_wireless])):
-    raise Exception('Wireless LAN attiva.')
+  for i in bad_proc:
+    if i in t:
+      raise Exception, 'Sono attivi processi non desiderati.'
 
-  # Logica di controllo con soglie lette da xml
-  # ----------------------------------------------------------------------------
-
-  if eval(values[tag_avMem]) < th_avMem:
-    raise Exception('Memoria non sufficiente.')
-  if eval(values[tag_memLoad]) > th_memLoad:
-    raise Exception('Memoria non sufficiente.')
-  if eval(values[tag_cpu]) > th_cpu:
-    raise Exception('CPU occupata.')
-  
   return True
 
 def fastcheck():
@@ -137,14 +116,11 @@ def fastcheck():
   altrimenti solleva un'eccezione
   '''
 
-  d = {tag_memLoad:'', tag_cpu:'', tag_task:'', tag_conn:''}
-  values = getstatus(d)
-  
-  # Logica di controllo del sistema
-  # ----------------------------------------------------------------------------
+  connectionCheck()
+  taskCheck()
 
-  connectionCheck(values[tag_conn], bad_conn)
-  taskCheck(values[tag_proc], bad_proc)
+  d = {tag_avMem:'', tag_memLoad:'', tag_cpu:''}
+  values = getstatus(d)
 
   if eval(values[tag_avMem]) < th_avMem:
     raise Exception('Memoria non sufficiente.')
@@ -153,6 +129,36 @@ def fastcheck():
   if eval(values[tag_cpu]) > th_cpu:
     raise Exception('CPU occupata.')
   
+  return True
+
+def mediumcheck():
+  
+  fastcheck()
+
+  d = {tag_wireless:'',  tag_fw:''}
+  values = getstatus(d)
+
+  if bool(eval(values[tag_fw])):
+    raise Exception('Firewall attivo.')
+  if bool(eval(values[tag_wireless])):
+    raise Exception('Wireless LAN attiva.')
+  
+  return True
+
+def checkall():
+
+  mediumcheck()
+  
+  d = {tag_wdisk:'', tag_rdisk:'', tag_hosts:''}
+  values = getstatus(d)
+
+  if eval(values[tag_wdisk]) > th_wdisk:
+    raise Exception('Eccessivo carico in scrittura del disco.')
+  if eval(values[tag_rdisk]) > th_rdisk:
+    raise Exception('Eccessivo carico in lettura del disco.')
+  if int(values[tag_hosts]) > int(th_host):
+    raise Exception('Presenza altri host in rete.')
+
   return True
 
 def getMac():
@@ -166,7 +172,7 @@ def getMac():
 
 def getSys():
   '''
-  restituisce array con informazioni sul sistema utilizzato per il test
+  Restituisce array con informazioni sul sistema utilizzato per il test
   '''
   d = {tag_vers:'',  tag_sys:'', tag_mac:'', tag_release:'', tag_cores:'', tag_arch:'', tag_proc:''}
   values = getstatus(d)
@@ -187,37 +193,6 @@ def getvalues(string, tag):
     values.update({subelement.tag:subelement.text})
 
   return values
-
-
-def connectionCheck(connActive, connList):
-  '''
-  Ettettua il controllo sulle connessioni attive
-  '''
-
-  c = []
-  for j in connActive.split(';'):
-    c.append(int(j.split(':')[1]))
-  
-  for i in connList:
-    if i in c:
-      raise Exception, 'Sono attive connessioni non desiderate.'
-
-  return True
-
-def taskCheck(taskActive, taskList):
-  '''
-  Ettettua il controllo sui processi
-  '''
-
-  t = []
-  for j in taskActive.split(';'):
-    t.append(str(j))
-
-  for i in taskList:
-    if i in t:
-      raise Exception, 'Sono attivi processi non desiderati.'
-
-  return True
 
 if __name__ == '__main__':
   print '_______________________________________\n'
