@@ -20,7 +20,6 @@ from datetime import datetime
 from logger import logging
 from popup import NotificationStack
 from status import Status
-from time import sleep
 from xml.dom import minidom
 from xmlutils import xml2status
 import asyncore
