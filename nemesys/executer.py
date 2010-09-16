@@ -51,26 +51,54 @@ from xmlutils import xml2task
 
 bandwidth = Semaphore()
 logger = logging.getLogger()
+current_status = status.LOGO
 
+# TODO Scrivere procedura per l'exit veloce da ^C
 
 class _Communicator(Thread):
 
   def __init__(self):
     Thread.__init__(self)
-    self.running = False
     self._channel = _Channel(('localhost', 21401))
 
-  def sendstatus(self, status, message=None):
-    if (message != None):
-      status.setmessage(message)
-    self._channel.sendstatus(status)
-
-  def stop(self):
-    self.running = False
+  def sendstatus(self):
+    self._channel.sendstatus()
 
   def run(self):
-    self.running = True
-    asyncore.loop()
+    asyncore.loop(5)
+    logger.debug('Nemesys asyncore loop terminated.')
+
+  def join(self, timeout=None):
+    self._channel.quit()
+    Thread.join(self, timeout)
+
+
+class _Channel(asyncore.dispatcher):
+
+  def __init__(self, url):
+    asyncore.dispatcher.__init__(self)
+    self._url = url
+    self._sender = None
+    self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+    self.set_reuse_addr()
+    self.bind(self._url)
+    self.listen(1)
+
+  def sendstatus(self):
+    if self._sender:
+      self._sender.write(current_status)
+    else:
+      pass
+
+  def handle_accept(self):
+    (channel, addr) = self.accept()
+    self._sender = _Sender(channel)
+    self.sendstatus()
+    
+  def quit(self):
+    if (self._sender != None):
+      self._sender.close()
+    self.close()
 
 
 class _Sender(asyncore.dispatcher):
@@ -89,13 +117,13 @@ class _Sender(asyncore.dispatcher):
 
     try:
       self.handle_write()
-    except Exception:
-      logger.debug('Impossibile inviare il messaggio di notifica.')
+    except Exception as e:
+      logger.debug('Impossibile inviare il messaggio di notifica, errore: %s' % e)
       self.close()
 
-  # def handle_read(self):
-  #  data = self.recv(2048)
-  #  logger.debug('Received: %s' % data)
+  def handle_read(self):
+    data = self.recv(2048)
+    logger.debug('Received: %s' % data)
 
   def handle_write(self):
     logger.debug('Sending status "%s"' % self.buffer)
@@ -109,29 +137,6 @@ class _Sender(asyncore.dispatcher):
     self.handle_close()
 
 
-class _Channel(asyncore.dispatcher):
-
-  def __init__(self, url):
-    asyncore.dispatcher.__init__(self)
-    self._url = url
-    self._sender = None
-    self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-    self.set_reuse_addr()
-    self.bind(self._url)
-    self.listen(1)
-
-  def sendstatus(self, status):
-    if self._sender:
-      self._sender.write(status)
-    else:
-      pass
-
-  def handle_accept(self):
-    (channel, addr) = self.accept()
-    self._sender = _Sender(channel)
-    self._sender.write(status.LOGO)
-
-
 class OptionParser(OptionParser):
 
   def check_required(self, opt):
@@ -142,7 +147,7 @@ class OptionParser(OptionParser):
 
 class Executer:
 
-  def __init__(self, client, scheduler, repository, polling=20.0, tasktimeout=60,
+  def __init__(self, client, scheduler, repository, polling=300.0, tasktimeout=60,
                testtimeout=30, httptimeout=60, local=False):
 
     self._client = client
@@ -155,6 +160,7 @@ class Executer:
     self._local = local
     self._outbox = paths.OUTBOX
     self._sent = paths.SENT
+    current_status = status.LOGO
     self._communicator = None
 
   def test(self, taskfile=None):
@@ -182,6 +188,8 @@ class Executer:
     # Open socket for GUI dialog
     self._communicator = _Communicator()
     self._communicator.start()
+
+    # self._progress = Progress()
 
     while True:
 
@@ -212,19 +220,18 @@ class Executer:
           alarm = delta.days * 86400 + delta.seconds
 
         if alarm > 0:
-          logger.debug('Impostazione di un nuovo task tra: %s secondi (%s)' % (alarm, delta))
+          logger.debug('Impostazione di un nuovo task tra: %s secondi' % alarm)
           t = Timer(alarm, self._dotask, [task])
           t.start()
       else:
-        self._sendstatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure.'))
-
+        self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure.'))
 
       # Aspetta 20 secondi
       sleep(float(self._polling))
 
   # Scarica il prossimo task dallo scheduler
   def _download(self):
-    # logger.debug('Reading resource %s for client %s' % (self._scheduler, self._client))
+    logger.debug('Reading resource %s for client %s' % (self._scheduler, self._client))
 
     url = urlparse(self._scheduler)
     clientid = self._client.id
@@ -238,11 +245,12 @@ class Executer:
       connection = HTTPSConnection(host=url.hostname, timeout=self._httptimeout)
 
     try:
+      # TODO Inserire invio della versione del software
       connection.request('GET', '%s?clientid=%s' % (url.path, clientid))
 
     except SSLError as e:
       logger.error('Impossibile scaricare lo scheduling. Errore SSL: %s.' % e)
-      self._sendstatus(Status(status.ERROR, 'Impossibile dialogare con lo scheduler delle misure.'))
+      self._updatestatus(Status(status.ERROR, 'Impossibile dialogare con lo scheduler delle misure.'))
       return None
 
     except socket.gaierror as e:
@@ -281,7 +289,7 @@ class Executer:
     # TODO Inserire il timeout complessivo di task
     # TODO Inserire controllo lungo per lo stato del PC dell'utente
 
-    self._sendstatus(status.PLAY)
+    self._updatestatus(status.PLAY)
 
     t = Tester(host=task.server, timeout=self._testtimeout,
                username=self._client.username, password=self._client.password)
@@ -343,7 +351,7 @@ class Executer:
       logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
       pass
 
-    self._sendstatus(status.READY)
+    self._updatestatus(status.READY)
     bandwidth.release() # Rilascia la risorsa condivisa: la banda
 
   def _upload(self, file):
@@ -378,10 +386,12 @@ class Executer:
     except Exception as e:
       logger.error('Errore durante il parsing della risposta del repository: %s' % e)
 
-  def _sendstatus(self, status):
-
+  def _updatestatus(self, status):
+    global current_status
+    current_status = status
+    
     if (self._communicator != None):
-      self._communicator.sendstatus(status)
+      self._communicator.sendstatus()
 
 
   def _movefiles(self, filename):
@@ -529,7 +539,7 @@ def parse():
                     help='timeout (in seconds) for http operations [%s]' % value)
 
   option = 'polling'
-  value = '20'
+  value = '300'
   try:
     value = config.getint(section, option)
   except NoOptionError:
