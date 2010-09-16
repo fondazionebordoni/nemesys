@@ -54,8 +54,6 @@ bandwidth = Semaphore()
 logger = logging.getLogger()
 current_status = status.LOGO
 
-# TODO Scrivere procedura per l'exit veloce da ^C
-
 class _Communicator(Thread):
 
   def __init__(self):
@@ -85,7 +83,7 @@ class _Channel(asyncore.dispatcher):
     self.bind(self._url)
     self.listen(1)
 
-  def sendstatus(self):
+  def sendstatus(self, status=None):
     if self._sender:
       self._sender.write(current_status)
     else:
@@ -215,7 +213,7 @@ class Executer:
         # Imposta il nuovo allarme
         if (task.now):
           # Task immediato: inizio tra 5 secondi
-          alarm = 5.0
+          alarm = 5.00
         else:
           delta = task.start - datetime.now()
           alarm = delta.days * 86400 + delta.seconds
@@ -290,9 +288,9 @@ class Executer:
 
     try:
       if not sysmonitor.checkall():
-        raise Exception('Condizioni per effettuare la misura non verificate.') 
-  
-      self._updatestatus(status.PLAY)
+        raise Exception('Condizioni per effettuare la misura non verificate.')
+      
+      logger.debug('Passato check di sysmonitor.')
   
       t = Tester(host=task.server, timeout=self._testtimeout,
                  username=self._client.username, password=self._client.password)
@@ -303,6 +301,7 @@ class Executer:
   
       # Set task timeout alarm
       # signal.alarm(self._tasktimeout)
+      self._updatestatus(status.PLAY)
 
       # Testa gli ftp down
       for i in range(1, task.download + 1):
@@ -356,17 +355,19 @@ class Executer:
       if (not self._local):
         self._upload(f)
 
+      self._updatestatus(status.READY)
+
     except RuntimeWarning:
       self._updatestatus(status.Status(status.ERROR, 'Misura interrotta per timeout.'))
       logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
+      sleep(1)
 
     except Exception as e:
       self._updatestatus(status.Status(status.ERROR, 'Misura interrotta: %s' % e))
       logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
+      sleep(1)
 
-    finally:
-      self._updatestatus(status.READY)
-      bandwidth.release() # Rilascia la risorsa condivisa: la banda
+    bandwidth.release() # Rilascia la risorsa condivisa: la banda
 
   def _upload(self, file):
     '''
@@ -400,13 +401,14 @@ class Executer:
     except Exception as e:
       logger.error('Errore durante il parsing della risposta del repository: %s' % e)
 
-  def _updatestatus(self, status):
+  def _updatestatus(self, new):
     global current_status
-    current_status = status
+    
+    logger.debug('Aggiornamento stato: %s' % new.message)
+    current_status = new
     
     if (self._communicator != None):
       self._communicator.sendstatus()
-
 
   def _movefiles(self, filename):
 
