@@ -16,16 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-
-#from SystemProfiler import SystemProfiler
-
 from logger import logging
-from xml.dom.minidom import parse
 from xml.etree import ElementTree as ET
-from xml.parsers.expat import ExpatError
-from xmlutils import getvalues
 import paths
-
 
 tag_results = 'SystemProfilerResults'
 tag_threshold = 'SystemProfilerThreshold'
@@ -48,81 +41,78 @@ tag_hosts = 'hostNumber'
 tag_task = 'taskList'
 tag_conn = 'activeConnections'
 
-msg = ''#Impossibile effettuare la misura a causa delle condizioni non ideali del sistema!'
+logger = logging.getLogger()
+
+# TODO modificare specifiche di valori booleani in stringa di SystemProfiler: 1 = True
+
+def getstatus(d):
+
+  data = ''
+
+  try:
+    from SystemProfiler import systemProfiler
+    data = systemProfiler(d)
+  except Exception:
+    data = open(paths.RESULTS).read() #andrà sostituita con dati passati da sysProfiler
+
+  return getvalues(data, tag_results)
 
 def checkall():
-  
-  _sysdata = open(paths.RESULTS) #andrà sostituita con dati passati da sysProfiler
-  _thdata = open(paths.THRESHOLD)
 
-  #d = {tag_vers, tag_avMem, tag_wireless, tag_fw, tag_memLoad, tag_ip, tag_sys, tag_wdisk, tag_cpu, tag_mac, tag_rdisk, tag_release, tag_cores, tag_arch, tag_proc, tag_hosts, tag_task, tag_conn}
+  d = {tag_vers:'', tag_avMem:'', tag_wireless:'',  tag_fw:'',  tag_memLoad:'',  tag_ip:'',  tag_sys:'',  tag_wdisk:'',  tag_cpu:'',  tag_mac:'',  tag_rdisk:'',  tag_release:'',  tag_cores:'',  tag_arch:'',  tag_proc:'',  tag_hosts:'',  tag_task:'',  tag_conn:''}
+  values = getstatus(d)
+  threshold = getvalues(open(paths.THRESHOLD).read(), tag_threshold)
 
-  #try 
-  #  SystemProfiler (fileOutput, d)
-  #except Exception as e:
-  #  logger.debug('Errore durante il monitorig del sistema (checkall): %s' % e)
-
-  values = getvalues(_sysdata, tag_results)
-  threshold = getvalues(_thdata, tag_threshold)
-
-  #logica di controllo del sistema
+  # Logica di controllo del sistema
 
   connectionCheck(values[tag_conn], threshold[tag_conn])
 
-  if values[tag_hosts] != 1:
-    raise Exception, 'Presenza altri host in rete! %s' % msg
-  if values[tag_fw] != False:
-    raise Exception, 'Firewall attivo! %s' % msg
-  if values[tag_wireless] != False:
-    raise Exception, 'Wireless LAN attiva! %s' % msg
+  if int(values[tag_hosts]) > 1:
+    raise Exception, 'Presenza altri host in rete.'
+  if bool(eval(values[tag_fw])):
+    raise Exception, 'Firewall attivo.'
+  if bool(eval(values[tag_wireless])):
+    raise Exception, 'Wireless LAN attiva.'
 
-  #logica di controllo con soglie lette da xml
+  # Logica di controllo con soglie lette da xml
 
-  if values[tag_avMem] > threshold[tag_avMem]:
-    raise Exception, 'Memoria non sufficiente! %s' % msg
-  if values[tag_memLoad] > threshold[tag_memLoad]:
-    raise Exception, 'Memoria non sufficiente! %s' % msg
-  if values[tag_cpu] > threshold[tag_cpu]:
-    raise Exception, 'CPU occupata! %s' % msg
-  if values[tag_wdisk] > threshold[tag_wdisk]:
-    raise Exception, 'Eccessiva attività in scrittura del disco! %s' % msg
-  if values[tag_rdisk] > threshold[tag_rdisk]:
-    raise Exception, 'Eccessiva attività in lettura del disco! %s' % msg
+  if eval(values[tag_avMem]) < eval(threshold[tag_avMem]):
+    raise Exception('Memoria non sufficiente.')
+  if eval(values[tag_memLoad]) > eval(threshold[tag_memLoad]):
+    raise Exception, 'Memoria non sufficiente.'
+  if eval(values[tag_cpu]) > eval(threshold[tag_cpu]):
+    raise Exception, 'CPU occupata.'
+  if eval(values[tag_wdisk]) > eval(threshold[tag_wdisk]):
+    raise Exception, 'Eccessiva carico in scrittura del disco.'
+  if eval(values[tag_rdisk]) > eval(threshold[tag_rdisk]):
+    raise Exception, 'Eccessiva carico in lettura del disco.'
 
   return True
 
 def mediumcheck():
 
-  _sysdata = open(paths.RESULTS) #andrà sostituita con dati passati da sysProfiler
-  _thdata = open(paths.THRESHOLD)
-
 #  d = {tag_avMem, tag_wireless, tag_fw, tag_memLoad, tag_cpu, tag_hosts, tag_task, tag_conn}
-#  try 
-#    SystemProfiler (fileOutput, d)
-#  except Exception as e:
-#    logger.debug('Errore durante il monitorig del sistema (mediumcheck): %s' % e)
-
-  #parsing xml
-  values = getvalues(_sysdata, tag_results)
-  threshold = getvalues(_thdata, tag_threshold)
+  d = {tag_vers:'', tag_avMem:'', tag_wireless:'',  tag_fw:'',  tag_memLoad:'',  tag_ip:'',  tag_sys:'',  tag_wdisk:'',  tag_cpu:'',  tag_mac:'',  tag_rdisk:'',  tag_release:'',  tag_cores:'',  tag_arch:'',  tag_proc:'',  tag_hosts:'',  tag_task:'',  tag_conn:''}
+  values = getstatus(d)
+  threshold = getvalues(open(paths.THRESHOLD).read(), tag_threshold)
 
   #logica di controllo del sistema
 
   connectionCheck(values[tag_conn], threshold[tag_conn])
 
   if values[tag_fw] != False:
-    raise Exception, 'Firewall attivo! %s' % msg
+    raise Exception, 'Firewall attivo.'
   if values[tag_wireless] != False:
-    raise Exception, 'Wireless LAN attiva! %s' % msg
+    raise Exception, 'Wireless LAN attiva.'
 
   #logica di controllo con soglie lette da xml
 
   if values[tag_avMem] > threshold[tag_avMem]:
-    raise Exception, 'Memoria non sufficiente! %s' % msg
+    raise Exception, 'Memoria non sufficiente.'
   if values[tag_memLoad] > threshold[tag_memLoad]:
-    raise Exception, 'Memoria non sufficiente! %s' % msg
+    raise Exception, 'Memoria non sufficiente.'
   if values[tag_cpu] > threshold[tag_cpu]:
-    raise Exception, 'CPU occupata! %s' % msg
+    raise Exception, 'CPU occupata.'
 
   return True
 
@@ -132,72 +122,47 @@ def fastcheck():
   Ritorna True se le condizioni per effettuare le misure sono corrette,
   altrimenti solleva un'eccezione
   '''
-  _sysdata = open(paths.RESULTS) #andrà sostituita con dati passati da sysProfiler
-  _thdata = open(paths.THRESHOLD)
 
 #  d = {tag_memLoad, tag_cpu, tag_task, tag_conn}
-#  try 
-#    SystemProfiler (fileOutput, d)
-#  except Exception as e:
-#    logger.debug('Errore durante il monitorig del sistema (fastcheck): %s' % e)
-
-  #parsing xml
-  values = getvalues(_sysdata, tag_results)
-  threshold = getvalues(_thdata, tag_threshold)
+  d = {tag_vers:'', tag_avMem:'', tag_wireless:'',  tag_fw:'',  tag_memLoad:'',  tag_ip:'',  tag_sys:'',  tag_wdisk:'',  tag_cpu:'',  tag_mac:'',  tag_rdisk:'',  tag_release:'',  tag_cores:'',  tag_arch:'',  tag_proc:'',  tag_hosts:'',  tag_task:'',  tag_conn:''}
+  values = getstatus(d)
+  threshold = getvalues(open(paths.THRESHOLD).read(), tag_threshold)
 
   #logica di controllo del sistema
-  #logica di controllo con soglie lette da xml
 
   connectionCheck(values[tag_conn], threshold[tag_conn])
 
   if values[tag_avMem] > threshold[tag_avMem]:
-    raise Exception, 'Memoria non sufficiente! %s' % msg
+    raise Exception('Memoria non sufficiente.')
+    return False
   if values[tag_memLoad] > threshold[tag_memLoad]:
-    raise Exception, 'Memoria non sufficiente! %s' % msg
+    raise Exception, 'Memoria non sufficiente.'
   if values[tag_cpu] > threshold[tag_cpu]:
-    raise Exception, 'CPU occupata! %s' % msg
+    raise Exception, 'CPU occupata.'
 
   return True
 
 #creazione dizionario con risposte del SystemProfiler
-def getvalues(data, tag):
-
-  try:
-    xml = parse(data)
-  except ExpatError as e:
-    #logger.error('Il dato ricevuto non è in formato XML: %s' % data)
-    return None
-
-  nodes = xml.getElementsByTagName(tag)
-  if (len(nodes) < 1):
-    #logger.debug('Nessun risultato trovato nell\'XML:\n%s' % xml.toxml())
-    return None
-
-  node = nodes[0]
+def getvalues(string, tag):
 
   values = {}
-
-  for subelement in ET.XML(node.toxml()):
+  for subelement in ET.XML(string):
     values.update({subelement.tag:subelement.text})
 
-  '''
-  inserire controllo su valori riportati da SystemProfiler
-  '''
-
   return values
-  
+
 def connectionCheck(connActive, connList):
   '''
   Ettettua il controllo sulle connessioni attive
   '''
-  
+
   c = []
   for j in connActive.split(';'):
     c.append(j.split(':')[1])
 
   for i in connList.split(';'):
     if i in c:
-      raise Exception, 'Sono attive connessioni non desiderate. %s' % msg
+      raise Exception, 'Sono attive connessioni non desiderate.'
 
   return True
 
