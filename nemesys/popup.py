@@ -24,7 +24,7 @@ import gobject
 import gtk
 
 class NotificationStack():
-    def __init__(self, size_x=300, size_y=100, timeout=5):
+    def __init__(self, size_x=220, size_y=60, timeout=5):
         """
         Create a new notification stack.  The recommended way to create Popup instances.
           Parameters:
@@ -97,8 +97,9 @@ class Popup(gtk.Window):
         header_box = gtk.HBox()
         self.header = gtk.Label()
         self.header.set_markup("<b>%s</b>" % title)
+        self.header.set_size_request(50 + 3, 22 + 3)
         self.header.set_padding(3, 3)
-        self.header.set_alignment(0, 0)
+        self.header.set_alignment(0, 0.5)
         close_button = gtk.Image()
 
         close_button.set_from_stock(gtk.STOCK_CANCEL, gtk.ICON_SIZE_BUTTON)
@@ -107,23 +108,27 @@ class Popup(gtk.Window):
         close_window.set_visible_window(False)
         close_window.connect("button-press-event", self.hide_notification)
         close_window.add(close_button)
+        
+        if image is not None:
+            self.image = gtk.Image()
+            self.image.set_size_request(22 + 3, 22 + 3)
+            self.image.set_alignment(0, 0.5)
+            self.image.set_padding(3, 3)
+            self.image.set_from_file(image)
+            header_box.pack_start(self.image, False, False, 5)
+
         header_box.pack_start(self.header, True, True, 5)
         header_box.pack_end(close_window, False, False)
         main_box.pack_start(header_box)
 
         body_box = gtk.HBox()
-        if image is not None:
-            self.image = gtk.Image()
-            self.image.set_size_request(70, 70)
-            self.image.set_alignment(0, 0)
-            self.image.set_from_file(image)
-            body_box.pack_start(self.image, False, False, 5)
         self.message = gtk.Label()
         self.message.set_property("wrap", True)
-        self.message.set_size_request(stack.size_x - 90, -1)
+        #self.message.set_size_request(stack.size_x - 90, -1)
+        self.message.set_size_request(stack.size_x - 30 + 3, 60 + 3)
         self.message.set_alignment(0, 0)
-        self.message.set_padding(5, 10)
-        self.message.set_markup(message)
+        self.message.set_padding(3, 3)
+        self.message.set_markup("<i>%s</i>" % message)
         self.counter = gtk.Label()
         self.counter.set_alignment(1, 1)
         self.counter.set_padding(3, 3)
@@ -140,6 +145,7 @@ class Popup(gtk.Window):
             self.message.modify_fg(gtk.STATE_NORMAL, stack.fg_color)
             self.header.modify_fg(gtk.STATE_NORMAL, stack.fg_color)
             self.counter.modify_fg(gtk.STATE_NORMAL, stack.fg_color)
+            
         self.show_timeout = stack.show_timeout
         self.hover = False
         self.show_all()
@@ -147,8 +153,6 @@ class Popup(gtk.Window):
         self.move(gtk.gdk.screen_width() - self.x - stack.edge_offset_x,
                   gtk.gdk.screen_height() - self.y - stack._offset - stack.edge_offset_y)
         self.fade_in_timer = gobject.timeout_add(100, self.fade_in)
-
-
 
     def reposition(self, offset, stack):
         """Move the notification window down, when an older notification is removed"""

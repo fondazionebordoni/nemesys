@@ -35,8 +35,10 @@ import webbrowser
 pygtk.require('2.0')
 
 LISTENING_URL = ('localhost', 21401)
-NOTIFY_COLORS = ('#ffffee', 'black')
+NOTIFY_COLORS = ('yellow', 'black')
 logger = logging.getLogger()
+
+# TODO Scrivere procedura per l'immediato stop del programma alla selezione della voce "Esci"
 
 def _iso2datetime(s):
   '''
@@ -52,17 +54,15 @@ class _Controller(threading.Thread):
   def __init__(self, url, trayicon):
     threading.Thread.__init__(self)
     self._channel = _Channel(url, trayicon)
-    self._running = False
     self._trayicon = trayicon
 
-  def stop(self):
-    self._channel.handle_close()
-    self._running = False
-
   def run(self):
-    self._running = True
-    asyncore.loop()
-
+    asyncore.loop(1)
+    logger.debug('GUI asyncore loop terminated.')
+    
+  def join(self, timeout=None):
+    self._channel.quit()
+    threading.Thread.join(self, timeout)
 
 class _Channel(asyncore.dispatcher):
 
@@ -70,20 +70,27 @@ class _Channel(asyncore.dispatcher):
     asyncore.dispatcher.__init__(self)
     self._trayicon = trayicon
     self._url = url
+    self._stopevent = threading.Event()
     self._reconnect()
 
   def writable(self):
     return False  # don't have anything to write
 
+  def quit(self):
+    logger.debug('Quitting channel.')
+    self._stopevent.set()
+    self.close()
+
   def _reconnect(self):
-    self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-    self.connect(self._url)
+    if not self._stopevent.isSet():
+      self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+      self.connect(self._url)
 
   def handle_error(self):
     logger.debug('Error. Closing client socket.')
     self._trayicon.setstatus(status.ERROR)
     self.handle_close()
-    sleep(15)
+    self._stopevent.wait(15)
     self._reconnect()
 
   def handle_close(self):
@@ -97,7 +104,7 @@ class _Channel(asyncore.dispatcher):
       current_status = xml2status(data)
     except Exception, e:
       logger.error('Errore durante la decodifica dello stato del demone: %s' % e)
-      current_status = Status(status.ERROR, 'Errore di comunicazione con il server')
+      current_status = Status(status.ERROR, '%s' % e)
 
     if current_status == None:
       current_status = Status(status.ERROR, 'Errore di comunicazione con il server')
@@ -114,7 +121,7 @@ class TrayIcon:
     self._menu = None
     self._crea_menu(self)
 
-  def setstatus(self, status):
+  def setstatus(self, currentstatus):
     '''
     Aggiorna l'icona e il messaggio nel system tray, l'aggiornamento viene
     fatto solo se lo staus è cambiato, ovvero se è cambiata l'icona o il
@@ -122,9 +129,9 @@ class TrayIcon:
     lo stato.
     '''
 
-    if (self._status.icon != status.icon
-        or self._status.message != status.message):
-      self._status = status
+    if (self._status.icon != currentstatus.icon
+        or self._status.message != currentstatus.message):
+      self._status = currentstatus
       self._trayicon.set_visible(False)
       self._trayicon = gtk.status_icon_new_from_file(self._status.icon)
       self._trayicon.set_tooltip(self._status.message)
@@ -135,7 +142,7 @@ class TrayIcon:
         notifier.fg_color = gtk.gdk.Color(NOTIFY_COLORS[1])
         # mnotifier.show_timeout = random.choice((True, False))
         notifier.edge_offset_x = 20
-        notifier.new_popup(title="Nemesys", message=self._status.message)
+        notifier.new_popup(title="Nemesys", message=self._status.message, image=self._status.icon)
 
   def statomisura(self, widget):
     global winAperta
@@ -269,6 +276,8 @@ class TrayIcon:
       self._infoMessage.destroy()
     infoAperta = True
 
+    # TODO Inserire controllo per nuove versioni del software
+
     self._infoMessage = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE,
                                           '''
 Nemesys (Network Measurement System)
@@ -288,13 +297,14 @@ Homepage del progetto su www.misurainternet.it''')
     self._menu.popup(None, None, None, button, time, self._trayicon)
 
   def _quit(self, widget, data=None):  # quando esco dal programma
+    controller.join()
+    
     self._trayicon.set_visible(False)
     self._menu.destroy()
     if (self._win != None):
       self._win.destroy()
     if (self._infoMessage != None):
       self._infoMessage.destroy()
-    controller.stop()  # fermo il thread di controllo
     return gtk.main_quit()
 
   def _crea_menu(self, widget):
@@ -360,7 +370,7 @@ if __name__ == '__main__':
   statoPopUp = 'ON' # per discriminare fra abilita e disabilita popup
   winAperta = False  # indica se è aperta o meno la finestra contenente l'andamento della misura
   infoAperta = False  # indica se è aperta o meno la finestra contenente le info su nemesys
-  notifier = NotificationStack(timeout=6)
+  notifier = NotificationStack()
   trayicon = TrayIcon()
   controller = _Controller(LISTENING_URL, trayicon)
   controller.start()
