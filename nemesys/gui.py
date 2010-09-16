@@ -16,12 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
 from logger import logging
 from popup import NotificationStack
 from status import Status
-from xml.dom import minidom
 from xmlutils import xml2status
+from os import path
 import asyncore
 import gtk
 import locale
@@ -31,6 +30,7 @@ import socket
 import status
 import threading
 import webbrowser
+from progress import Progress
 pygtk.require('2.0')
 
 LISTENING_URL = ('localhost', 21401)
@@ -38,15 +38,6 @@ NOTIFY_COLORS = ('yellow', 'black')
 logger = logging.getLogger()
 
 # TODO Scrivere procedura per l'immediato stop del programma alla selezione della voce "Esci"
-
-def _iso2datetime(s):
-  '''
-  La versione 2.5 di python ha un bug nella funzione strptime che non riesce
-  a leggere i microsecondi (%f)
-  '''
-  parts = s.split('.')
-  dt = datetime.strptime(parts[0], '%Y-%m-%d %H:%M:%S')
-  return dt.replace(microsecond=int(parts[1]))
 
 class _Controller(threading.Thread):
 
@@ -144,6 +135,7 @@ class TrayIcon:
         notifier.new_popup(title="Nemesys", message=self._status.message, image=self._status.icon)
 
   def statomisura(self, widget):
+    
     global winAperta
     if winAperta:
       self._win.destroy()  # così lascio aprire una finestra sola relativa allo stato della misura
@@ -166,12 +158,7 @@ class TrayIcon:
 
     ore = dict()
     for n in range(0, 24):
-      hour = str(n)
-
-      if (n < 10):
-        hour = '0' + hour
-
-      hour = '<small>' + hour + ':00' + '</small>'
+      hour = '<small>%d</small>' % n
       ore[n] = gtk.Label(hour)
       ore[n].set_use_markup(True)
       table.attach(ore[n], n, n + 1, 4, 5, xpadding=1, ypadding=0)
@@ -214,30 +201,22 @@ class TrayIcon:
       riga1[i].modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('red'))
 
     # il codice di seguito serve per measure.xml
-    xmldoc = minidom.parse(paths.MEASURE_STATUS)
-    start = xmldoc.documentElement.getElementsByTagName('start')[0].firstChild.data
+    if not path.exists(paths.MEASURE_STATUS):
+      return
 
-    inizioMisure = self._str2datetime(str(start))  # inizioMisure è datetime
-    coloreCelle[inizioMisure.hour] = 'green'
-    slots = xmldoc.documentElement.getElementsByTagName('slot')
-    for slot in slots:
-      misura = str(slot.firstChild.data)
-      misuraDataTime = self._str2datetime(misura)
-      delta = misuraDataTime - inizioMisure
-      if (delta.days < 3): # ovvero se la misura è valida
-        coloreCelle[misuraDataTime.hour] = 'green'
+    xmldoc = Progress()
+    inizioMisure = xmldoc.start()  # inizioMisure è datetime
 
     n = 0
     for i in range(0, 24):
-      riga1[i].modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(coloreCelle[i]))
-      if (coloreCelle[i] == 'green'):
+      if xmldoc.isdone(i):
+        riga1[i].modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('green'))
         n = n + 1
 
     label1 = gtk.Label('<b><big>Nemesys</big></b>')
     label2 = gtk.Label('<big>Data inizio misurazioni: %s</big>' % inizioMisure.strftime('%c'))
-
-    label3 = gtk.Label('<big>Si ricorda che la misurazione va completata entro tre giorni dal suo inizio</big>')
-    label4 = gtk.Label('<big>Stato di avanzamento della misura: %d misure su 24</big>' % n)
+    label3 = gtk.Label('Si ricorda che la misurazione va completata entro tre giorni dal suo inizio')
+    label4 = gtk.Label('<big>Stato di avanzamento della misura: %d su 24</big>' % n)
     label1.set_use_markup(True)
     label2.set_use_markup(True)
     label3.set_use_markup(True)

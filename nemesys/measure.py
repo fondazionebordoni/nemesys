@@ -48,6 +48,8 @@ class Measure:
     measure = xml.getElementsByTagName('measure')[0]
     measure.setAttribute('id', str(self._client.id) + str(self._id))
 
+    # TODO Aggiungere l'invio del mac address
+
     # Header
     # --------------------------------------------------------------------------
     header = xml.createElement('header')

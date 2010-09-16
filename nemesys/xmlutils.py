@@ -20,12 +20,12 @@ from datetime import datetime
 from logger import logging
 from server import Server
 from status import Status
-import status
 from string import join
 from task import Task
 from xml.dom import Node
 from xml.dom.minidom import parseString
 from xml.parsers.expat import ExpatError
+import status
 
 tag_task = 'task'
 tag_id = 'id'
@@ -46,6 +46,15 @@ startformat = '%Y-%m-%d %H:%M:%S'
 
 logger = logging.getLogger()
 
+def iso2datetime(s):
+  '''
+  La versione 2.5 di python ha un bug nella funzione strptime che non riesce
+  a leggere i microsecondi (%f)
+  '''
+  parts = s.split('.')
+  dt = datetime.strptime(parts[0], '%Y-%m-%dT%H:%M:%S')
+  return dt.replace(microsecond=int(parts[1]))
+
 def getxml(data):
   try:
     xml = parseString(data)
@@ -62,11 +71,11 @@ def xml2task(data):
     logger.error('Nessun dato da processare')
     return None
 
-  logger.debug('Dati da convertire in XML:\n%s' % data)
+  #logger.debug('Dati da convertire in XML:\n%s' % data)
   try:
     xml = parseString(data)
-  except ExpatError:
-    logger.error('Il dato ricevuto non è in formato XML: %s' % data)
+  except ExpatError as e:
+    logger.error('Il dato ricevuto non è in formato XML: %s' % e)
     return None
 
   nodes = xml.getElementsByTagName(tag_task)
@@ -173,6 +182,7 @@ def getvalues(node, tag=None):
     values = []
     for child in node.childNodes:
       if child.nodeType == Node.TEXT_NODE:
+        #logger.debug('Trovato nodo testo.')
         values.append(child.nodeValue)
 
     #logger.debug('Value found: %s' % join(values).strip())
@@ -189,22 +199,21 @@ def nodedata(node):
   return s.strip('\n')
 
 def xml2status(data):
-  # TODO Meglio sollevare delle eccezioni che verrano catturate (?)
   if (len(data) < 1):
     logger.error('Nessun dato da processare')
-    return Status(status.ERROR, 'Errore di comunicazione con il server');
+    raise Exception('Il demone che effettua le misure non invia informazioni sul suo stato.');
 
   #logger.debug('Dati da convertire in XML:\n%s' % data)
   try:
     xml = parseString(data)
   except ExpatError:
     logger.error('Il dato ricevuto non è in formato XML: %s' % data)
-    return Status(status.ERROR, 'Errore di comunicazione con il server');
+    raise Exception('Errore di formattazione del messaggio di stato del demone delle misure.');
 
   nodes = xml.getElementsByTagName('status')
   if (len(nodes) < 1):
     logger.debug('Nessun status trovato nell\'XML:\n%s' % xml.toxml())
-    return Status(status.ERROR, 'Errore di comunicazione con il server');
+    raise Exception('Nessuna informazione sullo stato del demone delle misure ricevuta.');
 
   node = nodes[0]
 
@@ -214,6 +223,6 @@ def xml2status(data):
     message = getvalues(node, 'message')
   except IndexError:
     logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
-    return Status(status.ERROR, 'Errore di comunicazione con il server');
+    raise Exception('I messaggi di stato del demone non contengono tutte le informazioni richieste.');
 
   return Status(icon, message)
