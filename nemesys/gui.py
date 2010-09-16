@@ -37,7 +37,6 @@ LISTENING_URL = ('localhost', 21401)
 NOTIFY_COLORS = ('yellow', 'black')
 logger = logging.getLogger()
 
-# TODO Scrivere procedura per l'immediato stop del programma alla selezione della voce "Esci"
 
 class _Controller(threading.Thread):
 
