@@ -18,11 +18,11 @@
 
 
 #from SystemProfiler import SystemProfiler
-from xml.dom.minidom import parse
-import xml.parsers.expat
-from string import join
-from xml.etree import ElementTree as ET
+
 from logger import logging
+from xml.dom.minidom import parse
+from xml.etree import ElementTree as ET
+from xml.parsers.expat import ExpatError
 from xmlutils import getvalues
 import paths
 
@@ -55,44 +55,41 @@ _sysdata = open(paths.RESULTS) #andrà sostituita con dati passati da sysProfile
 _thdata = open(paths.THRESHOLD)
 
 def checkall():
-  response = True
   #d = {tag_vers, tag_avMem, tag_wireless, tag_fw, tag_memLoad, tag_ip, tag_sys, tag_wdisk, tag_cpu, tag_mac, tag_rdisk, tag_release, tag_cores, tag_arch, tag_proc, tag_hosts, tag_task, tag_conn}
 
   #try 
   #  SystemProfiler (fileOutput, d)
   #except Exception as e:
   #  logger.debug('Errore durante il monitorig del sistema (checkall): %s' % e)
-    
+
   values = getvalues(_sysdata, tag_results)
   threshold = getvalues(_thdata, tag_threshold)
-  
+
   #logica di controllo del sistema
 
   connectionCheck(values[tag_conn], threshold[tag_conn])
-  
+
   if values[tag_hosts] != 1:
-    raise Exception, 'Presenza altri host in rete!'+str(msg)
+    raise Exception, 'Presenza altri host in rete!' + str(msg)
   if values[tag_fw] != False:
-    raise Exception, 'Firewall attivo!'+str(msg)
+    raise Exception, 'Firewall attivo!' + str(msg)
   if values[tag_wireless] != False:
-    raise Exception, 'Wireless LAN attiva!'+str(msg)
+    raise Exception, 'Wireless LAN attiva!' + str(msg)
 
   #logica di controllo con soglie lette da xml
 
   if values[tag_avMem] > threshold[tag_avMem]:
-    raise Exception, 'Memoria non sufficiente!'+str(msg)
+    raise Exception, 'Memoria non sufficiente!' + str(msg)
   if values[tag_memLoad] > threshold[tag_memLoad]:
-    raise Exception, 'Memoria non sufficiente!'+str(msg)
+    raise Exception, 'Memoria non sufficiente!' + str(msg)
   if values[tag_cpu] > threshold[tag_cpu]:
-    raise Exception, 'CPU occupata!'+str(msg)
+    raise Exception, 'CPU occupata!' + str(msg)
   if values[tag_wdisk] > threshold[tag_wdisk]:
-    raise Exception, 'Eccessiva attività in scrittura del disco!'+str(msg)
+    raise Exception, 'Eccessiva attività in scrittura del disco!' + str(msg)
   if values[tag_rdisk] > threshold[tag_rdisk]:
-    raise Exception, 'Eccessiva attività in lettura del disco!'+str(msg)
+    raise Exception, 'Eccessiva attività in lettura del disco!' + str(msg)
 
-    
   return True
- 
 
 def mediumcheck():
 
@@ -107,26 +104,24 @@ def mediumcheck():
   threshold = getvalues(_thdata, tag_threshold)
 
   #logica di controllo del sistema
-  
+
   connectionCheck(values[tag_conn], threshold[tag_conn])
-   
+
   if values[tag_fw] != False:
-    raise Exception, 'Firewall attivo!'+str(msg)
+    raise Exception, 'Firewall attivo!' + str(msg)
   if values[tag_wireless] != False:
-    raise Exception, 'Wireless LAN attiva!'+str(msg)
+    raise Exception, 'Wireless LAN attiva!' + str(msg)
 
   #logica di controllo con soglie lette da xml
 
   if values[tag_avMem] > threshold[tag_avMem]:
-    raise Exception, 'Memoria non sufficiente!'+str(msg)
+    raise Exception, 'Memoria non sufficiente!' + str(msg)
   if values[tag_memLoad] > threshold[tag_memLoad]:
-    raise Exception, 'Memoria non sufficiente!'+str(msg)
+    raise Exception, 'Memoria non sufficiente!' + str(msg)
   if values[tag_cpu] > threshold[tag_cpu]:
-    raise Exception, 'CPU occupata!'+str(msg)
- 
+    raise Exception, 'CPU occupata!' + str(msg)
+
   return True
-
-
 
 def fastcheck():
 
@@ -146,62 +141,56 @@ def fastcheck():
   connectionCheck(values[tag_conn], threshold[tag_conn])
 
   if values[tag_avMem] > threshold[tag_avMem]:
-    raise Exception, 'Memoria non sufficiente!'+str(msg)
+    raise Exception, 'Memoria non sufficiente!' + str(msg)
   if values[tag_memLoad] > threshold[tag_memLoad]:
-    raise Exception, 'Memoria non sufficiente!'+str(msg)
+    raise Exception, 'Memoria non sufficiente!' + str(msg)
   if values[tag_cpu] > threshold[tag_cpu]:
-    raise Exception, 'CPU occupata!'+str(msg)
+    raise Exception, 'CPU occupata!' + str(msg)
 
   return True
 
-
-
 #creazione dizionario con risposte del SystemProfiler
 def getvalues(data, tag):
-  
+
   try:
     xml = parse(data)
   except ExpatError as e:
     #logger.error('Il dato ricevuto non è in formato XML: %s' % data)
     return None
-  
+
   nodes = xml.getElementsByTagName(tag)
   if (len(nodes) < 1):
     #logger.debug('Nessun risultato trovato nell\'XML:\n%s' % xml.toxml())
     return None
- 
+
   node = nodes[0]
-  
+
   values = {}
-  
+
   for subelement in ET.XML(node.toxml()):
     values.update({subelement.tag:subelement.text})
-  
+
   '''
   inserire controllo su valori riportati da SystemProfiler
   '''
 
   return values
-
-
-#ettettua il controllo sulle connessioni attive  
+  
 def connectionCheck(connActive, connList):
+  '''
+  Ettettua il controllo sulle connessioni attive
+  '''
   
   c = []
   for j in connActive.split(';'):
     c.append(j.split(':')[1])
-  
+
   for i in connList.split(';'):
     if i in c:
-      raise Exception, 'Sono attive connessioni non desiderate: '+str(msg)
-  
+      raise Exception, 'Sono attive connessioni non desiderate: ' + str(msg)
+
   return True
 
- 
-
 if __name__ == '__main__':
- import sysmonitor
- ip = checkall()
- print 'test sysmonitor'
- print ip
+  print 'Test sysmonitor: %s' % checkall()
 
