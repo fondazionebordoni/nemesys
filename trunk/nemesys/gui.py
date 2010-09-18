@@ -16,24 +16,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from asyncore import dispatcher, loop
+from gobject import idle_add, timeout_add
+from locale import LC_ALL, setlocale
 from logger import logging
 from os import path
 from popup import NotificationStack
 from progress import Progress
 from status import Status
+from sys import platform
+from threading import Event, Thread
+from time import sleep
 from xmlutils import xml2status
-import asyncore
-import gobject
 import gtk
-import locale
 import paths
 import pygtk
 import socket
 import status
-import threading
 import webbrowser
-import time
-import sys
 pygtk.require('2.0')
     
 LISTENING_URL = ('localhost', 21401)
@@ -41,31 +41,31 @@ NOTIFY_COLORS = ('yellow', 'black')
 logger = logging.getLogger()
 
 def sleeper():
-    time.sleep(.001)
+    sleep(.001)
     return 1 # don't forget this otherwise the timeout will be removed
 
-class _Controller(threading.Thread):
+class _Controller(Thread):
 
   def __init__(self, url, trayicon):
-    threading.Thread.__init__(self)
+    Thread.__init__(self)
     self._channel = _Channel(url, trayicon)
     self._trayicon = trayicon
 
   def run(self):
-    asyncore.loop(1)
+    loop(1)
     logger.debug('GUI asyncore loop terminated.')
     
   def join(self, timeout=None):
     self._channel.quit()
-    threading.Thread.join(self, timeout)
+    Thread.join(self, timeout)
 
-class _Channel(asyncore.dispatcher):
+class _Channel(dispatcher):
 
   def __init__(self, url, trayicon):
-    asyncore.dispatcher.__init__(self)
+    dispatcher.__init__(self)
     self._trayicon = trayicon
     self._url = url
-    self._stopevent = threading.Event()
+    self._stopevent = Event()
     self._reconnect()
 
   def writable(self):
@@ -104,12 +104,12 @@ class _Channel(asyncore.dispatcher):
     if current_status == None:
       current_status = Status(status.ERROR, 'Errore di comunicazione con il server')
 
-    gobject.idle_add(self._trayicon.setstatus, current_status)
+    idle_add(self._trayicon.setstatus, current_status)
 
 class TrayIcon():
 
   def __init__(self):
-    locale.setlocale(locale.LC_ALL, '')
+    setlocale(LC_ALL, '')
     self._status = status.LOGO
     self._popupenabled = True
     self._menu = None
@@ -348,6 +348,6 @@ Homepage del progetto su www.misurainternet.it''')
     gtk.gdk.threads_leave()
 
 if __name__ == '__main__':
-  if sys.platform == 'win32':
-    gobject.timeout_add(400, sleeper)
+  if platform == 'win32':
+    timeout_add(400, sleeper)
   trayicon = TrayIcon()
