@@ -17,11 +17,13 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from logger import logging
+from os import path
 from popup import NotificationStack
+from progress import Progress
 from status import Status
 from xmlutils import xml2status
-from os import path
 import asyncore
+import gobject
 import gtk
 import locale
 import paths
@@ -30,13 +32,17 @@ import socket
 import status
 import threading
 import webbrowser
-from progress import Progress
+import time
+import sys
 pygtk.require('2.0')
-
+    
 LISTENING_URL = ('localhost', 21401)
 NOTIFY_COLORS = ('yellow', 'black')
 logger = logging.getLogger()
 
+def sleeper():
+    time.sleep(.001)
+    return 1 # don't forget this otherwise the timeout will be removed
 
 class _Controller(threading.Thread):
 
@@ -98,17 +104,22 @@ class _Channel(asyncore.dispatcher):
     if current_status == None:
       current_status = Status(status.ERROR, 'Errore di comunicazione con il server')
 
-    self._trayicon.setstatus(current_status)
+    gobject.idle_add(self._trayicon.setstatus, current_status)
 
-
-class TrayIcon:
+class TrayIcon():
 
   def __init__(self):
     locale.setlocale(locale.LC_ALL, '')
     self._status = status.LOGO
     self._popupenabled = True
     self._menu = None
-    self._crea_menu(self)
+    self._progress_dialog = None
+    self._about_dialog = None
+    self._crea_menu()
+    self._notifier = NotificationStack()
+    self._controller = _Controller(LISTENING_URL, self)
+    self._controller.start()
+    self.run()
 
   def setstatus(self, currentstatus):
     '''
@@ -120,40 +131,37 @@ class TrayIcon:
 
     if (self._status.icon != currentstatus.icon
         or self._status.message != currentstatus.message):
+    #if True:
       self._status = currentstatus
       self._trayicon.set_visible(False)
       self._trayicon = gtk.status_icon_new_from_file(self._status.icon)
       self._trayicon.set_tooltip(self._status.message)
       self._trayicon.connect('popup-menu', self._callback, self._menu)
-      # image = random.choice(images)
       if self._popupenabled:
-        notifier.bg_color = gtk.gdk.Color(NOTIFY_COLORS[0])
-        notifier.fg_color = gtk.gdk.Color(NOTIFY_COLORS[1])
-        # mnotifier.show_timeout = random.choice((True, False))
-        notifier.edge_offset_x = 20
-        notifier.new_popup(title="Nemesys", message=self._status.message, image=self._status.icon)
+        self._notifier.bg_color = gtk.gdk.Color(NOTIFY_COLORS[0])
+        self._notifier.fg_color = gtk.gdk.Color(NOTIFY_COLORS[1])
+        self._notifier.new_popup(title="Nemesys", message=self._status.message, image=self._status.icon)
 
   def statomisura(self, widget):
     
-    global winAperta
-    if winAperta:
-      self._win.destroy()  # così lascio aprire una finestra sola relativa allo stato della misura
+    if self._progress_dialog != None:
+      self._progress_dialog.destroy()  # così lascio aprire una finestra sola relativa allo stato della misura
 
-    self._win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-    self._win.set_title('Stato Misura Nemesys')
-    self._win.set_position(gtk.WIN_POS_CENTER)
-    self._win.set_default_size(600, 300)
-    self._win.set_resizable(False)
-    self._win.set_icon_from_file(status.LOGO.icon)
-    self._win.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#FFF'))
-    self._win.set_border_width(20)
+    self._progress_dialog = gtk.Window(gtk.WINDOW_TOPLEVEL)
+    self._progress_dialog.set_title('Stato Misura Nemesys')
+    self._progress_dialog.set_position(gtk.WIN_POS_CENTER)
+    self._progress_dialog.set_default_size(600, 300)
+    self._progress_dialog.set_resizable(False)
+    self._progress_dialog.set_icon_from_file(status.LOGO.icon)
+    self._progress_dialog.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#FFF'))
+    self._progress_dialog.set_border_width(20)
 
     coloreCelle = dict() # lo uso per associare ad ogni colonna lo stato red o green
     for n in range(24): # inizializzo tutto allo stato rosso
       coloreCelle[n] = 'red'
 
     table = gtk.Table(6, 24, True)  # 6 righe, 24 colonne
-    self._win.add(table)
+    self._progress_dialog.add(table)
 
     ore = dict()
     for n in range(0, 24):
@@ -164,6 +172,7 @@ class TrayIcon:
 
     # creo le 24 drawing area
     darea_1_1 = gtk.DrawingArea()
+
     darea_1_2 = gtk.DrawingArea()
     darea_1_3 = gtk.DrawingArea()
     darea_1_4 = gtk.DrawingArea()
@@ -226,8 +235,7 @@ class TrayIcon:
     table.attach(label3, 0, 24, 2, 3)
     table.attach(label4, 0, 24, 3, 4)
 
-    self._win.show_all()
-    winAperta = True
+    self._progress_dialog.show_all()
 
   def _togglepopup(self, widget):
     self._item_togglepopup.destroy()
@@ -248,23 +256,20 @@ class TrayIcon:
     webbrowser.open('http://misurainternet.fub.it/login_form.php')
 
   def _about(self, widget):
-    global infoAperta
-    if infoAperta:  # non do all'utente la possibilità di aprire n finestre info
-      self._infoMessage.destroy()
-    infoAperta = True
+    if self._about_dialog != None:
+      self._about_dialog.destroy()
 
     # TODO Inserire controllo per nuove versioni del software
 
-    self._infoMessage = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE,
+    self._about_dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE,
                                           '''
 Nemesys (Network Measurement System)
 Copyright (c) 2010 Fondazione Ugo Bordoni <info@fub.it>
 Homepage del progetto su www.misurainternet.it''')
-    self._infoMessage.show()
-    self._infoMessage.set_icon_from_file(status.LOGO.icon)
-    if self._infoMessage.run() == gtk.RESPONSE_CLOSE:
-      self._infoMessage.destroy()
-      infoAperta = False
+    self._about_dialog.show()
+    self._about_dialog.set_icon_from_file(status.LOGO.icon)
+    if self._about_dialog.run() == gtk.RESPONSE_CLOSE:
+      self._about_dialog.destroy()
 
   def _callback(self, widget, button, time, menu):
     self._menu.popdown()
@@ -274,28 +279,27 @@ Homepage del progetto su www.misurainternet.it''')
     self._menu.popup(None, None, None, button, time, self._trayicon)
 
   def _quit(self, widget, data=None):  # quando esco dal programma
-    controller.join()
     
     self._trayicon.set_visible(False)
-    self._menu.destroy()
-    if (self._win != None):
-      self._win.destroy()
-    if (self._infoMessage != None):
-      self._infoMessage.destroy()
+    
+    self._controller.join()
+
+    if self._menu != None:
+      self._menu.destroy()
+    
+    if (self._progress_dialog != None):
+      self._progress_dialog.destroy()
+    
+    if (self._about_dialog != None):
+      self._about_dialog.destroy()
+    
     return gtk.main_quit()
 
-  def _crea_menu(self, widget):
-    global statoPopUp
-
-    if (self._menu != None):
+  def _crea_menu(self):
+    if self._menu:
       self._menu.destroy()
+      
     self._menu = gtk.Menu()
-
-    if (winAperta == False):
-      self._win = None
-
-    if (infoAperta == False):
-      self._infoMessage = None
 
     icona = self._status.icon
     stringa = self._status.message
@@ -337,18 +341,13 @@ Homepage del progetto su www.misurainternet.it''')
     self._item_quit.connect('activate', self._quit)
     self._menu.append(self._item_quit)
 
-  def main(self):
+  def run(self):
     gtk.gdk.threads_init()
     gtk.gdk.threads_enter()
     gtk.main()
     gtk.gdk.threads_leave()
 
 if __name__ == '__main__':
-  statoPopUp = 'ON' # per discriminare fra abilita e disabilita popup
-  winAperta = False  # indica se è aperta o meno la finestra contenente l'andamento della misura
-  infoAperta = False  # indica se è aperta o meno la finestra contenente le info su nemesys
-  notifier = NotificationStack()
+  if sys.platform == 'win32':
+    gobject.timeout_add(400, sleeper)
   trayicon = TrayIcon()
-  controller = _Controller(LISTENING_URL, trayicon)
-  controller.start()
-  trayicon.main()
