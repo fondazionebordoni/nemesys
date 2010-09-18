@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+# popup.py
+# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -22,9 +23,9 @@
 
 # TODO Reintrodurre i fade_in e fade_out (anche sotto Windows) http://faq.pygtk.org/ Problema di threading sotto win32
 
-import gobject
-import gtk
+from gobject import idle_add, timeout_add
 from logger import logging
+import gtk
 
 logger = logging.getLogger()
 
@@ -78,7 +79,7 @@ class NotificationStack():
         
         try:
           self._notify_stack.remove(popup)
-          gobject.idle_add(popup.destroy)
+          idle_add(popup.destroy)
         except:
           pass
         
@@ -155,12 +156,12 @@ class Popup(gtk.Window):
         self.x, self.y = self.size_request()
         self.move(gtk.gdk.screen_width() - self.x - stack.edge_offset_x,
                   gtk.gdk.screen_height() - self.y - stack._offset - stack.edge_offset_y)
-        gobject.timeout_add(self.timeout * 1000, self.hide_notification)
+        timeout_add(self.timeout * 1000, self.hide_notification)
 
     def reposition(self, offset, stack):
         """Move the notification window down, when an older notification is removed"""
         new_offset = self.y + offset
-        gobject.idle_add(self.move, gtk.gdk.screen_width() - self.x - stack.edge_offset_x,
+        idle_add(self.move, gtk.gdk.screen_width() - self.x - stack.edge_offset_x,
                   gtk.gdk.screen_height() - new_offset - stack.edge_offset_y)
         return new_offset
 
@@ -192,6 +193,6 @@ if __name__ == "__main__":
         gtk.main_quit()
     
     notifier = NotificationStack(timeout=2) 
-    gobject.timeout_add(1000, notify_factory)
-    gobject.timeout_add(10000, gtk.main_quit)
+    timeout_add(1000, notify_factory)
+    timeout_add(10000, gtk.main_quit)
     gtk.main()

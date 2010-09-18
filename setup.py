@@ -3,8 +3,9 @@
 from distutils.command.sdist import sdist
 from distutils.core import setup
 import os
+import py2exe
 
-VERSION="1.0"
+VERSION = "1.2"
 
 class sdist_svn(sdist):
 
@@ -43,9 +44,22 @@ setup(name='Nemesys',
       author='Giuseppe Pantanetti',
       author_email='gpantanetti@fub.it',
       url='http://code.google.com/p/nemesys-qos/',
-      packages=['nemesys', 'nemesys.test'],
-      requires=['M2Crypto'],
-      provides=['nemesys'],
+      packages=['nemesys'],
+      requires=['M2Crypto', 'glib', 'gtk', 'gobject'],
       platforms=['Linux', 'Windows', 'MacOS'],
       cmdclass={'sdist': sdist_svn},
+      windows=[
+        {
+          'script': 'nemesys/gui.py',
+          'icon_resources': [(1, "nemesys.ico")],
+        }
+      ],
+      options={
+        'py2exe': {
+          'includes': 'asyncore, glib, sys, time, webbrowser, gtk, gobject',
+        },
+        'sdist': {
+          'formats': 'zip',
+        }
+      }
       )

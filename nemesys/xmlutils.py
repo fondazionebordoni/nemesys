@@ -53,6 +53,7 @@ def iso2datetime(s):
   '''
   parts = s.split('.')
   dt = datetime.strptime(parts[0], '%Y-%m-%dT%H:%M:%S')
+  # TODO Gestire eventualità che parts[1] sia nullo
   return dt.replace(microsecond=int(parts[1]))
 
 def getxml(data):
