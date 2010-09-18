@@ -20,11 +20,17 @@
 # Original version:
 #   -> http://github.com/woodenbrick/gtkPopupNotify
 
+# TODO Reintrodurre i fade_in e fade_out (anche sotto Windows) http://faq.pygtk.org/ Problema di threading sotto win32
+
 import gobject
 import gtk
+from logger import logging
+
+logger = logging.getLogger()
 
 class NotificationStack():
-    def __init__(self, size_x=220, size_y=60, timeout=5):
+  
+    def __init__(self, size_x=220, size_y=60, timeout=5, edge_offset_x=20, edge_offset_y=0):
         """
         Create a new notification stack.  The recommended way to create Popup instances.
           Parameters:
@@ -49,35 +55,38 @@ class NotificationStack():
             at one time.
             `bg_color` : if None default is used (usually grey). set with a gtk.gdk.Color.
             `fg_color` : if None default is used (usually black). set with a gtk.gdk.Color.
-            `show_timeout : if True, a countdown till destruction will be displayed.
-            
         """
-        self.edge_offset_x = 0
-        self.edge_offset_y = 0
+        self.edge_offset_x = edge_offset_x
+        self.edge_offset_y = edge_offset_y
         self.max_popups = 5
         self.fg_color = None
         self.bg_color = None
-        self.show_timeout = False
 
         self._notify_stack = []
         self._offset = 0
-
 
     def new_popup(self, title, message, image=None):
         """Create a new Popup instance."""
         if len(self._notify_stack) == self.max_popups:
             self._notify_stack[0].hide_notification()
-        self._notify_stack.append(Popup(self, title, message, image))
+        popup = Popup(self, title, message, image)
+        self._notify_stack.append(popup)
         self._offset += self._notify_stack[-1].y
 
     def destroy_popup_cb(self, popup):
-        self._notify_stack.remove(popup)
+        #logger.debug('Destroying popup %s' % popup)
+        
+        try:
+          self._notify_stack.remove(popup)
+          gobject.idle_add(popup.destroy)
+        except:
+          pass
+        
         #move popups down if required
         offset = 0
         for note in self._notify_stack:
             offset = note.reposition(offset, self)
         self._offset = offset
-
 
 class Popup(gtk.Window):
     def __init__(self, stack, title, message, image):
@@ -88,10 +97,7 @@ class Popup(gtk.Window):
         self.set_deletable(False)
         self.set_property("skip-pager-hint", True)
         self.set_property("skip-taskbar-hint", True)
-        self.connect("enter-notify-event", self.on_hover, True)
-        self.connect("leave-notify-event", self.on_hover, False)
-        self.set_opacity(0.2)
-        self.destroy_cb = stack.destroy_popup_cb
+        self.stack = stack
 
         main_box = gtk.VBox()
         header_box = gtk.HBox()
@@ -102,7 +108,7 @@ class Popup(gtk.Window):
         self.header.set_alignment(0, 0.5)
         close_button = gtk.Image()
 
-        close_button.set_from_stock(gtk.STOCK_CANCEL, gtk.ICON_SIZE_BUTTON)
+        close_button.set_from_stock(gtk.STOCK_STOP, gtk.ICON_SIZE_BUTTON)
         close_button.set_padding(3, 3)
         close_window = gtk.EventBox()
         close_window.set_visible_window(False)
@@ -124,7 +130,6 @@ class Popup(gtk.Window):
         body_box = gtk.HBox()
         self.message = gtk.Label()
         self.message.set_property("wrap", True)
-        #self.message.set_size_request(stack.size_x - 90, -1)
         self.message.set_size_request(stack.size_x - 30 + 3, 60 + 3)
         self.message.set_alignment(0, 0)
         self.message.set_padding(3, 3)
@@ -146,62 +151,47 @@ class Popup(gtk.Window):
             self.header.modify_fg(gtk.STATE_NORMAL, stack.fg_color)
             self.counter.modify_fg(gtk.STATE_NORMAL, stack.fg_color)
             
-        self.show_timeout = stack.show_timeout
-        self.hover = False
         self.show_all()
         self.x, self.y = self.size_request()
         self.move(gtk.gdk.screen_width() - self.x - stack.edge_offset_x,
                   gtk.gdk.screen_height() - self.y - stack._offset - stack.edge_offset_y)
-        self.fade_in_timer = gobject.timeout_add(100, self.fade_in)
+        gobject.timeout_add(self.timeout * 1000, self.hide_notification)
 
     def reposition(self, offset, stack):
         """Move the notification window down, when an older notification is removed"""
         new_offset = self.y + offset
-        self.move(gtk.gdk.screen_width() - self.x - stack.edge_offset_x,
+        gobject.idle_add(self.move, gtk.gdk.screen_width() - self.x - stack.edge_offset_x,
                   gtk.gdk.screen_height() - new_offset - stack.edge_offset_y)
         return new_offset
-
-
-    def fade_in(self):
-        opacity = self.get_opacity()
-        opacity += 0.15
-        if opacity >= 1:
-            self.wait_timer = gobject.timeout_add(1000, self.wait)
-            return False
-        self.set_opacity(opacity)
-        return True
-
-    def wait(self):
-        if not self.hover:
-            self.timeout -= 1
-        if self.show_timeout:
-            self.counter.set_markup(str("<b>%s</b>" % self.timeout))
-        if self.timeout == 0:
-            self.fade_out_timer = gobject.timeout_add(100, self.fade_out)
-            return False
-        return True
-
-
-    def fade_out(self):
-        opacity = self.get_opacity()
-        opacity -= 0.10
-        if opacity <= 0:
-            self.in_progress = False
-            self.hide_notification()
-            return False
-        self.set_opacity(opacity)
-        return True
-
-    def on_hover(self, window, event, hover):
-        """Starts/Stops the notification timer on a mouse in/out event"""
-        self.hover = hover
-
 
     def hide_notification(self, *args):
         """Destroys the notification and tells the stack to move the
         remaining notification windows"""
-        for timer in ("fade_in_timer", "fade_out_timer", "wait_timer"):
-            if hasattr(self, timer):
-                gobject.source_remove(getattr(self, timer))
-        self.destroy()
-        self.destroy_cb(self)
+        self.stack.destroy_popup_cb(self)
+
+if __name__ == "__main__":
+    import random
+    color_combos = (("red", "white"), ("white", "blue"), ("green", "black"))
+    messages = (("Hello", "This is a popup"),
+            ("Some Latin", "Quidquid latine dictum sit, altum sonatur."),
+            ("A long message", "The quick brown fox jumped over the lazy dog. " * 6))
+    images = ("logo1_64.png", None)
+
+    def notify_factory():
+        color = random.choice(color_combos)
+        message = random.choice(messages)
+        image = random.choice(images)
+        notifier.bg_color = gtk.gdk.Color(color[0])
+        notifier.fg_color = gtk.gdk.Color(color[1])
+        notifier.edge_offset_x = 20
+        notifier.new_popup(title=message[0], message=message[1], image=image)
+        return True
+
+    def gtk_main_quit():
+        print "quitting"
+        gtk.main_quit()
+    
+    notifier = NotificationStack(timeout=2) 
+    gobject.timeout_add(1000, notify_factory)
+    gobject.timeout_add(10000, gtk.main_quit)
+    gtk.main()
