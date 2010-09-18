@@ -28,20 +28,32 @@ default = '''
 keys=root
 
 [handlers]
-keys=console
+keys=console,ntevent,syslog
 
 [formatters]
 keys=formatter
 
 [logger_root]
 level=DEBUG
-handlers=console
+handlers=console,ntevent,syslog
 
 [handler_console]
 class=StreamHandler
 level=DEBUG
 formatter=formatter
 args=(sys.stdout,)
+
+[handler_ntevent]
+class=handlers.NTEventLogHandler
+level=WARNING
+formatter=formatter
+args=('Nemesys', '', 'Application')
+
+[handler_syslog]
+class=handlers.SysLogHandler
+level=WARNING
+formatter=formatter
+args=(('localhost', handlers.SYSLOG_UDP_PORT), handlers.SysLogHandler.LOG_USER)
 
 [formatter_formatter] 
 format=%(asctime)s %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
