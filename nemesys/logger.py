@@ -16,9 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import logging
-import logging.config
 from os import path
+import logging.config
 import paths
 
 configfile = paths.CONF_LOG
@@ -71,5 +70,5 @@ logging.config.fileConfig(configfile)
 # create logger
 class Logger(logging.getLoggerClass()):
 
-  def __init__():
+  def __init__(self):
     pass
