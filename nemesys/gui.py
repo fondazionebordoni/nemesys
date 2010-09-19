@@ -35,7 +35,7 @@ import socket
 import status
 import webbrowser
 pygtk.require('2.0')
-    
+
 LISTENING_URL = ('localhost', 21401)
 NOTIFY_COLORS = ('yellow', 'black')
 logger = logging.getLogger()
@@ -54,7 +54,7 @@ class _Controller(Thread):
   def run(self):
     loop(1)
     logger.debug('GUI asyncore loop terminated.')
-    
+
   def join(self, timeout=None):
     self._channel.quit()
     Thread.join(self, timeout)
@@ -143,7 +143,7 @@ class TrayIcon():
         self._notifier.new_popup(title="Nemesys", message=self._status.message, image=self._status.icon)
 
   def statomisura(self, widget):
-    
+
     if self._progress_dialog != None:
       self._progress_dialog.destroy()  # così lascio aprire una finestra sola relativa allo stato della misura
 
@@ -279,26 +279,26 @@ Homepage del progetto su www.misurainternet.it''')
     self._menu.popup(None, None, None, button, time, self._trayicon)
 
   def _quit(self, widget, data=None):  # quando esco dal programma
-    
+
     self._trayicon.set_visible(False)
-    
+
     self._controller.join()
 
     if self._menu != None:
       self._menu.destroy()
-    
+
     if (self._progress_dialog != None):
       self._progress_dialog.destroy()
-    
+
     if (self._about_dialog != None):
       self._about_dialog.destroy()
-    
+
     return gtk.main_quit()
 
   def _crea_menu(self):
     if self._menu:
       self._menu.destroy()
-      
+
     self._menu = gtk.Menu()
 
     icona = self._status.icon
