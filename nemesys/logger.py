@@ -53,10 +53,10 @@ args=('Nemesys', '', 'Application')
 class=handlers.SysLogHandler
 level=WARNING
 formatter=formatter
-args=(('localhost', handlers.SYSLOG_UDP_PORT), handlers.SysLogHandler.LOG_USER)
+args=('/dev/log', handlers.SysLogHandler.LOG_USER)
 
 [formatter_formatter] 
-format=%(asctime)s %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
+format=%(asctime)s Nemesys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
 datefmt=%b %d %H:%M:%S
 '''
 
