@@ -57,7 +57,7 @@ current_status = status.LOGO
 VERSION = '1.1'
 
 # Esegui sempre le misure anche nell'orario già coperto
-MULTIPLY_HOURS = True 
+MULTIPLY_HOURS = True
 
 class _Communicator(Thread):
 
@@ -98,7 +98,7 @@ class _Channel(asyncore.dispatcher):
     (channel, addr) = self.accept()
     self._sender = _Sender(channel)
     self.sendstatus()
-    
+
   def quit(self):
     if (self._sender != None):
       self._sender.close()
@@ -231,7 +231,7 @@ class Executer:
 
       # Aspetta 20 secondi
       sleep(float(self._polling))
-      
+
     while True:
       self._updatestatus(status.FINISHED)
       sleep(float(self._polling))
@@ -297,43 +297,43 @@ class Executer:
     if self._progress.isdone(hour):
       logger.debug('La misura delle %d è già stata eseguita' % hour)
       if not MULTIPLY_HOURS:
-        bandwidth.release() 
+        bandwidth.release()
         return
-      
+
     try:
       if not sysmonitor.checkall():
         raise Exception('Condizioni per effettuare la misura non verificate.')
-      
+
       self._updatestatus(status.PLAY)
-  
+
       t = Tester(host=task.server, timeout=self._testtimeout,
                  username=self._client.username, password=self._client.password)
-  
+
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
       id = datetime.now().strftime('%y%m%d%H%M')
       m = Measure(id, task.server, self._client)
-  
+
       # Set task timeout alarm
       # signal.alarm(self._tasktimeout)
 
       # Testa gli ftp down
       for i in range(1, task.download + 1):
-        
+
         if not sysmonitor.fastcheck():
-          raise Exception('Condizioni per effettuare la misura non verificate.') 
+          raise Exception('Condizioni per effettuare la misura non verificate.')
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
         test = t.testftpdown(task.ftpdownpath)
         logger.debug('Download result: %.3f' % test.value)
         m.savetest(test)
 
       if not sysmonitor.mediumcheck():
-        raise Exception('Condizioni per effettuare la misura non verificate.') 
+        raise Exception('Condizioni per effettuare la misura non verificate.')
 
       # Testa gli ftp down
       for i in range(1, task.upload + 1):
 
         if not sysmonitor.fastcheck():
-          raise Exception('Condizioni per effettuare la misura non verificate.') 
+          raise Exception('Condizioni per effettuare la misura non verificate.')
 
         logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
         test = t.testftpup(self._client.profile.upload * task.multiplier * 1024 / 8, task.ftpuppath)
@@ -345,9 +345,9 @@ class Executer:
 
       # Testa i ping
       for i in range(1, task.ping + 1):
-        
+
         if not sysmonitor.fastcheck():
-          raise Exception('Condizioni per effettuare la misura non verificate.') 
+          raise Exception('Condizioni per effettuare la misura non verificate.')
 
         logger.debug('Starting ping test [%d]' % i)
         test = t.testping()
@@ -366,6 +366,7 @@ class Executer:
       f.close()
 
       if (not self._local):
+        # TODO Testare correttezza nuovo sistema di upload delle misure
         self._upload(f)
       # TODO Spostare questa chiamata nella funzione qui sopra
       self._progress.putstamp()
@@ -416,10 +417,10 @@ class Executer:
 
   def _updatestatus(self, new):
     global current_status
-    
+
     logger.debug('Aggiornamento stato: %s' % new.message)
     current_status = new
-    
+
     if (self._communicator != None):
       self._communicator.sendstatus()
 
