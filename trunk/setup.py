@@ -3,7 +3,10 @@
 from distutils.command.sdist import sdist
 from distutils.core import setup
 import os
-import py2exe
+import sys
+
+if sys.platform == 'win':
+  import py2exe
 
 VERSION = "1.2"
 
@@ -24,7 +27,7 @@ class sdist_svn(sdist):
         self.distribution.metadata.version += '.dev%d' % revision
     sdist.run(self)
 
-    cmd = (""" sed -e 's/OptionParser(version="[0-9\.]*"/OptionParser(version="%s"/g' < nemesys/executer.py """ % 
+    cmd = (""" sed -e 's/OptionParser(version="[0-9\.]*"/OptionParser(version="%s"/g' < nemesys/executer.py """ %
         self.distribution.metadata.version) + " > nemesys/executer.py.new; mv nemesys/executer.py.new nemesys/executer.py"
     os.system(cmd)
 
@@ -46,6 +49,7 @@ setup(name='Nemesys',
       url='http://code.google.com/p/nemesys-qos/',
       packages=['nemesys'],
       requires=['M2Crypto', 'glib', 'gtk', 'gobject'],
+      provides=['nemesys'],
       platforms=['Linux', 'Windows', 'MacOS'],
       cmdclass={'sdist': sdist_svn},
       windows=[
