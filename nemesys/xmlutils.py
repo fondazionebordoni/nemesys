@@ -51,10 +51,18 @@ def iso2datetime(s):
   La versione 2.5 di python ha un bug nella funzione strptime che non riesce
   a leggere i microsecondi (%f)
   '''
-  parts = s.split('.')
-  dt = datetime.strptime(parts[0], '%Y-%m-%dT%H:%M:%S')
-  # TODO Gestire eventualità che parts[1] sia nullo
-  return dt.replace(microsecond=int(parts[1]))
+  p = s.split('.')
+  dt = datetime.strptime(p[0], '%Y-%m-%dT%H:%M:%S')
+
+  # Gstione dei microsecondi
+  ms = 0
+  try:
+    if len(p) > 1:
+      ms = int(p[1])
+  except:
+    ms = 0
+  dt.replace(microsecond=ms)
+  return dt
 
 def getxml(data):
   try:
