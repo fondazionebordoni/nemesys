@@ -55,33 +55,39 @@ bad_proc = ['amule', 'bittorrent']
 
 logger = logging.getLogger()
 
+try:
+  from SystemProfiler import systemProfiler
+except Exception as e:
+  logger.warning('Impossibile importare SystemProfiler')
+  pass
+
 def getstatus(d):
 
   data = ''
 
   try:
-    from SystemProfiler import systemProfiler
     data = systemProfiler(d)
-  except Exception:
+  except Exception as e:
+    logger.warning('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
     data = open(paths.RESULTS).read()
 
   return getvalues(data, tag_results)
 
 def connectionCheck():
   '''
-  Ettettua il controllo sulle connessioni attive
+  Effettua il controllo sulle connessioni attive
   '''
   d = {tag_conn:''}
   values = getstatus(d)
   connActive = values[tag_conn]
-  
+
   if connActive == None or len(connActive) <= 0:
     return True
 
   c = []
   for j in connActive.split(';'):
     c.append(int(j.split(':')[1]))
-  
+
   for i in bad_conn:
     if i in c:
       raise Exception, 'Sono attive connessioni non desiderate.'
@@ -95,7 +101,7 @@ def taskCheck():
   d = {tag_proc:''}
   values = getstatus(d)
   taskActive = values[tag_proc]
-  
+
   if taskActive == None or len(taskActive) <= 0:
     return True
 
@@ -128,27 +134,27 @@ def fastcheck():
     raise Exception('Memoria non sufficiente.')
   if eval(values[tag_cpu]) > th_cpu:
     raise Exception('CPU occupata.')
-  
+
   return True
 
 def mediumcheck():
-  
+
   fastcheck()
 
-  d = {tag_wireless:'',  tag_fw:''}
+  d = {tag_wireless:'', tag_fw:''}
   values = getstatus(d)
 
   if bool(eval(values[tag_fw])):
     raise Exception('Firewall attivo.')
   if bool(eval(values[tag_wireless])):
     raise Exception('Wireless LAN attiva.')
-  
+
   return True
 
 def checkall():
 
   mediumcheck()
-  
+
   d = {tag_wdisk:'', tag_rdisk:'', tag_hosts:''}
   values = getstatus(d)
 
@@ -174,14 +180,14 @@ def getSys():
   '''
   Restituisce array con informazioni sul sistema utilizzato per il test
   '''
-  d = {tag_vers:'',  tag_sys:'', tag_mac:'', tag_release:'', tag_cores:'', tag_arch:'', tag_proc:''}
+  d = {tag_vers:'', tag_sys:'', tag_mac:'', tag_release:'', tag_cores:'', tag_arch:'', tag_proc:''}
   values = getstatus(d)
-  
+
   r = []
-  
+
   for i in values:
     r.append(values[i])
-  
+
   return r
 
 def getvalues(string, tag):
