@@ -196,11 +196,16 @@ class Executer:
 
     self._progress = Progress(create=True)
 
+	# Controllo se non sono trascorsi 3 giorni dall'inizio delle misure
     while self._progress.onair():
 
       bandwidth.acquire() # Richiedi accesso esclusivo alla banda
       task = self._download()
       bandwidth.release() # Rilascia l'accesso esclusivo alla banda
+
+      if self._progress.doneall():
+        self._updatestatus(status.FINISHED)
+
       if (task != None):
         # logger.debug('Trovato task %s' % task)
 
@@ -296,6 +301,7 @@ class Executer:
     hour = datetime.now().hour
     if self._progress.isdone(hour):
       logger.debug('La misura delle %d è già stata eseguita' % hour)
+      self._polling *= 3
       if not MULTIPLY_HOURS:
         bandwidth.release()
         return
@@ -319,20 +325,17 @@ class Executer:
       # Testa gli ftp down
       for i in range(1, task.download + 1):
 
-        if not sysmonitor.fastcheck():
+        if not sysmonitor.mediumcheck():
           raise Exception('Condizioni per effettuare la misura non verificate.')
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
         test = t.testftpdown(task.ftpdownpath)
         logger.debug('Download result: %.3f' % test.value)
         m.savetest(test)
 
-      if not sysmonitor.mediumcheck():
-        raise Exception('Condizioni per effettuare la misura non verificate.')
-
       # Testa gli ftp down
       for i in range(1, task.upload + 1):
 
-        if not sysmonitor.fastcheck():
+        if not sysmonitor.mediumcheck():
           raise Exception('Condizioni per effettuare la misura non verificate.')
 
         logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
@@ -340,13 +343,10 @@ class Executer:
         logger.debug('Upload result: %.3f' % test.value)
         m.savetest(test)
 
-      #if not sysmonitor.mediumcheck():
-      #  raise Exception('Condizioni per effettuare la misura non verificate.') 
-
       # Testa i ping
       for i in range(1, task.ping + 1):
 
-        if not sysmonitor.fastcheck():
+        if not sysmonitor.mediumcheck():
           raise Exception('Condizioni per effettuare la misura non verificate.')
 
         logger.debug('Starting ping test [%d]' % i)
@@ -359,7 +359,10 @@ class Executer:
       # Unset task timeout alarm
       # signal.alarm(0)
 
-      # Spedisci il file al repository delle misure
+      if not sysmonitor.checkall():
+        raise Exception('Condizioni per effettuare la misura non verificate.')
+
+	    # Spedisci il file al repository delle misure
       sec = datetime.now().strftime('%S')
       f = open('%s/measure_%s%s.xml' % (self._outbox, m.id, sec), 'w')
       f.write(str(m))

@@ -55,7 +55,7 @@ class Progress:
     Controlla lo stato delle misure nell'ora indicata: restituisce
     True se per l'ora indicata sono già presenti degli "slot" validi
     '''
-    
+
     slots = self._xml.documentElement.getElementsByTagName('slot')
     for slot in slots:
       slottime = iso2datetime(slot.firstChild.data)
@@ -63,7 +63,7 @@ class Progress:
         return True
 
     return False
-  
+
   def onair(self):
     '''
     Restituisce true se non sono trascorsi ancora MAX_DAYS dallo start delle misure
@@ -74,7 +74,17 @@ class Progress:
       return False
 
     return True
-  
+
+  # TODO Implementare funzione doneall()
+  def doneall(self):
+    '''
+    Restituisce true se ho effettuato almeno una misura per ciascuna ora
+	  '''
+    for i in range(0, 24):
+      if not self.isdone(i):
+        return False
+    return True
+
   def _newxml(self):
     logger.debug('Creo il file dello stato delle misure.')
     xml = parseString('<measure />')
@@ -83,17 +93,17 @@ class Progress:
     start = xml.createElement('start')
     start.appendChild(xml.createTextNode(datetime.now().isoformat()))
     measure.appendChild(start)
-    
+
     content = xml.createElement('content')
     measure.appendChild(content)
 
     return xml
-  
+
   def _saveonfile(self):
     f = open(paths.MEASURE_STATUS, 'w')
     f.write(str(self))
     f.close()
-  
+
   def putstamp(self):
     '''
     Salva l'oggetto Test ricevuto nel file XML interno.
@@ -103,10 +113,10 @@ class Progress:
     slot.appendChild(self._xml.createTextNode(datetime.now().isoformat()))
     content.appendChild(slot)
     self._saveonfile()
-    
+
   def __str__(self):
     return self._xml.toxml('UTF-8')
-      
+
 if __name__ == '__main__':
   t = Progress('cli00000001')
   print t
