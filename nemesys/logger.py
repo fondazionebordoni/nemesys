@@ -19,6 +19,7 @@
 from os import path
 import logging.config
 import paths
+import os
 
 configfile = paths.CONF_LOG
 
@@ -27,14 +28,39 @@ default = '''
 keys=root
 
 [handlers]
-keys=console,ntevent,syslog
+keys=console
 
 [formatters]
 keys=formatter
 
 [logger_root]
 level=DEBUG
-handlers=console,ntevent,syslog
+handlers=console,ntevent
+
+[handler_console]
+class=StreamHandler
+level=DEBUG
+formatter=formatter
+args=(sys.stdout,)
+
+[formatter_formatter] 
+format=%(asctime)s Nemesys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
+datefmt=%b %d %H:%M:%S
+'''
+
+default_win = '''
+[loggers]
+keys=root
+
+[handlers]
+keys=console,ntevent
+
+[formatters]
+keys=formatter
+
+[logger_root]
+level=DEBUG
+handlers=console,ntevent
 
 [handler_console]
 class=StreamHandler
@@ -47,6 +73,31 @@ class=handlers.NTEventLogHandler
 level=WARNING
 formatter=formatter
 args=('Nemesys', '', 'Application')
+
+[formatter_formatter] 
+format=%(asctime)s Nemesys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
+datefmt=%b %d %H:%M:%S
+'''
+
+default_posix = '''
+[loggers]
+keys=root
+
+[handlers]
+keys=console,syslog
+
+[formatters]
+keys=formatter
+
+[logger_root]
+level=DEBUG
+handlers=console,syslog
+
+[handler_console]
+class=StreamHandler
+level=DEBUG
+formatter=formatter
+args=(sys.stdout,)
 
 [handler_syslog]
 class=handlers.SysLogHandler
@@ -61,6 +112,12 @@ datefmt=%b %d %H:%M:%S
 
 # Se il file configurazione di log non esiste, creane uno con le impostazioni base
 if (not path.exists(configfile)):
+
+  if os.name == 'nt':
+    default = default_win
+  elif os.name == 'posix':
+    default = default_posix
+
   with open(configfile, 'w') as file:
     s = str(default)
     file.write(s)
