@@ -259,8 +259,7 @@ class TrayIcon():
     if self._about_dialog != None:
       self._about_dialog.destroy()
 
-    # TODO Inserire controllo per nuove versioni del software
-
+    # TODO Inserire controllo per nuove versioni del software: viene einserito nel messaggio di about un avviso: "scaricare la nuova versione" 
     self._about_dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE,
                                           '''
 Nemesys (Network Measurement System)

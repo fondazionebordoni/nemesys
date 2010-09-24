@@ -84,7 +84,7 @@ def xml2task(data):
   try:
     xml = parseString(data)
   except ExpatError as e:
-    logger.error('Il dato ricevuto non è in formato XML: %s' % e)
+    logger.error('Il dato ricevuto non è in formato XML: %s\n%s' % (e, data))
     return None
 
   nodes = xml.getElementsByTagName(tag_task)
