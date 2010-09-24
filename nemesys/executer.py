@@ -715,6 +715,10 @@ def parse():
   value = None
   try:
     value = config.get(section, option)
+    if not path.exists(value):
+      config.remove_option(section, option)
+      logger.warning('Trovata configurazione di certificato non esistente su disco. Cambiata configurazione')
+      value = None
   except NoOptionError:
     logger.warning('Nessun certificato client specificato.')
     pass
