@@ -64,6 +64,19 @@ class Progress:
 
     return False
 
+  def howmany(self, hour):
+    '''
+    Retituisce il numero di misure effettuate nell'ora indicata.
+    '''
+    n = 0
+    slots = self._xml.documentElement.getElementsByTagName('slot')
+    for slot in slots:
+      slottime = iso2datetime(slot.firstChild.data)
+      if (hour == slottime.hour):
+        n += 1
+
+    return n
+
   def onair(self):
     '''
     Restituisce true se non sono trascorsi ancora MAX_DAYS dallo start delle misure

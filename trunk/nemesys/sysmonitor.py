@@ -56,6 +56,7 @@ bad_proc = ['amule', 'bittorrent']
 logger = logging.getLogger()
 
 try:
+  # TODO Verificare l'import di SystemProfiler
   from SystemProfiler import systemProfiler
 except Exception as e:
   logger.warning('Impossibile importare SystemProfiler')

@@ -90,7 +90,7 @@ def receive_one_ping(my_socket, ID, timeout):
     (type, code, checksum, packetID, sequence) = \
       struct.unpack('bbHHh', icmpHeader)
 
-    # TODO Inserire tutti i codes con i relativi errori
+    # TODO Inserire tutti i codes con i relativi errori (?)
 
     if type == 3:
       codes = {

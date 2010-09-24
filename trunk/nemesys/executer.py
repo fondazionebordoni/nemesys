@@ -50,14 +50,15 @@ from xmlutils import getvalues
 from xmlutils import getxml
 from progress import Progress
 from xmlutils import xml2task
+from random import randint
 
 bandwidth = Semaphore()
 logger = logging.getLogger()
 current_status = status.LOGO
 VERSION = '1.1'
 
-# Esegui sempre le misure anche nell'orario già coperto
-MULTIPLY_HOURS = True
+# Numero massimo di misure per ora
+MAX_MEASURES_PER_HOUR = 2
 
 class _Communicator(Thread):
 
@@ -152,7 +153,7 @@ class OptionParser(OptionParser):
 class Executer:
 
   def __init__(self, client, scheduler, repository, polling=300.0, tasktimeout=60,
-               testtimeout=30, httptimeout=60, local=False):
+               testtimeout=30, httptimeout=60, local=False, isprobe=True):
 
     self._client = client
     self._scheduler = scheduler
@@ -162,11 +163,16 @@ class Executer:
     self._testtimeout = testtimeout
     self._httptimeout = httptimeout
     self._local = local
+    self._isprobe = isprobe
     self._outbox = paths.OUTBOX
     self._sent = paths.SENT
     current_status = status.LOGO
     self._communicator = None
     self._progress = None
+    if self._isprobe:
+      logger.debug('Inizializzato demone per sonda.')
+    else:
+      logger.debug('Inizializzato demone per misure d\'utente')
 
   def test(self, taskfile=None):
 
@@ -196,15 +202,41 @@ class Executer:
 
     self._progress = Progress(create=True)
 
-	# Controllo se non sono trascorsi 3 giorni dall'inizio delle misure
-    while self._progress.onair():
+    # Controllo se non sono trascorsi 3 giorni dall'inizio delle misure
+    while self._progress.onair() or self._isprobe:
+
+      # Se non è una sonda, ma un client d'utente
+      if not self._isprobe:
+        # Se ho fatto 2 misure in questa ora, aspetto la prossima ora
+        now = datetime.now()
+        hour = now.hour
+        made = self._progress.howmany(hour)
+        if made >= MAX_MEASURES_PER_HOUR:
+          # Quanti secondi perché scatti la prossima ora?
+          delta_hour = now - now.replace(hour=hour + 1)
+          # Aggiungo un random di 5 minuti per evitare chiamate sincrone
+          wait_hour = delta_hour.seconds + randint(5, 300)
+          logger.debug('La misura delle %d è completa. Aspetto %d secondi per il prossimo polling.' % (hour, wait_hour))
+          sleep(wait_hour)
+        elif made >= 1:
+          # Ritardo la richiesta per le successive
+          logger.debug('Ho fatto almento una misura. Aspetto %d secondi per il prossimo polling.' % self._polling * 3)
+          sleep(self._polling * 3)
+        else:
+          # Aspetto prima di richiedere il task
+          sleep(self._polling)
+      else:
+        # Aspetto prima di richiedere il task
+        sleep(self._polling)
+
+      if not self._isprobe and self._progress.doneall():
+        self._updatestatus(status.FINISHED)
 
       bandwidth.acquire() # Richiedi accesso esclusivo alla banda
+      # Controllo se ho dei file da mandare prima di prendermi il compito di fare altre misure
+      self._uploadall()
       task = self._download()
       bandwidth.release() # Rilascia l'accesso esclusivo alla banda
-
-      if self._progress.doneall():
-        self._updatestatus(status.FINISHED)
 
       if (task != None):
         # logger.debug('Trovato task %s' % task)
@@ -233,9 +265,6 @@ class Executer:
           t.start()
       else:
         self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure.'))
-
-      # Aspetta 20 secondi
-      sleep(float(self._polling))
 
     while True:
       self._updatestatus(status.FINISHED)
@@ -296,15 +325,7 @@ class Executer:
     # Area riservata per l'esecuzione dei test
     # --------------------------------------------------------------------------
 
-    # TODO Inserire il timeout complessivo di task
-
-    hour = datetime.now().hour
-    if self._progress.isdone(hour):
-      logger.debug('La misura delle %d è già stata eseguita' % hour)
-      self._polling *= 3
-      if not MULTIPLY_HOURS:
-        bandwidth.release()
-        return
+    # TODO Inserire il timeout complessivo di task (da posticipare)
 
     try:
       if not sysmonitor.checkall():
@@ -362,7 +383,7 @@ class Executer:
       if not sysmonitor.checkall():
         raise Exception('Condizioni per effettuare la misura non verificate.')
 
-	    # Spedisci il file al repository delle misure
+      # Spedisci il file al repository delle misure
       sec = datetime.now().strftime('%S')
       f = open('%s/measure_%s%s.xml' % (self._outbox, m.id, sec), 'w')
       f.write(str(m))
@@ -371,8 +392,6 @@ class Executer:
       if (not self._local):
         # TODO Testare correttezza nuovo sistema di upload delle misure
         self._upload(f)
-      # TODO Spostare questa chiamata nella funzione qui sopra
-      self._progress.putstamp()
 
       self._updatestatus(status.READY)
 
@@ -385,6 +404,15 @@ class Executer:
       logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
 
     bandwidth.release() # Rilascia la risorsa condivisa: la banda
+
+  def _uploadall(self):
+    '''
+    Cerca di spedire tutti i file di misura che trova nella cartella d'uscita
+    '''
+    # TODO Implementare funzione: ricerca i file di misura nella directory di invio e li spedisce con self._upload 
+    #for match in glob.glob(os.path.join(self._outbox, '/^measure_\d*.xml/')):
+    #  yeld match
+    return
 
   def _upload(self, file):
     '''
@@ -410,7 +438,7 @@ class Executer:
         # Se tutto è andato bene spostare tutti i file che iniziano per file.name nella cartella "sent"
         if (code == 0):
           self._movefiles(file.name)
-          # TODO Inserire qui timbro su file paths.MEASURE_STATUS
+          self._progress.putstamp()
 
     except TypeError as e:
       logger.error('Errore durante il parsing della risposta del repository: %s' % e)
@@ -465,17 +493,17 @@ class Executer:
     message = getvalues(node, 'message')
     return (code, message)
 
-# TODO Creare dei task per l'upload dei file rimasti nella outbox
-
 def main():
   paths.check_paths()
   (options, args) = parse()
 
   client = getclient(options)
+  isprobe = (client.isp.certificate != None)
   e = Executer(client=client, scheduler=options.scheduler,
                repository=options.repository, polling=options.polling,
                tasktimeout=options.tasktimeout, testtimeout=options.testtimeout,
-               httptimeout=options.httptimeout, local=options.local)
+               httptimeout=options.httptimeout, local=options.local, isprobe=isprobe)
+  logger.debug("%s, %s, %s" % (client, client.isp, client.profile))
 
   if (options.test):
     # Se è presente il flag T segui il test ed esci
