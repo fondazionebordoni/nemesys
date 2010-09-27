@@ -31,7 +31,7 @@ logger = logging.getLogger()
 
 class NotificationStack():
   
-    def __init__(self, size_x=220, size_y=60, timeout=5, edge_offset_x=20, edge_offset_y=0):
+    def __init__(self, size_x=220, size_y=80, timeout=5, edge_offset_x=20, edge_offset_y=0):
         """
         Create a new notification stack.  The recommended way to create Popup instances.
           Parameters:
@@ -131,7 +131,7 @@ class Popup(gtk.Window):
         body_box = gtk.HBox()
         self.message = gtk.Label()
         self.message.set_property("wrap", True)
-        self.message.set_size_request(stack.size_x - 30 + 3, 60 + 3)
+        self.message.set_size_request(stack.size_x - 30 + 3, stack.size_y + 3)
         self.message.set_alignment(0, 0)
         self.message.set_padding(3, 3)
         self.message.set_markup("<i>%s</i>" % message)

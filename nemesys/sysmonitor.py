@@ -51,12 +51,11 @@ th_wdisk = 104857600
 th_cpu = 60
 th_rdisk = 104857600
 bad_conn = [80, 8080, 110, 25]
-bad_proc = ['amule', 'bittorrent']
+bad_proc = ['amule', 'emule', 'bittorrent']
 
 logger = logging.getLogger()
 
 try:
-  # TODO Verificare l'import di SystemProfiler
   from SystemProfiler import systemProfiler
 except Exception as e:
   logger.warning('Impossibile importare SystemProfiler')
@@ -67,7 +66,7 @@ def getstatus(d):
   data = ''
 
   try:
-    data = systemProfiler(d)
+    data = systemProfiler('test', d)
   except Exception as e:
     logger.warning('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
     data = open(paths.RESULTS).read()
@@ -91,7 +90,7 @@ def connectionCheck():
 
   for i in bad_conn:
     if i in c:
-      raise Exception, 'Sono attive connessioni non desiderate.'
+      raise Exception, 'Sono attive connessioni non desiderate: porta %d aperta ed utilizzata.' % i
 
   return True
 
@@ -112,7 +111,7 @@ def taskCheck():
 
   for i in bad_proc:
     if i in t:
-      raise Exception, 'Sono attivi processi non desiderati.'
+      raise Exception, 'Sono attivi processi non desiderati. Chiudere l\'applicazione "%s" per continuare le misure.' % i
 
   return True
 
