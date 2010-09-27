@@ -51,6 +51,7 @@ from xmlutils import getxml
 from progress import Progress
 from xmlutils import xml2task
 from random import randint
+import glob
 
 bandwidth = Semaphore()
 logger = logging.getLogger()
@@ -278,6 +279,7 @@ class Executer:
     clientid = self._client.id
     certificate = self._client.isp.certificate
 
+    # TODO Aggiugnere verifica certificato server
     if (url.scheme != 'https'):
       connection = HTTPConnection(host=url.hostname, timeout=self._httptimeout)
     elif (certificate != None and path.exists(certificate)):
@@ -409,25 +411,23 @@ class Executer:
     '''
     Cerca di spedire tutti i file di misura che trova nella cartella d'uscita
     '''
-    # TODO Implementare funzione: ricerca i file di misura nella directory di invio e li spedisce con self._upload 
-    #for match in glob.glob(os.path.join(self._outbox, '/^measure_\d*.xml/')):
-    #  yeld match
-    return
+    for filename in glob.glob(os.path.join(self._outbox, 'measure_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].xml')):
+      self._upload(filename)
 
-  def _upload(self, file):
+  def _upload(self, filename):
     '''
-    Spedisce il file di misura al repository entro il tempo messo a
+    Spedisce il filename di misura al repository entro il tempo messo a
     disposizione secondo il parametro httptimeout
     '''
     try:
 
       # Crea il Deliverer che si occuperà della spedizione
       d = Deliverer(self._repository, self._client.isp.certificate, self._httptimeout)
-      logger.debug('Invio il file %s a %s' % (file.name, self._repository))
-      response = d.upload(file.name)
+      logger.debug('Invio il file %s a %s' % (filename, self._repository))
+      response = d.upload(filename)
 
     except Exception as e:
-      logger.error('Errore durante la spedizione del file delle misure %s: %s' % (file.name, e))
+      logger.error('Errore durante la spedizione del filename delle misure %s: %s' % (filename, e))
 
     try:
       if (response != None):
@@ -435,9 +435,9 @@ class Executer:
         code = int(code)
         logger.debug('Risposta dal server di upload: [%d] %s' % (code, message))
 
-        # Se tutto è andato bene spostare tutti i file che iniziano per file.name nella cartella "sent"
+        # Se tutto è andato bene sposto il file nella cartella "sent"
         if (code == 0):
-          self._movefiles(file.name)
+          self._movefiles(filename)
           self._progress.putstamp()
 
     except TypeError as e:

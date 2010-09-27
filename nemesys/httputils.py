@@ -32,6 +32,7 @@ def post_multipart(url, fields, files, certificate=None, timeout=60):
     """
     content_type, body = encode_multipart_formdata(fields, files)
 
+    # TODO Aggiungere verifica certificato server
     if (url.scheme != 'https'):
       h = httplib.HTTPConnection(host=url.hostname, timeout=timeout) 
     elif (certificate != None):
