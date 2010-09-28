@@ -117,13 +117,13 @@ class Progress:
     f.write(str(self))
     f.close()
 
-  def putstamp(self):
+  def putstamp(self, time):
     '''
     Salva l'oggetto Test ricevuto nel file XML interno.
     '''
     content = self._xml.getElementsByTagName('content')[0]
     slot = self._xml.createElement('slot')
-    slot.appendChild(self._xml.createTextNode(datetime.now().isoformat()))
+    slot.appendChild(self._xml.createTextNode(time))
     content.appendChild(slot)
     self._saveonfile()
 
