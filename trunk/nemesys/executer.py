@@ -438,7 +438,8 @@ class Executer:
         # Se tutto è andato bene sposto il file nella cartella "sent"
         if (code == 0):
           self._movefiles(filename)
-          self._progress.putstamp()
+          # TODO prendere il tempo dal file di misura
+          self._progress.putstamp(datetime.now().isoformat())
 
     except TypeError as e:
       logger.error('Errore durante il parsing della risposta del repository: %s' % e)
