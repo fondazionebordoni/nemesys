@@ -25,11 +25,12 @@ from os import path
 from urlparse import urlparse
 import zipfile
 from ssl import SSLError
+import os
 
 logger = logging.getLogger()
 
 class Deliverer:
-  
+
   def __init__(self, url, certificate, timeout=60):
     self._url = url
     self._certificate = certificate
@@ -39,35 +40,34 @@ class Deliverer:
     '''
     Effettua l'upload del file .xml contenente la misura zippato. Restituisce la risposta ricevuta dal repository o None se c'è stato un problema.
     '''
-     
+
     zip = self.pack(filename)
 
     # Controllo esito procedura compressione e firma
     if zip != None:
 
+      response = None
       logger.debug('Invio del file %s' % zip)
-
       try:
         file = open(zip, 'r')
         body = file.read()
         file.close()
         url = urlparse(self._url)
         response = post_multipart(url, fields=None, files=[('myfile', path.basename(zip), body)], certificate=self._certificate, timeout=self._timeout)
-        
+
       except HTTPException as e:
         logger.error('Impossibile effettuare l\'invio del file delle misure. Errore: %s' % e)
-        return None
 
       except SSLError as e:
         logger.error('Errore SSL durante l\'invio del file delle misure: %s' % e)
-        return None
 
-      return response
-     
+      finally:
+        os.remove(file)
+        return response
+
     else:
       logger.error("Impossibile inviare il file contenente le misure al Server Repository")
       return None
-   
 
   def pack(self, filename):
     '''
@@ -97,14 +97,14 @@ class Deliverer:
 
     if sign != None and path.exists(sign.name):
         zip.write(sign.name, path.basename(sign.name))
-      
+
     if zip.testzip() != None:
       logger.error("Lo zip del file %s è corrotto" % zip.testzip())
       return None
     else:
       zip.close()
       return zipname
-   
+
   #restituisce la firma del file da inviare
   def sign(self, filename):
     '''
@@ -133,4 +133,4 @@ if __name__ == '__main__':
   #d = Deliverer('https://dataserver.fub.it/Upload', 'fub000.pem')
   #d = Deliverer('http://platone.fub.it/', 'fub000.pem')
   print ('%s' % d.upload("outbox/measure.xml"))
-  
+

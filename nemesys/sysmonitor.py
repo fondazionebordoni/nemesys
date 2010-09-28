@@ -61,6 +61,8 @@ except Exception as e:
   logger.warning('Impossibile importare SystemProfiler')
   pass
 
+# TODO Eliminare eval dalla valutazione dei dati di Systemprofiler
+
 def getstatus(d):
 
   data = ''
@@ -111,7 +113,7 @@ def taskCheck():
 
   for i in bad_proc:
     if i in t:
-      raise Exception, 'Sono attivi processi non desiderati. Chiudere l\'applicazione "%s" per continuare le misure.' % i
+      raise Exception, 'Sono attivi processi non desiderati: chiudere il programma %s per proseguire le misure.' % i
 
   return True
 
@@ -195,13 +197,16 @@ def getvalues(string, tag):
   Estrae informazioni dal SystemProfiler 
   '''
   values = {}
-  for subelement in ET.XML(string):
-    values.update({subelement.tag:subelement.text})
+  try:
+    for subelement in ET.XML(string):
+      values.update({subelement.tag:subelement.text})
+  except Exception as e:
+    logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
+    raise Exception('Errore durante il recupero dello stato del computer.')
 
   return values
 
 if __name__ == '__main__':
-  print '_______________________________________\n'
   print 'Test sysmonitor fastcheck: %s' % fastcheck()
   print 'Test sysmonitor mediumcheck: %s' % mediumcheck()
   print 'Test sysmonitor checkall: %s' % checkall()
