@@ -47,7 +47,7 @@ class Deliverer:
     if zip != None:
 
       response = None
-      logger.debug('Invio del file %s' % zip)
+      #logger.debug('Invio del file %s' % zip)
       try:
         file = open(zip, 'r')
         body = file.read()
@@ -62,7 +62,7 @@ class Deliverer:
         logger.error('Errore SSL durante l\'invio del file delle misure: %s' % e)
 
       finally:
-        os.remove(file)
+        os.remove(file.name)
         return response
 
     else:
@@ -104,6 +104,7 @@ class Deliverer:
     else:
       zip.close()
       return zipname
+  # TODO Eliminare il file di firma se c'è
 
   #restituisce la firma del file da inviare
   def sign(self, filename):

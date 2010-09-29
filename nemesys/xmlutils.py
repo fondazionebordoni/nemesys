@@ -78,14 +78,14 @@ def xml2task(data):
 
   if (len(data) < 1):
     logger.error('Nessun dato da processare')
-    return None
+    raise Exception('Nessun dato ricevuto dallo scheduler.')
 
   #logger.debug('Dati da convertire in XML:\n%s' % data)
   try:
     xml = parseString(data)
   except ExpatError as e:
     logger.error('Il dato ricevuto non è in formato XML: %s\n%s' % (e, data))
-    return None
+    raise Exception('Le informazioni per la programmazione delle misure non sono corrette.')
 
   nodes = xml.getElementsByTagName(tag_task)
   if (len(nodes) < 1):
@@ -109,7 +109,7 @@ def xml2task(data):
     ftpuppath = getvalues(node, tag_ftpuppath)
   except IndexError:
     logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
-    return None
+    raise Exception('Le informazioni per la programmazione delle misure sono incomplete.')
 
   # Aggancio dei dati opzinali
   try:
@@ -126,19 +126,19 @@ def xml2task(data):
   try:
     if (len(upload) <= 0):
       logger.error('L\'XML non contiene il numero di upload da effettuare')
-      return None
+      raise Exception('Le informazioni per la programmazione delle misure sono errate.')
     else:
       upload = int(upload)
 
     if (len(download) <= 0):
       logger.error('L\'XML non contiene il numero di download da effettuare')
-      return None
+      raise Exception()
     else:
       download = int(download)
 
     if (len(ping) <= 0):
       logger.error('L\'XML non contiene il numero di ping da effettuare')
-      return None
+      raise Exception()
     else:
       ping = int(ping)
 
@@ -166,9 +166,13 @@ def xml2task(data):
     else:
       now = bool(now)
 
+  # TODO Testare catena di eccezioni
   except TypeError:
     logger.error('Errore durante la verifica della compatibilità dei dati numerici di task')
-    return None
+    raise Exception()
+
+  except Exception:
+    raise Exception('Le informazioni per la programmazione delle misure sono errate.')
 
   # Date
   try:
@@ -176,7 +180,7 @@ def xml2task(data):
   except ValueError:
     logger.error('Errore durante la verifica della compatibilità dei dati orari di task')
     logger.debug('XML: %s' % data)
-    return None
+    raise Exception('Le informazioni orarie per la programmazione delle misure sono errate.')
 
   # Ip
   # TODO Controllare validità dati IP
