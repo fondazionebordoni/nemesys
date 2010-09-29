@@ -233,10 +233,14 @@ class Executer:
       if not self._isprobe and self._progress.doneall():
         self._updatestatus(status.FINISHED)
 
+      task = None
       bandwidth.acquire() # Richiedi accesso esclusivo alla banda
       # Controllo se ho dei file da mandare prima di prendermi il compito di fare altre misure
       self._uploadall()
-      task = self._download()
+      try:
+        task = self._download()
+      except Exception as e:
+        self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure: %s' % e))
       bandwidth.release() # Rilascia l'accesso esclusivo alla banda
 
       if (task != None):
@@ -265,7 +269,7 @@ class Executer:
           t = Timer(alarm, self._dotask, [task])
           t.start()
       else:
-        self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure.'))
+        self._updatestatus(status.READY)
 
     while True:
       self._updatestatus(status.FINISHED)
@@ -428,6 +432,7 @@ class Executer:
 
     except Exception as e:
       logger.error('Errore durante la spedizione del filename delle misure %s: %s' % (filename, e))
+      return
 
     try:
       if (response != None):
