@@ -402,7 +402,7 @@ class Executer:
       logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
 
     except Exception as e:
-      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta: %s' % e))
+      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s' % e))
       logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
 
     bandwidth.release() # Rilascia la risorsa condivisa: la banda
