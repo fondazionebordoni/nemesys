@@ -43,7 +43,7 @@ tag_proc = 'processList'
 
 # Soglie di sistema
 # ------------------------------------------------------------------------------
-
+# TODO Trovare un sistema per gestire queste soglie da file di configurazione testuale
 th_host = 2
 th_avMem = 134217728
 th_memLoad = 80
@@ -92,7 +92,7 @@ def connectionCheck():
 
   for i in bad_conn:
     if i in c:
-      raise Exception, 'Sono attive connessioni non desiderate: porta %d aperta ed utilizzata.' % i
+      raise Exception, 'Porta %d aperta ed utilizzata.' % i
 
   return True
 
