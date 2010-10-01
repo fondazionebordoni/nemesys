@@ -59,7 +59,6 @@ current_status = status.LOGO
 VERSION = '1.2'
 
 # Numero massimo di misure per ora
-# TODO Mettere 2 misure massime
 MAX_MEASURES_PER_HOUR = 2
 
 class _Communicator(Thread):
@@ -171,6 +170,8 @@ class Executer:
     current_status = status.LOGO
     self._communicator = None
     self._progress = None
+    self._deliverer = Deliverer(self._repository, self._client.isp.certificate, self._httptimeout)
+
     if self._isprobe:
       logger.debug('Inizializzato demone per sonda.')
     else:
@@ -238,10 +239,12 @@ class Executer:
       bandwidth.acquire() # Richiedi accesso esclusivo alla banda
       # Controllo se ho dei file da mandare prima di prendermi il compito di fare altre misure
       self._uploadall()
+      
       try:
         task = self._download()
       except Exception as e:
         self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure: %s' % e))
+      
       bandwidth.release() # Rilascia l'accesso esclusivo alla banda
 
       if (task != None):
@@ -417,6 +420,7 @@ class Executer:
     Cerca di spedire tutti i file di misura che trova nella cartella d'uscita
     '''
     for filename in glob.glob(os.path.join(self._outbox, 'measure_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].xml')):
+      #logger.debug('Trovato il file %s da spedire' % filename)
       self._upload(filename)
 
   def _upload(self, filename):
@@ -427,25 +431,32 @@ class Executer:
     try:
 
       # Crea il Deliverer che si occuperà della spedizione
-      d = Deliverer(self._repository, self._client.isp.certificate, self._httptimeout)
-      logger.debug('Invio il file %s a %s' % (filename, self._repository))
-      response = d.upload(filename)
+      #logger.debug('Invio il file %s a %s' % (filename, self._repository))
+      zipname = self._deliverer.pack(filename)
+      response = self._deliverer.upload(zipname)
 
     except Exception as e:
       logger.error('Errore durante la spedizione del filename delle misure %s: %s' % (filename, e))
+      os.remove(zipname)
       return
 
     try:
       if (response != None):
         (code, message) = self._parserepositorydata(response)
         code = int(code)
-        logger.debug('Risposta dal server di upload: [%d] %s' % (code, message))
+        logger.info('Risposta dal server di upload: [%d] %s' % (code, message))
 
-        # Se tutto è andato bene sposto il file nella cartella "sent"
+        # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
         if (code == 0):
-          self._movefiles(filename)
           # TODO Prendere il tempo dal file di misura
-          self._progress.putstamp(datetime.now().isoformat())
+          stamp = datetime.now().isoformat()
+          os.remove(filename)
+          self._movefiles(zipname)
+          self._progress.putstamp(stamp)
+        else:
+          os.remove(zipname)
+      else:
+        os.remove(zipname)
 
     except TypeError as e:
       logger.error('Errore durante il parsing della risposta del repository: %s' % e)
@@ -456,7 +467,7 @@ class Executer:
   def _updatestatus(self, new):
     global current_status
 
-    logger.debug('Aggiornamento stato: %s' % new.message)
+    #logger.debug('Aggiornamento stato: %s' % new.message)
     current_status = new
 
     if (self._communicator != None):
@@ -510,7 +521,7 @@ def main():
                repository=options.repository, polling=options.polling,
                tasktimeout=options.tasktimeout, testtimeout=options.testtimeout,
                httptimeout=options.httptimeout, local=options.local, isprobe=isprobe)
-  logger.debug("%s, %s, %s" % (client, client.isp, client.profile))
+  #logger.debug("%s, %s, %s" % (client, client.isp, client.profile))
 
   if (options.test):
     # Se è presente il flag T segui il test ed esci
