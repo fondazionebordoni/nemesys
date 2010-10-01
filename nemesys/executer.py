@@ -46,7 +46,7 @@ from threading import Semaphore
 from threading import Thread
 from threading import Timer
 from urlparse import urlparse
-from xmlutils import getvalues
+from xmlutils import getvalues, getcommentvalue, iso2datetime, getfinishedtime
 from xmlutils import getxml
 from progress import Progress
 from xmlutils import xml2task
@@ -397,6 +397,8 @@ class Executer:
       sec = datetime.now().strftime('%S')
       f = open('%s/measure_%s%s.xml' % (self._outbox, m.id, sec), 'w')
       f.write(str(m))
+      # Aggiungi la data di fine in fondo al file
+      f.write('\n<!-- [finished] %s -->' % datetime.now().isoformat())
       f.close()
 
       if (not self._local):
@@ -447,11 +449,10 @@ class Executer:
 
         # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
         if (code == 0):
-          # TODO Prendere il tempo dal file di misura
-          stamp = datetime.now().isoformat()
+          time = getfinishedtime(filename)
           os.remove(filename)
           self._movefiles(zipname)
-          self._progress.putstamp(stamp)
+          self._progress.putstamp(time)
         else:
           os.remove(zipname)
       else:
@@ -475,7 +476,8 @@ class Executer:
   def _movefiles(self, filename):
 
     dir = path.dirname(filename)
-    pattern = path.basename(filename)[0:-4]
+    #pattern = path.basename(filename)[0:-4]
+    pattern = path.basename(filename)
 
     try:
       for file in os.listdir(dir):

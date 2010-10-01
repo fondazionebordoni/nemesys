@@ -25,7 +25,7 @@ from task import Task
 from xml.dom import Node
 from xml.dom.minidom import parseString
 from xml.parsers.expat import ExpatError
-import status
+import re
 
 tag_task = 'task'
 tag_id = 'id'
@@ -143,25 +143,25 @@ def xml2task(data):
       ping = int(ping)
 
     if (len(multiplier) <= 0):
-      logger.warn('L\'XML non contiene il multiplicatore per la grandezza del file di upload (default = 5)')
+      logger.info('L\'XML non contiene il multiplicatore per la grandezza del file di upload (default = 5)')
       multiplier = 5
     else:
       multiplier = int(multiplier)
 
     if (len(nicmp) <= 0):
-      logger.warn('L\'XML non contiene il numero di pacchetti icmp per la prova ping da effettuare (default = 4)')
+      logger.info('L\'XML non contiene il numero di pacchetti icmp per la prova ping da effettuare (default = 4)')
       nicmp = 4
     else:
       nicmp = int(nicmp)
 
     if (len(delay) <= 0):
-      logger.warn('L\'XML non contiene il valore di delay, in secondi, tra un ping e l\'altro (default = 1)')
+      logger.info('L\'XML non contiene il valore di delay, in secondi, tra un ping e l\'altro (default = 1)')
       delay = 1
     else:
       delay = int(delay)
 
     if (len(now) <= 0):
-      logger.warn('L\'XML non contiene indicazione se il task deve essere iniziato subito (default = 0)')
+      logger.info('L\'XML non contiene indicazione se il task deve essere iniziato subito (default = 0)')
       now = False
     else:
       now = bool(now)
@@ -239,3 +239,32 @@ def xml2status(data):
     raise Exception('I messaggi di stato del demone non contengono tutte le informazioni richieste.');
 
   return Status(icon, message)
+
+def getcommentvalue(filename, comment, pattern='.*'):
+  '''
+  Ricava il valore di un commento nell'XML
+  '''
+  CSTART = '<!--'
+  CEND = '-->'
+
+  with open(filename) as f:
+    data = f.read()
+
+  m = re.search('%s %s (%s) %s' % (re.escape(CSTART), re.escape(comment), pattern, re.escape(CEND)), data)
+  value = m.group(1)
+
+  return value
+
+def getfinishedtime(filename):
+  '''
+  Ricava il tempo di start da un file di misura
+  '''
+  try:
+    pattern = '[\dT\-:\.]*'
+    # TODO Correggere riferimenti a [finished] vedi executer.
+    comment = '[finished]'
+    time = iso2datetime(getcommentvalue(filename, comment, pattern))
+  except Exception as e:
+    logger.error('Errore durante il recupero del valore finished della misura: %s' % e)
+    time = datetime.now()
+  return time
