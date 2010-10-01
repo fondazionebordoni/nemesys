@@ -59,6 +59,7 @@ current_status = status.LOGO
 VERSION = '1.2'
 
 # Numero massimo di misure per ora
+# TODO Mettere 2 misure massime
 MAX_MEASURES_PER_HOUR = 2
 
 class _Communicator(Thread):
@@ -221,7 +222,7 @@ class Executer:
           sleep(wait_hour)
         elif made >= 1:
           # Ritardo la richiesta per le successive
-          logger.debug('Ho fatto almento una misura. Aspetto %d secondi per il prossimo polling.' % self._polling * 3)
+          logger.debug('Ho fatto almento una misura. Aspetto %d secondi per il prossimo polling.' % (self._polling * 3))
           sleep(self._polling * 3)
         else:
           # Aspetto prima di richiedere il task
@@ -244,7 +245,7 @@ class Executer:
       bandwidth.release() # Rilascia l'accesso esclusivo alla banda
 
       if (task != None):
-        # logger.debug('Trovato task %s' % task)
+        logger.debug('Trovato task %s' % task)
 
         # Imposta l'allarme che eseguirà i test quando richiesto dal task
         # Prima cancella il vecchio allarme
@@ -443,7 +444,7 @@ class Executer:
         # Se tutto è andato bene sposto il file nella cartella "sent"
         if (code == 0):
           self._movefiles(filename)
-          # TODO prendere il tempo dal file di misura
+          # TODO Prendere il tempo dal file di misura
           self._progress.putstamp(datetime.now().isoformat())
 
     except TypeError as e:
