@@ -173,9 +173,9 @@ class Executer:
     self._deliverer = Deliverer(self._repository, self._client.isp.certificate, self._httptimeout)
 
     if self._isprobe:
-      logger.debug('Inizializzato demone per sonda.')
+      logger.info('Inizializzato demone per sonda.')
     else:
-      logger.debug('Inizializzato demone per misure d\'utente')
+      logger.info('Inizializzato demone per misure d\'utente')
 
   def test(self, taskfile=None):
 
@@ -400,8 +400,7 @@ class Executer:
       f.close()
 
       if (not self._local):
-        # TODO Testare correttezza nuovo sistema di upload delle misure
-        self._upload(f)
+        self._upload(f.name)
 
       self._updatestatus(status.READY)
 
@@ -548,8 +547,8 @@ def parse():
   config = ConfigParser()
 
   if (path.exists(paths.CONF_MAIN)):
-    logger.debug('Trovata configurazione in %s' % paths.CONF_MAIN)
     config.read(paths.CONF_MAIN)
+    logger.info('Caricata configurazione da %s' % paths.CONF_MAIN)
 
   parser = OptionParser(version=VERSION, description='')
   parser.add_option('-T', '--test', dest='test', action='store_true',
