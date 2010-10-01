@@ -113,6 +113,7 @@ datefmt=%b %d %H:%M:%S
 # Se il file configurazione di log non esiste, creane uno con le impostazioni base
 if (not path.exists(configfile)):
 
+  # TODO Correggere baco nell'identificazione del sistema operativo
   if os.name == 'nt':
     default = default_win
   elif os.name == 'posix':
