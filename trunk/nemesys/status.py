@@ -67,6 +67,6 @@ PAUSE = Status('nemesys_white.png', 'Nemesys non deve effettuare misure nella pr
 PLAY = Status('nemesys_green.png', 'Nemesys sta effettuando una misura...')
 FINISHED = Status('nemesys_cyan.png', 'Nemesys ha terminato le misurazioni')
 # TODO Modificare il testo di default per READY
-READY = Status('nemesys_amber.png', 'Nemesys sta per effettuare una misura')
+READY = Status('nemesys_amber.png', 'Nemesys pronto e in attesa di eseguire una misura')
 LOGO = Status('nemesys_logo.png', 'Nemesys (Network Measurement System)')
 
