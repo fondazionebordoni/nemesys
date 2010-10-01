@@ -65,9 +65,9 @@ class Deliverer:
     Restituisce il nome del file zip creato.
     '''
 
-    # Aggiungi la data in fondo al file
+    # Aggiungi la data di invio in fondo al file
     file = open(filename, 'a')
-    file.write('\n<!-- %s -->' % datetime.datetime.now().isoformat())
+    file.write('\n<!-- [packed] %s -->' % datetime.datetime.now().isoformat())
     file.close()
 
     # Gestione della firma del file
