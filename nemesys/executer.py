@@ -16,41 +16,47 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from ConfigParser import ConfigParser, NoOptionError
-from client import Client
+from ssl import SSLError
+from time import sleep
+
+from ConfigParser import ConfigParser
+from ConfigParser import NoOptionError
+import asyncore
 from datetime import datetime
+from client import Client
 from deliverer import Deliverer
-from httplib import HTTPConnection, HTTPSConnection
+from httplib import HTTPSConnection
+from httplib import HTTPConnection
 from isp import Isp
 from logger import logging
 from measure import Measure
 from optparse import OptionParser
-from os import path
-from profile import Profile
-from progress import Progress
-from random import randint
-from ssl import SSLError
-from status import Status
-from tester import Tester
-from threading import Semaphore, Thread, Timer
-from time import sleep
-from urlparse import urlparse
-from xmlutils import getvalues, getfinishedtime, getxml, xml2task
-import asyncore
-import glob
 import os
+from os import path
 import paths
+from profile import Profile
 import re
 import shutil
 import socket
 import status
 import sysmonitor
-
+from status import Status
+from tester import Tester
+from threading import Semaphore
+from threading import Thread
+from threading import Timer
+from urlparse import urlparse
+from xmlutils import getvalues
+from xmlutils import getxml
+from progress import Progress
+from xmlutils import xml2task
+from random import randint
+import glob
 
 bandwidth = Semaphore()
 logger = logging.getLogger()
 current_status = status.LOGO
-VERSION = '1.3'
+VERSION = '1.2'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 2
@@ -66,7 +72,7 @@ class _Communicator(Thread):
 
   def run(self):
     asyncore.loop(5)
-    logger.debug('NeMeSys asyncore loop terminated.')
+    logger.debug('Nemesys asyncore loop terminated.')
 
   def join(self, timeout=None):
     self._channel.quit()
@@ -164,12 +170,10 @@ class Executer:
     current_status = status.LOGO
     self._communicator = None
     self._progress = None
-    self._deliverer = Deliverer(self._repository, self._client.isp.certificate, self._httptimeout)
-
     if self._isprobe:
-      logger.info('Inizializzato demone per sonda.')
+      logger.debug('Inizializzato demone per sonda.')
     else:
-      logger.info('Inizializzato demone per misure d\'utente')
+      logger.debug('Inizializzato demone per misure d\'utente')
 
   def test(self, taskfile=None):
 
@@ -190,8 +194,6 @@ class Executer:
       logger.info('Nessun task da eseguire.')
 
   def loop(self):
-    # TODO Rivedere algoritmo di loop()
-
     # signal.signal(signal.SIGALRM, runtimewarning)
     t = None
 
@@ -203,7 +205,6 @@ class Executer:
 
     # Controllo se non sono trascorsi 3 giorni dall'inizio delle misure
     while self._progress.onair() or self._isprobe:
-      
 
       # Se non è una sonda, ma un client d'utente
       if not self._isprobe:
@@ -212,18 +213,16 @@ class Executer:
         hour = now.hour
         made = self._progress.howmany(hour)
         if made >= MAX_MEASURES_PER_HOUR:
-          self._updatestatus(status.PAUSE)
           # Quanti secondi perché scatti la prossima ora?
-          delta_hour = now.replace(hour=(hour + 1), minute=0, second=0) - now
+          delta_hour = now - now.replace(hour=hour + 1)
           # Aggiungo un random di 5 minuti per evitare chiamate sincrone
           wait_hour = delta_hour.seconds + randint(5, 300)
           logger.debug('La misura delle %d è completa. Aspetto %d secondi per il prossimo polling.' % (hour, wait_hour))
           sleep(wait_hour)
         elif made >= 1:
-          wait_next = max(self._polling * 3, 600)
-          # Ritardo la richiesta per le successive: dovrebbe essere maggiore del tempo per effettuare una misura, altrimenti eseguo MAX_MEASURES_PER_HOUR + 1
-          logger.debug('Ho fatto almento una misura. Aspetto %d secondi per il prossimo polling.' % wait_next)
-          sleep(wait_next)
+          # Ritardo la richiesta per le successive
+          logger.debug('Ho fatto almento una misura. Aspetto %d secondi per il prossimo polling.' % self._polling * 3)
+          sleep(self._polling * 3)
         else:
           # Aspetto prima di richiedere il task
           sleep(self._polling)
@@ -234,20 +233,14 @@ class Executer:
       if not self._isprobe and self._progress.doneall():
         self._updatestatus(status.FINISHED)
 
-      task = None
       bandwidth.acquire() # Richiedi accesso esclusivo alla banda
       # Controllo se ho dei file da mandare prima di prendermi il compito di fare altre misure
       self._uploadall()
-
-      try:
-        task = self._download()
-      except Exception as e:
-        self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure: %s' % e))
-
+      task = self._download()
       bandwidth.release() # Rilascia l'accesso esclusivo alla banda
 
       if (task != None):
-        logger.debug('Trovato task %s' % task)
+        # logger.debug('Trovato task %s' % task)
 
         # Imposta l'allarme che eseguirà i test quando richiesto dal task
         # Prima cancella il vecchio allarme
@@ -272,7 +265,7 @@ class Executer:
           t = Timer(alarm, self._dotask, [task])
           t.start()
       else:
-        self._updatestatus(status.READY)
+        self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure.'))
 
     while True:
       self._updatestatus(status.FINISHED)
@@ -328,11 +321,6 @@ class Executer:
     Esegue il complesso di test prescritti dal task entro il tempo messo a
     disposizione secondo il parametro tasktimeout
     '''
-
-    made = self._progress.howmany(datetime.now().hour)
-    if made >= MAX_MEASURES_PER_HOUR:
-      self._updatestatus(status.PAUSE)
-      return
 
     bandwidth.acquire()  # Acquisisci la risorsa condivisa: la banda
 
@@ -401,12 +389,11 @@ class Executer:
       sec = datetime.now().strftime('%S')
       f = open('%s/measure_%s%s.xml' % (self._outbox, m.id, sec), 'w')
       f.write(str(m))
-      # Aggiungi la data di fine in fondo al file
-      f.write('\n<!-- [finished] %s -->' % datetime.now().isoformat())
       f.close()
 
       if (not self._local):
-        self._upload(f.name)
+        # TODO Testare correttezza nuovo sistema di upload delle misure
+        self._upload(f)
 
       self._updatestatus(status.READY)
 
@@ -415,7 +402,7 @@ class Executer:
       logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
 
     except Exception as e:
-      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s' % e))
+      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta: %s' % e))
       logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
 
     bandwidth.release() # Rilascia la risorsa condivisa: la banda
@@ -425,7 +412,6 @@ class Executer:
     Cerca di spedire tutti i file di misura che trova nella cartella d'uscita
     '''
     for filename in glob.glob(os.path.join(self._outbox, 'measure_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].xml')):
-      #logger.debug('Trovato il file %s da spedire' % filename)
       self._upload(filename)
 
   def _upload(self, filename):
@@ -436,31 +422,23 @@ class Executer:
     try:
 
       # Crea il Deliverer che si occuperà della spedizione
-      #logger.debug('Invio il file %s a %s' % (filename, self._repository))
-      zipname = self._deliverer.pack(filename)
-      response = self._deliverer.upload(zipname)
+      d = Deliverer(self._repository, self._client.isp.certificate, self._httptimeout)
+      logger.debug('Invio il file %s a %s' % (filename, self._repository))
+      response = d.upload(filename)
 
     except Exception as e:
       logger.error('Errore durante la spedizione del filename delle misure %s: %s' % (filename, e))
-      os.remove(zipname)
-      return
 
     try:
       if (response != None):
         (code, message) = self._parserepositorydata(response)
         code = int(code)
-        logger.info('Risposta dal server di upload: [%d] %s' % (code, message))
+        logger.debug('Risposta dal server di upload: [%d] %s' % (code, message))
 
-        # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
+        # Se tutto è andato bene sposto il file nella cartella "sent"
         if (code == 0):
-          time = getfinishedtime(filename)
-          os.remove(filename)
-          self._movefiles(zipname)
-          self._progress.putstamp(time)
-        else:
-          os.remove(zipname)
-      else:
-        os.remove(zipname)
+          self._movefiles(filename)
+          self._progress.putstamp()
 
     except TypeError as e:
       logger.error('Errore durante il parsing della risposta del repository: %s' % e)
@@ -471,7 +449,7 @@ class Executer:
   def _updatestatus(self, new):
     global current_status
 
-    #logger.debug('Aggiornamento stato: %s' % new.message)
+    logger.debug('Aggiornamento stato: %s' % new.message)
     current_status = new
 
     if (self._communicator != None):
@@ -480,8 +458,7 @@ class Executer:
   def _movefiles(self, filename):
 
     dir = path.dirname(filename)
-    #pattern = path.basename(filename)[0:-4]
-    pattern = path.basename(filename)
+    pattern = path.basename(filename)[0:-4]
 
     try:
       for file in os.listdir(dir):
@@ -526,7 +503,7 @@ def main():
                repository=options.repository, polling=options.polling,
                tasktimeout=options.tasktimeout, testtimeout=options.testtimeout,
                httptimeout=options.httptimeout, local=options.local, isprobe=isprobe)
-  #logger.debug("%s, %s, %s" % (client, client.isp, client.profile))
+  logger.debug("%s, %s, %s" % (client, client.isp, client.profile))
 
   if (options.test):
     # Se è presente il flag T segui il test ed esci
@@ -553,8 +530,8 @@ def parse():
   config = ConfigParser()
 
   if (path.exists(paths.CONF_MAIN)):
+    logger.debug('Trovata configurazione in %s' % paths.CONF_MAIN)
     config.read(paths.CONF_MAIN)
-    logger.info('Caricata configurazione da %s' % paths.CONF_MAIN)
 
   parser = OptionParser(version=VERSION, description='')
   parser.add_option('-T', '--test', dest='test', action='store_true',

@@ -40,7 +40,7 @@ class Errorcoder:
 
     config = ConfigParser.ConfigParser()
     if path.exists(filename):
-      #logger.debug('Trovata configurazione d\'errore %s' % filename)
+      logger.debug('Trovata configurazione d\'errore %s' % filename)
       config.read(filename)
     else:
       config.add_section('Errors')

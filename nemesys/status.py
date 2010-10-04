@@ -63,9 +63,9 @@ class Status:
 
 # TODO Gestire TUTTI i caratteri utf8 !!!
 ERROR = Status('nemesys_red.png', 'Impossibile contattare il demone che effettua le misure.')
-PAUSE = Status('nemesys_white.png', 'NeMeSys non deve effettuare misure nell\'ora corrente.')
-PLAY = Status('nemesys_green.png', 'NeMeSys sta effettuando una misura.')
-FINISHED = Status('nemesys_cyan.png', 'NeMeSys ha terminato le misurazioni. Controllare lo stato complessivo della misura.')
-READY = Status('nemesys_amber.png', 'NeMeSys pronto e in attesa di eseguire una misura.')
-LOGO = Status('nemesys_logo.png', 'NeMeSys (Network Measurement System). Sistema collegato e funzionante.')
+PAUSE = Status('nemesys_white.png', 'Nemesys non deve effettuare misure nella prossima ora.')
+PLAY = Status('nemesys_green.png', 'Nemesys sta effettuando una misura...')
+FINISHED = Status('nemesys_cyan.png', 'Nemesys ha terminato le misurazioni')
+READY = Status('nemesys_amber.png', 'Nemesys sta per effettuare una misura')
+LOGO = Status('nemesys_logo.png', 'Nemesys (Network Measurement System)')
 

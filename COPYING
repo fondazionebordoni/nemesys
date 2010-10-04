@@ -1,32 +1,23 @@
-NeMeSys License Information
+Nemesys License Information
 ===========================
 
-NeMeSys (Network Measurement System)
+Nemesys (Network Measurement System)
 Copyright (c) 2010 Fondazione Ugo Bordoni <info@fub.it>
 
-NeMeSys is free software: you can redistribute it and/or modify
+Nemesys is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-NeMeSys is distributed in the hope that it will be useful,
+Nemesys is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with NeMeSys. If not, see <http://www.gnu.org/licenses/>.
+along with Nemesys. If not, see <http://www.gnu.org/licenses/>.
 
-NeMeSys source availability
+Nemesys source availability
 ===========================
 
 Sources files are available on project homepage on http://code.google.com/p/nemesys-qos/
-
-License Information regarding bundled third-party software
-==========================================================
-
-The following third party software is distributed with Jardin and is provided
-under other licenses and/or has source available from other locations.
-
-- System Profiler
-  License: 

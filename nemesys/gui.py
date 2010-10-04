@@ -140,7 +140,7 @@ class TrayIcon():
       if self._popupenabled:
         self._notifier.bg_color = gtk.gdk.Color(NOTIFY_COLORS[0])
         self._notifier.fg_color = gtk.gdk.Color(NOTIFY_COLORS[1])
-        self._notifier.new_popup(title="NeMeSys", message=self._status.message, image=self._status.icon)
+        self._notifier.new_popup(title="Nemesys", message=self._status.message, image=self._status.icon)
 
   def statomisura(self, widget):
 
@@ -148,7 +148,7 @@ class TrayIcon():
       self._progress_dialog.destroy()  # così lascio aprire una finestra sola relativa allo stato della misura
 
     self._progress_dialog = gtk.Window(gtk.WINDOW_TOPLEVEL)
-    self._progress_dialog.set_title('Stato Misura NeMeSys')
+    self._progress_dialog.set_title('Stato Misura Nemesys')
     self._progress_dialog.set_position(gtk.WIN_POS_CENTER)
     self._progress_dialog.set_default_size(600, 300)
     self._progress_dialog.set_resizable(False)
@@ -221,7 +221,7 @@ class TrayIcon():
         riga1[i].modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('green'))
         n = n + 1
 
-    label1 = gtk.Label('<b><big>NeMeSys</big></b>')
+    label1 = gtk.Label('<b><big>Nemesys</big></b>')
     label2 = gtk.Label('<big>Data inizio misurazioni: %s</big>' % inizioMisure.strftime('%c'))
     label3 = gtk.Label('Si ricorda che la misurazione va completata entro tre giorni dal suo inizio')
     label4 = gtk.Label('<big>Stato di avanzamento della misura: %d su 24</big>' % n)
@@ -262,7 +262,7 @@ class TrayIcon():
     # TODO Inserire controllo per nuove versioni del software: viene einserito nel messaggio di about un avviso: "scaricare la nuova versione" 
     self._about_dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE,
                                           '''
-NeMeSys (Network Measurement System)
+Nemesys (Network Measurement System)
 Copyright (c) 2010 Fondazione Ugo Bordoni <info@fub.it>
 Homepage del progetto su www.misurainternet.it''')
     self._about_dialog.show()

@@ -25,7 +25,7 @@ from task import Task
 from xml.dom import Node
 from xml.dom.minidom import parseString
 from xml.parsers.expat import ExpatError
-import re
+import status
 
 tag_task = 'task'
 tag_id = 'id'
@@ -78,14 +78,14 @@ def xml2task(data):
 
   if (len(data) < 1):
     logger.error('Nessun dato da processare')
-    raise Exception('Nessun dato ricevuto dallo scheduler.')
+    return None
 
   #logger.debug('Dati da convertire in XML:\n%s' % data)
   try:
     xml = parseString(data)
   except ExpatError as e:
     logger.error('Il dato ricevuto non è in formato XML: %s\n%s' % (e, data))
-    raise Exception('Le informazioni per la programmazione delle misure non sono corrette.')
+    return None
 
   nodes = xml.getElementsByTagName(tag_task)
   if (len(nodes) < 1):
@@ -109,7 +109,7 @@ def xml2task(data):
     ftpuppath = getvalues(node, tag_ftpuppath)
   except IndexError:
     logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
-    raise Exception('Le informazioni per la programmazione delle misure sono incomplete.')
+    return None
 
   # Aggancio dei dati opzinali
   try:
@@ -126,53 +126,49 @@ def xml2task(data):
   try:
     if (len(upload) <= 0):
       logger.error('L\'XML non contiene il numero di upload da effettuare')
-      raise Exception('Le informazioni per la programmazione delle misure sono errate.')
+      return None
     else:
       upload = int(upload)
 
     if (len(download) <= 0):
       logger.error('L\'XML non contiene il numero di download da effettuare')
-      raise Exception()
+      return None
     else:
       download = int(download)
 
     if (len(ping) <= 0):
       logger.error('L\'XML non contiene il numero di ping da effettuare')
-      raise Exception()
+      return None
     else:
       ping = int(ping)
 
     if (len(multiplier) <= 0):
-      logger.info('L\'XML non contiene il multiplicatore per la grandezza del file di upload (default = 5)')
+      logger.warn('L\'XML non contiene il multiplicatore per la grandezza del file di upload (default = 5)')
       multiplier = 5
     else:
       multiplier = int(multiplier)
 
     if (len(nicmp) <= 0):
-      logger.info('L\'XML non contiene il numero di pacchetti icmp per la prova ping da effettuare (default = 4)')
+      logger.warn('L\'XML non contiene il numero di pacchetti icmp per la prova ping da effettuare (default = 4)')
       nicmp = 4
     else:
       nicmp = int(nicmp)
 
     if (len(delay) <= 0):
-      logger.info('L\'XML non contiene il valore di delay, in secondi, tra un ping e l\'altro (default = 1)')
+      logger.warn('L\'XML non contiene il valore di delay, in secondi, tra un ping e l\'altro (default = 1)')
       delay = 1
     else:
       delay = int(delay)
 
     if (len(now) <= 0):
-      logger.info('L\'XML non contiene indicazione se il task deve essere iniziato subito (default = 0)')
+      logger.warn('L\'XML non contiene indicazione se il task deve essere iniziato subito (default = 0)')
       now = False
     else:
       now = bool(now)
 
-  # TODO Testare catena di eccezioni
   except TypeError:
     logger.error('Errore durante la verifica della compatibilità dei dati numerici di task')
-    raise Exception()
-
-  except Exception:
-    raise Exception('Le informazioni per la programmazione delle misure sono errate.')
+    return None
 
   # Date
   try:
@@ -180,7 +176,7 @@ def xml2task(data):
   except ValueError:
     logger.error('Errore durante la verifica della compatibilità dei dati orari di task')
     logger.debug('XML: %s' % data)
-    raise Exception('Le informazioni orarie per la programmazione delle misure sono errate.')
+    return None
 
   # Ip
   # TODO Controllare validità dati IP
@@ -239,32 +235,3 @@ def xml2status(data):
     raise Exception('I messaggi di stato del demone non contengono tutte le informazioni richieste.');
 
   return Status(icon, message)
-
-def getcommentvalue(filename, comment, pattern='.*'):
-  '''
-  Ricava il valore di un commento nell'XML
-  '''
-  CSTART = '<!--'
-  CEND = '-->'
-
-  with open(filename) as f:
-    data = f.read()
-
-  m = re.search('%s %s (%s) %s' % (re.escape(CSTART), re.escape(comment), pattern, re.escape(CEND)), data)
-  value = m.group(1)
-
-  return value
-
-def getfinishedtime(filename):
-  '''
-  Ricava il tempo di start da un file di misura
-  '''
-  try:
-    pattern = '[\dT\-:\.]*'
-    # TODO Correggere riferimenti a [finished] vedi executer.
-    comment = '[finished]'
-    time = iso2datetime(getcommentvalue(filename, comment, pattern))
-  except Exception as e:
-    logger.error('Errore durante il recupero del valore finished della misura: %s' % e)
-    time = datetime.now()
-  return time

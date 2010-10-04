@@ -2,16 +2,16 @@
 Installation instructions
 =========================
 
-Quelle che seguono sono le intruzioni di installazione di NeMeSys su varie piattaforme. NeMeSys è sviluppato in Python e per funzionare ha bisogno delle librerie standard di Python_ 2.6 (2.6.4 e successive) e della libreria aggiuntiva M2Crypto.
+Quelle che seguono sono le intruzioni di installazione di Nemesys su varie piattaforme. Nemesys è sviluppato in Python e per funzionare ha bisogno delle librerie standard di Python_ 2.6 (2.6.4 e successive) e della libreria aggiuntiva M2Crypto.
 
 Windows
 -------
 
-Se si dispone dei sorgenti di NeMeSys, per eseguire NeMeSys occorre installare preventivamente Python 2.6. L'installazione più semplice prevede l'uso dei binari pre-compilati ufficiali reperibili alla pagina: http://www.python.org/download/
+Se si dispone dei sorgenti di Nemesys, per eseguire Nemesys occorre installare preventivamente Python 2.6. L'installazione più semplice prevede l'uso dei binari pre-compilati ufficiali reperibili alla pagina: http://www.python.org/download/
 
 E' utile inserire l'eseguibile di Python nel PATH del sistema. Inseriamo per questo la cartella di installazione di Python (generalmente ``C:\Python26``) nel PATH.
 
-Prima di usare NeMeSys occorre installare del software necessario per la firma delle misure.
+Prima di usare Nemesys occorre installare del software necessario per la firma delle misure.
 
 Tuttavia, se non si desidera inviare misure al repository, si può omettere l'installazione del software aggiuntivo, ma si deve avere l'accortezza di eseguire ''executer.py'' con l'opzione che disabilita l'invio delle misure.
 
@@ -49,7 +49,7 @@ Una volta installati i pacchetti necessari, verifichiamo che tutto sia installat
   >>> import M2Crypto
   >>>
 
-Versioni di Python 2.6 uguali o successive alla 4 sono compatibili con NeMeSys. Il test di importazione delle librerie M2Crypto non deve dare eccezioni.
+Versioni di Python 2.6 uguali o successive alla 4 sono compatibili con Nemesys. Il test di importazione delle librerie M2Crypto non deve dare eccezioni.
 
 .. _Python: http://www.python.org/
 .. _M2Crypto: http://chandlerproject.org/Projects/MeTooCrypto

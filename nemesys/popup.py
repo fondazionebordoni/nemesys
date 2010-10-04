@@ -30,8 +30,8 @@ import gtk
 logger = logging.getLogger()
 
 class NotificationStack():
-
-    def __init__(self, size_x=220, size_y=120, timeout=5, edge_offset_x=20, edge_offset_y=0):
+  
+    def __init__(self, size_x=220, size_y=80, timeout=5, edge_offset_x=20, edge_offset_y=0):
         """
         Create a new notification stack.  The recommended way to create Popup instances.
           Parameters:
@@ -76,13 +76,13 @@ class NotificationStack():
 
     def destroy_popup_cb(self, popup):
         #logger.debug('Destroying popup %s' % popup)
-
+        
         try:
           self._notify_stack.remove(popup)
           idle_add(popup.destroy)
         except:
           pass
-
+        
         #move popups down if required
         offset = 0
         for note in self._notify_stack:
@@ -115,7 +115,7 @@ class Popup(gtk.Window):
         close_window.set_visible_window(False)
         close_window.connect("button-press-event", self.hide_notification)
         close_window.add(close_button)
-
+        
         if image is not None:
             self.image = gtk.Image()
             self.image.set_size_request(22 + 3, 22 + 3)
@@ -151,7 +151,7 @@ class Popup(gtk.Window):
             self.message.modify_fg(gtk.STATE_NORMAL, stack.fg_color)
             self.header.modify_fg(gtk.STATE_NORMAL, stack.fg_color)
             self.counter.modify_fg(gtk.STATE_NORMAL, stack.fg_color)
-
+            
         self.show_all()
         self.x, self.y = self.size_request()
         self.move(gtk.gdk.screen_width() - self.x - stack.edge_offset_x,
@@ -191,8 +191,8 @@ if __name__ == "__main__":
     def gtk_main_quit():
         print "quitting"
         gtk.main_quit()
-
-    notifier = NotificationStack(timeout=2)
+    
+    notifier = NotificationStack(timeout=2) 
     timeout_add(1000, notify_factory)
     timeout_add(10000, gtk.main_quit)
     gtk.main()

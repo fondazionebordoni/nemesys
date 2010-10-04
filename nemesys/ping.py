@@ -80,7 +80,7 @@ def receive_one_ping(my_socket, ID, timeout):
     if whatReady[0] == []:  # Timeout
       raise RuntimeWarning('Timeout during ICMP socket select')
 
-    if IS_WIN:
+    if IS_WIN == True:
       timeReceived = time.clock()
     else:
       timeReceived = time.time()
@@ -132,7 +132,7 @@ def send_one_ping(my_socket, dest_addr, ID):
   bytesInDouble = struct.calcsize('d')
   data = (PACKET_SIZE - len(header) - bytesInDouble) * 'x'
 
-  if IS_WIN:
+  if IS_WIN == True:
     start = time.clock()
   else:
     start = time.time()

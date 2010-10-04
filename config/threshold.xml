@@ -1,11 +1,9 @@
 <?xml version="1.0" ?>
 <SystemProfilerThreshold>
  <availableMemory>134217728</availableMemory>
- <memoryLoad>80</memoryLoad>
- <diskWrite>1048576000</diskWrite>
+ <memoryLoad>70</memoryLoad>
+ <diskWrite>20971520</diskWrite>
  <cpuLoad>55</cpuLoad>
- <diskRead>1048576000</diskRead>
- <hostNumber>2</hostNumber>
- <activeConnections>110;80;8080;100</activeConnections>
- <processList>mule;torrent;bittorrent;dropbox</processList>
+ <diskRead>20971520</diskRead>
+ <activeConnections>0110;080;08080;0100</activeConnections>
 </SystemProfilerThreshold>

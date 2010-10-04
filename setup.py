@@ -39,7 +39,7 @@ class sdist_svn(sdist):
     except:
       return 0
 
-setup(name='NeMeSys',
+setup(name='Nemesys',
       version=VERSION,
       description='NEtwork MEasurement SYStem',
       long_description=open('README').read(),
