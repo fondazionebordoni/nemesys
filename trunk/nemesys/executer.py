@@ -16,47 +16,41 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from ssl import SSLError
-from time import sleep
-
-from ConfigParser import ConfigParser
-from ConfigParser import NoOptionError
-import asyncore
-from datetime import datetime
+from ConfigParser import ConfigParser, NoOptionError
 from client import Client
+from datetime import datetime
 from deliverer import Deliverer
-from httplib import HTTPSConnection
-from httplib import HTTPConnection
+from httplib import HTTPConnection, HTTPSConnection
 from isp import Isp
 from logger import logging
 from measure import Measure
 from optparse import OptionParser
-import os
 from os import path
-import paths
 from profile import Profile
+from progress import Progress
+from random import randint
+from ssl import SSLError
+from status import Status
+from tester import Tester
+from threading import Semaphore, Thread, Timer
+from time import sleep
+from urlparse import urlparse
+from xmlutils import getvalues, getfinishedtime, getxml, xml2task
+import asyncore
+import glob
+import os
+import paths
 import re
 import shutil
 import socket
 import status
 import sysmonitor
-from status import Status
-from tester import Tester
-from threading import Semaphore
-from threading import Thread
-from threading import Timer
-from urlparse import urlparse
-from xmlutils import getvalues, getcommentvalue, iso2datetime, getfinishedtime
-from xmlutils import getxml
-from progress import Progress
-from xmlutils import xml2task
-from random import randint
-import glob
+
 
 bandwidth = Semaphore()
 logger = logging.getLogger()
 current_status = status.LOGO
-VERSION = '1.2'
+VERSION = '1.3'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 2
