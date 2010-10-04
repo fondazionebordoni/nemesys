@@ -196,6 +196,8 @@ class Executer:
       logger.info('Nessun task da eseguire.')
 
   def loop(self):
+    # TODO Rivedere algoritmo di loop()
+
     # signal.signal(signal.SIGALRM, runtimewarning)
     t = None
 
@@ -207,6 +209,7 @@ class Executer:
 
     # Controllo se non sono trascorsi 3 giorni dall'inizio delle misure
     while self._progress.onair() or self._isprobe:
+      
 
       # Se non è una sonda, ma un client d'utente
       if not self._isprobe:
@@ -331,6 +334,11 @@ class Executer:
     Esegue il complesso di test prescritti dal task entro il tempo messo a
     disposizione secondo il parametro tasktimeout
     '''
+
+    made = self._progress.howmany(datetime.now().hour)
+    if made >= MAX_MEASURES_PER_HOUR:
+      self._updatestatus(status.PAUSE)
+      return
 
     bandwidth.acquire()  # Acquisisci la risorsa condivisa: la banda
 
