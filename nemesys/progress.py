@@ -123,7 +123,7 @@ class Progress:
     '''
     content = self._xml.getElementsByTagName('content')[0]
     slot = self._xml.createElement('slot')
-    slot.appendChild(self._xml.createTextNode(time))
+    slot.appendChild(self._xml.createTextNode(time.isoformat()))
     content.appendChild(slot)
     self._saveonfile()
 

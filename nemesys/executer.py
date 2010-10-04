@@ -72,7 +72,7 @@ class _Communicator(Thread):
 
   def run(self):
     asyncore.loop(5)
-    logger.debug('Nemesys asyncore loop terminated.')
+    logger.debug('NeMeSys asyncore loop terminated.')
 
   def join(self, timeout=None):
     self._channel.quit()
@@ -215,16 +215,18 @@ class Executer:
         hour = now.hour
         made = self._progress.howmany(hour)
         if made >= MAX_MEASURES_PER_HOUR:
+          self._updatestatus(status.PAUSE)
           # Quanti secondi perché scatti la prossima ora?
-          delta_hour = now - now.replace(hour=hour + 1)
+          delta_hour = now.replace(hour=(hour + 1), minute=0, second=0) - now
           # Aggiungo un random di 5 minuti per evitare chiamate sincrone
           wait_hour = delta_hour.seconds + randint(5, 300)
           logger.debug('La misura delle %d è completa. Aspetto %d secondi per il prossimo polling.' % (hour, wait_hour))
           sleep(wait_hour)
         elif made >= 1:
-          # Ritardo la richiesta per le successive
-          logger.debug('Ho fatto almento una misura. Aspetto %d secondi per il prossimo polling.' % (self._polling * 3))
-          sleep(self._polling * 3)
+          wait_next = max(self._polling * 3, 600)
+          # Ritardo la richiesta per le successive: dovrebbe essere maggiore del tempo per effettuare una misura, altrimenti eseguo MAX_MEASURES_PER_HOUR + 1
+          logger.debug('Ho fatto almento una misura. Aspetto %d secondi per il prossimo polling.' % wait_next)
+          sleep(wait_next)
         else:
           # Aspetto prima di richiedere il task
           sleep(self._polling)
@@ -239,12 +241,12 @@ class Executer:
       bandwidth.acquire() # Richiedi accesso esclusivo alla banda
       # Controllo se ho dei file da mandare prima di prendermi il compito di fare altre misure
       self._uploadall()
-      
+
       try:
         task = self._download()
       except Exception as e:
         self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure: %s' % e))
-      
+
       bandwidth.release() # Rilascia l'accesso esclusivo alla banda
 
       if (task != None):
