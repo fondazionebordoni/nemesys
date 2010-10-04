@@ -19,7 +19,7 @@
 from os import path
 import logging.config
 import paths
-import os
+import sys
 
 configfile = paths.CONF_LOG
 
@@ -34,17 +34,17 @@ keys=console
 keys=formatter
 
 [logger_root]
-level=DEBUG
-handlers=console,ntevent
+level=INFO
+handlers=console
 
 [handler_console]
 class=StreamHandler
-level=DEBUG
+level=INFO
 formatter=formatter
 args=(sys.stdout,)
 
 [formatter_formatter] 
-format=%(asctime)s Nemesys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
+format=%(asctime)s NeMeSys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
 datefmt=%b %d %H:%M:%S
 '''
 
@@ -59,23 +59,23 @@ keys=console,ntevent
 keys=formatter
 
 [logger_root]
-level=DEBUG
+level=INFO
 handlers=console,ntevent
 
 [handler_console]
 class=StreamHandler
-level=DEBUG
+level=INFO
 formatter=formatter
 args=(sys.stdout,)
 
 [handler_ntevent]
 class=handlers.NTEventLogHandler
-level=WARNING
+level=INFO
 formatter=formatter
-args=('Nemesys', '', 'Application')
+args=('NeMeSys', '', 'Application')
 
 [formatter_formatter] 
-format=%(asctime)s Nemesys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
+format=%(asctime)s NeMeSys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
 datefmt=%b %d %H:%M:%S
 '''
 
@@ -90,23 +90,23 @@ keys=console,syslog
 keys=formatter
 
 [logger_root]
-level=DEBUG
+level=INFO
 handlers=console,syslog
 
 [handler_console]
 class=StreamHandler
-level=DEBUG
+level=INFO
 formatter=formatter
 args=(sys.stdout,)
 
 [handler_syslog]
 class=handlers.SysLogHandler
-level=WARNING
+level=INFO
 formatter=formatter
 args=('/dev/log', handlers.SysLogHandler.LOG_USER)
 
 [formatter_formatter] 
-format=%(asctime)s Nemesys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
+format=%(asctime)s NeMeSys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
 datefmt=%b %d %H:%M:%S
 '''
 
@@ -114,9 +114,9 @@ datefmt=%b %d %H:%M:%S
 if (not path.exists(configfile)):
 
   # TODO Correggere baco nell'identificazione del sistema operativo
-  if os.name == 'nt':
+  if sys.platform[0:3] == 'win':
     default = default_win
-  elif os.name == 'posix':
+  elif sys.platform[0:6] == 'darwin' or sys.platform[0:5] == 'linux':
     default = default_posix
 
   with open(configfile, 'w') as file:
