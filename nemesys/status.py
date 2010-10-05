@@ -68,4 +68,5 @@ PLAY = Status('nemesys_green.png', 'NeMeSys sta effettuando una misura.')
 FINISHED = Status('nemesys_cyan.png', 'NeMeSys ha terminato le misurazioni. Controllare lo stato complessivo della misura.')
 READY = Status('nemesys_amber.png', 'NeMeSys pronto e in attesa di eseguire una misura.')
 LOGO = Status('nemesys_logo.png', 'NeMeSys (Network Measurement System). Sistema collegato e funzionante.')
-
+LOGOSTATOMISURA2 = Status('logo_nemesys_stato_misura.png','NeMeSys (Network Measurement System).')
+LOGOSTATOMISURA1 = Status('misintw_stato_misura.jpg','Misura Internet.')
