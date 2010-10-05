@@ -140,7 +140,7 @@ class TrayIcon():
       if self._popupenabled:
         self._notifier.bg_color = gtk.gdk.Color(NOTIFY_COLORS[0])
         self._notifier.fg_color = gtk.gdk.Color(NOTIFY_COLORS[1])
-        self._notifier.new_popup(title="NeMeSys", message=self._status.message, image=self._status.icon)
+        self._notifier.new_popup(title="Ne.Me.Sys.", message=self._status.message, image=self._status.icon)
 
   def statomisura(self, widget):
 
@@ -148,7 +148,7 @@ class TrayIcon():
       self._progress_dialog.destroy()  # così lascio aprire una finestra sola relativa allo stato della misura
 
     self._progress_dialog = gtk.Window(gtk.WINDOW_TOPLEVEL)
-    self._progress_dialog.set_title('Stato Misura NeMeSys')
+    self._progress_dialog.set_title('Stato Misura Ne.Me.Sys.')
     self._progress_dialog.set_position(gtk.WIN_POS_CENTER)
     self._progress_dialog.set_default_size(600, 270)
     self._progress_dialog.set_resizable(False)
@@ -231,7 +231,7 @@ class TrayIcon():
     scaled_buf = pixbuf.scale_simple(90,75,gtk.gdk.INTERP_BILINEAR)
     logo2.set_from_pixbuf(scaled_buf)
 
-    label1 = gtk.Label("<b><big><big><big><big><big>NeMeSys</big></big></big></big></big></b>")
+    label1 = gtk.Label("<b><big><big><big><big><big>Ne.Me.Sys.</big></big></big></big></big></b>")
     label2 = gtk.Label("<big>Inizio test di misura</big>")
     label3 = gtk.Label("<big>Data: %s</big>" % inizioMisure.strftime('%c'))
     label4 = gtk.Label("<big>Stato di avanzamento: "+str(n)+"/24</big>")
@@ -276,7 +276,7 @@ class TrayIcon():
     # TODO Inserire controllo per nuove versioni del software: viene einserito nel messaggio di about un avviso: "scaricare la nuova versione" 
     self._about_dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE,
                                           '''
-NeMeSys (Network Measurement System)
+Ne.Me.Sys. (Network Measurement System)
 Copyright (c) 2010 Fondazione Ugo Bordoni <info@fub.it>
 Homepage del progetto su www.misurainternet.it''')
     self._about_dialog.show()

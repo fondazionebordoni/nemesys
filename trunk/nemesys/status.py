@@ -63,10 +63,10 @@ class Status:
 
 # TODO Gestire TUTTI i caratteri utf8 !!!
 ERROR = Status('nemesys_red.png', 'Impossibile contattare il demone che effettua le misure.')
-PAUSE = Status('nemesys_white.png', 'NeMeSys non deve effettuare misure nell\'ora corrente.')
-PLAY = Status('nemesys_green.png', 'NeMeSys sta effettuando una misura.')
-FINISHED = Status('nemesys_cyan.png', 'NeMeSys ha terminato le misurazioni. Controllare lo stato complessivo della misura.')
-READY = Status('nemesys_amber.png', 'NeMeSys pronto e in attesa di eseguire una misura.')
-LOGO = Status('nemesys_logo.png', 'NeMeSys (Network Measurement System). Sistema collegato e funzionante.')
-LOGOSTATOMISURA2 = Status('logo_nemesys_stato_misura.png','NeMeSys (Network Measurement System).')
+PAUSE = Status('nemesys_white.png', 'Ne.Me.Sys. non deve effettuare misure nell\'ora corrente.')
+PLAY = Status('nemesys_green.png', 'Ne.Me.Sys. sta effettuando una misura.')
+FINISHED = Status('nemesys_cyan.png', 'Ne.Me.Sys. ha terminato le misurazioni. Controllare lo stato complessivo della misura.')
+READY = Status('nemesys_amber.png', 'Ne.Me.Sys. pronto e in attesa di eseguire una misura.')
+LOGO = Status('nemesys_logo.png', 'Ne.Me.Sys. (Network Measurement System). Sistema collegato e funzionante.')
+LOGOSTATOMISURA2 = Status('logo_nemesys_stato_misura.png','Ne.Me.Sys. (Network Measurement System).')
 LOGOSTATOMISURA1 = Status('misintw_stato_misura.jpg','Misura Internet.')
