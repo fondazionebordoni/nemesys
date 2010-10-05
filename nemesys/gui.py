@@ -150,17 +150,18 @@ class TrayIcon():
     self._progress_dialog = gtk.Window(gtk.WINDOW_TOPLEVEL)
     self._progress_dialog.set_title('Stato Misura NeMeSys')
     self._progress_dialog.set_position(gtk.WIN_POS_CENTER)
-    self._progress_dialog.set_default_size(600, 300)
+    self._progress_dialog.set_default_size(600, 270)
     self._progress_dialog.set_resizable(False)
     self._progress_dialog.set_icon_from_file(status.LOGO.icon)
     self._progress_dialog.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#FFF'))
     self._progress_dialog.set_border_width(20)
-
+    
     coloreCelle = dict() # lo uso per associare ad ogni colonna lo stato red o green
     for n in range(24): # inizializzo tutto allo stato rosso
       coloreCelle[n] = 'red'
 
-    table = gtk.Table(6, 24, True)  # 6 righe, 24 colonne
+    table = gtk.Table(7, 24, True)  # 7 righe, 24 colonne
+    table.set_size_request(600,270)
     self._progress_dialog.add(table)
 
     ore = dict()
@@ -172,7 +173,6 @@ class TrayIcon():
 
     # creo le 24 drawing area
     darea_1_1 = gtk.DrawingArea()
-
     darea_1_2 = gtk.DrawingArea()
     darea_1_3 = gtk.DrawingArea()
     darea_1_4 = gtk.DrawingArea()
@@ -221,19 +221,33 @@ class TrayIcon():
         riga1[i].modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('green'))
         n = n + 1
 
-    label1 = gtk.Label('<b><big>NeMeSys</big></b>')
-    label2 = gtk.Label('<big>Data inizio misurazioni: %s</big>' % inizioMisure.strftime('%c'))
-    label3 = gtk.Label('Si ricorda che la misurazione va completata entro tre giorni dal suo inizio')
-    label4 = gtk.Label('<big>Stato di avanzamento della misura: %d su 24</big>' % n)
+    logo1 = gtk.Image()       
+    pixbuf = gtk.gdk.pixbuf_new_from_file(status.LOGOSTATOMISURA1.icon)
+    scaled_buf = pixbuf.scale_simple(75,75,gtk.gdk.INTERP_BILINEAR)
+    logo1.set_from_pixbuf(scaled_buf)
+
+    logo2 = gtk.Image()
+    pixbuf = gtk.gdk.pixbuf_new_from_file(status.LOGOSTATOMISURA2.icon)
+    scaled_buf = pixbuf.scale_simple(90,75,gtk.gdk.INTERP_BILINEAR)
+    logo2.set_from_pixbuf(scaled_buf)
+
+    label1 = gtk.Label("<b><big><big><big><big><big>NeMeSys</big></big></big></big></big></b>")
+    label2 = gtk.Label("<big>Inizio test di misura</big>")
+    label3 = gtk.Label("<big>Data: %s</big>" % inizioMisure.strftime('%c'))
+    label4 = gtk.Label("<big>Stato di avanzamento: "+str(n)+"/24</big>")
+    label5 = gtk.Label("<big>Si ricorda che la misurazione va completata entro tre giorni dal suo inizio</big>")
     label1.set_use_markup(True)
     label2.set_use_markup(True)
     label3.set_use_markup(True)
     label4.set_use_markup(True)
-
-    table.attach(label1, 0, 24, 0, 1)
+    label5.set_use_markup(True)
+    table.attach(label1, 8, 16, 0, 1)
     table.attach(label2, 0, 24, 1, 2)
     table.attach(label3, 0, 24, 2, 3)
     table.attach(label4, 0, 24, 3, 4)
+    table.attach(label5, 0, 24, 6, 7)
+    table.attach(logo1, 0, 6, 0, 2)
+    table.attach(logo2, 18, 24, 0, 2)
 
     self._progress_dialog.show_all()
 
