@@ -52,7 +52,7 @@ th_memLoad = 80
 th_wdisk = 104857600
 th_cpu = 60
 th_rdisk = 104857600
-bad_conn = [80, 8080, 110, 25]
+bad_conn = [80, 8080, 110, 25, 443]
 bad_proc = ['amule', 'emule', 'bittorrent']
 
 logger = logging.getLogger()
@@ -69,13 +69,14 @@ if Path.isfile(paths.THRESHOLD):
     raise Exception('Errore durante il recupero delle soglie da file.')
   
   # TODO eliminare NONE e bloccare esecuzione in presenza problema di casting
+  # commentato controllo su lettura e scrittura disco per debug
   try:
     th_host = int(th_values[tag_hosts])
     th_avMem = float(th_values[tag_avMem])
     th_memLoad = float(th_values[tag_memLoad])
-    th_wdisk = float(th_values[tag_wdisk])
+    #th_wdisk = float(th_values[tag_wdisk])
     th_cpu = float(th_values[tag_cpu])
-    th_rdisk = float(th_values[tag_rdisk])
+    #th_rdisk = float(th_values[tag_rdisk])
     bad_conn = []
     for j in th_values[tag_conn].split(';'):
       bad_conn.append(int(j))
@@ -255,8 +256,22 @@ def checkall():
   d = {tag_wdisk:'', tag_rdisk:'', tag_hosts:''}
   values = getstatus(d)
 
-# TODO eliminare pass e bloccare esecuzione in presenza problema di casting
+  try:
+    host = int(values[tag_hosts])
+  except ValueError as e:
+    logger.error('errore nel casting dei paramentri di SystemProfiler!')
+    host = None
+    #raise e
 
+  if host > th_host:
+    raise Exception('Presenza altri host in rete.')
+
+  return True
+
+
+# TODO eliminare pass e bloccare esecuzione in presenza problema di casting
+# commentato controllo su lettura e scrittura disco per debug
+'''
   try:
     wdisk = float(values[tag_wdisk])
   except ValueError as e:
@@ -270,22 +285,13 @@ def checkall():
     logger.error('errore nel casting dei paramentri di SystemProfiler!')
     rdisk = None
      #raise e
-
-  try:
-    host = int(values[tag_hosts])
-  except ValueError as e:
-    logger.error('errore nel casting dei paramentri di SystemProfiler!')
-    host = None
-    #raise e
-
+     
   if wdisk > th_wdisk:
     raise Exception('Eccessivo carico in scrittura del disco.')
   if rdisk > th_rdisk:
     raise Exception('Eccessivo carico in lettura del disco.')
-  if host > th_host:
-    raise Exception('Presenza altri host in rete.')
+'''
 
-  return True
 
 def getMac():
   '''
