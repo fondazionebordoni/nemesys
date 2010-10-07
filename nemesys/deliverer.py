@@ -43,9 +43,9 @@ class Deliverer:
     response = None
     #logger.debug('Invio del file %s' % filename)
     try:
-      file = open(filename, 'r')
-      body = file.read()
-      file.close()
+      with open(filename, 'rb') as file:
+        body = file.read()
+      
       url = urlparse(self._url)
       response = post_multipart(url, fields=None, files=[('myfile', path.basename(filename), body)], certificate=self._certificate, timeout=self._timeout)
 
@@ -66,9 +66,8 @@ class Deliverer:
     '''
 
     # Aggiungi la data di invio in fondo al file
-    file = open(filename, 'a')
-    file.write('\n<!-- [packed] %s -->' % datetime.datetime.now().isoformat())
-    file.close()
+    with open(filename, 'a') as file:
+      file.write('\n<!-- [packed] %s -->' % datetime.datetime.now().isoformat())
 
     # Gestione della firma del file
     sign = None
