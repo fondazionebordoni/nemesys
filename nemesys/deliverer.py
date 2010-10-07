@@ -115,7 +115,7 @@ class Deliverer:
       logger.debug('Impossibile importare il modulo M2Crypto')
       return None
 
-    data = open(filename, 'r').read()
+    data = open(filename, 'rb').read()
     digest = hashlib.sha1(data).digest()
 
     rsa = RSA.load_key(self._certificate)
