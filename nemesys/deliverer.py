@@ -77,9 +77,8 @@ class Deliverer:
       if signature == None:
         logger.error('Impossibile eseguire la firma del file delle misure. Creazione dello zip omettendo il .sign')
       else:
-        sign = open('%s.sign' % filename[0:-4], 'w')
-        sign.write(signature)
-        sign.close()
+        with open('%s.sign' % filename[0:-4], 'wb') as sign:
+          sign.write(signature)
 
     # Creazione del file zip
     zipname = '%s.zip' % filename[0:-4]

@@ -467,6 +467,10 @@ class Executer:
 
     except Exception as e:
       logger.error('Errore durante il parsing della risposta del repository: %s' % e)
+      
+    finally:
+      os.remove(zipname)
+
 
   def _updatestatus(self, new):
     global current_status
