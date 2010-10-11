@@ -88,7 +88,6 @@ class Progress:
 
     return True
 
-  # TODO Implementare funzione doneall()
   def doneall(self):
     '''
     Restituisce true se ho effettuato almeno una misura per ciascuna ora

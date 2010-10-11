@@ -70,7 +70,7 @@ args=(sys.stdout,)
 
 [handler_ntevent]
 class=handlers.NTEventLogHandler
-level=INFO
+level=ERROR
 formatter=formatter
 args=('NeMeSys', '', 'Application')
 
@@ -101,7 +101,7 @@ args=(sys.stdout,)
 
 [handler_syslog]
 class=handlers.SysLogHandler
-level=INFO
+level=ERROR
 formatter=formatter
 args=('/dev/log', handlers.SysLogHandler.LOG_USER)
 
@@ -113,7 +113,6 @@ datefmt=%b %d %H:%M:%S
 # Se il file configurazione di log non esiste, creane uno con le impostazioni base
 if (not path.exists(configfile)):
 
-  # TODO Correggere baco nell'identificazione del sistema operativo
   if sys.platform[0:3] == 'win':
     default = default_win
   elif sys.platform[0:6] == 'darwin' or sys.platform[0:5] == 'linux':

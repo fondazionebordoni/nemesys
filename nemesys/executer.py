@@ -45,12 +45,13 @@ import shutil
 import socket
 import status
 import sysmonitor
+import hashlib
 
 
 bandwidth = Semaphore()
 logger = logging.getLogger()
 current_status = status.LOGO
-VERSION = '1.3'
+VERSION = '1.3.1'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 2
@@ -148,7 +149,7 @@ class OptionParser(OptionParser):
 class Executer:
 
   def __init__(self, client, scheduler, repository, polling=300.0, tasktimeout=60,
-               testtimeout=30, httptimeout=60, local=False, isprobe=True):
+               testtimeout=30, httptimeout=60, local=False, isprobe=True, md5conf=None):
 
     self._client = client
     self._scheduler = scheduler
@@ -159,6 +160,8 @@ class Executer:
     self._httptimeout = httptimeout
     self._local = local
     self._isprobe = isprobe
+    self._md5conf = md5conf
+    
     self._outbox = paths.OUTBOX
     self._sent = paths.SENT
     current_status = status.LOGO
@@ -283,7 +286,6 @@ class Executer:
     logger.debug('Reading resource %s for client %s' % (self._scheduler, self._client))
 
     url = urlparse(self._scheduler)
-    clientid = self._client.id
     certificate = self._client.isp.certificate
 
     # TODO Aggiugnere verifica certificato server
@@ -295,7 +297,7 @@ class Executer:
       connection = HTTPSConnection(host=url.hostname, timeout=self._httptimeout)
 
     try:
-      connection.request('GET', '%s?clientid=%s&version=%s' % (url.path, clientid, VERSION))
+      connection.request('GET', '%s?clientid=%s&version=%s&confid=%s' % (url.path, self._client.id, VERSION, self._md5conf))
 
     except SSLError as e:
       logger.error('Impossibile scaricare lo scheduling. Errore SSL: %s.' % e)
@@ -360,6 +362,7 @@ class Executer:
       # Testa gli ftp down
       for i in range(1, task.download + 1):
 
+        # TODO Check dell'IP con cui la macchina effettua i test: se l'ip non di classe privata NON posso impedire le misure in base al numero di macchine nella rete
         if not sysmonitor.mediumcheck():
           raise Exception('Condizioni per effettuare la misura non verificate.')
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
@@ -522,14 +525,14 @@ class Executer:
 
 def main():
   paths.check_paths()
-  (options, args) = parse()
+  (options, args, md5conf) = parse()
 
   client = getclient(options)
   isprobe = (client.isp.certificate != None)
   e = Executer(client=client, scheduler=options.scheduler,
                repository=options.repository, polling=options.polling,
                tasktimeout=options.tasktimeout, testtimeout=options.testtimeout,
-               httptimeout=options.httptimeout, local=options.local, isprobe=isprobe)
+               httptimeout=options.httptimeout, local=options.local, isprobe=isprobe, md5conf=md5conf)
   #logger.debug("%s, %s, %s" % (client, client.isp, client.profile))
 
   if (options.test):
@@ -781,7 +784,10 @@ def parse():
     with open(paths.CONF_MAIN, 'w') as file:
       config.write(file)
 
-  return (options, args)
+  with open(paths.CONF_MAIN, 'r') as file:
+    md5 = hashlib.md5(file.read()).hexdigest()
+
+  return (options, args, md5)
 
 
 def runtimewarning(signum, frame):
