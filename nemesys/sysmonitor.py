@@ -45,7 +45,6 @@ tag_proc = 'processList'
 
 # Soglie di sistema
 # ------------------------------------------------------------------------------
-# TODO Trovare un sistema per gestire queste soglie da file di configurazione testuale
 th_host = 2
 th_avMem = 134217728
 th_memLoad = 80
