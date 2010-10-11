@@ -261,7 +261,7 @@ def getfinishedtime(filename):
   '''
   try:
     pattern = '[\dT\-:\.]*'
-    # TODO Correggere riferimenti a [finished] vedi executer.
+    # TODO Migliorare riferimenti a [finished] vedi executer.
     comment = '[finished]'
     time = iso2datetime(getcommentvalue(filename, comment, pattern))
   except Exception as e:
