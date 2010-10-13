@@ -51,7 +51,7 @@ import hashlib
 bandwidth = Semaphore()
 logger = logging.getLogger()
 current_status = status.LOGO
-VERSION = '1.3.1'
+VERSION = '1.4'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 2
@@ -362,7 +362,6 @@ class Executer:
       # Testa gli ftp down
       for i in range(1, task.download + 1):
 
-        # TODO Check dell'IP con cui la macchina effettua i test: se l'ip non di classe privata NON posso impedire le misure in base al numero di macchine nella rete
         if not sysmonitor.mediumcheck():
           raise Exception('Condizioni per effettuare la misura non verificate.')
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
@@ -472,8 +471,8 @@ class Executer:
       logger.error('Errore durante il parsing della risposta del repository: %s' % e)
       
     finally:
-      os.remove(zipname)
-
+      if os.path.exists(zipname):
+        os.remove(zipname)
 
   def _updatestatus(self, new):
     global current_status
