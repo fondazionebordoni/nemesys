@@ -251,8 +251,18 @@ def mediumcheck():
 def checkall():
 
   mediumcheck()
+  # TODO Reinserire questo check quanto corretto il problema di determinazione del dato
+  #checkdisk()
+  
+  ip = getIp()
+  if bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
+    checkhosts()
 
-  d = {tag_wdisk:'', tag_rdisk:'', tag_hosts:''}
+  return True
+
+def checkhosts():
+
+  d = {tag_hosts:''}
   values = getstatus(d)
 
   try:
@@ -267,10 +277,11 @@ def checkall():
 
   return True
 
+def checkdisk():
+  
+  d = {tag_wdisk:'', tag_rdisk:''}
+  values = getstatus(d)
 
-# TODO eliminare pass e bloccare esecuzione in presenza problema di casting
-# commentato controllo su lettura e scrittura disco per debug
-'''
   try:
     wdisk = float(values[tag_wdisk])
   except ValueError as e:
@@ -289,8 +300,8 @@ def checkall():
     raise Exception('Eccessivo carico in scrittura del disco.')
   if rdisk > th_rdisk:
     raise Exception('Eccessivo carico in lettura del disco.')
-'''
 
+  return True
 
 def getMac():
   '''
@@ -300,6 +311,15 @@ def getMac():
   values = getstatus(d)
 
   return values[tag_mac]
+
+def getIp():
+  '''
+  restituisce indirizzo IP del computer
+  '''
+  d = {tag_ip:''}
+  values = getstatus(d)
+
+  return values[tag_ip]
 
 def getSys():
   '''
