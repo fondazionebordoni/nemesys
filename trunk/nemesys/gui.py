@@ -267,7 +267,7 @@ class TrayIcon():
     self._menu.insert(self._item_togglepopup, 1)
 
   def _serviziOnline(self, widget):
-    webbrowser.open('http://misurainternet.fub.it/login_form.php')
+    webbrowser.open('http://www.misurainternet.it/login_form.php')
 
   def _about(self, widget):
     if self._about_dialog != None:
