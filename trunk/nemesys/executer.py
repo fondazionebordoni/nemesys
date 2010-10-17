@@ -161,7 +161,7 @@ class Executer:
     self._local = local
     self._isprobe = isprobe
     self._md5conf = md5conf
-    
+
     self._outbox = paths.OUTBOX
     self._sent = paths.SENT
     current_status = status.LOGO
@@ -206,7 +206,6 @@ class Executer:
 
     # Controllo se non sono trascorsi 3 giorni dall'inizio delle misure
     while self._progress.onair() or self._isprobe:
-      
 
       # Se non è una sonda, ma un client d'utente
       if not self._isprobe:
@@ -239,8 +238,11 @@ class Executer:
 
       task = None
       bandwidth.acquire() # Richiedi accesso esclusivo alla banda
-      # Controllo se ho dei file da mandare prima di prendermi il compito di fare altre misure
-      self._uploadall()
+
+      # Solo se sono una sonda invio i file di misura nella cartella da spedire
+      if self._isprobe:
+        # Controllo se ho dei file da mandare prima di prendermi il compito di fare altre misure
+        self._uploadall()
 
       try:
         task = self._download()
@@ -435,19 +437,14 @@ class Executer:
     Spedisce il filename di misura al repository entro il tempo messo a
     disposizione secondo il parametro httptimeout
     '''
-    try:
+    response = None
 
+    try:
       # Crea il Deliverer che si occuperà della spedizione
       #logger.debug('Invio il file %s a %s' % (filename, self._repository))
       zipname = self._deliverer.pack(filename)
       response = self._deliverer.upload(zipname)
 
-    except Exception as e:
-      logger.error('Errore durante la spedizione del filename delle misure %s: %s' % (filename, e))
-      os.remove(zipname)
-      return
-
-    try:
       if (response != None):
         (code, message) = self._parserepositorydata(response)
         code = int(code)
@@ -459,20 +456,17 @@ class Executer:
           os.remove(filename)
           self._movefiles(zipname)
           self._progress.putstamp(time)
-        else:
-          os.remove(zipname)
-      else:
-        os.remove(zipname)
-
-    except TypeError as e:
-      logger.error('Errore durante il parsing della risposta del repository: %s' % e)
 
     except Exception as e:
-      logger.error('Errore durante il parsing della risposta del repository: %s' % e)
-      
+      logger.error('Errore durante la spedizione del file delle misure %s: %e' % (filename, e))
+
     finally:
+      # Elimino lo zip del file di misura temporaneo
       if os.path.exists(zipname):
         os.remove(zipname)
+      # Se non sono una sonda _devo_ cancellare il file di misura 
+      if not self._isprobe and os.path.exists(filename):
+        os.remove(filename)
 
   def _updatestatus(self, new):
     global current_status
@@ -578,7 +572,7 @@ def parse():
   value = False
   try:
     value = config.getboolean(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     config.set(section, option, value)
   parser.add_option('-L', '--local', dest='local', action='store_true', default=value,
                     help='perform tests without sending measure files to repository')
@@ -599,7 +593,7 @@ def parse():
   value = '3600'
   try:
     value = config.getint(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     config.set(section, option, value)
   parser.add_option('--task-timeout', dest=option, type='int', default=value,
                     help='global timeout (in seconds) for each task [%s]' % value)
@@ -608,25 +602,25 @@ def parse():
   value = '60'
   try:
     value = config.getint(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     config.set(section, option, value)
   parser.add_option('--test-timeout', dest=option, type='float', default=value,
                     help='timeout (in seconds as float number) for each test in a task [%s]' % value)
 
   option = 'repository'
-  value = 'https://repository.agcom244.fub.it/Upload'
+  value = 'https://finaluser.agcom244.fub.it/Upload'
   try:
     value = config.get(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     config.set(section, option, value)
   parser.add_option('-r', '--repository', dest=option, default=value,
                     help='upload URL for deliver measures\' files [%s]' % value)
 
   option = 'scheduler'
-  value = 'https://scheduler.agcom244.fub.it/'
+  value = 'https://finaluser.agcom244.fub.it/Scheduler'
   try:
     value = config.get(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     config.set(section, option, value)
   parser.add_option('-s', '--scheduler', dest=option, default=value,
                     help='complete url for schedule download [%s]' % value)
@@ -635,7 +629,7 @@ def parse():
   value = '60'
   try:
     value = config.getint(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     config.set(section, option, value)
   parser.add_option('--http-timeout', dest=option, type='int', default=value,
                     help='timeout (in seconds) for http operations [%s]' % value)
@@ -644,7 +638,7 @@ def parse():
   value = '300'
   try:
     value = config.getint(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     config.set(section, option, value)
   parser.add_option('--polling-time', dest=option, type='int', default=value,
                     help='polling time in seconds between two scheduling requests [%s]' % value)
@@ -659,7 +653,7 @@ def parse():
   value = None
   try:
     value = config.get(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     pass
   parser.add_option('-c', '--clientid', dest=option, default=value,
                     help='client identification string [%s]' % value)
@@ -668,7 +662,7 @@ def parse():
   value = None
   try:
     value = config.get(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     logger.warning('Nessuna specifica geocode inserita.')
     pass
   parser.add_option('-g', '--geocode', dest=option, default=value,
@@ -678,7 +672,7 @@ def parse():
   value = 'anonymous'
   try:
     value = config.get(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     config.set(section, option, value)
   parser.add_option('--username', dest=option, default=value,
                     help='username for FTP login [%s]' % value)
@@ -687,7 +681,7 @@ def parse():
   value = '@anonymous'
   try:
     value = config.get(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     config.set(section, option, value)
   parser.add_option('--password', dest=option, default=value,
                     help='password for FTP login [%s]' % value)
@@ -702,7 +696,7 @@ def parse():
   value = None
   try:
     value = config.get(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     pass
   parser.add_option('-p', '--profileid', dest=option, default=value,
                     help='profile identification string [%s]' % value)
@@ -711,7 +705,7 @@ def parse():
   value = None
   try:
     value = config.getint(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     pass
   parser.add_option('--up', dest=option, default=value, type='int',
                     help='upload bandwidth [%s]' % value)
@@ -720,7 +714,7 @@ def parse():
   value = None
   try:
     value = config.getint(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     pass
   parser.add_option('--down', dest=option, default=value, type='int',
                     help='download bandwidth [%s]' % value)
@@ -735,7 +729,7 @@ def parse():
   value = None
   try:
     value = config.get(section, option)
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     pass
   parser.add_option('--ispid', dest=option, default=value,
                     help='isp identification string [%s]' % value)
@@ -748,7 +742,7 @@ def parse():
       config.remove_option(section, option)
       logger.warning('Trovata configurazione di certificato non esistente su disco. Cambiata configurazione')
       value = None
-  except NoOptionError:
+  except (ValueError, NoOptionError):
     logger.warning('Nessun certificato client specificato.')
     pass
   parser.add_option('--certificate', dest=option, default=value,
