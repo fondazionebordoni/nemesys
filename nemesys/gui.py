@@ -110,7 +110,7 @@ class TrayIcon():
 
   def __init__(self):
     setlocale(LC_ALL, '')
-    self._status = status.LOGO
+    self._status = status.ERROR
     self._popupenabled = True
     self._menu = None
     self._progress_dialog = None
@@ -138,11 +138,14 @@ class TrayIcon():
       self._trayicon.set_tooltip(self._status.message)
       self._trayicon.connect('popup-menu', self._callback, self._menu)
       if self._popupenabled:
-        self._notifier.bg_color = gtk.gdk.Color(NOTIFY_COLORS[0])
-        self._notifier.fg_color = gtk.gdk.Color(NOTIFY_COLORS[1])
-        self._notifier.new_popup(title="Ne.Me.Sys.", message=self._status.message, image=self._status.icon)
+        self._popupstato(None)
 
-  def statomisura(self, widget):
+  def _popupstato(self, widget):
+    self._notifier.bg_color = gtk.gdk.Color(NOTIFY_COLORS[0])
+    self._notifier.fg_color = gtk.gdk.Color(NOTIFY_COLORS[1])
+    self._notifier.new_popup(title="Ne.Me.Sys.", message=self._status.message, image=self._status.icon)
+
+  def _statomisura(self, widget):
 
     if self._progress_dialog != None:
       self._progress_dialog.destroy()  # così lascio aprire una finestra sola relativa allo stato della misura
@@ -155,13 +158,13 @@ class TrayIcon():
     self._progress_dialog.set_icon_from_file(status.LOGO.icon)
     self._progress_dialog.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#FFF'))
     self._progress_dialog.set_border_width(20)
-    
+
     coloreCelle = dict() # lo uso per associare ad ogni colonna lo stato red o green
     for n in range(24): # inizializzo tutto allo stato rosso
       coloreCelle[n] = 'red'
 
-    table = gtk.Table(7, 24, True)  # 7 righe, 24 colonne
-    table.set_size_request(600,270)
+    table = gtk.Table(6, 24, True)  # 7 righe, 24 colonne
+    table.set_size_request(600, 180)
     self._progress_dialog.add(table)
 
     ore = dict()
@@ -169,7 +172,7 @@ class TrayIcon():
       hour = '<small>%d</small>' % n
       ore[n] = gtk.Label(hour)
       ore[n].set_use_markup(True)
-      table.attach(ore[n], n, n + 1, 4, 5, xpadding=1, ypadding=0)
+      table.attach(ore[n], n, n + 1, 3, 4, xpadding=1, ypadding=0)
 
     # creo le 24 drawing area
     darea_1_1 = gtk.DrawingArea()
@@ -205,7 +208,7 @@ class TrayIcon():
 
     # inserisco in tabella le 24 drawing area che ho appena creato e le coloro di rosso
     for i in range(0, 24):
-      table.attach(riga1[i], i, i + 1, 5, 6, xpadding=1, ypadding=0)
+      table.attach(riga1[i], i, i + 1, 4, 5, xpadding=1, ypadding=1)
       riga1[i].modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('red'))
 
     # il codice di seguito serve per measure.xml
@@ -221,50 +224,49 @@ class TrayIcon():
         riga1[i].modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('green'))
         n = n + 1
 
-    logo1 = gtk.Image()       
+    logo1 = gtk.Image()
     pixbuf = gtk.gdk.pixbuf_new_from_file(status.LOGOSTATOMISURA1.icon)
-    scaled_buf = pixbuf.scale_simple(75,75,gtk.gdk.INTERP_BILINEAR)
+    scaled_buf = pixbuf.scale_simple(75, 75, gtk.gdk.INTERP_BILINEAR)
     logo1.set_from_pixbuf(scaled_buf)
 
     logo2 = gtk.Image()
     pixbuf = gtk.gdk.pixbuf_new_from_file(status.LOGOSTATOMISURA2.icon)
-    scaled_buf = pixbuf.scale_simple(90,75,gtk.gdk.INTERP_BILINEAR)
+    scaled_buf = pixbuf.scale_simple(95, 65, gtk.gdk.INTERP_BILINEAR)
     logo2.set_from_pixbuf(scaled_buf)
 
-    label1 = gtk.Label("<b><big><big><big><big><big>Ne.Me.Sys.</big></big></big></big></big></b>")
-    label2 = gtk.Label("<big>Inizio test di misura</big>")
-    label3 = gtk.Label("<big>Data: %s</big>" % inizioMisure.strftime('%c'))
-    label4 = gtk.Label("<big>Stato di avanzamento: "+str(n)+"/24</big>")
-    label5 = gtk.Label("<big>Si ricorda che la misurazione va completata entro tre giorni dal suo inizio</big>")
+    label1 = gtk.Label("<b><big><big>Ne.Me.Sys.</big></big></b>")
+    label2 = gtk.Label("<big>Inizio test di misura: %s</big>" % inizioMisure.strftime('%c'))
+    label3 = gtk.Label("<big>Stato di avanzamento: %s test su 24</big>" % str(n))
+    label4 = gtk.Label("Si ricorda che la misurazione va completata entro tre giorni dal suo inizio")
+    label5 = gtk.Label("Misura completa! Visita la tua area personale sul sito\n<i>www.misurainternet.it</i> per scaricare il pdf delle misure")
+
     label1.set_use_markup(True)
     label2.set_use_markup(True)
     label3.set_use_markup(True)
     label4.set_use_markup(True)
     label5.set_use_markup(True)
+
+    label1.set_justify(gtk.JUSTIFY_CENTER)
+    label2.set_justify(gtk.JUSTIFY_CENTER)
+    label3.set_justify(gtk.JUSTIFY_CENTER)
+    label4.set_justify(gtk.JUSTIFY_CENTER)
+    label5.set_justify(gtk.JUSTIFY_CENTER)
+
+    table.attach(logo1, 0, 6, 0, 3)
+    table.attach(logo2, 18, 24, 0, 3)
     table.attach(label1, 8, 16, 0, 1)
     table.attach(label2, 0, 24, 1, 2)
     table.attach(label3, 0, 24, 2, 3)
-    table.attach(label4, 0, 24, 3, 4)
-    table.attach(label5, 0, 24, 6, 7)
-    table.attach(logo1, 0, 6, 0, 2)
-    table.attach(logo2, 18, 24, 0, 2)
+    if n < 24:
+      table.attach(label4, 0, 24, 5, 6)
+    else:
+      table.attach(label5, 0, 24, 5, 6)
 
     self._progress_dialog.show_all()
 
   def _togglepopup(self, widget):
-    self._item_togglepopup.destroy()
-
-    if self._popupenabled:
-      self._popupenabled = False
-      self._item_togglepopup = gtk.ImageMenuItem('Abilita notifiche popup')
-    else:
-      self._popupenabled = True
-      self._item_togglepopup = gtk.ImageMenuItem('Disabilita notifiche popup')
-
-    icon = gtk.image_new_from_stock('gtk-dialog-warning', gtk.ICON_SIZE_MENU)
-    self._item_togglepopup.set_image(icon)
-    self._item_togglepopup.connect('activate', self._togglepopup)
-    self._menu.insert(self._item_togglepopup, 1)
+    self._popupenabled = widget.get_active()
+    logger.debug("Popup abilitato: %s" % self._popupenabled)
 
   def _serviziOnline(self, widget):
     webbrowser.open('http://www.misurainternet.it/login_form.php')
@@ -308,6 +310,12 @@ Homepage del progetto su www.misurainternet.it''')
 
     return gtk.main_quit()
 
+  def _on_event(self, widget, event):
+    logger.debug('Event: %s' % event.type)
+
+  def _closemenu(self, widget):
+    self._menu.popdown()
+
   def _crea_menu(self):
     if self._menu:
       self._menu.destroy()
@@ -321,38 +329,42 @@ Homepage del progetto su www.misurainternet.it''')
     self._trayicon.set_tooltip(stringa)
     self._trayicon.connect('popup-menu', self._callback, self._menu)
 
-    self._item_openmeasure = gtk.ImageMenuItem('Stato misurazione')
-    icon = gtk.image_new_from_stock('gtk-execute', gtk.ICON_SIZE_MENU)
-    self._item_openmeasure.set_image(icon)
-    self._item_openmeasure.connect('activate', self.statomisura)
-    self._menu.append(self._item_openmeasure)
+    item = gtk.ImageMenuItem('Stato della _misura')
+    icon = gtk.image_new_from_stock('gtk-index', gtk.ICON_SIZE_MENU)
+    item.set_image(icon)
+    item.connect('activate', self._statomisura)
+    self._menu.append(item)
 
-    if self._popupenabled:
-      self._item_togglepopup = gtk.ImageMenuItem('Disabilita notifiche popup')
-    else:
-      self._item_togglepopup = gtk.ImageMenuItem('Abilita notifiche popup')
+    item = gtk.ImageMenuItem('Stato di Ne.Me.Sys.')
+    icon = gtk.image_new_from_stock('gtk-info', gtk.ICON_SIZE_MENU)
+    item.set_image(icon)
+    item.connect('activate', self._popupstato)
+    self._menu.append(item)
 
-    icon = gtk.image_new_from_stock('gtk-dialog-warning', gtk.ICON_SIZE_MENU)
-    self._item_togglepopup.set_image(icon)
-    self._item_togglepopup.connect('activate', self._togglepopup)
-    self._menu.append(self._item_togglepopup)
+    item = gtk.CheckMenuItem('Visualizza _popup')
+    item.set_active(self._popupenabled)
+    item.connect('activate', self._togglepopup)
+    self._menu.append(item)
 
-    self._item_onlineservices = gtk.ImageMenuItem('Servizi online')
+    item = gtk.ImageMenuItem('Servizi _online')
     icon = gtk.image_new_from_stock('gtk-network', gtk.ICON_SIZE_MENU)
-    self._item_onlineservices.set_image(icon)
-    self._item_onlineservices.connect('activate', self._serviziOnline)
-    self._menu.append(self._item_onlineservices)
+    item.set_image(icon)
+    item.connect('activate', self._serviziOnline)
+    self._menu.append(item)
 
-    self._item_about = gtk.ImageMenuItem('Info')
-    icon = gtk.image_new_from_stock('gtk-about', gtk.ICON_SIZE_MENU)
-    self._item_about.set_image(icon)
-    self._item_about.connect('activate', self._about)
-    self._menu.append(self._item_about)
+    item = gtk.ImageMenuItem(stock_id=gtk.STOCK_ABOUT)
+    item.connect('activate', self._about)
+    self._menu.append(item)
 
-    self._item_quit = gtk.SeparatorMenuItem()
-    self._item_quit = gtk.ImageMenuItem(stock_id=gtk.STOCK_QUIT)
-    self._item_quit.connect('activate', self._quit)
-    self._menu.append(self._item_quit)
+    item = gtk.ImageMenuItem(stock_id=gtk.STOCK_CLOSE)
+    item.connect('activate', self._closemenu)
+    self._menu.append(item)
+
+    self._menu.append(gtk.SeparatorMenuItem())
+
+    item = gtk.ImageMenuItem(stock_id=gtk.STOCK_QUIT)
+    item.connect('activate', self._quit)
+    self._menu.append(item)
 
   def run(self):
     gtk.gdk.threads_init()
