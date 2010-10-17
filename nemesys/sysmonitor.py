@@ -52,13 +52,13 @@ th_wdisk = 104857600
 th_cpu = 60
 th_rdisk = 104857600
 bad_conn = [80, 8080, 110, 25, 443]
-bad_proc = ['amule', 'emule', 'bittorrent']
+bad_proc = ['amule', 'emule', 'bittorrent', 'skype', 'dropbox', 'chrome', 'iexplore', 'firefox']
 
 logger = logging.getLogger()
 
 
 if Path.isfile(paths.THRESHOLD):
-   
+
   th_values = {}
   try:
     for subelement in ET.XML(open(paths.THRESHOLD).read()):
@@ -66,7 +66,7 @@ if Path.isfile(paths.THRESHOLD):
   except Exception as e:
     logger.warning('Errore durante il recupero delle soglie da file. %s' % e)
     raise Exception('Errore durante il recupero delle soglie da file.')
-  
+
   # TODO eliminare NONE e bloccare esecuzione in presenza problema di casting
   # commentato controllo su lettura e scrittura disco per debug
   try:
@@ -83,13 +83,13 @@ if Path.isfile(paths.THRESHOLD):
     for j in th_values[tag_proc].split(';'):
       bad_proc.append(str(j))
   except ValueError as e:
-      logger.error('errore nel casting dei paramentri di SystemProfiler!')
+      logger.error('Errore nel casting dei paramentri di SystemProfiler!')
        #raise e
-  
-else:
-  pass  
 
-  
+else:
+  pass
+
+
 try:
   from SystemProfiler import systemProfiler
 except Exception as e:
@@ -105,10 +105,10 @@ def getstatus(d):
     data = open(paths.RESULTS).read()
   else:
     try:
-      data = systemProfiler('test', d)    
+      data = systemProfiler('test', d)
     except Exception as e:
       logger.warning('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
-      		
+
   return getvalues(data, tag_results)
 
 
@@ -132,7 +132,7 @@ def connectionCheck():
       logger.error('errore nel casting dei paramentri di SystemProfiler!')
       c = [None]
       #raise e
-    
+
   for i in bad_conn:
     if i in c:
       raise Exception, 'Porta %d aperta ed utilizzata.' % i
@@ -159,12 +159,12 @@ def taskCheck():
       logger.error('errore nel casting dei paramentri di SystemProfiler!')
       t = None
       #raise e
-    
+
   for i in bad_proc:
     for k in t:
       if (bool(re.search(i, k, re.IGNORECASE))):
        raise Exception, 'Sono attivi processi non desiderati: chiudere il programma %s per proseguire le misure.' % i
-  
+
   return True
 
 def fastcheck():
@@ -253,7 +253,7 @@ def checkall():
   mediumcheck()
   # TODO Reinserire questo check quanto corretto il problema di determinazione del dato
   #checkdisk()
-  
+
   ip = getIp()
   if bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
     checkhosts()
@@ -278,7 +278,7 @@ def checkhosts():
   return True
 
 def checkdisk():
-  
+
   d = {tag_wdisk:'', tag_rdisk:''}
   values = getstatus(d)
 
@@ -295,7 +295,7 @@ def checkdisk():
     logger.error('errore nel casting dei paramentri di SystemProfiler!')
     rdisk = None
      #raise e
-     
+
   if wdisk > th_wdisk:
     raise Exception('Eccessivo carico in scrittura del disco.')
   if rdisk > th_rdisk:
