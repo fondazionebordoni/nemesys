@@ -51,7 +51,7 @@ import hashlib
 bandwidth = Semaphore()
 logger = logging.getLogger()
 current_status = status.LOGO
-VERSION = '1.4'
+VERSION = '1.5'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 2
