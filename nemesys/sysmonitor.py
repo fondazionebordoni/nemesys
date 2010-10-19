@@ -22,6 +22,9 @@ from os import path as Path
 import paths
 import re
 
+# TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
+STRICT_CHECK = True
+
 tag_results = 'SystemProfilerResults'
 tag_threshold = 'SystemProfilerThreshold'
 tag_vers = 'vers'
@@ -51,12 +54,12 @@ th_memLoad = 80
 th_wdisk = 104857600
 th_cpu = 60
 th_rdisk = 104857600
-bad_conn = [80, 8080, 110, 25, 443]
-bad_proc = ['amule', 'emule', 'bittorrent', 'skype', 'dropbox', 'chrome', 'iexplore', 'firefox']
+bad_conn = [80, 8080, 110, 25]
+bad_proc = ['amule', 'emule', 'bittorrent', 'skype', 'dropbox', 'chrome', 'iexplore', 'firefox', ]
 
 logger = logging.getLogger()
 
-
+# TODO Caricare da threshold SOLO se è una sonda
 if Path.isfile(paths.THRESHOLD):
 
   th_values = {}
@@ -64,38 +67,34 @@ if Path.isfile(paths.THRESHOLD):
     for subelement in ET.XML(open(paths.THRESHOLD).read()):
       th_values.update({subelement.tag:subelement.text})
   except Exception as e:
-    logger.warning('Errore durante il recupero delle soglie da file. %s' % e)
+    logger.warning('Errore durante il recupero delle soglie da file: %s' % e)
     raise Exception('Errore durante il recupero delle soglie da file.')
 
-  # TODO eliminare NONE e bloccare esecuzione in presenza problema di casting
-  # commentato controllo su lettura e scrittura disco per debug
   try:
     th_host = int(th_values[tag_hosts])
     th_avMem = float(th_values[tag_avMem])
     th_memLoad = float(th_values[tag_memLoad])
-    #th_wdisk = float(th_values[tag_wdisk])
+    th_wdisk = float(th_values[tag_wdisk])
     th_cpu = float(th_values[tag_cpu])
-    #th_rdisk = float(th_values[tag_rdisk])
+    th_rdisk = float(th_values[tag_rdisk])
     bad_conn = []
     for j in th_values[tag_conn].split(';'):
       bad_conn.append(int(j))
     bad_proc = []
     for j in th_values[tag_proc].split(';'):
       bad_proc.append(str(j))
-  except ValueError as e:
-      logger.error('Errore nel casting dei paramentri di SystemProfiler!')
-       #raise e
+  except Exception as e:
+      logger.error('Errore in lettura dei paramentri di threshold.')
+      raise Exception('Errore in lettura dei paramentri di threshold.')
 
 else:
   pass
-
 
 try:
   from SystemProfiler import systemProfiler
 except Exception as e:
   logger.warning('Impossibile importare SystemProfiler')
   pass
-
 
 def getstatus(d):
 
@@ -111,8 +110,44 @@ def getstatus(d):
 
   return getvalues(data, tag_results)
 
+def getfloattag(tag, value):
+  d = {tag:''}
+  values = getstatus(d)
 
-def connectionCheck():
+  try:
+    value = float(values[tag])
+  except Exception as e:
+    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
+    if STRICT_CHECK:
+      raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
+  
+  return value
+
+def getbooltag(tag, value):
+  d = {tag:''}
+  values = getstatus(d)
+
+  try:
+    value = str(values[tag]).lower()
+  except Exception as e:
+    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
+    if STRICT_CHECK:
+      raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
+  
+  if STRICT_CHECK:
+    if value != 'false' and value != 'true':
+      logger.warning('Impossibile determinare il parametro "%s".' % tag)
+      raise Exception('Impossibile determinare il parametro "%s".' % tag)
+
+  if value == 'true':
+    return True
+  
+  if value == 'false':
+    return False
+
+  return value
+
+def checkconnections():
   '''
   Effettua il controllo sulle connessioni attive
   '''
@@ -125,21 +160,20 @@ def connectionCheck():
 
   c = []
   for j in connActive.split(';'):
-    # TODO eliminare NONE e bloccare esecuzione in presenza problema di casting
     try:
       c.append(int(j.split(':')[1]))
-    except ValueError as e:
-      logger.error('errore nel casting dei paramentri di SystemProfiler!')
-      c = [None]
-      #raise e
+    except Exception as e:
+      logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
+      if STRICT_CHECK:
+        raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
 
   for i in bad_conn:
     if i in c:
-      raise Exception, 'Porta %d aperta ed utilizzata.' % i
+      raise Exception('Porta %d aperta ed utilizzata.' % i)
 
   return True
 
-def taskCheck():
+def checktasks():
   '''
   Ettettua il controllo sui processi
   '''
@@ -152,18 +186,73 @@ def taskCheck():
 
   t = []
   for j in taskActive.split(';'):
-    # TODO eliminare NONE e bloccare esecuzione in presenza problema di casting
     try:
       t.append(str(j))
-    except ValueError as e:
-      logger.error('errore nel casting dei paramentri di SystemProfiler!')
-      t = None
-      #raise e
+    except Exception as e:
+      logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_proc, e))
+      if STRICT_CHECK:
+        raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_proc)
 
   for i in bad_proc:
     for k in t:
       if (bool(re.search(i, k, re.IGNORECASE))):
-       raise Exception, 'Sono attivi processi non desiderati: chiudere il programma %s per proseguire le misure.' % i
+        raise Exception('Sono attivi processi non desiderati: chiudere il programma "%s" per proseguire le misure.' % i)
+
+  return True
+
+def checkcpu():
+  
+  value = getfloattag(tag_cpu, th_cpu - 1)
+  if value > th_cpu:
+    raise Exception('CPU occupata.')
+
+  return True
+
+def checkmem():
+  
+  avMem = getfloattag(tag_avMem, th_avMem + 1)
+  if avMem < th_avMem:
+    raise Exception('Memoria non sufficiente.')
+
+  memLoad = getfloattag(tag_memLoad, th_memLoad - 1)
+  if memLoad > th_memLoad:
+    raise Exception('Memoria non sufficiente.')
+
+  return True
+
+def checkfw():
+  
+  value = getbooltag(tag_fw, 'False')
+  if value:
+    raise Exception('Firewall attivo.')
+  
+  return True
+
+def checkwireless():
+  
+  value = getbooltag(tag_wireless, 'False')
+  if value:
+    raise Exception('Wireless LAN attiva.')
+
+  return True
+
+def checkhosts():
+  
+  value = getfloattag(tag_hosts, th_host - 1)
+  if value > th_host:
+    raise Exception('Presenza altri host in rete.')
+
+  return True
+
+def checkdisk():
+
+  value = getfloattag(tag_wdisk, th_wdisk - 1)
+  if value > th_wdisk:
+    raise Exception('Eccessivo carico in scrittura del disco.')
+
+  value = getfloattag(tag_wdisk, th_rdisk - 1)
+  if value > th_rdisk:
+    raise Exception('Eccessivo carico in lettura del disco.')
 
   return True
 
@@ -174,77 +263,18 @@ def fastcheck():
   altrimenti solleva un'eccezione
   '''
 
-  connectionCheck()
-  taskCheck()
-
-  d = {tag_avMem:'', tag_memLoad:'', tag_cpu:''}
-  values = getstatus(d)
-
-# TODO eliminare NONE e bloccare esecuzione in presenza problema di casting
-
-  try:
-    avMem = float(values[tag_avMem])
-  except ValueError as e:
-    logger.error('errore nel casting dei paramentri di SystemProfiler!')
-    avMem = None
-    pass
-    #raise e
-
-  try:
-    memLoad = float(values[tag_memLoad])
-  except ValueError as e:
-    logger.error('errore nel casting dei paramentri di SystemProfiler!')
-    memLoad = None
-    pass
-    #raise e
-
-  try:
-    cpu = float(values[tag_cpu])
-  except ValueError as e:
-    logger.error('errore nel casting dei paramentri di SystemProfiler!')
-    cpu = None
-    pass
-    #raise e
-
-  if avMem < th_avMem:
-    raise Exception('Memoria non sufficiente.')
-  if memLoad > th_memLoad:
-    raise Exception('Memoria non sufficiente.')
-  if cpu > th_cpu:
-    raise Exception('CPU occupata.')
+  checkcpu()
+  checkmem()
+  checktasks()
+  checkconnections()
 
   return True
 
 def mediumcheck():
 
   fastcheck()
-
-  d = {tag_wireless:'', tag_fw:''}
-  values = getstatus(d)
-
-# TODO eliminare pass e bloccare esecuzione in presenza problema di casting
-
-  try:
-    fw = str(values[tag_fw])
-  except ValueError as e:
-    logger.error('errore nel casting dei paramentri di SystemProfiler!')
-    fw = None
-    pass
-    #raise e
-
-  try:
-    wireless = str(values[tag_wireless])
-  except ValueError as e:
-    logger.error('errore nel casting dei paramentri di SystemProfiler!')
-    wireless = None
-    pass
-    #raise e
-
-
-  if fw.lower() == 'True'.lower():
-    raise Exception('Firewall attivo.')
-  if wireless.lower() == 'True'.lower():
-    raise Exception('Wireless LAN attiva.')
+  checkfw()
+  checkwireless()
 
   return True
 
@@ -257,49 +287,6 @@ def checkall():
   ip = getIp()
   if bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
     checkhosts()
-
-  return True
-
-def checkhosts():
-
-  d = {tag_hosts:''}
-  values = getstatus(d)
-
-  try:
-    host = int(values[tag_hosts])
-  except ValueError as e:
-    logger.error('errore nel casting dei paramentri di SystemProfiler!')
-    host = None
-    #raise e
-
-  if host > th_host:
-    raise Exception('Presenza altri host in rete.')
-
-  return True
-
-def checkdisk():
-
-  d = {tag_wdisk:'', tag_rdisk:''}
-  values = getstatus(d)
-
-  try:
-    wdisk = float(values[tag_wdisk])
-  except ValueError as e:
-    logger.error('errore nel casting dei paramentri di SystemProfiler!')
-    wdisk = None
-    #raise e
-
-  try:
-    rdisk = float(values[tag_rdisk])
-  except ValueError as e:
-    logger.error('errore nel casting dei paramentri di SystemProfiler!')
-    rdisk = None
-     #raise e
-
-  if wdisk > th_wdisk:
-    raise Exception('Eccessivo carico in scrittura del disco.')
-  if rdisk > th_rdisk:
-    raise Exception('Eccessivo carico in lettura del disco.')
 
   return True
 
@@ -353,5 +340,6 @@ if __name__ == '__main__':
   print 'Test sysmonitor fastcheck: %s' % fastcheck()
   print 'Test sysmonitor mediumcheck: %s' % mediumcheck()
   print 'Test sysmonitor checkall: %s' % checkall()
-  print '\nTest sysmonitor getMac: %s' % getMac()
-  print '\nTest sysmonitor getSys: %s' % getSys()
+  print 'Test sysmonitor getMac: %s' % getMac()
+  print 'Test sysmonitor getIP: %s' % getIp()
+  print 'Test sysmonitor getSys: %s' % getSys()
