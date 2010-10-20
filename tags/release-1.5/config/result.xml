@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SystemProfilerResults>
+ <vers>5.1.2600</vers>
+ <availableMemory>134217728</availableMemory>
+ <wirelessON>False</wirelessON>
+ <firewall>False</firewall>
+ <memoryLoad>20</memoryLoad>
+ <ipAddr>16.18.125.84</ipAddr>
+ <system>WindowsXP</system>
+ <diskWrite>10485760</diskWrite>
+ <cpuLoad>50</cpuLoad>
+ <macAddr>D8:D3:85:10:F8:55</macAddr>
+ <diskRead>10485760</diskRead>
+ <release>XP</release>
+ <cores>2</cores>
+ <arch>32bit WindowsPE</arch>
+ <processor>x86 Family 6 Model 23 Stepping 10, GenuineIntel</processor>
+ <hostNumber>2</hostNumber>
+ <activeConnections></activeConnections>
+ <processList></processList>
+</SystemProfilerResults>

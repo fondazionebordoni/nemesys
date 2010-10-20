@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<SystemProfilerThreshold>
+ <availableMemory>134217728</availableMemory>
+ <memoryLoad>80</memoryLoad>
+ <diskWrite>104857600</diskWrite>
+ <cpuLoad>80</cpuLoad>
+ <diskRead>104857600</diskRead>
+ <hostNumber>2</hostNumber>
+ <activeConnections>110;80;8080;25</activeConnections>
+ <processList>amule;emule;torrent;bittorrent;dropbox;skype;chrome;firefox;iexplore</processList>
+</SystemProfilerThreshold>
