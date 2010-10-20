@@ -44,7 +44,7 @@ tag_arch = 'arch'
 tag_proc = 'processor'
 tag_hosts = 'hostNumber'
 tag_conn = 'activeConnections'
-tag_proc = 'processList'
+tag_task = 'taskList'
 
 # Soglie di sistema
 # ------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ if Path.isfile(paths.THRESHOLD):
     for j in th_values[tag_conn].split(';'):
       bad_conn.append(int(j))
     bad_proc = []
-    for j in th_values[tag_proc].split(';'):
+    for j in th_values[tag_task].split(';'):
       bad_proc.append(str(j))
   except Exception as e:
       logger.error('Errore in lettura dei paramentri di threshold.')
@@ -151,6 +151,8 @@ def checkconnections():
   '''
   Effettua il controllo sulle connessioni attive
   '''
+  
+  #TODO Se la connessione è verso un nostro server non dobbiamo farne il controllo
   d = {tag_conn:''}
   values = getstatus(d)
   connActive = values[tag_conn]
@@ -177,9 +179,9 @@ def checktasks():
   '''
   Ettettua il controllo sui processi
   '''
-  d = {tag_proc:''}
+  d = {tag_task:''}
   values = getstatus(d)
-  taskActive = values[tag_proc]
+  taskActive = values[tag_task]
 
   if taskActive == None or len(taskActive) <= 0:
     return True
