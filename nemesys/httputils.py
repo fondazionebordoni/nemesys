@@ -22,38 +22,6 @@
 #   -> http://code.activestate.com/recipes/146306-http-client-to-post-using-multipartform-data/
 
 import httplib, mimetypes
-import ssl
-from socket import socket
-
-def verifypeer(url):
-  '''
-  # TODO Verificare il certificato del server
-  s = socket()
-  c = ssl.wrap_socket(s, cert_reqs=ssl.CERT_REQUIRED, ssl_version=ssl.PROTOCOL_SSLv3)
-  c.connect((url.hostname, 443))
-
-  # naive and incomplete check to see if cert matches host
-  cert = c.getpeercert()
-  print cert
-  #if not cert or ('commonName', u'www.google.com') not in cert['subject'][4]:
-  #    raise Exception('Danger!')
-
-  c.close()
-  '''
-  return True
-
-def getverifiedconnection(url, certificate=None, timeout=60):
-    connection = None
-
-    if (url.scheme != 'https'):
-      connection = httplib.HTTPConnection(host=url.hostname, timeout=timeout)
-    elif verifypeer(url):
-      if (certificate != None):
-        connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout)
-      else:
-        connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout)
-
-    return connection
 
 def post_multipart(url, fields, files, certificate=None, timeout=60):
     """
@@ -64,16 +32,22 @@ def post_multipart(url, fields, files, certificate=None, timeout=60):
     """
     content_type, body = encode_multipart_formdata(fields, files)
 
-    h = getverifiedconnection(url=url, certificate=certificate, timeout=timeout)
+    # TODO Aggiungere verifica certificato server
+    if (url.scheme != 'https'):
+      h = httplib.HTTPConnection(host=url.hostname, timeout=timeout) 
+    elif (certificate != None):
+      h = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout)
+    else:
+      h = httplib.HTTPSConnection(host=url.hostname, timeout=timeout)
+
     h.putrequest('POST', url.path)
     h.putheader('content-type', content_type)
     h.putheader('content-length', str(len(body)))
     h.endheaders()
     h.send(body)
-    response = h.getresponse().read()
-    h.close()
-
-    return response
+    #errcode, errmsg, headers = h.getreply()
+    #return h.file.read()
+    return h.getresponse().read()
 
 def encode_multipart_formdata(fields, files):
     """

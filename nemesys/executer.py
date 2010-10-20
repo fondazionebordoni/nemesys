@@ -20,6 +20,7 @@ from ConfigParser import ConfigParser, NoOptionError
 from client import Client
 from datetime import datetime
 from deliverer import Deliverer
+from httplib import HTTPConnection, HTTPSConnection
 from isp import Isp
 from logger import logging
 from measure import Measure
@@ -45,7 +46,7 @@ import socket
 import status
 import sysmonitor
 import hashlib
-import httputils
+
 
 bandwidth = Semaphore()
 logger = logging.getLogger()
@@ -284,11 +285,18 @@ class Executer:
 
   # Scarica il prossimo task dallo scheduler
   def _download(self):
-    #logger.debug('Reading resource %s for client %s' % (self._scheduler, self._client))
+    logger.debug('Reading resource %s for client %s' % (self._scheduler, self._client))
 
     url = urlparse(self._scheduler)
     certificate = self._client.isp.certificate
-    connection = httputils.getverifiedconnection(url=url, certificate=certificate, timeout=self._httptimeout)
+
+    # TODO Aggiugnere verifica certificato server
+    if (url.scheme != 'https'):
+      connection = HTTPConnection(host=url.hostname, timeout=self._httptimeout)
+    elif (certificate != None and path.exists(certificate)):
+      connection = HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=self._httptimeout)
+    else:
+      connection = HTTPSConnection(host=url.hostname, timeout=self._httptimeout)
 
     try:
       connection.request('GET', '%s?clientid=%s&version=%s&confid=%s' % (url.path, self._client.id, VERSION, self._md5conf))

@@ -1,21 +1,21 @@
-<?xml version="1.0" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <SystemProfilerResults>
  <vers>5.1.2600</vers>
- <availableMemory>232312832</availableMemory>
+ <availableMemory>134217728</availableMemory>
  <wirelessON>False</wirelessON>
  <firewall>False</firewall>
- <activeConnections>192.168.90.39:443</activeConnections>
- <memoryLoad>43</memoryLoad>
- <ipAddr>192.168.208.11</ipAddr>
+ <memoryLoad>20</memoryLoad>
+ <ipAddr>16.18.125.84</ipAddr>
  <system>WindowsXP</system>
- <diskWrite>0</diskWrite>
- <cpuLoad>7</cpuLoad>
- <macAddr>08:00:27:F3:08:5F</macAddr>
- <diskRead>0</diskRead>
- <taskList>System Idle Process;System;smss.exe;csrss.exe;winlogon.exe;services.exe;lsass.exe;VBoxService.exe;svchost.exe;svchost.exe;svchost.exe;svchost.exe;svchost.exe;explorer.exe;spoolsv.exe;VBoxTray.exe;svchost.exe;alg.exe;wscntfy.exe;mmc.exe;wordpad.exe;ctfmon.exe;Nemesys.exe;gui.exe;SystemProfiler.exe;wmiprvse.exe</taskList>
+ <diskWrite>10485760</diskWrite>
+ <cpuLoad>50</cpuLoad>
+ <macAddr>D8:D3:85:10:F8:55</macAddr>
+ <diskRead>10485760</diskRead>
  <release>XP</release>
- <cores>1</cores>
+ <cores>2</cores>
  <arch>32bit WindowsPE</arch>
- <processor>x86 Family 6 Model 30 Stepping 5, GenuineIntel</processor>
+ <processor>x86 Family 6 Model 23 Stepping 10, GenuineIntel</processor>
  <hostNumber>2</hostNumber>
+ <activeConnections></activeConnections>
+ <processList></processList>
 </SystemProfilerResults>
