@@ -98,7 +98,7 @@ class _Channel(dispatcher):
     try:
       current_status = xml2status(data)
     except Exception, e:
-      logger.error('Errore durante la decodifica dello stato del demone: %s' % e)
+      logger.error('Errore durante la decodifica dello stato del sistema di misura: %s' % e)
       current_status = Status(status.ERROR, '%s' % e)
 
     if current_status == None:
