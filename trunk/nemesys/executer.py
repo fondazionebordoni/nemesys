@@ -215,9 +215,17 @@ class Executer:
         if made >= MAX_MEASURES_PER_HOUR:
           self._updatestatus(status.PAUSE)
           # Quanti secondi perché scatti la prossima ora?
-          delta_hour = now.replace(hour=(hour + 1), minute=0, second=0) - now
-          # Aggiungo un random di 5 minuti per evitare chiamate sincrone
-          wait_hour = delta_hour.seconds + randint(5, 300)
+          wait_hour = self._polling
+          
+          try:
+            delta_hour = now.replace(hour=(hour + 1)%24, minute=0, second=0) - now
+            if delta_hour.days < 0:
+              logger.debug('Nuovo giorno: delta_hour %s' % delta_hour)
+            # Aggiungo un random di 5 minuti per evitare chiamate sincrone
+            wait_hour = delta_hour.seconds + randint(5, 300)
+          except ValueError as e:
+            logger.warning('Errore nella determinazione della prossima ora.')
+            
           logger.debug('La misura delle %d è completa. Aspetto %d secondi per il prossimo polling.' % (hour, wait_hour))
           sleep(wait_hour)
         elif made >= 1:
