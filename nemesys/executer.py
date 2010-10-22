@@ -170,9 +170,9 @@ class Executer:
     self._deliverer = Deliverer(self._repository, self._client.isp.certificate, self._httptimeout)
 
     if self._isprobe:
-      logger.info('Inizializzato demone per sonda.')
+      logger.info('Inizializzato software per sonda.')
     else:
-      logger.info('Inizializzato demone per misure d\'utente')
+      logger.info('Inizializzato software per misure d\'utente')
 
   def test(self, taskfile=None):
 
@@ -533,7 +533,7 @@ def main():
     # Se è presente il flag T segui il test ed esci
     e.test(options.task)
   else:
-    # Altrimenti viene eseguito come demone: entra nel loop infinito
+    # Altrimenti viene eseguito come processo residente: entra nel loop infinito
     logger.debug('Inizio il loop.')
     e.loop()
 

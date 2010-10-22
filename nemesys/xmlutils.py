@@ -214,19 +214,19 @@ def nodedata(node):
 def xml2status(data):
   if (len(data) < 1):
     logger.error('Nessun dato da processare')
-    raise Exception('Il demone che effettua le misure non invia informazioni sul suo stato.');
+    raise Exception('Il processo che effettua le misure non invia informazioni sul suo stato.');
 
   #logger.debug('Dati da convertire in XML:\n%s' % data)
   try:
     xml = parseString(data)
   except ExpatError:
     logger.error('Il dato ricevuto non è in formato XML: %s' % data)
-    raise Exception('Errore di formattazione del messaggio di stato del demone delle misure.');
+    raise Exception('Errore di formattazione del messaggio di stato del processo delle misure.');
 
   nodes = xml.getElementsByTagName('status')
   if (len(nodes) < 1):
     logger.debug('Nessun status trovato nell\'XML:\n%s' % xml.toxml())
-    raise Exception('Nessuna informazione sullo stato del demone delle misure ricevuta.');
+    raise Exception('Nessuna informazione ricevuta sullo stato del processo che effettua misure.');
 
   node = nodes[0]
 
@@ -236,7 +236,7 @@ def xml2status(data):
     message = getvalues(node, 'message')
   except IndexError:
     logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
-    raise Exception('I messaggi di stato del demone non contengono tutte le informazioni richieste.');
+    raise Exception('I messaggi di stato del processo che effettua le misure non contengono tutte le informazioni richieste.');
 
   return Status(icon, message)
 
