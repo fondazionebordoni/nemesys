@@ -275,7 +275,7 @@ def fastcheck():
 def mediumcheck():
 
   fastcheck()
-  checkfw()
+  #checkfw()
   checkwireless()
 
   return True
