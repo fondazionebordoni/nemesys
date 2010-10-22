@@ -37,6 +37,8 @@ from urlparse import urlparse
 from xmlutils import getvalues, getfinishedtime, getxml, xml2task
 import asyncore
 import glob
+import hashlib
+import httputils
 import os
 import paths
 import re
@@ -44,8 +46,7 @@ import shutil
 import socket
 import status
 import sysmonitor
-import hashlib
-import httputils
+
 
 bandwidth = Semaphore()
 logger = logging.getLogger()
@@ -533,6 +534,7 @@ def main():
     e.test(options.task)
   else:
     # Altrimenti viene eseguito come demone: entra nel loop infinito
+    logger.debug('Inizio il loop.')
     e.loop()
 
 
