@@ -43,6 +43,8 @@ SENT = _APP_PATH + DIR_SEP + 'sent'
 
 # Configuration dirs and files
 _CONF_DIR = _APP_PATH + DIR_SEP + 'config'
+LOG_DIR = _APP_PATH + DIR_SEP + 'logs'
+FILE_LOG = LOG_DIR + DIR_SEP + 'nemesys.log'
 CONF_LOG = _CONF_DIR + DIR_SEP + 'log.conf'
 CONF_MAIN = _CONF_DIR + DIR_SEP + 'client.conf'
 CONF_ERRORS = _CONF_DIR + DIR_SEP + 'errorcodes.conf'
@@ -52,7 +54,6 @@ MEASURE_STATUS = _CONF_DIR + DIR_SEP + 'progress.xml'
 
 from logger import logging
 def check_paths():
-
   logger = logging.getLogger()
 
   if not path.exists(_CONF_DIR):
