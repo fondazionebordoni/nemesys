@@ -341,6 +341,8 @@ class Executer:
 
     bandwidth.acquire()  # Acquisisci la risorsa condivisa: la banda
 
+    logger.info('Inizio task di misura verso il server %s' % task.server)
+
     # Area riservata per l'esecuzione dei test
     # --------------------------------------------------------------------------
 
@@ -413,6 +415,7 @@ class Executer:
       if (not self._local):
         self._upload(f.name)
 
+      logger.info('Fine task di misura.')
       self._updatestatus(status.READY)
 
     except RuntimeWarning:
