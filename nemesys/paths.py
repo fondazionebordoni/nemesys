@@ -23,8 +23,6 @@ from os import name
 from os import path
 from os import sep
 
-# TODO Assicurarsi di effettuare l'escaping dei caratteri particolari!
-
 DIR_SEP = sep
 
 if hasattr(sys, 'frozen'):
@@ -46,7 +44,7 @@ SENT = _APP_PATH + DIR_SEP + 'sent'
 # Configuration dirs and files
 _CONF_DIR = _APP_PATH + DIR_SEP + 'config'
 LOG_DIR = _APP_PATH + DIR_SEP + 'logs'
-FILE_LOG = LOG_DIR + DIR_SEP + 'Nemesys.log'
+FILE_LOG = LOG_DIR + DIR_SEP + 'nemesys.log'
 CONF_LOG = _CONF_DIR + DIR_SEP + 'log.conf'
 CONF_MAIN = _CONF_DIR + DIR_SEP + 'client.conf'
 CONF_ERRORS = _CONF_DIR + DIR_SEP + 'errorcodes.conf'

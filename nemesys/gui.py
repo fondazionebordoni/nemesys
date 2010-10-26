@@ -28,7 +28,6 @@ from sys import platform
 from threading import Event, Thread
 from time import sleep
 from xmlutils import xml2status
-import pango, cairo, pangocairo, atk, gio
 import gtk
 import paths
 import pygtk
