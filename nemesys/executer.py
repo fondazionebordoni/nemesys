@@ -48,10 +48,11 @@ import status
 import sysmonitor
 
 
-bandwidth = Semaphore()
+bandwidth_sem = Semaphore()
+status_sem = Semaphore()
 logger = logging.getLogger()
 current_status = status.LOGO
-VERSION = '1.6'
+VERSION = '1.7'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 2
@@ -113,8 +114,9 @@ class _Sender(asyncore.dispatcher):
   def write(self, status):
     try:
       self.buffer = status.getxml()
-    except UnicodeEncodeError:
-      self.buffer = Status(status.ERROR, 'Errore di decodifica unicode').getxml()
+    except UnicodeEncodeError, Exception:
+      status = Status(status.ERROR, 'Errore di decodifica unicode')
+      self.buffer = status.getxml()
 
     try:
       self.handle_write()
@@ -192,8 +194,50 @@ class Executer:
     else:
       logger.info('Nessun task da eseguire.')
 
+  def wait(self):
+
+    # Se non è una sonda, ma un client d'utente
+    if not self._isprobe:
+      # Se ho fatto 2 misure in questa ora, aspetto la prossima ora
+      now = datetime.now()
+      hour = now.hour
+      made = self._progress.howmany(hour)
+      if made >= MAX_MEASURES_PER_HOUR:
+        self._updatestatus(status.PAUSE)
+
+        # Quanti secondi perché scatti la prossima ora?
+        wait_hour = self._polling
+        try:
+          delta_hour = now.replace(hour=(hour + 1) % 24, minute=0, second=0) - now
+          if delta_hour.days < 0:
+            logger.info('Nuovo giorno: delta_hour %s' % delta_hour)
+          # Aggiungo un random di 5 minuti per evitare chiamate sincrone
+          wait_hour = delta_hour.seconds
+        except ValueError as e:
+          logger.warning('Errore nella determinazione della prossima ora: %s.' % e)
+
+        random_sleep = randint(0, self._polling * 3)
+        logger.info('La misura delle %d è completa. Aspetto %d secondi per il prossimo polling.' % (hour, wait_hour + random_sleep))
+
+        # Aspetto un'ora poi aggiorno lo stato
+        sleep(wait_hour)
+        self._updatestatus(status.READY)
+
+        # Aspetto un altro po' per evitare di chiedere di fare le misure contemporaneamente agli altri
+        sleep(random_sleep)
+      elif made >= 1:
+        wait_next = max(self._polling * 3, 180)
+        # Ritardo la richiesta per le successive: dovrebbe essere maggiore del tempo per effettuare una misura, altrimenti eseguo MAX_MEASURES_PER_HOUR + 1
+        logger.info('Ho fatto almento una misura. Aspetto %d secondi per il prossimo polling.' % wait_next)
+        sleep(wait_next)
+      else:
+        # Aspetto prima di richiedere il task
+        sleep(self._polling)
+    else:
+      # Aspetto prima di richiedere il task
+      sleep(self._polling)
+
   def loop(self):
-    # TODO Rivedere algoritmo di loop()
 
     # signal.signal(signal.SIGALRM, runtimewarning)
     t = None
@@ -204,48 +248,15 @@ class Executer:
 
     self._progress = Progress(create=True)
 
-    # Controllo se non sono trascorsi 3 giorni dall'inizio delle misure
-    while self._progress.onair() or self._isprobe:
-
-      # Se non è una sonda, ma un client d'utente
-      if not self._isprobe:
-        # Se ho fatto 2 misure in questa ora, aspetto la prossima ora
-        now = datetime.now()
-        hour = now.hour
-        made = self._progress.howmany(hour)
-        if made >= MAX_MEASURES_PER_HOUR:
-          self._updatestatus(status.PAUSE)
-          # Quanti secondi perché scatti la prossima ora?
-          wait_hour = self._polling
-          
-          try:
-            delta_hour = now.replace(hour=(hour + 1)%24, minute=0, second=0) - now
-            if delta_hour.days < 0:
-              logger.debug('Nuovo giorno: delta_hour %s' % delta_hour)
-            # Aggiungo un random di 5 minuti per evitare chiamate sincrone
-            wait_hour = delta_hour.seconds + randint(5, 300)
-          except ValueError as e:
-            logger.warning('Errore nella determinazione della prossima ora.')
-            
-          logger.debug('La misura delle %d è completa. Aspetto %d secondi per il prossimo polling.' % (hour, wait_hour))
-          sleep(wait_hour)
-        elif made >= 1:
-          wait_next = max(self._polling * 3, 600)
-          # Ritardo la richiesta per le successive: dovrebbe essere maggiore del tempo per effettuare una misura, altrimenti eseguo MAX_MEASURES_PER_HOUR + 1
-          logger.debug('Ho fatto almento una misura. Aspetto %d secondi per il prossimo polling.' % wait_next)
-          sleep(wait_next)
-        else:
-          # Aspetto prima di richiedere il task
-          sleep(self._polling)
-      else:
-        # Aspetto prima di richiedere il task
-        sleep(self._polling)
-
-      if not self._isprobe and self._progress.doneall():
-        self._updatestatus(status.FINISHED)
+    # Controllo se 
+    # - non sono trascorsi 3 giorni dall'inizio delle misure
+    # - non ho finito le misure
+    # - sono una sonda
+    while self._progress.onair() or self._isprobe or not self._progress.doneall():
 
       task = None
-      bandwidth.acquire() # Richiedi accesso esclusivo alla banda
+      bandwidth_sem.acquire() # Richiedi accesso esclusivo alla banda
+      self._updatestatus(status.READY)
 
       # Solo se sono una sonda invio i file di misura nella cartella da spedire
       if self._isprobe:
@@ -257,7 +268,7 @@ class Executer:
       except Exception as e:
         self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure: %s' % e))
 
-      bandwidth.release() # Rilascia l'accesso esclusivo alla banda
+      bandwidth_sem.release() # Rilascia l'accesso esclusivo alla banda
 
       if (task != None):
         logger.debug('Trovato task %s' % task)
@@ -282,10 +293,12 @@ class Executer:
 
         if alarm > 0:
           logger.debug('Impostazione di un nuovo task tra: %s secondi' % alarm)
+          self._updatestatus(Status(status.READY, 'Mi preparo per eseguire una misura...'))
           t = Timer(alarm, self._dotask, [task])
           t.start()
-      else:
-        self._updatestatus(status.READY)
+
+      # Attendi il prossimo polling
+      self.wait()
 
     while True:
       self._updatestatus(status.FINISHED)
@@ -301,29 +314,10 @@ class Executer:
 
     try:
       connection.request('GET', '%s?clientid=%s&version=%s&confid=%s' % (url.path, self._client.id, VERSION, self._md5conf))
-
-    except SSLError as e:
-      logger.error('Impossibile scaricare lo scheduling. Errore SSL: %s.' % e)
-      self._updatestatus(Status(status.ERROR, 'Impossibile dialogare con lo scheduler delle misure.'))
-      return None
-
-    except socket.gaierror as e:
-      logger.error('Impossibile scaricare lo scheduling. Errore socket: %s' % e)
-      return None
-
-    except socket.error as e:
-      logger.error('Impossibile scaricare lo scheduling. Errore socket: %s' % e)
-      return None
-
-    except Exception as e:
-      logger.error('Impossibile scaricare lo scheduling. Errore: %s' % e)
-      return None
-
-    try:
       data = connection.getresponse().read()
-
-    except AttributeError as e:
-      logger.error('Impossibile scaricare lo scheduling. Errore httplib: %s' % e)
+    except Exception as e:
+      logger.error('Impossibile scaricare lo scheduling. Errore: %s.' % e)
+      self._updatestatus(Status(status.ERROR, 'Impossibile dialogare con lo scheduler delle misure.'))
       return None
 
     return xml2task(data)
@@ -339,7 +333,7 @@ class Executer:
       self._updatestatus(status.PAUSE)
       return
 
-    bandwidth.acquire()  # Acquisisci la risorsa condivisa: la banda
+    bandwidth_sem.acquire()  # Acquisisci la risorsa condivisa: la banda
 
     logger.info('Inizio task di misura verso il server %s' % task.server)
 
@@ -369,12 +363,13 @@ class Executer:
 
         if not sysmonitor.mediumcheck():
           raise Exception('Condizioni per effettuare la misura non verificate.')
+
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
         test = t.testftpdown(task.ftpdownpath)
         logger.debug('Download result: %.3f' % test.value)
         m.savetest(test)
 
-      # Testa gli ftp down
+      # Testa gli ftp up
       for i in range(1, task.upload + 1):
 
         if not sysmonitor.mediumcheck():
@@ -416,17 +411,16 @@ class Executer:
         self._upload(f.name)
 
       logger.info('Fine task di misura.')
-      self._updatestatus(status.READY)
 
     except RuntimeWarning:
       self._updatestatus(status.Status(status.ERROR, 'Misura interrotta per timeout.'))
       logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
 
     except Exception as e:
-      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s' % e))
+      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
       logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
 
-    bandwidth.release() # Rilascia la risorsa condivisa: la banda
+    bandwidth_sem.release() # Rilascia la risorsa condivisa: la banda
 
   def _uploadall(self):
     '''
@@ -462,7 +456,7 @@ class Executer:
           self._progress.putstamp(time)
 
     except Exception as e:
-      logger.error('Errore durante la spedizione del file delle misure %s: %e' % (filename, e))
+      logger.error('Errore durante la spedizione del file delle misure %s: %s' % (filename, e))
 
     finally:
       # Elimino lo zip del file di misura temporaneo
@@ -475,11 +469,13 @@ class Executer:
   def _updatestatus(self, new):
     global current_status
 
+    status_sem.acquire()
     #logger.debug('Aggiornamento stato: %s' % new.message)
     current_status = new
 
     if (self._communicator != None):
       self._communicator.sendstatus()
+    status_sem.release()
 
   def _movefiles(self, filename):
 
