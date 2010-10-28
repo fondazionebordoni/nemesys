@@ -39,6 +39,7 @@ pygtk.require('2.0')
 
 LISTENING_URL = ('localhost', 21401)
 NOTIFY_COLORS = ('yellow', 'black')
+WAIT_RECONNECT = 15 # secondi
 logger = logging.getLogger()
 
 def sleeper():
@@ -51,12 +52,15 @@ class _Controller(Thread):
     Thread.__init__(self)
     self._channel = _Channel(url, trayicon)
     self._trayicon = trayicon
+    self._running = True
 
   def run(self):
-    loop(1)
+    while self._running:
+      loop(1)
     logger.debug('GUI asyncore loop terminated.')
 
   def join(self, timeout=None):
+    self._running = False
     self._channel.quit()
     Thread.join(self, timeout)
 
@@ -86,7 +90,7 @@ class _Channel(dispatcher):
     logger.debug('Error. Closing client socket.')
     self._trayicon.setstatus(status.ERROR)
     self.handle_close()
-    self._stopevent.wait(15)
+    self._stopevent.wait(WAIT_RECONNECT)
     self._reconnect()
 
   def handle_close(self):
@@ -101,9 +105,10 @@ class _Channel(dispatcher):
     except Exception, e:
       logger.error('Errore durante la decodifica dello stato del sistema di misura: %s' % e)
       current_status = Status(status.ERROR, '%s' % e)
+      self.handle_error()
 
     if current_status == None:
-      current_status = Status(status.ERROR, 'Errore di comunicazione con il server')
+      current_status = Status(status.ERROR, 'Errore di comunicazione con il server.')
 
     idle_add(self._trayicon.setstatus, current_status)
 
