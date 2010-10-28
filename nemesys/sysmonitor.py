@@ -48,14 +48,23 @@ tag_task = 'taskList'
 
 # Soglie di sistema
 # ------------------------------------------------------------------------------
+# Massima quantità di host in rete
 th_host = 2
+# Minima memoria disponibile
 th_avMem = 134217728
-th_memLoad = 80
+# Massimo carico percentuale sulla memoria
+th_memLoad = 95
+# Massimo carico percentuale sulla CPU
+th_cpu = 85
+# Massimo numero di byte scritti su disco in 5 secondi
 th_wdisk = 104857600
-th_cpu = 80
 th_rdisk = 104857600
-bad_conn = [80, 8080, 110, 25]
-bad_proc = ['amule', 'emule', 'bittorrent', 'skype', 'dropbox', 'chrome', 'iexplore', 'firefox', ]
+# Porte con connessioni attive da evitare
+bad_conn = [80, 8080, 110, 25, 465, 993, 995, 143, 6881, 4662, 4672]
+# Processi che richiedono risorse da evitare 
+bad_proc = ['amule', 'emule', 'bittorrent', 'skype', 'dropbox', ]
+good_fqdn = ['finaluser.agcom244.fub.it']
+
 
 logger = logging.getLogger()
 
@@ -120,7 +129,7 @@ def getfloattag(tag, value):
     logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
     if STRICT_CHECK:
       raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
-  
+
   return value
 
 def getbooltag(tag, value):
@@ -133,7 +142,7 @@ def getbooltag(tag, value):
     logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
     if STRICT_CHECK:
       raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
-  
+
   if STRICT_CHECK:
     if value != 'false' and value != 'true':
       logger.warning('Impossibile determinare il parametro "%s".' % tag)
@@ -141,7 +150,7 @@ def getbooltag(tag, value):
 
   if value == 'true':
     return True
-  
+
   if value == 'false':
     return False
 
@@ -151,7 +160,7 @@ def checkconnections():
   '''
   Effettua il controllo sulle connessioni attive
   '''
-  
+
   #TODO Se la connessione è verso un nostro server non dobbiamo farne il controllo
   d = {tag_conn:''}
   values = getstatus(d)
@@ -203,7 +212,7 @@ def checktasks():
   return True
 
 def checkcpu():
-  
+
   value = getfloattag(tag_cpu, th_cpu - 1)
   if value > th_cpu:
     raise Exception('CPU occupata.')
@@ -211,7 +220,7 @@ def checkcpu():
   return True
 
 def checkmem():
-  
+
   avMem = getfloattag(tag_avMem, th_avMem + 1)
   if avMem < th_avMem:
     raise Exception('Memoria non sufficiente.')
@@ -223,15 +232,15 @@ def checkmem():
   return True
 
 def checkfw():
-  
+
   value = getbooltag(tag_fw, 'False')
   if value:
     raise Exception('Firewall attivo.')
-  
+
   return True
 
 def checkwireless():
-  
+
   value = getbooltag(tag_wireless, 'False')
   if value:
     raise Exception('Wireless LAN attiva.')
@@ -239,7 +248,7 @@ def checkwireless():
   return True
 
 def checkhosts():
-  
+
   value = getfloattag(tag_hosts, th_host - 1)
   if value > th_host:
     raise Exception('Presenza altri host in rete.')
