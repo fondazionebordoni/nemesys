@@ -26,23 +26,27 @@ class Status:
 
   def __init__(self, icon, message):
     if isinstance (icon, Status):
-      self._trayicon = icon._trayicon
+      self._trayicon = icon.baseicon
     else:
-      self._trayicon = icon
+      self._trayicon = icon.decode('utf-8')
 
-    self._message = message
+    self._message = message.decode('utf-8')
+
+  @property
+  def baseicon(self):
+    return self._trayicon.encode('ascii', 'xmlcharrefreplace')
 
   @property
   def icon(self):
-    path = paths.ICONS + paths.DIR_SEP + self._trayicon
+    path = paths.ICONS + paths.DIR_SEP + self.baseicon
     return path
 
   @property
   def message(self):
-    return self._message
+    return self._message.encode('ascii', 'xmlcharrefreplace')
 
   def setmessage(self, message):
-    self._message = message
+    self._message = message.decode('utf-8')
 
   def __str__(self):
     return self.getxml()
@@ -52,16 +56,15 @@ class Status:
     status = xml.getElementsByTagName('status')[0]
 
     icon = xml.createElement('icon')
-    icon.appendChild(xml.createTextNode(self._trayicon.decode('utf8', 'replace')))
+    icon.appendChild(xml.createTextNode(self.baseicon))
     status.appendChild(icon)
 
     message = xml.createElement('message')
-    message.appendChild(xml.createTextNode(self._message.decode('utf8', 'replace')))
+    message.appendChild(xml.createTextNode(self.message))
     status.appendChild(message)
 
     return xml.toxml()
 
-# TODO Gestire TUTTI i caratteri utf8 !!!
 ERROR = Status('nemesys_red.png', 'Impossibile contattare il sistema che effettua le misure.\nRitento tra qualche secondo...')
 PAUSE = Status('nemesys_white.png', 'Ne.Me.Sys. non deve effettuare misure nell\'ora corrente.')
 PLAY = Status('nemesys_green.png', 'Ne.Me.Sys. sta effettuando una misura.')
