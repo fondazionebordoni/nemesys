@@ -243,7 +243,7 @@ class TrayIcon():
     label1 = gtk.Label("<b><big><big>Ne.Me.Sys.</big></big></b>")
     label2 = gtk.Label("<big>Inizio test di misura: %s</big>" % inizioMisure.strftime('%c'))
     label3 = gtk.Label("<big>Stato di avanzamento: %s test su 24</big>" % str(n))
-    label4 = gtk.Label("Si ricorda che la misurazione va completata entro tre giorni dal suo inizio")
+    label4 = gtk.Label("Si ricorda che la misurazione va completata entro tre giorni dal suo inizio\nPer avere un dato aggiornato dello stato della misura chiudere questa finestra e riaprirla.")
     label5 = gtk.Label("Misura completa! Visita la tua area personale sul sito\n<i>www.misurainternet.it</i> per scaricare il pdf delle misure")
 
     label1.set_use_markup(True)
