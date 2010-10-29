@@ -55,12 +55,8 @@ class _Controller(Thread):
     self._running = True
 
   def run(self):
-    # TODO Verificare al fattibilità di ricollegamento della gui al demone
-    '''
     while self._running:
       loop(1)
-    '''
-    loop(1)
     logger.debug('GUI asyncore loop terminated.')
 
   def join(self, timeout=None):
@@ -109,6 +105,7 @@ class _Channel(dispatcher):
     except Exception, e:
       logger.error('Errore durante la decodifica dello stato del sistema di misura: %s' % e)
       current_status = Status(status.ERROR, '%s' % e)
+      self.handle_error()
 
     if current_status == None:
       current_status = Status(status.ERROR, 'Errore di comunicazione con il server.')
@@ -246,7 +243,7 @@ class TrayIcon():
     label1 = gtk.Label("<b><big><big>Ne.Me.Sys.</big></big></b>")
     label2 = gtk.Label("<big>Inizio test di misura: %s</big>" % inizioMisure.strftime('%c'))
     label3 = gtk.Label("<big>Stato di avanzamento: %s test su 24</big>" % str(n))
-    label4 = gtk.Label("Si ricorda che la misurazione va completata entro tre giorni dal suo inizio\nPer avere un dato aggiornato dello stato della misura chiudere questa finestra e riaprirla.")
+    label4 = gtk.Label("Si ricorda che la misurazione va completata entro tre giorni dal suo inizio")
     label5 = gtk.Label("Misura completa! Visita la tua area personale sul sito\n<i>www.misurainternet.it</i> per scaricare il pdf delle misure")
 
     label1.set_use_markup(True)
@@ -383,5 +380,5 @@ Homepage del progetto su www.misurainternet.it''')
 
 if __name__ == '__main__':
   if platform == 'win32':
-    timeout_add(200, sleeper)
+    timeout_add(400, sleeper)
   trayicon = TrayIcon()

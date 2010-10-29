@@ -24,23 +24,12 @@ from profile import Profile
 from server import Server
 from proof import Proof
 from xml.dom.minidom import parseString
-import platform
 
 logger = logging.getLogger()
 
-def getos():
-  
-  os = 'n.d.'
-  try:
-    os = '%s %s' % (platform.system(), platform.release())
-  except Exception as e:
-    logger.error('Impossibile determinare il tipo di sistema operativo: %s' % e)
-    
-  return os  
-
 class Measure:
 
-  def __init__(self, id, server, client, version=None):
+  def __init__(self, id, server, client):
     '''
     Costruisce un oggetto Measure utilizzando i parametri ricevuti nella
     chiamata.
@@ -51,7 +40,6 @@ class Measure:
     self._id = id
     self._server = server
     self._client = client
-    self._version = version
     self._xml = self.getxml()
 
   def getxml(self):
@@ -60,7 +48,7 @@ class Measure:
     measure = xml.getElementsByTagName('measure')[0]
     measure.setAttribute('id', str(self._client.id) + str(self._id))
 
-    # TODO Aggiungere l'invio del mac address
+    # TODO Aggiungere l'invio del mac address. Attenzione che questo modifica lo schema su cui viene validata la misura!
 
     # Header
     # --------------------------------------------------------------------------
@@ -90,14 +78,6 @@ class Measure:
 
     geocode = xml.createElement('geocode')
     geocode.appendChild(xml.createTextNode(str(self._client.geocode)))
-    client.appendChild(geocode)
-
-    geocode = xml.createElement('so')
-    geocode.appendChild(xml.createTextNode(str(getos())))
-    client.appendChild(geocode)
-
-    geocode = xml.createElement('version')
-    geocode.appendChild(xml.createTextNode(str(self._version)))
     client.appendChild(geocode)
 
     header.appendChild(client)

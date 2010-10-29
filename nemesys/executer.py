@@ -28,6 +28,7 @@ from os import path
 from profile import Profile
 from progress import Progress
 from random import randint
+from ssl import SSLError
 from status import Status
 from tester import Tester
 from threading import Semaphore, Thread, Timer
@@ -51,7 +52,7 @@ bandwidth_sem = Semaphore()
 status_sem = Semaphore()
 logger = logging.getLogger()
 current_status = status.LOGO
-VERSION = '1.6.5.1'
+VERSION = '1.7'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 2
@@ -327,11 +328,10 @@ class Executer:
     disposizione secondo il parametro tasktimeout
     '''
 
-    if not self._isprobe:
-      made = self._progress.howmany(datetime.now().hour)
-      if made >= MAX_MEASURES_PER_HOUR:
-        self._updatestatus(status.PAUSE)
-        return
+    made = self._progress.howmany(datetime.now().hour)
+    if made >= MAX_MEASURES_PER_HOUR:
+      self._updatestatus(status.PAUSE)
+      return
 
     bandwidth_sem.acquire()  # Acquisisci la risorsa condivisa: la banda
 
@@ -353,7 +353,7 @@ class Executer:
 
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
       id = datetime.now().strftime('%y%m%d%H%M')
-      m = Measure(id, task.server, self._client, VERSION)
+      m = Measure(id, task.server, self._client)
 
       # Set task timeout alarm
       # signal.alarm(self._tasktimeout)
