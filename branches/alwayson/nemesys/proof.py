@@ -26,7 +26,7 @@ class Proof:
     self._value = value
     self._bytes = bytes
     self._errorcode = errorcode
-   
+
   @property
   def type(self):
     return self._type
@@ -41,17 +41,20 @@ class Proof:
     Values must be saved in milliseconds.
     '''
     return self._value
-   
+
   @property
   def bytes(self):
     return self._bytes
-   
+
   @property
   def errorcode(self):
     return self._errorcode
 
+  def seterrorcode(self, errorcode):
+    self._errorcode = errorcode
+
   def __str__(self):
-    return 'type: %s; start: %s; value: %1.3f; bytes: %d; errorcode: %d' % (self.type, self.start.isoformat(), self.value*1000, self.bytes, self.errorcode)
+    return 'type: %s; start: %s; value: %1.3f; bytes: %d; errorcode: %d' % (self.type, self.start.isoformat(), self.value * 1000, self.bytes, self.errorcode)
 
 if __name__ == '__main__':
   t = Proof('download', datetime.now(), 20, 100000, 101)

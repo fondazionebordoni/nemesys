@@ -34,6 +34,7 @@ from threading import Semaphore, Thread, Timer
 from time import sleep
 from urlparse import urlparse
 from xmlutils import getvalues, getfinishedtime, getxml, xml2task
+from errorcoder import Errorcoder
 import asyncore
 import glob
 import hashlib
@@ -50,6 +51,7 @@ import sysmonitor
 bandwidth_sem = Semaphore()
 status_sem = Semaphore()
 logger = logging.getLogger()
+errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
 VERSION = '1.6.5.1'
 
@@ -251,7 +253,7 @@ class Executer:
     # - non sono trascorsi 3 giorni dall'inizio delle misure
     # - non ho finito le misure
     # - sono una sonda
-    while self._progress.onair() or self._isprobe or not self._progress.doneall():
+    while self._isprobe or not self._progress.doneall():
 
       task = None
       bandwidth_sem.acquire() # Richiedi accesso esclusivo alla banda
@@ -301,7 +303,7 @@ class Executer:
 
     while True:
       self._updatestatus(status.FINISHED)
-      sleep(float(self._polling))
+      sleep(float(self._polling * 3))
 
   # Scarica il prossimo task dallo scheduler
   def _download(self):
@@ -346,6 +348,15 @@ class Executer:
       if not sysmonitor.checkall():
         raise Exception('Condizioni per effettuare la misura non verificate.')
 
+        base_error = 0
+        try:
+          if not sysmonitor.checkall():
+            raise Exception('Condizioni per effettuare la misura non verificate.')
+
+        except Exception as e:
+          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+          base_error = 50000
+
       self._updatestatus(status.PLAY)
 
       t = Tester(host=task.server, timeout=self._testtimeout,
@@ -361,33 +372,63 @@ class Executer:
       # Testa gli ftp down
       for i in range(1, task.download + 1):
 
-        if not sysmonitor.mediumcheck():
-          raise Exception('Condizioni per effettuare la misura non verificate.')
+        error = None
+        try:
+          if not sysmonitor.mediumcheck():
+            raise Exception('Condizioni per effettuare la misura non verificate.')
+
+        except Exception as e:
+          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+          errorcode = errors.geterrorcode(e) + base_error
 
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
         test = t.testftpdown(task.ftpdownpath)
-        logger.debug('Download result: %.3f' % test.value)
+
+        if error != None:
+          test.seterrorcode(errorcode)
+
+        logger.debug('Download result: %.3f' % test)
         m.savetest(test)
 
       # Testa gli ftp up
       for i in range(1, task.upload + 1):
 
-        if not sysmonitor.mediumcheck():
-          raise Exception('Condizioni per effettuare la misura non verificate.')
+        error = None
+        try:
+          if not sysmonitor.mediumcheck():
+            raise Exception('Condizioni per effettuare la misura non verificate.')
+
+        except Exception as e:
+          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+          errorcode = errors.geterrorcode(e) + base_error
 
         logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
         test = t.testftpup(self._client.profile.upload * task.multiplier * 1024 / 8, task.ftpuppath)
+
+        if error != None:
+          test.seterrorcode(errorcode)
+
         logger.debug('Upload result: %.3f' % test.value)
         m.savetest(test)
 
       # Testa i ping
       for i in range(1, task.ping + 1):
 
-        if not sysmonitor.mediumcheck():
-          raise Exception('Condizioni per effettuare la misura non verificate.')
+        error = None
+        try:
+          if not sysmonitor.mediumcheck():
+            raise Exception('Condizioni per effettuare la misura non verificate.')
+
+        except Exception as e:
+          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+          errorcode = errors.geterrorcode(e) + base_error
 
         logger.debug('Starting ping test [%d]' % i)
         test = t.testping()
+
+        if error != None:
+          test.seterrorcode(errorcode)
+
         logger.debug('Ping result: %.3f' % test.value)
         if (i % task.nicmp == 0):
           sleep(task.delay)
@@ -395,9 +436,6 @@ class Executer:
 
       # Unset task timeout alarm
       # signal.alarm(0)
-
-      if not sysmonitor.checkall():
-        raise Exception('Condizioni per effettuare la misura non verificate.')
 
       # Spedisci il file al repository delle misure
       sec = datetime.now().strftime('%S')
