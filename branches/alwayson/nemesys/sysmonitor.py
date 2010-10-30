@@ -61,9 +61,9 @@ th_cpu = 85
 th_wdisk = 104857600
 th_rdisk = 104857600
 # Porte con connessioni attive da evitare
-bad_conn = [80, 8080, 110, 25, 465, 993, 995, 143, 6881, 4662, 4672, 443]
+bad_conn = [80, 8080, 25, 110, 465, 993, 995, 143, 6881, 4662, 4672, 443]
 # Processi che richiedono troppe risorse 
-bad_proc = ['amule', 'emule', 'skype', 'dropbox', 'torrent', 'azureus']
+bad_proc = ['amule', 'emule', 'skype', 'dropbox', 'torrent', 'azureus', 'transmission']
 
 logger = logging.getLogger()
 
@@ -130,6 +130,9 @@ def getstringtag(tag, value):
     if STRICT_CHECK:
       raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
 
+  if value == 'None':
+    return None
+
   return value
 
 def getfloattag(tag, value):
@@ -180,24 +183,27 @@ def checkconnections():
   c = []
   try:
     for j in connActive.split(';'):
-      try:
-        ip = j.split(':')[0]
-        port = j.split(':')[1]
-        #TODO Occorre chiamare un resolver per la risoluzione dei nostri ip
-        if not bool(re.search('^90\.147\.12[012]\.', ip)):
-          c.append(int(port))
-      except Exception as e:
-        logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
-        if STRICT_CHECK:
-          raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
+      ip = j.split(':')[0]
+      if not checkipsyntax(ip):
+        raise Exception('Lista delle connessioni attive non conforme.')
+      port = j.split(':')[1]
+      #TODO Occorre chiamare un resolver per la risoluzione dei nostri ip
+      if not bool(re.search('^90\.147\.120\.|^193\.104\.137\.', ip)):
+        c.append(int(port))
   except:
     logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
-    raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
+    if STRICT_CHECK:
+      raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
 
   for i in bad_conn:
     if i in c:
       logger.error('Porta %d aperta ed utilizzata.' % i)
-      raise Exception('Accesso ad internet da programmi non legati alla misura.')
+      raise Exception('Accesso ad Internet da programmi non legati alla misura. Se possibile, chiuderli.')
+
+  for i in c:
+    if i > 1024:
+      logger.error('Porta %d aperta ed utilizzata.' % i)
+      raise Exception('Accesso ad Internet da programmi non legati alla misura. Se possibile, chiuderli.')
 
   return True
 
@@ -216,12 +222,7 @@ def checktasks():
   t = []
   try:
     for j in taskActive.split(';'):
-      try:
-        t.append(str(j))
-      except Exception as e:
-        logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_proc, e))
-        if STRICT_CHECK:
-          raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_proc)
+      t.append(str(j))
 
     for i in bad_proc:
       for k in t:
