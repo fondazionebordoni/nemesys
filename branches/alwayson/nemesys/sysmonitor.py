@@ -115,8 +115,22 @@ def getstatus(d):
       data = systemProfiler('test', d)
     except Exception as e:
       logger.warning('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
+      raise Exception('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
 
   return getvalues(data, tag_results)
+
+def getstringtag(tag, value):
+  d = {tag:''}
+  values = getstatus(d)
+
+  try:
+    value = str(values[tag])
+  except Exception as e:
+    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
+    if STRICT_CHECK:
+      raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
+
+  return value
 
 def getfloattag(tag, value):
   d = {tag:''}
@@ -158,25 +172,27 @@ def checkconnections():
   Effettua il controllo sulle connessioni attive
   '''
 
-  d = {tag_conn:''}
-  values = getstatus(d)
-  connActive = values[tag_conn]
+  connActive = getstringtag(tag_conn, '90.147.120.2:443')
 
   if connActive == None or len(connActive) <= 0:
     raise Exception('Errore nella determinazione delle connessioni attive.')
 
   c = []
-  for j in connActive.split(';'):
-    try:
-      ip = j.split(':')[0]
-      port = j.split(':')[1]
-      #TODO Occorre chiamare un resolver per la risoluzione dei nostri ip
-      if not bool(re.search('^90\.147\.12[012]\.', ip)):
-        c.append(int(port))
-    except Exception as e:
-      logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
-      if STRICT_CHECK:
-        raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
+  try:
+    for j in connActive.split(';'):
+      try:
+        ip = j.split(':')[0]
+        port = j.split(':')[1]
+        #TODO Occorre chiamare un resolver per la risoluzione dei nostri ip
+        if not bool(re.search('^90\.147\.12[012]\.', ip)):
+          c.append(int(port))
+      except Exception as e:
+        logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
+        if STRICT_CHECK:
+          raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
+  except:
+    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
+    raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
 
   for i in bad_conn:
     if i in c:
@@ -189,9 +205,8 @@ def checktasks():
   '''
   Ettettua il controllo sui processi
   '''
-  d = {tag_task:''}
-  values = getstatus(d)
-  taskActive = values[tag_task]
+  taskActive = getstringtag(tag_task, 'executer')
+
 
   if taskActive == None or len(taskActive) <= 0:
     raise Exception('Errore nella determinazione dei processi attivi.')
@@ -199,24 +214,31 @@ def checktasks():
   # WARNING Non ho modo di sapere se il valore che recupero è non plausibile (not available)
 
   t = []
-  for j in taskActive.split(';'):
-    try:
-      t.append(str(j))
-    except Exception as e:
-      logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_proc, e))
-      if STRICT_CHECK:
-        raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_proc)
+  try:
+    for j in taskActive.split(';'):
+      try:
+        t.append(str(j))
+      except Exception as e:
+        logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_proc, e))
+        if STRICT_CHECK:
+          raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_proc)
 
-  for i in bad_proc:
-    for k in t:
-      if (bool(re.search(i, k, re.IGNORECASE))):
-        raise Exception('Sono attivi processi non desiderati.', 'Chiudere il programma "%s" per proseguire le misure.' % i)
+    for i in bad_proc:
+      for k in t:
+        if (bool(re.search(i, k, re.IGNORECASE))):
+          raise Exception('Sono attivi processi non desiderati.', 'Chiudere il programma "%s" per proseguire le misure.' % i)
+  except Exception as e:
+    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_proc, e))
+    raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_proc)
 
   return True
 
 def checkcpu():
 
   value = getfloattag(tag_cpu, th_cpu - 1)
+  if value < 0 or value > 100:
+    raise Exception('Valore di occupazione della CPU non conforme.')
+
   if value > th_cpu:
     raise Exception('CPU occupata.')
 
@@ -224,12 +246,16 @@ def checkcpu():
 
 def checkmem():
 
-  avMem = getfloattag(tag_avMem, th_avMem + 1)
-  if avMem < th_avMem:
+  value = getfloattag(tag_avMem, th_avMem + 1)
+  if value < 0:
+    raise Exception('Valore di memoria disponibile non conforme.')
+  if value < th_avMem:
     raise Exception('Memoria disponibile non sufficiente.')
 
-  memLoad = getfloattag(tag_memLoad, th_memLoad - 1)
-  if memLoad > th_memLoad:
+  value = getfloattag(tag_memLoad, th_memLoad - 1)
+  if value < 0 or value > 100:
+    raise Exception('Valore di occupazione della memoria non conforme.')
+  if value > th_memLoad:
     raise Exception('Memoria occupata.')
 
   return True
@@ -339,14 +365,12 @@ def getIp():
   '''
   restituisce indirizzo IP del computer
   '''
-  d = {tag_ip:''}
-  values = getstatus(d)
-  ip = values[tag_ip]
+  value = getstringtag(tag_ip, '90.147.120.2')
 
-  if not checkipsyntax(ip):
+  if not checkipsyntax(value):
     raise Exception('Impossibile ottenere il dettaglio dell\'indirizzo IP')
 
-  return ip
+  return value
 
 def getSys():
   '''
