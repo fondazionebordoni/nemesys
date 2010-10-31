@@ -48,7 +48,7 @@ args=(sys.stdout,)
 class=handlers.TimedRotatingFileHandler
 level=INFO
 formatter=formatter
-args=("''' + logfile + '''", 'midnight', 1, 5)
+args=(''' + repr(logfile) + ''', 'midnight', 1, 5)
 
 [formatter_formatter] 
 format=%(asctime)s NeMeSys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
