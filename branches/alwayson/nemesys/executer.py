@@ -295,7 +295,7 @@ class Executer:
 
         if alarm > 0:
           logger.debug('Impostazione di un nuovo task tra: %s secondi' % alarm)
-          self._updatestatus(Status(status.READY, 'Mi preparo per eseguire una misura...'))
+          self._updatestatus(Status(status.READY, 'Inizio misura tra %d secondi...' % alarm))
           t = Timer(alarm, self._dotask, [task])
           t.start()
 
@@ -360,7 +360,7 @@ class Executer:
           self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % (e, self._polling)))
           base_error = 50000
 
-      # self._updatestatus(status.PLAY)
+      self._updatestatus(status.PLAY)
 
       t = Tester(host=task.server, timeout=self._testtimeout,
                  username=self._client.username, password=self._client.password)
@@ -391,12 +391,11 @@ class Executer:
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
         test = t.testftpdown(task.ftpdownpath)
 
-        logger.debug('%d' % error)
         if error > 0 or base_error > 0:
           test.seterrorcode(error + base_error)
 
         logger.debug('Download result: %.3f' % test.value)
-        logger.debug('Download error: %d + %d = %d' % (error, base_error, test.errorcode))
+        logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
         m.savetest(test)
 
       # Testa gli ftp up
@@ -422,7 +421,7 @@ class Executer:
           test.seterrorcode(error + base_error)
 
         logger.debug('Upload result: %.3f' % test.value)
-        logger.debug('Upload error: %d + %d = %d' % (error, base_error, test.errorcode))
+        logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
         m.savetest(test)
 
       # Testa i ping
@@ -448,7 +447,7 @@ class Executer:
           test.seterrorcode(error + base_error)
 
         logger.debug('Ping result: %.3f' % test.value)
-        logger.debug('Ping error: %d + %d = %d' % (error, base_error, test.errorcode))
+        logger.debug('Ping error: %d, %d, %d' % (base_error, error, test.errorcode))
         if (i % task.nicmp == 0):
           sleep(task.delay)
         m.savetest(test)
