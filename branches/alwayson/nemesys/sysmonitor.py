@@ -223,14 +223,14 @@ def checktasks():
   try:
     for j in taskActive.split(';'):
       t.append(str(j))
-
-    for i in bad_proc:
-      for k in t:
-        if (bool(re.search(i, k, re.IGNORECASE))):
-          raise Exception('Sono attivi processi non desiderati.', 'Chiudere il programma "%s" per proseguire le misure.' % i)
   except Exception as e:
-    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_proc, e))
-    raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_proc)
+    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_task, e))
+    raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_task)
+
+  for i in bad_proc:
+    for k in t:
+      if (bool(re.search(i, k, re.IGNORECASE))):
+        raise Exception('Sono attivi processi non desiderati.', 'Chiudere il programma "%s" per proseguire le misure.' % i)
 
   return True
 
@@ -331,7 +331,6 @@ def mediumcheck():
 def checkall():
 
   mediumcheck()
-  # TODO Reinserire questo check quanto corretto il problema di determinazione del dato
   #checkdisk()
 
   ip = getIp()
