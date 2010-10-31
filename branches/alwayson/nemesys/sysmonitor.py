@@ -178,7 +178,9 @@ def checkconnections():
   connActive = getstringtag(tag_conn, '90.147.120.2:443')
 
   if connActive == None or len(connActive) <= 0:
-    raise Exception('Errore nella determinazione delle connessioni attive.')
+    # Non ho connessioni attive
+    logger.debug('Nessuna connessione di rete attiva.')
+    return True
 
   c = []
   try:
