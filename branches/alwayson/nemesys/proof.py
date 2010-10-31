@@ -51,6 +51,8 @@ class Proof:
     return self._errorcode
 
   def seterrorcode(self, errorcode):
+    if errorcode > 99999 or errorcode < 0:
+      errorcode = 99999
     self._errorcode = errorcode
 
   def __str__(self):
