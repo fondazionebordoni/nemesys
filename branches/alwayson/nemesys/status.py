@@ -17,8 +17,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from logger import logging
-import paths
+from os import path
 from xml.dom.minidom import parseString
+import paths
 
 logger = logging.getLogger()
 
@@ -38,8 +39,7 @@ class Status:
 
   @property
   def icon(self):
-    path = paths.ICONS + paths.DIR_SEP + self.baseicon
-    return path
+    return path.join(paths.ICONS, self.baseicon)
 
   @property
   def message(self):
