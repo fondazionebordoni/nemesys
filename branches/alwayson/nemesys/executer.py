@@ -53,7 +53,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-VERSION = '1.6.5.3'
+VERSION = '1.6.5.4'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
@@ -498,6 +498,7 @@ class Executer:
     disposizione secondo il parametro httptimeout
     '''
     response = None
+    result = False
 
     try:
       # Crea il Deliverer che si occuperà della spedizione
@@ -516,6 +517,7 @@ class Executer:
           os.remove(filename)
           self._movefiles(zipname)
           self._progress.putstamp(time)
+          result = True
 
     except Exception as e:
       logger.error('Errore durante la spedizione del file delle misure %s: %s' % (filename, e))
@@ -527,6 +529,8 @@ class Executer:
       # Se non sono una sonda _devo_ cancellare il file di misura 
       if not self._isprobe and os.path.exists(filename):
         os.remove(filename)
+
+      return result
 
   def _updatestatus(self, new):
     global current_status
