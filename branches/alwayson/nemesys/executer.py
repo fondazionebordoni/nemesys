@@ -295,7 +295,7 @@ class Executer:
 
         if alarm > 0:
           logger.debug('Impostazione di un nuovo task tra: %s secondi' % alarm)
-          self._updatestatus(Status(status.READY, 'Inizio misura tra %d secondi...' % alarm))
+          self._updatestatus(Status(status.READY, 'Inizio misura tra pochi secondi...'))
           t = Timer(alarm, self._dotask, [task])
           t.start()
 
@@ -355,7 +355,7 @@ class Executer:
       except Exception as e:
         logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
         if self._killonerror:
-          raise Exception(e)
+          raise e
         else:
           self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
           base_error = 50000
@@ -383,7 +383,7 @@ class Executer:
         except Exception as e:
           logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
           if self._killonerror:
-            raise Exception(e)
+            raise e
           else:
             self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
             error = errors.geterrorcode(e)
@@ -409,7 +409,7 @@ class Executer:
         except Exception as e:
           logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
           if self._killonerror:
-            raise Exception(e)
+            raise e
           else:
             self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
             error = errors.geterrorcode(e)
@@ -435,7 +435,7 @@ class Executer:
         except Exception as e:
           logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
           if self._killonerror:
-            raise Exception(e)
+            raise e
           else:
             self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
             error = errors.geterrorcode(e)
@@ -478,9 +478,9 @@ class Executer:
       self._updatestatus(status.Status(status.ERROR, 'Misura interrotta per timeout.'))
       logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
 
-    #except Exception as e:
-    #  logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
-    #  self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
+    except Exception as e:
+      logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
+      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
 
     bandwidth_sem.release() # Rilascia la risorsa condivisa: la banda
 
