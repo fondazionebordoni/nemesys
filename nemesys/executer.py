@@ -34,6 +34,7 @@ from threading import Semaphore, Thread, Timer
 from time import sleep
 from urlparse import urlparse
 from xmlutils import getvalues, getfinishedtime, getxml, xml2task
+from errorcoder import Errorcoder
 import asyncore
 import glob
 import hashlib
@@ -50,11 +51,12 @@ import sysmonitor
 bandwidth_sem = Semaphore()
 status_sem = Semaphore()
 logger = logging.getLogger()
+errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-VERSION = '1.6.5.1'
+VERSION = '1.6.5.3'
 
 # Numero massimo di misure per ora
-MAX_MEASURES_PER_HOUR = 2
+MAX_MEASURES_PER_HOUR = 1
 
 class _Communicator(Thread):
 
@@ -150,7 +152,7 @@ class OptionParser(OptionParser):
 class Executer:
 
   def __init__(self, client, scheduler, repository, polling=300.0, tasktimeout=60,
-               testtimeout=30, httptimeout=60, local=False, isprobe=True, md5conf=None):
+               testtimeout=30, httptimeout=60, local=False, isprobe=True, md5conf=None, killonerror=True):
 
     self._client = client
     self._scheduler = scheduler
@@ -162,6 +164,7 @@ class Executer:
     self._local = local
     self._isprobe = isprobe
     self._md5conf = md5conf
+    self._killonerror = killonerror
 
     self._outbox = paths.OUTBOX
     self._sent = paths.SENT
@@ -215,7 +218,7 @@ class Executer:
         except ValueError as e:
           logger.warning('Errore nella determinazione della prossima ora: %s.' % e)
 
-        random_sleep = randint(0, self._polling * 3)
+        random_sleep = randint(1, self._polling * 5 / MAX_MEASURES_PER_HOUR)
         logger.info('La misura delle %d è completa. Aspetto %d secondi per il prossimo polling.' % (hour, wait_hour + random_sleep))
 
         # Aspetto un'ora poi aggiorno lo stato
@@ -251,7 +254,7 @@ class Executer:
     # - non sono trascorsi 3 giorni dall'inizio delle misure
     # - non ho finito le misure
     # - sono una sonda
-    while self._progress.onair() or self._isprobe or not self._progress.doneall():
+    while self._isprobe or not self._progress.doneall():
 
       task = None
       bandwidth_sem.acquire() # Richiedi accesso esclusivo alla banda
@@ -284,7 +287,7 @@ class Executer:
 
         # Imposta il nuovo allarme
         if (task.now):
-          # Task immediato: inizio tra 5 secondi
+          # Task immediato
           alarm = 5.00
         else:
           delta = task.start - datetime.now()
@@ -292,7 +295,7 @@ class Executer:
 
         if alarm > 0:
           logger.debug('Impostazione di un nuovo task tra: %s secondi' % alarm)
-          self._updatestatus(Status(status.READY, 'Mi preparo per eseguire una misura...'))
+          self._updatestatus(Status(status.READY, 'Inizio misura tra %d secondi...' % alarm))
           t = Timer(alarm, self._dotask, [task])
           t.start()
 
@@ -301,7 +304,7 @@ class Executer:
 
     while True:
       self._updatestatus(status.FINISHED)
-      sleep(float(self._polling))
+      sleep(float(self._polling * 3))
 
   # Scarica il prossimo task dallo scheduler
   def _download(self):
@@ -343,8 +346,19 @@ class Executer:
     # TODO Inserire il timeout complessivo di task (da posticipare)
 
     try:
-      if not sysmonitor.checkall():
-        raise Exception('Condizioni per effettuare la misura non verificate.')
+
+      base_error = 0
+      try:
+        if not sysmonitor.checkall():
+          raise Exception('Condizioni per effettuare la misura non verificate.')
+
+      except Exception as e:
+        logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+        if self._killonerror:
+          raise Exception(e)
+        else:
+          self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+          base_error = 50000
 
       self._updatestatus(status.PLAY)
 
@@ -361,43 +375,85 @@ class Executer:
       # Testa gli ftp down
       for i in range(1, task.download + 1):
 
-        if not sysmonitor.mediumcheck():
-          raise Exception('Condizioni per effettuare la misura non verificate.')
+        error = 0
+        try:
+          if not sysmonitor.mediumcheck():
+            raise Exception('Condizioni per effettuare la misura non verificate.')
+
+        except Exception as e:
+          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+          if self._killonerror:
+            raise Exception(e)
+          else:
+            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+            error = errors.geterrorcode(e)
 
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
         test = t.testftpdown(task.ftpdownpath)
+
+        if error > 0 or base_error > 0:
+          test.seterrorcode(error + base_error)
+
         logger.debug('Download result: %.3f' % test.value)
+        logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
         m.savetest(test)
 
       # Testa gli ftp up
       for i in range(1, task.upload + 1):
 
-        if not sysmonitor.mediumcheck():
-          raise Exception('Condizioni per effettuare la misura non verificate.')
+        error = 0
+        try:
+          if not sysmonitor.mediumcheck():
+            raise Exception('Condizioni per effettuare la misura non verificate.')
+
+        except Exception as e:
+          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+          if self._killonerror:
+            raise Exception(e)
+          else:
+            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+            error = errors.geterrorcode(e)
 
         logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
-        test = t.testftpup(self._client.profile.upload * task.multiplier * 1024 / 8, task.ftpuppath)
+        test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
+
+        if error > 0 or base_error > 0:
+          test.seterrorcode(error + base_error)
+
         logger.debug('Upload result: %.3f' % test.value)
+        logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
         m.savetest(test)
 
       # Testa i ping
       for i in range(1, task.ping + 1):
 
-        if not sysmonitor.mediumcheck():
-          raise Exception('Condizioni per effettuare la misura non verificate.')
+        error = 0
+        try:
+          if not sysmonitor.mediumcheck():
+            raise Exception('Condizioni per effettuare la misura non verificate.')
+
+        except Exception as e:
+          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+          if self._killonerror:
+            raise Exception(e)
+          else:
+            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+            error = errors.geterrorcode(e)
 
         logger.debug('Starting ping test [%d]' % i)
         test = t.testping()
+
+        if error > 0 or base_error > 0:
+          test.seterrorcode(error + base_error)
+
         logger.debug('Ping result: %.3f' % test.value)
+        logger.debug('Ping error: %d, %d, %d' % (base_error, error, test.errorcode))
         if (i % task.nicmp == 0):
           sleep(task.delay)
         m.savetest(test)
 
       # Unset task timeout alarm
       # signal.alarm(0)
-
-      if not sysmonitor.checkall():
-        raise Exception('Condizioni per effettuare la misura non verificate.')
 
       # Spedisci il file al repository delle misure
       sec = datetime.now().strftime('%S')
@@ -408,7 +464,13 @@ class Executer:
       f.close()
 
       if (not self._local):
-        self._upload(f.name)
+        upload = self._upload(f.name)
+        if upload:
+          self._updatestatus(status.Status(status.READY, 'Misura terminata con successo.'))
+        else:
+          self._updatestatus(status.Status(status.READY, 'Misura terminata ma un errore si è verificato durante il suo invio.'))
+      else:
+        self._updatestatus(status.Status(status.READY, 'Misura terminata.'))
 
       logger.info('Fine task di misura.')
 
@@ -416,9 +478,9 @@ class Executer:
       self._updatestatus(status.Status(status.ERROR, 'Misura interrotta per timeout.'))
       logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
 
-    except Exception as e:
-      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
-      logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
+    #except Exception as e:
+    #  logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
+    #  self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
 
     bandwidth_sem.release() # Rilascia la risorsa condivisa: la banda
 
@@ -525,7 +587,8 @@ def main():
   e = Executer(client=client, scheduler=options.scheduler,
                repository=options.repository, polling=options.polling,
                tasktimeout=options.tasktimeout, testtimeout=options.testtimeout,
-               httptimeout=options.httptimeout, local=options.local, isprobe=isprobe, md5conf=md5conf)
+               httptimeout=options.httptimeout, local=options.local,
+               isprobe=isprobe, md5conf=md5conf, killonerror=options.killonerror)
   #logger.debug("%s, %s, %s" % (client, client.isp, client.profile))
 
   if (options.test):
@@ -575,8 +638,17 @@ def parse():
     value = config.getboolean(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('-L', '--local', dest='local', action='store_true', default=value,
+  parser.add_option('-L', '--local', dest=option, action='store_true', default=value,
                     help='perform tests without sending measure files to repository')
+
+  option = 'killonerror'
+  value = True
+  try:
+    value = config.getboolean(section, option)
+  except (ValueError, NoOptionError):
+    config.set(section, option, value)
+  parser.add_option('-K', '--killonerror', dest=option, action='store_true', default=value,
+                    help='kill tests if an exception is raised during check')
 
   # System options
   # --------------------------------------------------------------------------

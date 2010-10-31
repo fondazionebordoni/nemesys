@@ -65,7 +65,7 @@ class Status:
 
     return xml.toxml()
 
-ERROR = Status('nemesys_red.png', 'Impossibile contattare il sistema che effettua le misure.\nRitento tra qualche secondo...')
+ERROR = Status('nemesys_red.png', 'Impossibile contattare il sistema che effettua le misure.')
 PAUSE = Status('nemesys_white.png', 'Ne.Me.Sys. non deve effettuare misure nell\'ora corrente.')
 PLAY = Status('nemesys_green.png', 'Ne.Me.Sys. sta effettuando una misura.')
 FINISHED = Status('nemesys_cyan.png', 'Ne.Me.Sys. ha terminato le misurazioni. Controllare lo stato complessivo della misura.')
