@@ -357,7 +357,7 @@ class Executer:
         if self._killonerror:
           raise Exception(e)
         else:
-          self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % (e, self._polling)))
+          self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
           base_error = 50000
 
       self._updatestatus(status.PLAY)
@@ -385,7 +385,7 @@ class Executer:
           if self._killonerror:
             raise Exception(e)
           else:
-            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % (e, self._polling)))
+            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
             error = errors.geterrorcode(e)
 
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
@@ -411,7 +411,7 @@ class Executer:
           if self._killonerror:
             raise Exception(e)
           else:
-            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % (e, self._polling)))
+            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
             error = errors.geterrorcode(e)
 
         logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
@@ -437,7 +437,7 @@ class Executer:
           if self._killonerror:
             raise Exception(e)
           else:
-            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % (e, self._polling)))
+            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
             error = errors.geterrorcode(e)
 
         logger.debug('Starting ping test [%d]' % i)
@@ -478,9 +478,9 @@ class Executer:
       self._updatestatus(status.Status(status.ERROR, 'Misura interrotta per timeout.'))
       logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
 
-    except Exception as e:
-      logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
-      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
+    #except Exception as e:
+    #  logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
+    #  self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
 
     bandwidth_sem.release() # Rilascia la risorsa condivisa: la banda
 
