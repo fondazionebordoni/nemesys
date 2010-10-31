@@ -343,9 +343,11 @@ def getMac():
   '''
   restituisce indirizzo MAC del computer
   '''
+  # TODO Recuperare il valore usando un controllo del dato es. getstringtag
   d = {tag_mac:''}
   values = getstatus(d)
 
+  # TODO Implementare un controllo sulla conformità del dato MAC
   return values[tag_mac]
 
 def checkipsyntax(ip):
@@ -375,11 +377,14 @@ def getSys():
   '''
   Restituisce array con informazioni sul sistema utilizzato per il test
   '''
+  # TODO Recuperare i valori usando un controllo del dato es. getstringtag
+  # TODO Valutare se separare le chiamate
   d = {tag_vers:'', tag_sys:'', tag_mac:'', tag_release:'', tag_cores:'', tag_arch:'', tag_proc:''}
   values = getstatus(d)
 
   r = []
 
+  # TODO Implementare un controllo sulla conformità di ciascu valore ottenuto
   for i in values:
     r.append(values[i])
 
