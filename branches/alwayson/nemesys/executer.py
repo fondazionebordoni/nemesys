@@ -665,7 +665,7 @@ def parse():
                     help='perform tests without sending measure files to repository')
 
   option = 'killonerror'
-  value = True
+  value = False
   try:
     value = config.getboolean(section, option)
   except (ValueError, NoOptionError):
