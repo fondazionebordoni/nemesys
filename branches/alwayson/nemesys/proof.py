@@ -52,7 +52,8 @@ class Proof:
 
   def seterrorcode(self, errorcode):
     if errorcode > 99999 or errorcode < 0:
-      errorcode = 99999
+      # Faccio rimanere nelle ultime 4 cifre l'errore del test
+      errorcode = (errorcode - 90000) % 99999
     self._errorcode = errorcode
 
   def __str__(self):
