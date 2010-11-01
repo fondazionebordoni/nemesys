@@ -104,8 +104,10 @@ class _Channel(dispatcher):
     data = self.recv(2048)
     logger.debug('Received: %s' % data)
 
+    # TODO Corregere dialogo su socket
     try:
-      current_status = xml2status(data)
+      start = max(data.rfind('<?xml'), 0)
+      current_status = xml2status(data[start:])
     except Exception, e:
       logger.error('Errore durante la decodifica dello stato del sistema di misura: %s' % e)
       current_status = Status(status.ERROR, '%s' % e)
