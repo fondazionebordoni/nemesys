@@ -10,37 +10,25 @@ import xml.etree.ElementTree as ET
 from NemesysException import FactoryException, LocalProfilerException, RisorsaException
 
 
-def package_home(path,rest):
-        return ".".join([path,rest])
+def package_home(*args):
+        return ".".join(args)
 '''
 Memorizzare o no l'istanza del profiler creato cosi da non doverlo ricreare successivamente se necessario?
 se chi richiama il profiler lo cancella, ma io mantengo il riferimento qui, che succede? testare 
 '''    
 def getProfiler():
     try:
-        name = package_home(platform.system().lower(), 'profiler.Profiler')
+        name = package_home("SysProf",platform.system().lower(), 'profiler.Profiler')
         istance= Factory.class_forname(name)
     except FactoryException as e:
         raise LocalProfilerException(e)
     return istance
-'''
-class LocalProfilerException(Exception):
-    def __init__(self,value):
-        Exception.__init__(self)
-        self.value=value
-'''        
+
+     
 class LocalProfiler(object):
 
     def __init__(self):
         self._resources=[]
-        
-    '''    
-    @abstractmethod
-    def profile(self):
-        raise NotImplementedError
-        
-    #
-    '''
 
     def profile(self,path):
         result = ET.Element("SystemProfilerResults")

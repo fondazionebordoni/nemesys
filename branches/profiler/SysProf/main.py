@@ -2,6 +2,9 @@
 Created on 06/ott/2010
 
 @author: antonio
+
+Modulo per verificare che le operazioni implementate funzionino a dovere
+
 '''
 import LocalProfilerFactory
 import xml.etree.ElementTree as ET

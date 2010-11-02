@@ -1,4 +1,3 @@
-from abc import abstractmethod
 import Factory
 import xml.etree.ElementTree as ET
 from NemesysException import FactoryException, RisorsaException
@@ -11,23 +10,12 @@ def getRisorsa(path,name):
         raise RisorsaException(e)
     return ris
 
-'''
-class RisorsaException(Exception):
-    def __init__(self,value):
-        Exception.__init__(self)
-        self.value=value
-'''
 class Risorsa(object):
     
     def __init__(self):
         self.__name =""
         self.__params=[]
-    '''
-    @abstractmethod
-    def getStatusInfo(self):
-        return "NO1"
-    #
-    '''
+
     def getStatusInfo(self,root):
         try:
             for key in self._params:

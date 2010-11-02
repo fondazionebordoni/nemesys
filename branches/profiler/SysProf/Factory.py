@@ -1,10 +1,4 @@
-'''
-class FactoryException(Exception):
-    
-    def __init__(self,value):
-        Exception.__init__(self)
-        self.value= value
-'''
+
 from NemesysException import FactoryException
 
 def class_forname(name): 
@@ -22,8 +16,3 @@ def class_forname(name):
         raise FactoryException(e)       
     return m()
 
-class C(object):
-    def __init__(self):
-        self.c="ecc"
-    def getC(self):
-        print self.c
