@@ -53,7 +53,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-VERSION = '1.6.5.6'
+VERSION = '1.6.5.7'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
