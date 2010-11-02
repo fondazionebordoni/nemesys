@@ -55,8 +55,12 @@ class _Controller(Thread):
     self._running = True
 
   def run(self):
+    # TODO Verificare al fattibilità di ricollegamento della gui al demone
+    '''
     while self._running:
       loop(1)
+    '''
+    loop(1)
     logger.debug('GUI asyncore loop terminated.')
 
   def join(self, timeout=None):
@@ -105,7 +109,6 @@ class _Channel(dispatcher):
     except Exception, e:
       logger.error('Errore durante la decodifica dello stato del sistema di misura: %s' % e)
       current_status = Status(status.ERROR, '%s' % e)
-      self.handle_error()
 
     if current_status == None:
       current_status = Status(status.ERROR, 'Errore di comunicazione con il server.')
@@ -380,5 +383,5 @@ Homepage del progetto su www.misurainternet.it''')
 
 if __name__ == '__main__':
   if platform == 'win32':
-    timeout_add(400, sleeper)
+    timeout_add(200, sleeper)
   trayicon = TrayIcon()

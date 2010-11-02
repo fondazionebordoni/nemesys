@@ -20,7 +20,6 @@ from os import path
 from os import mkdir
 import logging.config
 import paths
-import sys
 
 configfile = paths.CONF_LOG
 logfile = paths.FILE_LOG
