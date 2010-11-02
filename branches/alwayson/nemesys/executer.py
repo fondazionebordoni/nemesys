@@ -416,6 +416,7 @@ class Executer:
         logger.debug('Download result: %.3f' % test.value)
         logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
         m.savetest(test)
+        sleep(1)
 
       # Testa gli ftp up
       for i in range(1, task.upload + 1):
@@ -442,6 +443,7 @@ class Executer:
         logger.debug('Upload result: %.3f' % test.value)
         logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
         m.savetest(test)
+        sleep(1)
 
       # Testa i ping
       for i in range(1, task.ping + 1):
@@ -470,6 +472,7 @@ class Executer:
         if (i % task.nicmp == 0):
           sleep(task.delay)
         m.savetest(test)
+        sleep(1)
 
       # Unset task timeout alarm
       # signal.alarm(0)
@@ -665,7 +668,7 @@ def parse():
                     help='perform tests without sending measure files to repository')
 
   option = 'killonerror'
-  value = False
+  value = True
   try:
     value = config.getboolean(section, option)
   except (ValueError, NoOptionError):
