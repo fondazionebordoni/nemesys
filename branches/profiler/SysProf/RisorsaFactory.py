@@ -38,5 +38,5 @@ class Risorsa(object):
     
     def xmlFormat(self,tag,val):
         elem=ET.Element(tag)
-        elem.text=val
+        elem.text=str(val)
         return elem
