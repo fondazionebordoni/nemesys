@@ -29,14 +29,14 @@ default = '''
 keys=root
 
 [handlers]
-keys=console,rotating
+keys=console,file
 
 [formatters]
 keys=formatter
 
 [logger_root]
 level=INFO
-handlers=console,rotating
+handlers=console,file
 
 [handler_console]
 class=StreamHandler
@@ -44,11 +44,11 @@ level=INFO
 formatter=formatter
 args=(sys.stdout,)
 
-[handler_rotating]
-class=handlers.TimedRotatingFileHandler
+[handler_file]
+class=FileHandler
 level=INFO
 formatter=formatter
-args=("''' + logfile + '''", 'midnight', 1, 5)
+args=(''' + repr(logfile) + ''',)
 
 [formatter_formatter] 
 format=%(asctime)s NeMeSys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
