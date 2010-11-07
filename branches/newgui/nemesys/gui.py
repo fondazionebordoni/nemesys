@@ -124,8 +124,6 @@ class TrayIcon(wx.Frame):
         
         setlocale(LC_ALL, '')
         self._status = status.ERROR
-        self._controller = _Controller(LISTENING_URL, self)
-        self._controller.start()
         #self.run()
 
         
@@ -173,6 +171,9 @@ class TrayIcon(wx.Frame):
 
         self.Show(True)
         self.Center()
+        
+        self._controller = _Controller(LISTENING_URL, self)
+        self._controller.start()
         
     
     def setstatus(self, currentstatus):
