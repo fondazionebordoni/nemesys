@@ -68,7 +68,7 @@ class Status:
 ERROR = Status('nemesys_red.png', 'Impossibile contattare il sistema che effettua le misure.')
 PAUSE = Status('nemesys_white.png', 'Ne.Me.Sys. non deve effettuare misure nell\'ora corrente.')
 PLAY = Status('nemesys_green.png', 'Ne.Me.Sys. sta effettuando una misura.')
-FINISHED = Status('nemesys_cyan.png', 'Ne.Me.Sys. ha terminato di fare i test sulla linea ADSL. Controllare lo stato complessivo della misura.')
+FINISHED = Status('nemesys_cyan.png', 'Ne.Me.Sys. ha terminato le misurazioni. Controllare lo stato complessivo della misura.')
 READY = Status('nemesys_amber.png', 'Ne.Me.Sys. pronto e in attesa di eseguire una misura.')
 LOGO = Status('nemesys_logo.png', 'Ne.Me.Sys. (Network Measurement System). Sistema collegato e funzionante.')
 LOGOSTATOMISURA2 = Status('logo_nemesys_stato_misura.png', 'Ne.Me.Sys. (Network Measurement System).')

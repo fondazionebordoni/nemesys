@@ -53,7 +53,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-VERSION = '1.6.5.9'
+VERSION = '1.6.5.5'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
@@ -366,8 +366,6 @@ class Executer:
 
     try:
 
-      self._updatestatus(status.PLAY)
-
       base_error = 0
       try:
         if not sysmonitor.checkall():
@@ -380,6 +378,8 @@ class Executer:
         else:
           self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
           base_error = 50000
+
+      self._updatestatus(status.PLAY)
 
       t = Tester(host=task.server, timeout=self._testtimeout,
                  username=self._client.username, password=self._client.password)
@@ -416,7 +416,6 @@ class Executer:
         logger.debug('Download result: %.3f' % test.value)
         logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
         m.savetest(test)
-        sleep(1)
 
       # Testa gli ftp up
       for i in range(1, task.upload + 1):
@@ -443,7 +442,6 @@ class Executer:
         logger.debug('Upload result: %.3f' % test.value)
         logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
         m.savetest(test)
-        sleep(1)
 
       # Testa i ping
       for i in range(1, task.ping + 1):
@@ -472,7 +470,6 @@ class Executer:
         if (i % task.nicmp == 0):
           sleep(task.delay)
         m.savetest(test)
-        sleep(1)
 
       # Unset task timeout alarm
       # signal.alarm(0)
