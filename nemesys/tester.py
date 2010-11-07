@@ -30,7 +30,6 @@ import paths
 import ping
 from proof import Proof
 import timeit
-import socket
 
 ftp = None
 file = None
@@ -52,7 +51,6 @@ class Tester:
     self._username = username
     self._password = password
     self._timeout = timeout
-    socket.setdefaulttimeout(self._timeout)
 
   def testftpup(self, bytes, path):
     global ftp, file, size, filepath
