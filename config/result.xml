@@ -7,9 +7,10 @@
  <firewall>False</firewall>
  <wirelessON>False</wirelessON>
  <ipAddr>192.168.208.1</ipAddr>
+
  <hostNumber>2</hostNumber>
  <taskList>pippo</taskList>
- <activeConnections>90.147.120.40:443;193.104.137.133:20;[::1]:49478;[::1]:2869</activeConnections>
+ <activeConnections>90.147.120.40:443;193.104.137.133:20</activeConnections>
  <diskWrite>0</diskWrite>
  <diskRead>0</diskRead>
  <system>WindowsXP</system>
