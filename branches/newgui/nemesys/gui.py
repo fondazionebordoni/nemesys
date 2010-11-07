@@ -186,7 +186,7 @@ class TrayIcon(wx.Frame):
             or self._status.message != currentstatus.message):
             #if True:
             self._status = currentstatus
-            self._tryicone.message.SetValue ("%s" % currentstatus.message)
+            self.message.SetValue ("%s" % currentstatus.message)
         
     def OnPaint(self, event):
         dc = wx.PaintDC(self)
