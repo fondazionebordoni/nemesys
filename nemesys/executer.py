@@ -53,7 +53,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-VERSION = '1.6.5.9'
+VERSION = '1.6.5.7'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
@@ -366,8 +366,6 @@ class Executer:
 
     try:
 
-      self._updatestatus(status.PLAY)
-
       base_error = 0
       try:
         if not sysmonitor.checkall():
@@ -380,6 +378,8 @@ class Executer:
         else:
           self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
           base_error = 50000
+
+      self._updatestatus(status.PLAY)
 
       t = Tester(host=task.server, timeout=self._testtimeout,
                  username=self._client.username, password=self._client.password)
