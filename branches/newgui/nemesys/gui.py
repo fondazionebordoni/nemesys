@@ -32,7 +32,7 @@ import status
 from os import path
 import wx
 
-filenames = [path.join(paths.ICONS, 'logo_nemesys_stato_misura.png'), path.join(paths.ICONS, 'misintw_stato_misura.jpg')]
+filenames = [path.join(paths.ICONS, 'logo_nemesys.png'), path.join(paths.ICONS, 'logo_misurainternet.png')]
 
 LISTENING_URL = ('localhost', 21401)
 NOTIFY_COLORS = ('yellow', 'black')
@@ -117,7 +117,7 @@ class _Channel(dispatcher):
 class TrayIcon(wx.Frame):
 
     def __init__(self):
-        wx.Frame.__init__ (self, None, -1, "Ne.Me.Sys", size = (611,480))
+        wx.Frame.__init__ (self, None, -1, "Ne.Me.Sys.", size = (630,420))
         panel = wx.Panel(self, -1)
         self.Bind(wx.EVT_PAINT, self.PaintInit)
         
@@ -128,24 +128,25 @@ class TrayIcon(wx.Frame):
         
         #Create Control
         #Logo 1
-        logo1 = wx.Image(filenames[0], wx.BITMAP_TYPE_ANY)
-        logo1 = logo1.Scale(111, 76)
-        logo1 = wx.StaticBitmap(panel, -1, wx.BitmapFromImage(logo1), pos = (10,10))
+        logo1 = wx.Image(filenames[1], wx.BITMAP_TYPE_ANY)
+        #logo1 = logo1.Scale(111, 76)
+        logo1 = wx.StaticBitmap(panel, -1, wx.BitmapFromImage(logo1), pos = (50,20))
         
         #Misura Internet
-        st1 = wx.StaticText(panel, -1,'Misura Internet', (235, 43), (160, -1), wx.ALIGN_CENTER)
-        st1.SetFont(wx.Font(18, wx.SWISS, wx.NORMAL, wx.BOLD))
-        
+        st1 = wx.StaticText(panel, -1,'Ne.Me.Sys.', (165, 15), (300, -1), wx.ALIGN_CENTER)
+        st1.SetFont(wx.Font(25, wx.SWISS, wx.NORMAL, wx.BOLD))
+        wx.StaticText(panel, -1,'Stato di Avanzamento: 0 test su 24', (165, 75), (300, -1), wx.ALIGN_CENTER)
         #Logo 2
-        logo2 = wx.Image(filenames[1], wx.BITMAP_TYPE_ANY)
-        logo2 = logo2.Scale(76,76)
-        logo2 = wx.StaticBitmap(panel, -1, wx.BitmapFromImage(logo2), pos = (515,10))
+        logo2 = wx.Image(filenames[0], wx.BITMAP_TYPE_ANY)
+        #logo2 = logo2.Scale(76,76)
+        logo2 = wx.StaticBitmap(panel, -1, wx.BitmapFromImage(logo2), pos = (495, 25))
         
         #Casella Messaggi
-        self.message = wx.TextCtrl(panel, -1,"Nessun Messaggio", (5,130), (600,100), wx.TE_READONLY)
+        wx.StaticText (panel, -1, "Dettaglio stato Ne.Me.Sys.", (15, 230), (600, -1), wx.ALIGN_CENTER)
+        self.message = wx.TextCtrl(panel, -1,"", (15,255), (600,100), wx.TE_READONLY)
         
         #Stato Misura
-        wx.StaticText (panel, -1, "Stato misura", pos = (270,320))
+        wx.StaticText (panel, -1, "Si ricorda che la misurazione va completata entro tre giorni dal suo inizio", (15, 190), (600, -1), wx.ALIGN_CENTER)
                 
         self.CreateStatusBar() # A StatusBar in the bottom of the window
 
@@ -205,13 +206,15 @@ class TrayIcon(wx.Frame):
         xmldoc = Progress()
         inizioMisure = xmldoc.start()  # inizioMisure è datetime
         
-        first = 6
+        wx.StaticText(self, -1, ('Inizio test di misura: ' "%s" % inizioMisure), (165, 55), (300, -1), wx.ALIGN_CENTER)
+        
+        first = 15
         for hour in range(0, 24):
             color = "red"
             if xmldoc.isdone(hour):
                 color="green"
             self.PaintHour(hour, color)
-            wx.StaticText(self, -1, "%s" % hour, ((first + (hour*25)), 365), (25, -1), wx.ALIGN_CENTER)
+            wx.StaticText(self, -1, "%s" % hour, ((first + (hour*25)), 130), (25, -1), wx.ALIGN_CENTER)
 
     
     def PaintHour(self, hour, color):
@@ -221,9 +224,9 @@ class TrayIcon(wx.Frame):
         dc = wx.PaintDC(self)
         dc.SetPen(wx.Pen('#d4d4d4'))
         
-        first = 6
+        first = 15
         dc.SetBrush(wx.Brush(color))
-        dc.DrawRectangle(first + (hour*25), 340, 25, 25)
+        dc.DrawRectangle(first + (hour*25), 155, 25, 25)
         
         
     def OnAbout(self,e):
