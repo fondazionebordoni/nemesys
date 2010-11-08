@@ -19,21 +19,20 @@
 from asyncore import dispatcher, loop
 from locale import LC_ALL, setlocale
 from logger import logging
-#from os import path
-#from popup import NotificationStack
-#from progress import Progress
+from progress import Progress
 from status import Status
-#from sys import platform
 from threading import Event, Thread
 from time import sleep
 from xmlutils import xml2status
-#import paths
+from datetime import datetime
+import re
+import paths
 import socket
 import status
-#import webbrowser
+from os import path
 import wx
 
-filenames = ["../icons/logo_nemesys_stato_misura.png", "../icons/misintw_stato_misura.jpg"] 
+filenames = [path.join(paths.ICONS, 'logo_nemesys_stato_misura.png'), path.join(paths.ICONS, 'misintw_stato_misura.jpg')]
 
 LISTENING_URL = ('localhost', 21401)
 NOTIFY_COLORS = ('yellow', 'black')
@@ -120,7 +119,7 @@ class TrayIcon(wx.Frame):
     def __init__(self):
         wx.Frame.__init__ (self, None, -1, "Ne.Me.Sys", size = (611,480))
         panel = wx.Panel(self, -1)
-        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(wx.EVT_PAINT, self.PaintInit)
         
         setlocale(LC_ALL, '')
         self._status = status.ERROR
@@ -143,7 +142,7 @@ class TrayIcon(wx.Frame):
         logo2 = wx.StaticBitmap(panel, -1, wx.BitmapFromImage(logo2), pos = (515,10))
         
         #Casella Messaggi
-        self.message = wx.TextCtrl(panel, -1,"Nessun Messaggio", style=wx.TE_MULTILINE, pos = (170,130), size = (300,100))
+        self.message = wx.TextCtrl(panel, -1,"Nessun Messaggio", (5,130), (600,100), wx.TE_READONLY)
         
         #Stato Misura
         wx.StaticText (panel, -1, "Stato misura", pos = (270,320))
@@ -153,17 +152,18 @@ class TrayIcon(wx.Frame):
         # Setting up the menu.
         filemenu= wx.Menu()
 
-        # wx.ID_ABOUT and wx.ID_EXIT are standard ids provided by wxWidgets.
-        menuAbout = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
-        menuExit = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
 
         # Creating the menubar.
         menuBar = wx.MenuBar()
-        menuBar.Append(filemenu,"&File") # Adding the "filemenu" to the MenuBar
+        menuBar.Append(filemenu,"&Ne.Me.Sys") # Adding the "filemenu" to the MenuBar
         self.SetMenuBar(menuBar)  # Adding the MenuBar to the Frame content.
         
-        menuItem = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
-        self.Bind(wx.EVT_MENU, self.OnAbout, menuItem)
+        # wx.ID_ABOUT and wx.ID_EXIT are standard ids provided by wxWidgets.
+        menuAbout = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
+        menuExit = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
+        
+        #menuItem = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
+        #self.Bind(wx.EVT_MENU, self.OnAbout, menuItem)
         
         # Set events.
         self.Bind(wx.EVT_MENU, self.OnAbout, menuAbout)
@@ -182,21 +182,49 @@ class TrayIcon(wx.Frame):
         fatto solo se lo staus è cambiato, ovvero se è cambiata il
         messaggio.
         '''
+        hour = datetime.now().hour
+        if (bool(re.search(status.PLAY.message, currentstatus.message))):
+            logger.debug('Misura iniziata')
+            self.PaintHour(hour, "yellow")
+        elif (bool(re.search('Misura terminata', currentstatus.message))):
+            logger.debug('Misura finita')
+            self.PaintHour(hour, "green")
+            
         if (self._status.icon != currentstatus.icon
             or self._status.message != currentstatus.message):
             #if True:
             self._status = currentstatus
             self.message.SetValue ("%s" % currentstatus.message)
+            
         
-    def OnPaint(self, event):
+    def PaintInit(self, event):
+        '''
+        Inizializza le casselle ora tutte rosse
+            
+        '''
+        xmldoc = Progress()
+        inizioMisure = xmldoc.start()  # inizioMisure è datetime
+        
+        first = 6
+        for hour in range(0, 24):
+            color = "red"
+            if xmldoc.isdone(hour):
+                color="green"
+            self.PaintHour(hour, color)
+            wx.StaticText(self, -1, "%s" % hour, ((first + (hour*25)), 365), (25, -1), wx.ALIGN_CENTER)
+
+    
+    def PaintHour(self, hour, color):
+        '''
+        Aggiorna la casella allora specificata con il colore specificatio
+        '''
         dc = wx.PaintDC(self)
         dc.SetPen(wx.Pen('#d4d4d4'))
-
+        
         first = 6
-        for n in range(0, 24): 
-            dc.SetBrush(wx.Brush('red'))
-            dc.DrawRectangle((first + (n*25)), 340, 25, 25)
-            wx.StaticText(self, -1, "%s" % n, ((first + (n*25)), 365), (25, -1), wx.ALIGN_CENTER)
+        dc.SetBrush(wx.Brush(color))
+        dc.DrawRectangle(first + (hour*25), 340, 25, 25)
+        
         
     def OnAbout(self,e):
         # A message dialog box with an OK button. wx.OK is a standard ID in wxWidgets.
@@ -205,6 +233,7 @@ class TrayIcon(wx.Frame):
         dlg.Destroy() # finally destroy it when finished.
 
     def OnExit(self,e):
+        self._controller.join()
         self.Close(True)  # Close the frame.
 
 
