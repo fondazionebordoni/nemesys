@@ -53,7 +53,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-VERSION = '1.6.5.8'
+VERSION = '1.6.5.9'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
@@ -116,7 +116,7 @@ class _Sender(asyncore.dispatcher):
   def write(self, status):
     try:
       self.buffer = status.getxml()
-    except UnicodeEncodeError, Exception:
+    except Exception as e:
       status = Status(status.ERROR, 'Errore di decodifica unicode')
       self.buffer = status.getxml()
 

@@ -185,14 +185,19 @@ def checkconnections():
   c = []
   try:
     for j in connActive.split(';'):
+      # Ignora le connessioni ipv6
+      # TODO Gestire le connessioni ipv6
+      if bool(re.search('^\[', j)):
+        logger.warning('Connessione IPv6 attiva: %s' % j)
+        continue
       ip = j.split(':')[0]
       if not checkipsyntax(ip):
         raise Exception('Lista delle connessioni attive non conforme.')
       port = int(j.split(':')[1])
-      #TODO Occorre chiamare un resolver per la risoluzione dei nostri ip
+      # TODO Occorre chiamare un resolver per la risoluzione dei nostri ip
       if not bool(re.search('^90\.147\.120\.|^193\.104\.137\.', ip)):
         c.append(port)
-  except:
+  except Exception as e:
     logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
     if STRICT_CHECK:
       raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
@@ -400,7 +405,7 @@ def getvalues(string, tag):
   try:
     for subelement in ET.XML(string):
       values.update({subelement.tag:subelement.text})
-      logger.info('Recupero valori dal Profiler. %s -> %s' % (subelement.tag, subelement.text))
+      #logger.info('Recupero valori dal Profiler. %s -> %s' % (subelement.tag, subelement.text))
   except Exception as e:
     logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
     raise Exception('Errore durante il recupero dello stato del computer.')
