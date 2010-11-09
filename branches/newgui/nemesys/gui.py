@@ -124,8 +124,9 @@ class TrayIcon(wx.Frame):
         setlocale(LC_ALL, '')
         self._status = status.ERROR
         #self.run()
+        self.iniziomisura =  wx.StaticText(panel, -1, "", (165, 55), (300, -1), wx.ALIGN_CENTER)
+        self.avanzamento = wx.StaticText(panel, -1, " ", (165, 75), (300, -1), wx.ALIGN_CENTER)
 
-        
         #Create Control
         #Logo 1
         logo1 = wx.Image(filenames[1], wx.BITMAP_TYPE_ANY)
@@ -141,6 +142,10 @@ class TrayIcon(wx.Frame):
         #logo2 = logo2.Scale(76,76)
         logo2 = wx.StaticBitmap(panel, -1, wx.BitmapFromImage(logo2), pos = (495, 25))
         
+        first = 15
+        for i in range (0, 24):
+            wx.StaticText(panel, -1, "%s" % i, ((first + (i*25)), 130), (25, -1), wx.ALIGN_CENTER)
+            
         #Casella Messaggi
         wx.StaticText (panel, -1, "Dettaglio stato Ne.Me.Sys.", (15, 230), (600, -1), wx.ALIGN_CENTER)
         self.message = wx.TextCtrl(panel, -1,"", (15,255), (600,100), wx.TE_READONLY)
@@ -190,8 +195,7 @@ class TrayIcon(wx.Frame):
         elif (bool(re.search('Misura terminata', currentstatus.message))):
             self.PaintHour(hour, "green")
             n = n + 1
-            wx.StaticText(self, -1,'Stato di Avanzamento: %d test su 24' %n, (165, 75), (300, -1), wx.ALIGN_CENTER)
-            
+            self.avanzamento.SetLabel('Stato di Avanzamento: %d test su 24' %n)
         if (self._status.icon != currentstatus.icon
             or self._status.message != currentstatus.message):
             #if True:
@@ -207,9 +211,8 @@ class TrayIcon(wx.Frame):
         xmldoc = Progress()
         inizioMisure = xmldoc.start()  # inizioMisure è datetime
         
-        wx.StaticText(self, -1, ('Inizio test di misura: %s' % inizioMisure.strftime('%c')), (165, 55), (300, -1), wx.ALIGN_CENTER)
-        
-        first = 15
+        self.iniziomisura.SetLabel('Inizio test di misura: %s' % inizioMisure.strftime('%c'))  
+
         n = 0
         for hour in range(0, 24):
             color = "red"
@@ -217,8 +220,7 @@ class TrayIcon(wx.Frame):
                 color="green"
                 n = n + 1
             self.PaintHour(hour, color)
-            wx.StaticText(self, -1, "%s" % hour, ((first + (hour*25)), 130), (25, -1), wx.ALIGN_CENTER)
-        wx.StaticText(self, -1,'Stato di Avanzamento: %d test su 24' %n, (165, 75), (300, -1), wx.ALIGN_CENTER)
+        self.avanzamento.SetLabel('Stato di Avanzamento: %d test su 24' %n)
 
     
     def PaintHour(self, hour, color):
