@@ -193,9 +193,7 @@ class TrayIcon(wx.Frame):
         if (bool(re.search(status.PLAY.message, currentstatus.message))):
             self.PaintHour(hour, "yellow")
         elif (bool(re.search('Misura terminata', currentstatus.message))):
-            self.PaintHour(hour, "green")
-            n = n + 1
-            self.avanzamento.SetLabel('Stato di Avanzamento: %d test su 24' %n)
+            self.PaintInit()
         if (self._status.icon != currentstatus.icon
             or self._status.message != currentstatus.message):
             #if True:
