@@ -53,7 +53,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-VERSION = '1.6.5.9'
+__version__ = '1.6.5.9'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
@@ -116,14 +116,15 @@ class _Sender(asyncore.dispatcher):
   def write(self, status):
     try:
       self.buffer = status.getxml()
-    except UnicodeEncodeError, Exception:
+    except Exception as e:
+      logger.warning('Errore durante invio del messaggio di stato: %s' % e)
       status = Status(status.ERROR, 'Errore di decodifica unicode')
       self.buffer = status.getxml()
 
     try:
       self.handle_write()
     except Exception as e:
-      logger.debug('Impossibile inviare il messaggio di notifica, errore: %s' % e)
+      logger.warning('Impossibile inviare il messaggio di notifica, errore: %s' % e)
       self.close()
 
   def handle_read(self):
@@ -334,7 +335,7 @@ class Executer:
     connection = httputils.getverifiedconnection(url=url, certificate=certificate, timeout=self._httptimeout)
 
     try:
-      connection.request('GET', '%s?clientid=%s&version=%s&confid=%s' % (url.path, self._client.id, VERSION, self._md5conf))
+      connection.request('GET', '%s?clientid=%s&version=%s&confid=%s' % (url.path, self._client.id, __version__, self._md5conf))
       data = connection.getresponse().read()
     except Exception as e:
       logger.error('Impossibile scaricare lo scheduling. Errore: %s.' % e)
@@ -386,7 +387,7 @@ class Executer:
 
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
       id = datetime.now().strftime('%y%m%d%H%M')
-      m = Measure(id, task.server, self._client, VERSION)
+      m = Measure(id, task.server, self._client, __version__)
 
       # Set task timeout alarm
       # signal.alarm(self._tasktimeout)
@@ -646,7 +647,7 @@ def parse():
     config.read(paths.CONF_MAIN)
     logger.info('Caricata configurazione da %s' % paths.CONF_MAIN)
 
-  parser = OptionParser(version=VERSION, description='')
+  parser = OptionParser(version=__version__, description='')
   parser.add_option('-T', '--test', dest='test', action='store_true',
                     help='test client functionality by executing a single task')
   parser.add_option('--task', dest='task',
