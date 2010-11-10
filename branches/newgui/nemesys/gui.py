@@ -31,6 +31,8 @@ import socket
 import status
 from os import path
 import wx
+from wxPython._windows import wxDEFAULT_FRAME_STYLE, wxRESIZE_BORDER,\
+    wxRESIZE_BOX, wxMAXIMIZE_BOX
 
 filenames = [path.join(paths.ICONS, 'logo_nemesys.png'), path.join(paths.ICONS, 'logo_misurainternet.png')]
 
@@ -120,7 +122,7 @@ class TrayIcon(wx.Frame):
         
         setlocale(LC_ALL, '')
         self._status = Status(status.ERROR, "error")
-        wx.Frame.__init__ (self, None, -1, "Ne.Me.Sys.", size = (630,420))
+        wx.Frame.__init__ (self, None, -1, "Ne.Me.Sys.", size = (630,420), style = (wxDEFAULT_FRAME_STYLE & ~ (wxRESIZE_BORDER | wxRESIZE_BOX)))
         panel = wx.Panel(self, -1)
         self.Bind(wx.EVT_PAINT, self.PaintInit)
         
@@ -154,10 +156,10 @@ class TrayIcon(wx.Frame):
             
         #Casella Messaggi
         wx.StaticText (panel, -1, "Dettaglio stato Ne.Me.Sys.", (15, 230), (600, -1), wx.ALIGN_CENTER)
-        self.message = wx.TextCtrl(panel, -1,"Sto contattando il servizio di misura.....", (15,255), (600,100), wx.TE_READONLY)
+        self.message = wx.TextCtrl(panel, -1,"Sto contattando il servizio di misura.....", (15,255), (600,100), wx.TE_READONLY|wx.TE_RICH2)
         
         #Stato Misura
-        wx.StaticText (panel, -1, "Si ricorda che la misurazione va completata entro tre giorni dal suo inizio", (15, 190), (600, -1), wx.ALIGN_CENTER)
+        self.helper = wx.StaticText (panel, -1, "Si ricorda che la misurazione va completata entro tre giorni dal suo inizio", (15, 190), (600, -1), wx.ALIGN_CENTER)
                 
         self.CreateStatusBar() # A StatusBar in the bottom of the window
 
@@ -200,6 +202,9 @@ class TrayIcon(wx.Frame):
             self.PaintHour(hour, "yellow")
         elif (bool(re.search('Misura terminata', currentstatus.message))):
             self.PaintInit(None)
+        elif (bool(re.search(status.FINISHED.message, currentstatus.message))):
+            self.helper.SetLabel("Misura completa! Visita la tua area personale sul sito\nwww.misurainternet.it per scaricare il pdf delle misure")
+            
         if (self._status.icon != currentstatus.icon
             or self._status.message != currentstatus.message):
             #if True:
