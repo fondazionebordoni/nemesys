@@ -117,14 +117,20 @@ class _Channel(dispatcher):
 class TrayIcon(wx.Frame):
 
     def __init__(self):
+        
+        setlocale(LC_ALL, '')
+        self._status = Status(status.ERROR, "error")
         wx.Frame.__init__ (self, None, -1, "Ne.Me.Sys.", size = (630,420))
         panel = wx.Panel(self, -1)
         self.Bind(wx.EVT_PAINT, self.PaintInit)
         
-        setlocale(LC_ALL, '')
-        self._status = status.ERROR
+        xmldoc = Progress()
+        inizioMisure = xmldoc.start()  # inizioMisure è datetime
+        
+        label = 'Inizio test di misura: %s' % inizioMisure.strftime('%c')
+        
         #self.run()
-        self.iniziomisura =  wx.StaticText(panel, -1, "", (165, 55), (300, -1), wx.ALIGN_CENTER)
+        self.iniziomisura =  wx.StaticText(panel, -1, label, (165, 55), (300, -1), wx.ALIGN_CENTER)
         self.avanzamento = wx.StaticText(panel, -1, " ", (165, 75), (300, -1), wx.ALIGN_CENTER)
 
         #Create Control
@@ -148,7 +154,7 @@ class TrayIcon(wx.Frame):
             
         #Casella Messaggi
         wx.StaticText (panel, -1, "Dettaglio stato Ne.Me.Sys.", (15, 230), (600, -1), wx.ALIGN_CENTER)
-        self.message = wx.TextCtrl(panel, -1,"", (15,255), (600,100), wx.TE_READONLY)
+        self.message = wx.TextCtrl(panel, -1,"Sto contattando il servizio di misura.....", (15,255), (600,100), wx.TE_READONLY)
         
         #Stato Misura
         wx.StaticText (panel, -1, "Si ricorda che la misurazione va completata entro tre giorni dal suo inizio", (15, 190), (600, -1), wx.ALIGN_CENTER)
@@ -189,11 +195,11 @@ class TrayIcon(wx.Frame):
         messaggio.
         '''
         hour = datetime.now().hour
-        n = 0
+        
         if (bool(re.search(status.PLAY.message, currentstatus.message))):
             self.PaintHour(hour, "yellow")
         elif (bool(re.search('Misura terminata', currentstatus.message))):
-            self.PaintInit()
+            self.PaintInit(None)
         if (self._status.icon != currentstatus.icon
             or self._status.message != currentstatus.message):
             #if True:
@@ -207,9 +213,6 @@ class TrayIcon(wx.Frame):
             
         '''
         xmldoc = Progress()
-        inizioMisure = xmldoc.start()  # inizioMisure è datetime
-        
-        self.iniziomisura.SetLabel('Inizio test di misura: %s' % inizioMisure.strftime('%c'))  
 
         n = 0
         for hour in range(0, 24):
