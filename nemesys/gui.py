@@ -164,7 +164,7 @@ class TrayIcon():
     self._progress_dialog = gtk.Window(gtk.WINDOW_TOPLEVEL)
     self._progress_dialog.set_title('Stato Misura Ne.Me.Sys.')
     self._progress_dialog.set_position(gtk.WIN_POS_CENTER)
-    self._progress_dialog.set_default_size(620, 270)
+    self._progress_dialog.set_default_size(600, 270)
     self._progress_dialog.set_resizable(False)
     self._progress_dialog.set_icon_from_file(status.LOGO.icon)
     self._progress_dialog.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#FFF'))
@@ -175,7 +175,7 @@ class TrayIcon():
       coloreCelle[n] = 'red'
 
     table = gtk.Table(6, 24, True)  # 7 righe, 24 colonne
-    table.set_size_request(620, 180)
+    table.set_size_request(600, 180)
     self._progress_dialog.add(table)
 
     ore = dict()

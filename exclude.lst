@@ -1,9 +1,6 @@
 */.svn/*
 .svn/*
 */*.pyc
-debian/*
-dist/*
-build/*
 lib/*
 include/*
 docs/*
@@ -21,9 +18,5 @@ config/log.conf
 MANIFEST.in
 INSTALL
 */*.swp
-*/*~
-*/*.xml
 *.swp
 *.zip
-*.xml
-nemesys/SystemProfiler.py

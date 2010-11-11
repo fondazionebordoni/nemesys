@@ -16,10 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from SystemProfiler import systemProfiler
 from logger import logging
-from os import path as Path
 from xml.etree import ElementTree as ET
+from os import path as Path
 import paths
 import re
 import socket
@@ -68,14 +67,55 @@ bad_proc = ['amule', 'emule', 'skype', 'dropbox', 'torrent', 'azureus', 'transmi
 
 logger = logging.getLogger()
 
-def getstatus(d):
-  data = ''
+# TODO Caricare da threshold SOLO se è una sonda
+if Path.isfile(paths.THRESHOLD):
+
+  th_values = {}
+  try:
+    for subelement in ET.XML(open(paths.THRESHOLD).read()):
+      th_values.update({subelement.tag:subelement.text})
+  except Exception as e:
+    logger.warning('Errore durante il recupero delle soglie da file: %s' % e)
+    raise Exception('Errore durante il recupero delle soglie da file.')
 
   try:
-    data = systemProfiler('test', d)
+    th_host = int(th_values[tag_hosts])
+    th_avMem = float(th_values[tag_avMem])
+    th_memLoad = float(th_values[tag_memLoad])
+    th_wdisk = float(th_values[tag_wdisk])
+    th_cpu = float(th_values[tag_cpu])
+    th_rdisk = float(th_values[tag_rdisk])
+    bad_conn = []
+    for j in th_values[tag_conn].split(';'):
+      bad_conn.append(int(j))
+    bad_proc = []
+    for j in th_values[tag_task].split(';'):
+      bad_proc.append(str(j))
   except Exception as e:
-    logger.error('Non sono riuscito a trovare lo stato del computer con SystemProfiler: %s.' % e)
-    raise Exception('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
+      logger.error('Errore in lettura dei paramentri di threshold.')
+      raise Exception('Errore in lettura dei paramentri di threshold.')
+
+else:
+  pass
+
+try:
+  from SystemProfiler import systemProfiler
+except Exception as e:
+  logger.warning('Impossibile importare SystemProfiler')
+  pass
+
+def getstatus(d):
+
+  data = ''
+
+  if Path.isfile(paths.RESULTS):
+    data = open(paths.RESULTS).read()
+  else:
+    try:
+      data = systemProfiler('test', d)
+    except Exception as e:
+      logger.warning('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
+      raise Exception('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
 
   return getvalues(data, tag_results)
 
