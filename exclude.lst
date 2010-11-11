@@ -26,4 +26,4 @@ INSTALL
 *.swp
 *.zip
 *.xml
-
+nemesys/SystemProfiler.py
