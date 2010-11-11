@@ -606,6 +606,7 @@ class Executer:
     return (code, message)
 
 def main():
+  logger.info('Starting NeMeSys v.%s' % __version__)
   paths.check_paths()
   (options, args, md5conf) = parse()
 
