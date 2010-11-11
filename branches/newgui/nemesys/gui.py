@@ -17,22 +17,24 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncore import dispatcher, loop
+from datetime import datetime
 from locale import LC_ALL, setlocale
 from logger import logging
+from os import path
 from progress import Progress
 from status import Status
 from threading import Event, Thread
 from time import sleep
+from wxPython._windows import wxDEFAULT_FRAME_STYLE, wxRESIZE_BORDER, \
+    wxRESIZE_BOX
 from xmlutils import xml2status
-from datetime import datetime
-import re
+import HTMLParser
 import paths
+import re
 import socket
 import status
-from os import path
 import wx
-from wxPython._windows import wxDEFAULT_FRAME_STYLE, wxRESIZE_BORDER,\
-    wxRESIZE_BOX, wxMAXIMIZE_BOX
+    
 
 filenames = [path.join(paths.ICONS, 'logo_nemesys.png'), path.join(paths.ICONS, 'logo_misurainternet.png')]
 
@@ -156,7 +158,7 @@ class TrayIcon(wx.Frame):
             
         #Casella Messaggi
         wx.StaticText (panel, -1, "Dettaglio stato Ne.Me.Sys.", (15, 230), (600, -1), wx.ALIGN_CENTER)
-        self.message = wx.TextCtrl(panel, -1,"Sto contattando il servizio di misura.....", (15,255), (600,100), wx.TE_READONLY|wx.TE_RICH2)
+        self.message = wx.TextCtrl(panel, -1,"Sto contattando il servizio di misura.....", (15,255), (600,100), wx.TE_READONLY)
         
         #Stato Misura
         self.helper = wx.StaticText (panel, -1, "Si ricorda che la misurazione va completata entro tre giorni dal suo inizio", (15, 190), (600, -1), wx.ALIGN_CENTER)
@@ -196,6 +198,7 @@ class TrayIcon(wx.Frame):
         fatto solo se lo staus è cambiato, ovvero se è cambiata il
         messaggio.
         '''
+        htmlmessage = HTMLParser.HTMLParser()
         hour = datetime.now().hour
         
         if (bool(re.search(status.PLAY.message, currentstatus.message))):
@@ -209,7 +212,8 @@ class TrayIcon(wx.Frame):
             or self._status.message != currentstatus.message):
             #if True:
             self._status = currentstatus
-            self.message.SetValue ("%s" % currentstatus.message)
+            message = htmlmessage.unescape(currentstatus.message)
+            self.message.SetValue ("%s" % message)
             
         
     def PaintInit(self, event):
