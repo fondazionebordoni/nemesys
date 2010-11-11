@@ -53,7 +53,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-__version__ = '1.6.5.10'
+__version__ = '1.6.5.11'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
@@ -606,6 +606,7 @@ class Executer:
     return (code, message)
 
 def main():
+  logger.info('Starting NeMeSys v.%s' % __version__)
   paths.check_paths()
   (options, args, md5conf) = parse()
 
