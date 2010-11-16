@@ -25,8 +25,6 @@ from progress import Progress
 from status import Status
 from threading import Event, Thread
 from time import sleep
-from wxPython._windows import wxDEFAULT_FRAME_STYLE, wxRESIZE_BORDER, \
-    wxRESIZE_BOX
 from xmlutils import xml2status
 import HTMLParser
 import paths
@@ -124,7 +122,7 @@ class TrayIcon(wx.Frame):
         
         setlocale(LC_ALL, '')
         self._status = Status(status.ERROR, "error")
-        wx.Frame.__init__ (self, None, -1, "Ne.Me.Sys.", size=(630, 370), style=(wxDEFAULT_FRAME_STYLE & ~(wxRESIZE_BORDER | wxRESIZE_BOX)))
+        wx.Frame.__init__ (self, None, -1, "Ne.Me.Sys.", size=(630, 370), style=(wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX)))
         panel = wx.Panel(self, -1)
         self.Bind(wx.EVT_PAINT, self.PaintInit)
         
