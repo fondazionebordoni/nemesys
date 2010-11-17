@@ -32,11 +32,11 @@ import re
 import socket
 import status
 import wx
-    
+import  wx.lib.fancytext as fancytext
 
 filenames = [path.join(paths.ICONS, 'logo_nemesys.png'), path.join(paths.ICONS, 'logo_misurainternet.png')]
 
-LISTENING_URL = ('localhost', 21401)
+LISTENING_URL = ('127.0.0.1', 21401)
 NOTIFY_COLORS = ('yellow', 'black')
 WAIT_RECONNECT = 15 # secondi
 logger = logging.getLogger()
@@ -54,15 +54,17 @@ class _Controller(Thread):
         self._running = True
 
     def run(self):
+        logger.debug('Inizio loop')
         # TODO Verificare al fattibilità di ricollegamento della gui al demone
         '''
         while self._running:
-        loop(1)
+          loop(1)
         '''
         loop(1)
         logger.debug('GUI asyncore loop terminated.')
 
     def join(self, timeout=None):
+        logger.debug('Richiesta di close')
         self._running = False
         self._channel.quit()
         Thread.join(self, timeout)
@@ -75,6 +77,9 @@ class _Channel(dispatcher):
         self._url = url
         self._stopevent = Event()
         self._reconnect()
+
+    def handle_connect(self):
+      pass
 
     def writable(self):
         return False  # don't have anything to write
@@ -107,14 +112,18 @@ class _Channel(dispatcher):
         try:
             start = max(data.rfind('<?xml'), 0)
             current_status = xml2status(data[start:])
-        except Exception, e:
+        except Exception as e:
             logger.error('Errore durante la decodifica dello stato del sistema di misura: %s' % e)
             current_status = Status(status.ERROR, '%s' % e)
 
         if current_status == None:
             current_status = Status(status.ERROR, 'Errore di comunicazione con il server.')
 
-        self._trayicon.setstatus(current_status)
+        logger.debug('Metto l\'aggiornamento dello stato nella coda grafica')
+        try:
+          wx.CallAfter(self._trayicon.setstatus, current_status)
+        except Exception as e:
+          logger.error('Errore durante l\'aggiornamento dello stato %s' % e)
 
 class TrayIcon(wx.Frame):
 
@@ -155,9 +164,12 @@ class TrayIcon(wx.Frame):
             wx.StaticText(panel, -1, "%s" % i, ((first + (i * 25)), 130), (25, -1), wx.ALIGN_CENTER)
             
         #Casella Messaggi
-        wx.StaticText (panel, -1, "Dettaglio stato Ne.Me.Sys.", (15, 230), (600, -1), wx.ALIGN_CENTER)
-        self.message = wx.TextCtrl(panel, -1, "Sto contattando il servizio di misura.....", (15, 250), (600, 80), wx.TE_READONLY | wx.TE_WORDWRAP | wx.TE_MULTILINE)
-        
+        #wx.StaticText (panel, -1, "Dettaglio stato Ne.Me.Sys.", (15, 230), (600, -1), wx.ALIGN_CENTER)
+        sb = wx.StaticBox(panel, -1, "Dettaglio stato Ne.Me.Sys.", (15, 230), (600, 100))
+        box = wx.StaticBoxSizer(sb, wx.VERTICAL)
+        self.message = wx.StaticText(panel, -1, "Sto contattando il servizio di misura...\n...attendere qualche secondo.", (20, 247), (590, 80), wx.ST_NO_AUTORESIZE)
+        box.Add(self.message, 1, wx.ALL, 5)
+
         #Stato Misura
         self.helper = wx.StaticText (panel, -1, "Si ricorda che la misurazione va completata entro tre giorni dal suo inizio", (15, 190), (600, -1), wx.ALIGN_CENTER)
                 
@@ -195,11 +207,11 @@ class TrayIcon(wx.Frame):
         fatto solo se lo staus è cambiato, ovvero se è cambiata il
         messaggio.
         '''
-        if (self._status.icon != currentstatus.icon
-            or self._status.message != currentstatus.message):
+        logger.debug('Inizio aggiornamento stato')
+        if (self._status.icon != currentstatus.icon or self._status.message != currentstatus.message):
           
-          htmlmessage = HTMLParser.HTMLParser()
           hour = datetime.now().hour
+          logger.debug('Ora attuale: %d' % hour)
           
           if (bool(re.search(status.PLAY.message, currentstatus.message))):
               self.PaintHour(hour, "yellow")
@@ -208,13 +220,27 @@ class TrayIcon(wx.Frame):
           elif (bool(re.search(status.FINISHED.message, currentstatus.message))):
               self.helper.SetLabel("Misura completa! Visita la tua area personale sul sito\nwww.misurainternet.it per scaricare il pdf delle misure")
             
-          message = htmlmessage.unescape(currentstatus.message)
-          message = message.replace('(\'', '')
-          message = message.replace('\')', '')
-          message = message.replace('\', \'', '\n')            
-          self.message.SetValue ("%s" % message)
+          message = self.getformattedmessage(currentstatus.message)
+          
+          self.message.SetLabel("%s" % message)
+          self.message.Wrap(590)
           self._status = currentstatus
         
+        
+    def getformattedmessage(self, message):
+        logger.debug('Instanzio HTMLParser')
+        htmlmessage = HTMLParser.HTMLParser()
+      
+        logger.debug('Messaggio prima di unescape: %s' % message)
+        message = htmlmessage.unescape(message)
+        logger.debug('Messaggio dopo unescape: %s' % message)
+        message = message.replace('(\'', '')
+        message = message.replace('\')', '')
+        message = message.replace('\', \'', '\n')
+        
+        logger.debug('Messaggio da stampare a video: %s' % message)
+        return message      
+    
     def PaintInit(self, event):
         '''
         Inizializza le casselle ora tutte rosse
@@ -229,6 +255,7 @@ class TrayIcon(wx.Frame):
                 color = "green"
                 n = n + 1
             self.PaintHour(hour, color)
+        logger.debug('Aggiorno lo stato di avanzamento')
         self.avanzamento.SetLabel('Stato di Avanzamento: %d test su 24' % n)
 
     
