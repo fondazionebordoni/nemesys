@@ -32,7 +32,6 @@ import re
 import socket
 import status
 import wx
-import  wx.lib.fancytext as fancytext
 
 filenames = [path.join(paths.ICONS, 'logo_nemesys.png'), path.join(paths.ICONS, 'logo_misurainternet.png')]
 
