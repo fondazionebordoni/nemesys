@@ -134,7 +134,7 @@ def checkconnections():
   '''
   Effettua il controllo sulle connessioni attive
   '''
-
+  myip = getIp()
   connActive = getstringtag(tag_conn, '90.147.120.2:443')
 
   if connActive == None or len(connActive) <= 0:
@@ -153,10 +153,14 @@ def checkconnections():
       ip = j.split(':')[0]
       if not checkipsyntax(ip):
         raise Exception('Lista delle connessioni attive non conforme.')
+      if ip == myip:
+        logger.warning('Ricevuto ip %s nella lista delle connessioni attive' % ip)
+        continue
       port = int(j.split(':')[1])
       # TODO Occorre chiamare un resolver per la risoluzione dei nostri ip
       if not bool(re.search('^90\.147\.120\.|^193\.104\.137\.', ip)):
         c.append(port)
+
   except Exception as e:
     logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
     if STRICT_CHECK:
