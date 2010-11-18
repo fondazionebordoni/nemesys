@@ -7,13 +7,12 @@ Usage:
 
 from setuptools import setup
 
-APP = ['nemesys/gui.py']
-DATA_FILES = []
+APP = ['nemesys/executer.py']
+DATA_FILES = ['nemesys/executer.py']
 OPTIONS = {'argv_emulation': True,
  'no_chdir': True,
- 'packages': 'wx',
- 'plist': 'Info.plist',
- 'resources': 'icons',
+ 'plist': 'Info_executer.plist',
+ 'resources': 'nemesys/cfg',
  'semi_standalone': True,
  'site_packages': True}
 
