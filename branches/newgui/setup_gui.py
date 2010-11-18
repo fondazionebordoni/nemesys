@@ -12,7 +12,7 @@ DATA_FILES = ['nemesys/gui.py']
 OPTIONS = {'argv_emulation': True,
  'no_chdir': True,
  'packages': 'wx',
- 'plist': 'Info.plist',
+ 'plist': 'Info_gui.plist',
  'resources': 'icons',
  'semi_standalone': True,
  'site_packages': True}
