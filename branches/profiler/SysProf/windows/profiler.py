@@ -8,15 +8,14 @@ from ..LocalProfilerFactory import LocalProfiler
 from ..RisorsaFactory import Risorsa
 from ..NemesysException import RisorsaException
 import win32com.client
-from win32pdhquery import QueryError
-import pywintypes
+import time
 
 
-def executeQuery(wmi_class):   
+def executeQuery(wmi_class,whereCondition=""):   
     try: 
         objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
         objSWbemServices = objWMIService.ConnectServer(".","root\cimv2")
-        colItems = objSWbemServices.ExecQuery("SELECT * FROM " + wmi_class)
+        colItems = objSWbemServices.ExecQuery("SELECT * FROM " + wmi_class + whereCondition)
     except:
         raise RisorsaException("Errore nella query al server root\cimv2")
         
@@ -25,6 +24,7 @@ def executeQuery(wmi_class):
 class RisorsaWin(Risorsa):
     def __init__(self):
         Risorsa.__init__(self)
+        self.whereCondition=""
         
     def getSingleInfo(self,obj,attr):
         val= obj.__getattr__(attr)
@@ -36,7 +36,7 @@ class RisorsaWin(Risorsa):
     def getStatusInfo(self,root):
         try:
             for wmi_class in self._params:
-                items = executeQuery(wmi_class)
+                items = executeQuery(wmi_class,self.whereCondition)
                 for obj in items:
                     for val in self._params[wmi_class]:
                         tag=val
@@ -111,7 +111,7 @@ class sistemaOperativo(RisorsaWin):
         self._params={'Win32_OperatingSystem':['version']}
         
     def version (self,obj):
-        var = ['Caption','Version','OSArchitecture']
+        var = ['Caption','Version'] # ci sarebbe anche 'OSArchitecture' ma su windows xp non e' definita
         versione=[]
         try:
             for v in var:
@@ -124,23 +124,54 @@ class sistemaOperativo(RisorsaWin):
 class disco(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params=[]
+        self._params={'Win32_PerfFormattedData_PerfDisk_PhysicalDisk':['byte_transfer']}
+        self.whereCondition=" WHERE Name= \"_Total\"" #problema, conta tutti i byte trasferiti, anche tra memorie esterne che non coinvolgono il disco del pc
+    
+    def byte_transfer(self,obj):
+        var = 'DiskBytesPersec'
+        total = 0;
+        try:
+            for i in range(5):
+                bd = self.getSingleInfo(obj,var)
+                total += int(bd)
+                time.sleep(1)
+        except AttributeError as e:
+            raise AttributeError(e)
+        return total
+                    
             
 class rete(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params=[]     
+        self._params={'Win32_NetworkAdapterConfiguration':['active_interface_mac']}
+        self.whereCondition=" WHERE IPEnabled=True"
+        
+    def active_interface_mac(self,obj):  
+        var = 'MACAddress'
+        try:
+            ris = self.getSingleInfo(obj, var)
+        except AttributeError as e:
+            raise AttributeError(e)
+        return ris  
         
 class processi(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params=[]
+        self._params={'Win32_Process':['process']}
+        
+    def process(self,obj):
+        var = 'Name'
+        try:
+            ris = self.getSingleInfo(obj, var)
+        except AttributeError as e:
+            raise AttributeError(e)
+        return ris
            
 class Profiler(LocalProfiler):
     
     def __init__(self):
         LocalProfiler.__init__(self)
-        self._resources =['CPU','RAM','sistemaOperativo']
+        self._resources =['CPU','RAM','sistemaOperativo','disco','processi','rete']
        
     '''
     necessario racchiudere anche la chiamata al profile della superclasse in un try/except?
@@ -148,31 +179,3 @@ class Profiler(LocalProfiler):
     
     def profile(self):
         return super(Profiler,self).profile(__name__)
-        
-
-'''
-Alcuni valori che potrebbero essere di interesse
-
-if objItem.Architecture != None:
-    print "Architecture: %s" %  objItem.Architecture
-if objItem.CurrentClockSpeed != None:
-    print "CurrentClockSpeed: %s" %  objItem.CurrentClockSpeed
-if objItem.Description != None:
-    print "Description: %s" %  objItem.Description
-if objItem.ExtClock != None:
-    print "ExtClock: %s" %  objItem.ExtClock
-if objItem.LoadPercentage != None:
-    print "LoadPercentage: %s" %  objItem.LoadPercentage
-if objItem.Manufacturer != None:
-    print "Manufacturer: %s" %  objItem.Manufacturer
-if objItem.Name != None:
-    print "Name: %s" %  objItem.Name
-if objItem.NumberOfCores != None:
-    print "NumberOfCores: %s" %  objItem.NumberOfCores
-if objItem.NumberOfLogicalProcessors != None:
-    print "NumberOfLogicalProcessors: %s" %  objItem.NumberOfLogicalProcessors
-if objItem.Status != None:
-    print "Status: %s" % objItem.Status
-if objItem.StatusInfo != None:
-    print "StatusInfo: %s" % objItem.StatusInfo
-'''
