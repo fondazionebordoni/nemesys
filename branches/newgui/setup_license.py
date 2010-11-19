@@ -7,13 +7,12 @@ Usage:
 
 from setuptools import setup
 
-APP = ['nemesys/gui.py']
-DATA_FILES = ['nemesys/gui.py']
+APP = ['nemesys/lnemesys.py']
+DATA_FILES = ['nemesys/lnemesys.py']
 OPTIONS = {'argv_emulation': True,
- 'plist': 'Info_gui.plist',
- 'resources': 'icons',
+ 'plist': 'Info_license.plist',
  'iconfile': 'nemesys.icns',
- 'semi_standalone': False, 
+ 'semi_standalone': False,
 }
 
 setup(
