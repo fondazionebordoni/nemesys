@@ -37,6 +37,12 @@ class Risorsa(object):
     
     
     def xmlFormat(self,tag,val):
+        val=str(val)
+        invalid_char=['<','>']
+        for c in invalid_char:
+            if c in val:
+                parts=val.split(c)
+                val = "".join(parts)                  
         elem=ET.Element(tag)
-        elem.text=str(val)
+        elem.text=val
         return elem

@@ -144,7 +144,7 @@ class rete(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
         self._params={'Win32_NetworkAdapterConfiguration':['active_interface_mac']}
-        self.whereCondition=" WHERE IPEnabled=True"
+        self.whereCondition=" WHERE IPEnabled=True AND (DNSDomain IS NOT NULL AND DNSDomain!=\"\")"
         
     def active_interface_mac(self,obj):  
         var = 'MACAddress'
