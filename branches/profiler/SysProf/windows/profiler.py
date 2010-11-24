@@ -9,6 +9,7 @@ from ..RisorsaFactory import Risorsa
 from ..NemesysException import RisorsaException
 import win32com.client
 import time
+import socket
 
 
 def executeQuery(wmi_class,whereCondition=""):   
@@ -37,11 +38,14 @@ class RisorsaWin(Risorsa):
         try:
             for wmi_class in self._params:
                 items = executeQuery(wmi_class,self.whereCondition)
-                for obj in items:
-                    for val in self._params[wmi_class]:
-                        tag=val
-                        cmd = getattr(self,tag)            
-                        root.append(self.xmlFormat(tag, cmd(obj)))
+                if len(items)==0:
+                    raise RisorsaException("La risorsa con le caratteristiche richieste non e' presente nel server")
+                else:
+                    for obj in items:
+                        for val in self._params[wmi_class]:
+                            tag=val
+                            cmd = getattr(self,tag)            
+                            root.append(self.xmlFormat(tag, cmd(obj)))
         except AttributeError as e:
             print RisorsaException(e)
             raise RisorsaException("errore get status info")
@@ -141,18 +145,36 @@ class disco(RisorsaWin):
                     
             
 class rete(RisorsaWin):
+    
     def __init__(self):
         RisorsaWin.__init__(self)
         self._params={'Win32_NetworkAdapterConfiguration':['active_interface_mac']}
-        self.whereCondition=" WHERE IPEnabled=True AND (DNSDomain IS NOT NULL AND DNSDomain!=\"\")"
+        self.ipaddr=""
+    
+    def getipaddr(self):
+        if self.ipaddr =="":
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(("www.fub.it",80))
+                self.ipaddr= s.getsockname()[0]
+            except socket.gaierror:
+                pass
+                #raise RisorsaException("Connessione Assente")
+        else:
+            pass
+        return self.ipaddr
         
-    def active_interface_mac(self,obj):  
-        var = 'MACAddress'
+    def active_interface_mac(self,obj):
+        ris=None
+        ipaddr = self.getipaddr()
         try:
-            ris = self.getSingleInfo(obj, var)
-        except AttributeError as e:
-            raise AttributeError(e)
-        return ris  
+            ipaddrlist=self.getSingleInfo(obj, 'IPAddress')
+            if ipaddr in ipaddrlist:
+                ris = self.getSingleInfo(obj,'MACAddress')
+            else:
+                raise AttributeError("Interfaccia con indirizzo non corrispondente a quello desiderato")
+        finally:
+            return ris  
         
 class processi(RisorsaWin):
     def __init__(self):

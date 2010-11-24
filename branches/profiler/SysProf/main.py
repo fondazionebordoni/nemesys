@@ -10,13 +10,25 @@ import LocalProfilerFactory
 import xml.etree.ElementTree as ET
 from NemesysException import LocalProfilerException, RisorsaException
 import Factory
-    
+
+def mytostring(etree,s="",tag=""):
+    s= s+tag+"<%s>" %etree.tag
+    child= etree.getchildren()
+    if child:
+        s+="\n"
+        tag += "\t"
+        for subetree in child:
+            s= mytostring(subetree,s,tag)
+    else:
+        s+=etree.text
+    return s+"</%s>\n" %etree.tag
+        
 def main():
     result=ET.ElementTree()
     try:
         profiler=LocalProfilerFactory.getProfiler()
         result=profiler.profile()        
-        print ET.tostring(result)
+        print mytostring(result)
     except NotImplementedError as e:
         print e
     except KeyError:

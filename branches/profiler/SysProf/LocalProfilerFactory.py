@@ -38,10 +38,7 @@ class LocalProfiler(object):
                 result=ris.getStatusInfo(result)
                 del ris
                 
-        except:
-            raise NotImplementedError("Risorsa non monitorabile")
-        #except RisorsaException as e:
-        #   raise RisorsaException(e)
+        except RisorsaException as e:
+            raise NotImplementedError(e)
         return result
-    #'''
         
