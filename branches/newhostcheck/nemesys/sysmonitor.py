@@ -23,6 +23,7 @@ from xml.etree import ElementTree as ET
 import paths
 import re
 import socket
+import checkhosts
 
 # TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
 STRICT_CHECK = True
@@ -247,9 +248,14 @@ def checkwireless():
 
   return True
 
-def checkhosts():
-
-  value = getfloattag(tag_hosts, th_host - 1)
+def checkhosts(up, down, ispid):
+  
+  ip=getIp();
+  # TODO Implementare funzione per il recupero della maschera di rete
+  mask=24
+    
+  value=checkhosts.countHosts(ip, mask, up, down, ispid, th_host)
+    
   if value <= 0:
     raise Exception('Impossibile determinare il numero di host in rete.')
 
@@ -298,15 +304,11 @@ def mediumcheck():
 
   return True
 
-def checkall():
+def checkall(up, down, ispid):
 
   mediumcheck()
   #checkdisk()
-
-  ip = getIp()
-
-  if bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
-    checkhosts()
+  checkhosts(up, down, ispid)
 
   return True
 
@@ -337,12 +339,31 @@ def getIp():
   '''
   restituisce indirizzo IP del computer
   '''
-  value = getstringtag(tag_ip, '90.147.120.2')
+  s = socket.socket()
+  s = socket.socket(socket.AF_INET)
+  s.connect(('www.google.com', 80))
+  value=s.getsockname()[0]
+
+  #value = getstringtag(tag_ip, '90.147.120.2')
 
   if not checkipsyntax(value):
     raise Exception('Impossibile ottenere il dettaglio dell\'indirizzo IP')
 
   return value
+
+def getMask(ip):
+  ris=None
+  objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
+  objSWbemServices = objWMIService.ConnectServer(".","root\cimv2")
+  colItems = objSWbemServices.ExecQuery("SELECT * FROM Win32_NetworkAdapterConfiguration")
+  for obj in colItems:
+    ipaddrlist=obj.__getattr__('IPAddress')
+    if (ipaddrlist != None) and (ip in ipaddrlist):
+      ris = obj.__getattr__('IPSubnet')
+      break
+    else:
+      pass
+  return ris
 
 def getSys():
   '''
