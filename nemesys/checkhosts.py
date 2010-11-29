@@ -25,9 +25,9 @@ logger = logging.getLogger()
 
 def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, threshold=4):
   realSubnet=True
-  if(provider=="fst001" and not bool(re.search('^192\.', ipAddress))):
+  if(provider=="fst001" and not bool(re.search('^192\.168\.', ipAddress))):
     realSubnet=False
-    if bandwidthup==bandwidthdown:
+    if bandwidthup==bandwidthdown and not bool(re.search('^10\.', ipAddress)):
       #profilo fibra
       netMask=29
       logger.debug("Profilo Fastweb in fibra. Modificata sottorete in %d" %netMask)
@@ -35,6 +35,7 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, th
       #profilo ADSL
       netMask=30
       logger.debug("Profilo Fastweb ADSL. Modificata sottorete in %d" %netMask)
+  #TODO controllare che per operatori diversi da fastweb non si tratti di indirizzo pubblico
   logger.debug("%s / %d, %s, %d" %(ipAddress, netMask, realSubnet, threshold))
   n_host=_countNetHosts(ipAddress, netMask, realSubnet, threshold)
   return n_host
