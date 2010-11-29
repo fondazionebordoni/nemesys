@@ -12,16 +12,15 @@ from NemesysException import LocalProfilerException, RisorsaException
 import Factory
 
 def mytostring(etree,s="",tag=""):
-    s= s+tag+"<%s>" %etree.tag
+    s= s+tag+"<%s>\n" %etree.tag
+    tagN = tag+ "\t"
     child= etree.getchildren()
     if child:
-        s+="\n"
-        tag += "\t"
         for subetree in child:
-            s= mytostring(subetree,s,tag)
+            s= mytostring(subetree,s,tagN)
     else:
-        s+=etree.text
-    return s+"</%s>\n" %etree.tag
+        s+=tagN+etree.text+"\n" 
+    return s+tag+"</%s>\n"%etree.tag
         
 def main():
     result=ET.ElementTree()

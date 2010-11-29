@@ -10,6 +10,10 @@ from ..NemesysException import RisorsaException
 import win32com.client
 import time
 import socket
+import xml.etree.ElementTree as ET
+from ctypes import *
+from ctypes.wintypes import DWORD, ULONG
+import struct
 
 
 def executeQuery(wmi_class,whereCondition=""):   
@@ -45,7 +49,7 @@ class RisorsaWin(Risorsa):
                         for val in self._params[wmi_class]:
                             tag=val
                             cmd = getattr(self,tag)            
-                            root.append(self.xmlFormat(tag, cmd(obj)))
+                            root.append(cmd(obj))
         except AttributeError as e:
             print RisorsaException(e)
             raise RisorsaException("errore get status info")
@@ -69,21 +73,22 @@ class CPU(RisorsaWin):
                 proc.append(val)
         except AttributeError as e:
             raise AttributeError(e)
-        return ", ".join(proc)    
+        ris = ", ".join(proc)
+        return self.xmlFormat("processor", ris)    
     
     def cpuLoad(self,obj):
         try:
             val = self.getSingleInfo(obj, 'LoadPercentage')
         except AttributeError as e:
             raise AttributeError(e)
-        return val
+        return self.xmlFormat("cpuLoad", val)
 
     def cores(self,obj):
         try:
             val = self.getSingleInfo(obj, 'NumberOfCores')
         except AttributeError as e:
             raise AttributeError(e)
-        return val
+        return self.xmlFormat("cores", val)
     
 class RAM(RisorsaWin):
     def __init__(self):
@@ -95,19 +100,19 @@ class RAM(RisorsaWin):
             val = self.getSingleInfo(obj, 'TotalPhysicalMemory')
         except AttributeError as e:
             raise AttributeError(e)
-        return val
+        return self.xmlFormat("totalPhysicalMemory", val)
         
     def percentage_ram_usage(self,obj):
         try:
             free= self.getSingleInfo(obj,'FreePhysicalMemory')
             total=self.getSingleInfo(obj,'TotalVisibleMemorySize')        
             if total !=0:
-                return int((1.0 - (float(free)/float(total)))*100.0)
+                load = int((1.0 - (float(free)/float(total)))*100.0)
+                return self.xmlFormat("RAMUsage", load)
             else:
                 raise AttributeError("Impossibile calcolare la percentuale di ram utilizzata")
         except AttributeError as e:
             raise AttributeError(e)
-    
     
 class sistemaOperativo(RisorsaWin):
     def __init__(self):
@@ -123,7 +128,8 @@ class sistemaOperativo(RisorsaWin):
                 versione.append(val)
         except AttributeError as e:
             raise AttributeError(e)
-        return ", ".join(versione)
+        ris = ", ".join(versione)
+        return self.xmlFormat("OperatingSystem",ris)
     
 class disco(RisorsaWin):
     def __init__(self):
@@ -141,8 +147,7 @@ class disco(RisorsaWin):
                 time.sleep(1)
         except AttributeError as e:
             raise AttributeError(e)
-        return total
-                    
+        return self.xmlFormat("ByteTransfer", total)
             
 class rete(RisorsaWin):
     
@@ -166,15 +171,17 @@ class rete(RisorsaWin):
         
     def active_interface_mac(self,obj):
         ris=None
+        tag="InterfaceNotConnected"
         ipaddr = self.getipaddr()
         try:
             ipaddrlist=self.getSingleInfo(obj, 'IPAddress')
             if ipaddr in ipaddrlist:
                 ris = self.getSingleInfo(obj,'MACAddress')
+                tag = "ActiveInterfaceMAC"
             else:
                 raise AttributeError("Interfaccia con indirizzo non corrispondente a quello desiderato")
         finally:
-            return ris  
+            return self.xmlFormat(tag, ris)  
         
 class processi(RisorsaWin):
     def __init__(self):
@@ -187,14 +194,129 @@ class processi(RisorsaWin):
             ris = self.getSingleInfo(obj, var)
         except AttributeError as e:
             raise AttributeError(e)
-        return ris
-           
+        return self.xmlFormat("process", ris)
+    
+class connection(RisorsaWin):
+    
+    def __init__(self):
+        RisorsaWin.__init__(self)
+        
+    def getOpenConnections(self):
+        """
+            This function will return a list of ports (TCP/UDP) that the current 
+            machine is listening on. It's basically a replacement for parsing 
+            netstat output but also serves as a good example for using the 
+            IP Helper API:
+            http://msdn.microsoft.com/library/default.asp?url=/library/en-
+            us/iphlp/iphlp/ip_helper_start_page.asp.
+            I also used the following post as a guide myself (in case it's useful 
+            to anyone):
+            http://aspn.activestate.com/ASPN/Mail/Message/ctypes-users/1966295
+       
+         """
+        connectionList = ET.Element("ConnectionEstablished")
+               
+        NO_ERROR = 0
+        NULL = ""
+        bOrder = 0
+        
+        # define some MIB constants used to identify the state of a TCP port
+        MIB_TCP_STATE_CLOSED = 1
+        MIB_TCP_STATE_LISTEN = 2
+        MIB_TCP_STATE_SYN_SENT = 3
+        MIB_TCP_STATE_SYN_RCVD = 4
+        MIB_TCP_STATE_ESTAB = 5
+        MIB_TCP_STATE_FIN_WAIT1 = 6
+        MIB_TCP_STATE_FIN_WAIT2 = 7
+        MIB_TCP_STATE_CLOSE_WAIT = 8
+        MIB_TCP_STATE_CLOSING = 9
+        MIB_TCP_STATE_LAST_ACK = 10
+        MIB_TCP_STATE_TIME_WAIT = 11
+        MIB_TCP_STATE_DELETE_TCB = 12
+        
+        ANY_SIZE = 1         
+        
+        # defing our MIB row structures
+        class MIB_TCPROW(Structure):
+            _fields_ = [('dwState', DWORD),
+                        ('dwLocalAddr', DWORD),
+                        ('dwLocalPort', DWORD),
+                        ('dwRemoteAddr', DWORD),
+                        ('dwRemotePort', DWORD)]
+      
+        dwSize = DWORD(0)
+        
+        # call once to get dwSize 
+        windll.iphlpapi.GetTcpTable(NULL, byref(dwSize), bOrder)
+        
+        # ANY_SIZE is used out of convention (to be like MS docs); even setting this
+        # to dwSize will likely be much larger than actually necessary but much 
+        # more efficient that just declaring ANY_SIZE = 65500.
+        # (in C we would use malloc to allocate memory for the *table pointer and 
+        #  then have ANY_SIZE set to 1 in the structure definition)
+        
+        ANY_SIZE = dwSize.value
+        
+        class MIB_TCPTABLE(Structure):
+            _fields_ = [('dwNumEntries', DWORD),
+                        ('table', MIB_TCPROW * ANY_SIZE)]
+        
+        tcpTable = MIB_TCPTABLE()
+        tcpTable.dwNumEntries = 0 # define as 0 for our loops sake
+    
+        # now make the call to GetTcpTable to get the data
+        if (windll.iphlpapi.GetTcpTable(byref(tcpTable), 
+            byref(dwSize), bOrder) == NO_ERROR):
+          
+            for i in range(tcpTable.dwNumEntries):
+            
+                item = tcpTable.table[i]
+                lPort = item.dwLocalPort
+                lPort = socket.ntohs(lPort)
+                rPort = item.dwRemotePort
+                rPort = socket.ntohs(rPort)
+                lAddr = item.dwLocalAddr
+                lAddr = socket.inet_ntoa(struct.pack('L', lAddr))
+                rAddr = item.dwRemoteAddr
+                rAddr = socket.inet_ntoa(struct.pack('L', rAddr))
+                portState = item.dwState
+                        
+                # only record TCP ports where we're listening on our external 
+                #    (or all) connections
+                if str(lAddr) != "127.0.0.1" and str(rAddr)!="127.0.0.1" and portState == MIB_TCP_STATE_ESTAB:
+                    localConn = ET.Element("Local")
+                    localAdd = self.xmlFormat("LocalAddress", str(lAddr))
+                    localPort = self.xmlFormat("LocalPort", str(lPort))
+                    localConn.append(localAdd)
+                    localConn.append(localPort)
+                    remoteConn = ET.Element("Remote")
+                    remoteAdd = self.xmlFormat("RemoteAddress", str(rAddr))
+                    remotePort = self.xmlFormat("RemotePort", str(rPort))
+                    remoteConn.append(remoteAdd)
+                    remoteConn.append(remotePort)
+                    
+                    connectionList.append(localConn)
+                    connectionList.append(remoteConn)
+        
+        else:
+            raise AttributeError("Error retrieving TCP table connections") 
+        
+        return connectionList
+    
+    def getStatusInfo(self,root):
+        try:
+            connection = self.getOpenConnections()
+            root.append(connection)
+        except AttributeError:
+            raise RisorsaException("Error in retrieving TCP table connections")
+        return root
+    
 class Profiler(LocalProfiler):
     
     def __init__(self):
         LocalProfiler.__init__(self)
-        self._resources =['CPU','RAM','sistemaOperativo','disco','processi','rete']
-       
+        self._resources =['CPU','RAM','sistemaOperativo','disco', 'rete', 'processi','connection']
+        
     '''
     necessario racchiudere anche la chiamata al profile della superclasse in un try/except?
     '''
