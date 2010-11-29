@@ -62,7 +62,7 @@ class _Communicator(Thread):
 
   def __init__(self):
     Thread.__init__(self)
-    self._channel = _Channel(('localhost', 21401))
+    self._channel = _Channel(('127.0.0.1', 21401))
 
   def sendstatus(self):
     self._channel.sendstatus()

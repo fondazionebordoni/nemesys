@@ -369,7 +369,7 @@ def getvalues(string, tag):
   try:
     for subelement in ET.XML(string):
       values.update({subelement.tag:subelement.text})
-      logger.debug('Recupero valori dal Profiler. %s -> %s' % (subelement.tag, subelement.text))
+      logger.info('Recupero valori dal Profiler. %s -> %s' % (subelement.tag, subelement.text))
   except Exception as e:
     logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
     raise Exception('Errore durante il recupero dello stato del computer.')
