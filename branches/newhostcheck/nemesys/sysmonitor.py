@@ -24,6 +24,7 @@ import paths
 import re
 import socket
 import checkhosts
+import netifaces
 
 # TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
 STRICT_CHECK = True
@@ -251,18 +252,22 @@ def checkwireless():
 def checkhosts(up, down, ispid):
   
   ip=getIp();
+  print ip
   # TODO Implementare funzione per il recupero della maschera di rete
-  mask=24
-    
-  value=checkhosts.countHosts(ip, mask, up, down, ispid, th_host)
-    
-  if value <= 0:
-    raise Exception('Impossibile determinare il numero di host in rete.')
+  mask=getNetworkMask(ip)
+  print mask
+  if (mask!=0):  
+    value=checkhosts.countHosts(ip, mask, up, down, ispid, th_host=3)
+      
+    if value <= 0:
+      raise Exception('Impossibile determinare il numero di host in rete.')
 
-  if value > th_host:
-    raise Exception('Presenza altri host in rete.')
+    if value > th_host:
+      raise Exception('Presenza altri host in rete.')
 
-  return True
+    return True
+  else:
+    print "error"
 
 def checkdisk():
 
@@ -351,6 +356,62 @@ def getIp():
 
   return value
 
+def getNetworkMask(ip):
+  inames=netifaces.interfaces()
+  netmask=0
+  for i in inames:
+    addrs = netifaces.ifaddresses(i)
+    ipinfo = addrs[socket.AF_INET][0]
+    address = ipinfo['addr'] 
+    if (address==ip):
+      netmask = ipinfo['netmask']
+      return maskConversion(netmask)
+    else:
+      pass
+  return maskConversion(netmask)
+
+def maskConversion(netmask):
+  nip=netmask.split(".")
+  i=0
+  bini=1*range(0,len(nip))
+  while i<len(nip):
+    bini[i]=int(nip[i])
+    i+=1
+  bins=convertDecToBin(bini)
+  lastChar = 1
+  maskcidr= 0
+  i=0
+  while i<4:
+    j=0
+    while j<8:
+      if (bins[i][j] == 1):
+        if (lastChar == 0):
+          return 0
+        maskcidr=maskcidr+1
+      lastChar = bins[i][j]
+      j=j+1
+    i=i+1
+  return maskcidr
+
+
+def convertDecToBin(dec):
+  i=0  
+  bin=range(0,4)
+  for x in range(0,4):
+    bin[x]=range(0,8)
+  print bin
+  for i in range(0,4):
+    j=7
+    while j>=0:
+      print i
+      print j
+      bin[i][j] = (dec[i] & 1) + 0
+      dec[i] /= 2
+      j=j-1
+  print bin
+  return bin
+
+#valido per windows
 def getMask(ip):
   ris=None
   objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
@@ -409,5 +470,6 @@ if __name__ == '__main__':
     print 'Test sysmonitor getIP: %s' % getIp()
     print 'Test sysmonitor getSys: %s' % getSys()
   except Exception as e:
+  
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
