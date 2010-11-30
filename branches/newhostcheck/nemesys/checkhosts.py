@@ -36,8 +36,8 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, th
       netMask=30
       logger.debug("Profilo Fastweb ADSL. Modificata sottorete in %d" %netMask)
   #controllo che non siano indirizzi pubblici, in quel caso ritorno 1, effettuo la misura
-  #else if not bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
-  #  return 1
+  else if not bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
+    return 1
   logger.debug("%s / %d, %s, %d" %(ipAddress, netMask, realSubnet, threshold))
   n_host=_countNetHosts(ipAddress, netMask, realSubnet, threshold)
   return n_host
