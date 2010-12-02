@@ -23,7 +23,7 @@ from xml.etree import ElementTree as ET
 import paths
 import re
 import socket
-import checkhosts
+import checkhost
 import netifaces
 
 # TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
@@ -252,12 +252,11 @@ def checkwireless():
 def checkhosts(up, down, ispid):
   
   ip=getIp();
-  print ip
-  # TODO Implementare funzione per il recupero della maschera di rete
+  
   mask=getNetworkMask(ip)
-  print mask
+  
   if (mask!=0):  
-    value=checkhosts.countHosts(ip, mask, up, down, ispid, th_host=3)
+    value=checkhost.countHosts(ip, mask, up, down, ispid, th_host)
       
     if value <= 0:
       raise Exception('Impossibile determinare il numero di host in rete.')
@@ -267,7 +266,7 @@ def checkhosts(up, down, ispid):
 
     return True
   else:
-    print "error"
+    raise Exception ('Impossibile determinare il numero di host in rete')
 
 def checkdisk():
 
@@ -357,40 +356,51 @@ def getIp():
   return value
 
 def getNetworkMask(ip):
+  '''
+   restituisce un intero rappresentante la maschera di rete, in formato CIDR, 
+	dell'indirizzo IP in uso
+  '''
   inames=netifaces.interfaces()
   netmask=0
   for i in inames:
     addrs = netifaces.ifaddresses(i)
-    ipinfo = addrs[socket.AF_INET][0]
-    address = ipinfo['addr'] 
-    if (address==ip):
-      netmask = ipinfo['netmask']
-      return maskConversion(netmask)
-    else:
+    try:
+      ipinfo = addrs[socket.AF_INET][0]
+      address = ipinfo['addr'] 
+      if (address==ip):
+        netmask = ipinfo['netmask']
+        return maskConversion(netmask)
+      else:
+        pass
+    except Exception as e:
       pass
+
   return maskConversion(netmask)
 
 def maskConversion(netmask):
   nip=netmask.split(".")
-  i=0
-  bini=1*range(0,len(nip))
-  while i<len(nip):
-    bini[i]=int(nip[i])
-    i+=1
-  bins=convertDecToBin(bini)
-  lastChar = 1
-  maskcidr= 0
-  i=0
-  while i<4:
-    j=0
-    while j<8:
-      if (bins[i][j] == 1):
-        if (lastChar == 0):
-          return 0
-        maskcidr=maskcidr+1
-      lastChar = bins[i][j]
-      j=j+1
-    i=i+1
+  if(len(nip)==4):
+    i=0
+    bini=range(0,len(nip))
+    while i<len(nip):
+      bini[i]=int(nip[i])
+      i+=1
+    bins=convertDecToBin(bini)
+    lastChar = 1
+    maskcidr= 0
+    i=0
+    while i<4:
+      j=0
+      while j<8:
+        if (bins[i][j] == 1):
+          if (lastChar == 0):
+            return 0
+          maskcidr=maskcidr+1
+        lastChar = bins[i][j]
+        j=j+1
+      i=i+1
+  else:
+    return 0
   return maskcidr
 
 
@@ -399,16 +409,14 @@ def convertDecToBin(dec):
   bin=range(0,4)
   for x in range(0,4):
     bin[x]=range(0,8)
-  print bin
+  
   for i in range(0,4):
     j=7
     while j>=0:
-      print i
-      print j
+           
       bin[i][j] = (dec[i] & 1) + 0
       dec[i] /= 2
       j=j-1
-  print bin
   return bin
 
 #valido per windows
@@ -462,14 +470,19 @@ if __name__ == '__main__':
   from errorcoder import Errorcoder
   errors = Errorcoder(paths.CONF_ERRORS)
 
-  try:
-    print 'Test sysmonitor fastcheck: %s' % fastcheck()
-    print 'Test sysmonitor mediumcheck: %s' % mediumcheck()
-    print 'Test sysmonitor checkall: %s' % checkall()
-    print 'Test sysmonitor getMac: %s' % getMac()
-    print 'Test sysmonitor getIP: %s' % getIp()
-    print 'Test sysmonitor getSys: %s' % getSys()
-  except Exception as e:
+  #try:
+  print "%s " %maskConversion("255.255.255.0")
+  print "%s " %maskConversion("255.0.255.0")
+  print "%s " %maskConversion("255.255.128.0")
   
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
+  #print 'Test sysmonitor fastcheck: %s' % checkhosts(2000,2000,'fst001')
+  #print 'Test sysmonitor fastcheck: %s' % checkhosts(1000,2000,'fst001')
+    #print 'Test sysmonitor mediumcheck: %s' % mediumcheck()
+    #print 'Test sysmonitor checkall: %s' % checkall()
+    #print 'Test sysmonitor getMac: %s' % getMac()
+    #print 'Test sysmonitor getIP: %s' % getIp()
+    #print 'Test sysmonitor getSys: %s' % getSys()
+  #except Exception as e:
+  
+  # errorcode = errors.geterrorcode(e)
+  # print 'Errore [%d]: %s' % (errorcode, e)
