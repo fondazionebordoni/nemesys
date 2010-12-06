@@ -80,11 +80,11 @@ def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4):
   i = 0
   lasting = 2 ** (32 - netMask)
   for ip in ips:
-    logger.debug('Ping host %s' % ip)
     if ((ip.hex() == net.hex() or ip.hex() == bcast.hex()) and realSubnet):
       logger.debug("Saltato ip %s" % ip)
       continue
     else:
+      logger.debug('Ping host %s' % ip)
       current = sendit(ip)
       pinglist.append(current)
       current.start()
