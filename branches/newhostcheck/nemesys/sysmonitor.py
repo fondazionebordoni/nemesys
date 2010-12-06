@@ -23,7 +23,7 @@ from xml.etree import ElementTree as ET
 import paths
 import re
 import socket
-import newcheckhost
+import checkhost
 import netifaces
 
 # TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
@@ -256,7 +256,7 @@ def checkhosts(up, down, ispid):
   mask=getNetworkMask(ip)
   
   if (mask!=0):  
-    value=newcheckhost.countHosts(ip, mask, up, down, ispid, th_host)
+    value=checkhost.countHosts(ip, mask, up, down, ispid, th_host)
       
     if value <= 0:
       raise Exception('Impossibile determinare il numero di host in rete.')
