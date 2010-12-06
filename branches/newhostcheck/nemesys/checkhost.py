@@ -21,23 +21,24 @@ from threading import Thread
 import ipcalc
 import ping
 import re
-import time
+MAX = 128
 
 logger = logging.getLogger()
 
 class sendit(Thread):
   def __init__ (self, ip):
-     Thread.__init__(self)
-     self.ip = ip
-     self.status = 0
-     self.elapsed = 0
+    Thread.__init__(self)
+    self.ip = ip
+    self.status = 0
+    self.elapsed = 0
 
   def run(self):
     try:
-     self.elapsed = ping.do_one("%s" % self.ip, 1)
-     if (self.elapsed > 0):  
-       self.status = 1
+      self.elapsed = ping.do_one("%s" % self.ip, 1)
+      if (self.elapsed > 0):
+        self.status = 1
     except Exception as e:
+      logger.debug('Errore durante il ping dell\'host %s: %s' % (self.ip, e))
       self.status = 0
       pass
     
@@ -49,17 +50,17 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, th
     if bandwidthup == bandwidthdown and not bool(re.search('^10\.', ipAddress)):
       #profilo fibra
       netMask = 29
-      logger.debug("Profilo Fastweb in fibra. Modificata sottorete in %d" % netMask)
+      logger.debug("Profilo Fastweb in Fibra. Modificata sottorete in %d" % netMask)
     else:
       #profilo ADSL
       netMask = 30
-      logger.debug("Profilo Fastweb ADSL. Modificata sottorete in %d" % netMask)
+      logger.debug("Profilo Fastweb ADSL o Fibra con indirizzo 10.*. Modificata sottorete in %d" % netMask)
 
   # Controllo che non siano indirizzi pubblici, in quel caso ritorno 1, effettuo la misura
   elif not bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ipAddress)):
-		return 1
+    return 1
 
-  logger.info("%s / %d, %s, %d" % (ipAddress, netMask, realSubnet, threshold))
+  logger.info("Indirizzo: %s/%d; Realsubnet: %s; Threshold: %d" % (ipAddress, netMask, realSubnet, threshold))
 
   n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold)
   return n_host
@@ -75,35 +76,45 @@ def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4):
   net = ips.network()
   bcast = ips.broadcast()
   pinglist = []
-  logger.debug('mask: %s; rete: %s; broadcast: %s' % (netMask, net, bcast))
+
+  i = 0
+  lasting = 2 ** (32 - netMask)
   for ip in ips:
     if ((ip.hex() == net.hex() or ip.hex() == bcast.hex()) and realSubnet):
-      logger.debug("saltato ip %s" % ip)
+      logger.debug("Saltato ip %s" % ip)
       continue
     else:
+      logger.debug('Ping host %s' % ip)
       current = sendit(ip)
       pinglist.append(current)
       current.start()
-	
-  for pingle in pinglist:
-    pingle.join()
-  
-    if(pingle.status):
-      logger.debug("Trovato host: %s (in %.2f ms)" % (pingle.ip, pingle.elapsed*1000))
-      nHosts = nHosts + 1
-    if(nHosts >= threshold):
-      break
+      i += 1
+    lasting -= 1
+
+    if (i > MAX or lasting <= 0):
+      i = 0
+      for pingle in pinglist:
+        pingle.join()
       
+        if(pingle.status):
+          logger.debug("Trovato host: %s (in %.2f ms)" % (pingle.ip, pingle.elapsed * 1000))
+          nHosts = nHosts + 1
+
+      pinglist = []
+        
+    if(nHosts > threshold):
+      break
+        
   return nHosts		
 
 
 if __name__ == '__main__':
-	n = countHosts("192.168.208.0", 24, 2000, 2000, 'tlc003', 255)
-	print '%d (%d)' % (n, 0)
+  n = countHosts("10.10.0.100", 24, 2000, 2000, 'fst001', 255)
+  print '%d (%d)' % (n, 0)
 
-	n = countHosts("192.168.1.1", 24, 2000, 2000, "fst001")
-	print '%d (%d)' % (n, 0)
+  n = countHosts("192.168.1.1", 24, 2000, 2000, "fst001")
+  print '%d (%d)' % (n, 0)
 
-	#n = countHosts("192.168.208.250", 24, 200, 2000, "fst001")
-	#print '%d (%d)' % (n, 0)
+  #n = countHosts("192.168.208.250", 24, 200, 2000, "fst001")
+  #print '%d (%d)' % (n, 0)
   

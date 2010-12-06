@@ -252,11 +252,12 @@ def checkwireless():
 def checkhosts(up, down, ispid):
   
   ip=getIp();
-  
   mask=getNetworkMask(ip)
+  logger.info("Indirizzo ip/mask: %s/%d" % (ip, mask))
   
   if (mask!=0):  
     value=checkhost.countHosts(ip, mask, up, down, ispid, th_host)
+    logger.info('Trovati %d host in rete.' % value)
       
     if value <= 0:
       raise Exception('Impossibile determinare il numero di host in rete.')
@@ -266,7 +267,7 @@ def checkhosts(up, down, ispid):
 
     return True
   else:
-    raise Exception ('Impossibile determinare il numero di host in rete')
+    raise Exception ('Impossibile recuperare il valore della maschera dell\'IP: %s' % ip)
 
 def checkdisk():
 
@@ -343,7 +344,6 @@ def getIp():
   '''
   restituisce indirizzo IP del computer
   '''
-  s = socket.socket()
   s = socket.socket(socket.AF_INET)
   s.connect(('www.google.com', 80))
   value=s.getsockname()[0]
@@ -357,7 +357,7 @@ def getIp():
 
 def getNetworkMask(ip):
   '''
-   restituisce un intero rappresentante la maschera di rete, in formato CIDR, 
+  Restituisce un intero rappresentante la maschera di rete, in formato CIDR, 
 	dell'indirizzo IP in uso
   '''
   inames=netifaces.interfaces()
