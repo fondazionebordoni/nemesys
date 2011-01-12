@@ -23,16 +23,26 @@ import paths
 from xml.dom.minidom import parse
 from xml.dom.minidom import parseString
 from logger import logging
+from timeNtp import timestampNtp
+from urlparse import urlparse
+import httputils
 
 logger = logging.getLogger()
 
 MAX_DAYS = 3
 
 class Progress:
-
-  def __init__(self, create=False):
+  #self._progress = Progress(create=True,  )
+  def __init__(self, create, uprogress, certificate , httptimeout, clientid, version, md5conf):
     if not path.exists(paths.MEASURE_STATUS) and create:
+      self._progress=uprogress
+      self._certificate=certificate
+      self._httptimeout=httptimeout
+      self._clientid=clientid
+      self._md5conf=md5conf      
+      self._version=version
       self._xml = self._newxml()
+      self._xml = self._downloadprogress()
       self._saveonfile()
     else:
       self._xml = parse(paths.MEASURE_STATUS)
@@ -82,7 +92,9 @@ class Progress:
     Restituisce true se non sono trascorsi ancora MAX_DAYS dallo start delle misure
     '''
     start = self.start()
-    delta = datetime.now() - start
+    
+    delta = datetime.fromtimestamp(timestampNtp()) - start
+    #delta = datetime.now() - start
     if (delta.days > MAX_DAYS):
       return False
 
@@ -97,13 +109,15 @@ class Progress:
         return False
     return True
 
+
   def _newxml(self):
     logger.debug('Creo il file dello stato delle misure.')
     xml = parseString('<measure />')
     measure = xml.getElementsByTagName('measure')[0]
 
     start = xml.createElement('start')
-    start.appendChild(xml.createTextNode(datetime.now().isoformat()))
+    start.appendChild(xml.createTextNode(datetime.fromtimestamp(timestampNtp()).isoformat()))
+    #start.appendChild(xml.createTextNode(datetime.now().isoformat()))
     measure.appendChild(start)
 
     content = xml.createElement('content')
@@ -113,6 +127,7 @@ class Progress:
 
   def _saveonfile(self):
     f = open(paths.MEASURE_STATUS, 'w')
+    #f.write(self._xml)    
     f.write(str(self))
     f.close()
 
@@ -126,10 +141,29 @@ class Progress:
     content.appendChild(slot)
     self._saveonfile()
 
+
+
+  def _downloadprogress(self):
+    #logger.debug('Reading resource %s for client %s' % (self._scheduler, self._client))
+    url = urlparse(self._progress)
+    certificate = self._certificate
+    connection = httputils.getverifiedconnection(url=url, certificate=certificate, timeout=self._httptimeout)
+
+    try:
+      connection.request('GET', '%s?clientid=%s&version=%s&confid=%s' % (url.path, self._clientid, self._version, self._md5conf))
+      data = connection.getresponse().read()
+      print data
+    except Exception as e:
+      logger.error('Impossibile scaricare il progress xml. Errore: %s.' % e)
+      
+      return None
+    
+    return data
+
   def __str__(self):
     return self._xml.toxml('UTF-8')
 
 if __name__ == '__main__':
-  t = Progress('cli00000001')
+  t = "a"
   print t
 

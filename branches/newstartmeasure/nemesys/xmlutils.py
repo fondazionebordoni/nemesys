@@ -25,6 +25,7 @@ from task import Task
 from xml.dom import Node
 from xml.dom.minidom import parseString
 from xml.parsers.expat import ExpatError
+from timeNtp import timestampNtp
 import re
 
 tag_task = 'task'
@@ -180,6 +181,7 @@ def xml2task(data):
   except ValueError:
     logger.error('Errore durante la verifica della compatibilità dei dati orari di task')
     logger.debug('XML: %s' % data)
+    print data
     raise Exception('Le informazioni orarie per la programmazione delle misure sono errate.')
 
   # Ip
@@ -266,5 +268,6 @@ def getfinishedtime(filename):
     time = iso2datetime(getcommentvalue(filename, comment, pattern))
   except Exception as e:
     logger.error('Errore durante il recupero del valore finished della misura: %s' % e)
-    time = datetime.now()
+    time=datetime.fromtimestamp(timestampNtp())    
+    #time = datetime.now()
   return time

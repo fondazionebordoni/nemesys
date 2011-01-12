@@ -18,6 +18,7 @@
 
 from ConfigParser import ConfigParser, NoOptionError
 from client import Client
+from timeNtp import timestampNtp
 from datetime import datetime
 from deliverer import Deliverer
 from isp import Isp
@@ -153,11 +154,12 @@ class OptionParser(OptionParser):
 
 class Executer:
 
-  def __init__(self, client, scheduler, repository, polling=300.0, tasktimeout=60,
+  def __init__(self, client, scheduler, repository, uprogress, polling=300.0, tasktimeout=60,
                testtimeout=30, httptimeout=60, local=False, isprobe=True, md5conf=None, killonerror=True):
 
     self._client = client
     self._scheduler = scheduler
+    self._uprogress=uprogress
     self._repository = repository
     self._polling = polling
     self._tasktimeout = tasktimeout
@@ -179,6 +181,7 @@ class Executer:
       logger.info('Inizializzato software per sonda.')
     else:
       logger.info('Inizializzato software per misure d\'utente')
+      
 
   def test(self, taskfile=None):
 
@@ -203,7 +206,8 @@ class Executer:
     # Se non è una sonda, ma un client d'utente
     if not self._isprobe:
       # Se ho fatto 2 misure in questa ora, aspetto la prossima ora
-      now = datetime.now()
+      now=datetime.fromtimestamp(timestampNtp())   
+      #now = datetime.now()
       hour = now.hour
       made = self._progress.howmany(hour)
       if made >= MAX_MEASURES_PER_HOUR:
@@ -242,7 +246,8 @@ class Executer:
 
   def _hourisdone(self):
     if not self._isprobe:
-      now = datetime.now()
+      now=datetime.fromtimestamp(timestampNtp())         
+      #now = datetime.now()
       hour = now.hour
       made = self._progress.howmany(hour)
       if made >= MAX_MEASURES_PER_HOUR:
@@ -252,6 +257,18 @@ class Executer:
     else:
       return False
 
+  def abc(self):
+    certificate = self._client.isp.certificate
+    uprogress = self._uprogress
+    httptimeout = self._httptimeout
+    clientid = self._client.id
+    md5conf = self._md5conf
+    version=__version__
+    self._progress = Progress(create=True, uprogress=uprogress, certificate=certificate , httptimeout=httptimeout, clientid=clientid, version=version, md5conf=md5conf)
+
+    #self._progress=Progress(create=True)
+    
+  
   def loop(self):
 
     # signal.signal(signal.SIGALRM, runtimewarning)
@@ -260,8 +277,13 @@ class Executer:
     # Open socket for GUI dialog
     self._communicator = _Communicator()
     self._communicator.start()
-
-    self._progress = Progress(create=True)
+    certificate = self._client.isp.certificate
+    uprogress = self_uprogress
+    httptimeout = self._httptimeout
+    clientid = self._client.id
+    md5conf = self._md5conf
+    version=__version__
+    self._progress = Progress(create=True, uprogress=uprogress, certificate=certificate , httptimeout=httptimeout, clientid=clientid, version=version, md5conf=md5conf)
 
     # Controllo se 
     # - non sono trascorsi 3 giorni dall'inizio delle misure
@@ -306,7 +328,8 @@ class Executer:
             # Task immediato
             alarm = 5.00
           else:
-            delta = task.start - datetime.now()
+            delta = task.start - datetime.fromtimestamp(timestampNtp())            
+            #delta = task.start - datetime.now()
             alarm = delta.days * 86400 + delta.seconds
 
           if alarm > 0:
@@ -351,7 +374,8 @@ class Executer:
     '''
 
     if not self._isprobe:
-      made = self._progress.howmany(datetime.now().hour)
+      made = self._progress.howmany(datetime.fromtimestamp(timestampNtp()).hour)
+      #made = self._progress.howmany(datetime.now().hour)
       if made >= MAX_MEASURES_PER_HOUR:
         self._updatestatus(status.PAUSE)
         return
@@ -387,8 +411,9 @@ class Executer:
                  username=self._client.username, password=self._client.password)
 
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
-      id = datetime.now().strftime('%y%m%d%H%M')
-      m = Measure(id, task.server, self._client, __version__)
+      id = datetime.fromtimestamp(timestampNtp()).strftime('%y%m%d%H%M')      
+      #id = datetime.now().strftime('%y%m%d%H%M')
+      m = Measure(id, task.server, self._client, __version__, task.start)
 
       # Set task timeout alarm
       # signal.alarm(self._tasktimeout)
@@ -483,11 +508,14 @@ class Executer:
       # signal.alarm(0)
 
       # Spedisci il file al repository delle misure
-      sec = datetime.now().strftime('%S')
+      sec = datetime.fromtimestamp(timestampNtp()).strftime('%S')
+      #sec = datetime.now().strftime('%S')
       f = open('%s/measure_%s%s.xml' % (self._outbox, m.id, sec), 'w')
       f.write(str(m))
+
       # Aggiungi la data di fine in fondo al file
-      f.write('\n<!-- [finished] %s -->' % datetime.now().isoformat())
+      f.write('\n<!-- [finished] %s -->' % datetime.fromtimestamp(timestampNtp()).isoformat())
+      #f.write('\n<!-- [finished] %s -->' % datetime.now().isoformat())
       f.close()
 
       if (not self._local):
@@ -540,6 +568,7 @@ class Executer:
 
         # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
         if (code == 0):
+        
           time = getfinishedtime(filename)
           os.remove(filename)
           self._movefiles(zipname)
@@ -617,7 +646,7 @@ def main():
   client = getclient(options)
   isprobe = (client.isp.certificate != None)
   e = Executer(client=client, scheduler=options.scheduler,
-               repository=options.repository, polling=options.polling,
+               repository=options.repository, uprogress=options.uprogress, polling=options.polling,
                tasktimeout=options.tasktimeout, testtimeout=options.testtimeout,
                httptimeout=options.httptimeout, local=options.local,
                isprobe=isprobe, md5conf=md5conf, killonerror=options.killonerror)
@@ -625,6 +654,7 @@ def main():
 
   if (options.test):
     # Se è presente il flag T segui il test ed esci
+    e.abc()
     e.test(options.task)
   else:
     # Altrimenti viene eseguito come processo residente: entra nel loop infinito
@@ -720,7 +750,15 @@ def parse():
     config.set(section, option, value)
   parser.add_option('-r', '--repository', dest=option, default=value,
                     help='upload URL for deliver measures\' files [%s]' % value)
-
+  
+  option = 'progress'
+  value = 'https://finaluser.agcom244.fub.it/ProgressXML'
+  try:
+    value = config.get(section, option)
+  except (ValueError, NoOptionError):
+    config.set(section, option, value)
+  parser.add_option('-p', '--progress', dest=option, default=value,
+                    help='complete URL for request progress \' [%s]' % value)
   option = 'scheduler'
   value = 'https://finaluser.agcom244.fub.it/Scheduler'
   try:
@@ -891,5 +929,10 @@ def parse():
 def runtimewarning(signum, frame):
   raise RuntimeWarning()
 
+
 if __name__ == '__main__':
-  main()
+   main()
+
+
+
+

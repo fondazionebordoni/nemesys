@@ -25,6 +25,7 @@ from os import path
 from urlparse import urlparse
 import zipfile
 from ssl import SSLError
+from timeNtp import timestampNtp
 import os
 
 logger = logging.getLogger()
@@ -67,7 +68,8 @@ class Deliverer:
 
     # Aggiungi la data di invio in fondo al file
     with open(filename, 'a') as file:
-      file.write('\n<!-- [packed] %s -->' % datetime.datetime.now().isoformat())
+      file.write('\n<!-- [packed] %s -->' % datetime.datetime.fromtimestamp(timestampNtp()).isoformat())      
+      #file.write('\n<!-- [packed] %s -->' % datetime.datetime.now().isoformat())
 
     # Gestione della firma del file
     sign = None

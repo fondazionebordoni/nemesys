@@ -29,6 +29,7 @@ from optparse import OptionParser
 import paths
 import ping
 from proof import Proof
+from timeNtp import timestampNtp
 import timeit
 import socket
 
@@ -61,8 +62,8 @@ class Tester:
     elapsed = 0
     file = Fakefile(bytes)
     timeout = max(self._timeout, 1)
-
-    start = datetime.now() 
+    start=datetime.fromtimestamp(timestampNtp())
+    #start = datetime.now() 
 
     try:
       # TODO Il timeout non viene onorato in Python 2.6: http://bugs.python.org/issue8493
@@ -97,8 +98,8 @@ class Tester:
     elapsed = 0
     file = filename
     timeout = max(self._timeout, 1)
-
-    start = datetime.now()
+    start=datetime.fromtimestamp(timestampNtp())
+    #start = datetime.now()
 
     try:
       # TODO Il timeout non viene onorato in Python 2.6: http://bugs.python.org/issue8493
@@ -128,7 +129,8 @@ class Tester:
 
   def testping(self):
     # si utilizza funzione ping.py
-    start = datetime.now()
+    start=datetime.fromtimestamp(timestampNtp())
+    #start = datetime.now()
     elapsed = 0
 
     try:
