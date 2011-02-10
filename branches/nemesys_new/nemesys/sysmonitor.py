@@ -141,7 +141,7 @@ def checkconnections():
 
   if connActive == None or len(connActive) <= 0:
     # Non ho connessioni attive
-    logger.debug('Nessuna connessione di rete attiva.')
+    ####logger.debug('Nessuna connessione di rete attiva.')
     return True
 
   c = []
@@ -460,7 +460,7 @@ def getvalues(string, tag):
   try:
     for subelement in ET.XML(string):
       values.update({subelement.tag:subelement.text})
-      logger.debug('Recupero valori dal Profiler. %s -> %s' % (subelement.tag, subelement.text))
+      ###logger.debug('Recupero valori dal Profiler. %s -> %s' % (subelement.tag, subelement.text))
   except Exception as e:
     logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
     raise Exception('Errore durante il recupero dello stato del computer.')
