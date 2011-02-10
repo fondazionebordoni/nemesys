@@ -372,15 +372,81 @@ class Executer:
     Esegue il complesso di test prescritti dal task entro il tempo messo a
     disposizione secondo il parametro tasktimeout
     '''
-
+    '''
+    AGGIUNTO
+    ricontrollo il progress anche se ho avuto la risorsa? potrebbe essere opportuno nel caso in cui la verifica
+    sul massimo numero di misure nell'ora, riscaricare il progress
+    '''
     if not self._isprobe:
       made = self._progress.howmany(datetime.fromtimestamp(timestampNtp()).hour)
       #made = self._progress.howmany(datetime.now().hour)
       if made >= MAX_MEASURES_PER_HOUR:
+    '''
+    aggiungo il download del progress e la nuova verifica?
+    '''
         self._updatestatus(status.PAUSE)
         return
 
     bandwidth_sem.acquire()  # Acquisisci la risorsa condivisa: la banda
+
+    '''
+
+    se non è una sonda, aggiungo prequalifica della linea dopo aver controllato host e sysmonitor
+    faccio un test in up e uno in down
+
+    '''
+    if not self._isprobe:
+      try:
+        try:
+          if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
+            raise Exception('Condizioni per effettuare la misura non verificate.')
+        except Exception as e:
+          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+          if self._killonerror:
+            raise e
+          else:
+            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+            base_error = 50000
+      
+          '''faccio un unico test di down e di up'''
+        t = Tester(host=task.server, timeout=self._testtimeout, username=self._client.username,  password=self._client.password)
+
+        logger.debug('Starting prequalifica in download')
+        test = t.testftpdown(task.ftpdownpath)
+        self._bandaDown=test.bytes*8/test.value
+        logger.debug('Banda ipotizzata %d' %bandaDown)
+        #self._prequalificaDown=1
+        sleep(1)
+      except Exception as e:
+        logger.error('Task interrotto per eccezione durante la prequalifica della linea: %s' % e)
+        self._updatestatus(status.Status(status.ERROR, 'Prequalifica interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
+        'ricontrollo pc e host'
+      try:
+        try:
+          if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
+            raise Exception('Condizioni per effettuare la misura non verificate.')
+        except Exception as e:
+          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+          if self._killonerror:
+            raise e
+          else:
+            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+            base_error = 50000
+
+        logger.debug('Starting prequalifica in upload ')
+        test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
+        self._bandaUp=test.bytes*8/test.value
+        logger.debug('Upload result: %.3f' % test.value)
+        logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
+        sleep(1)
+
+      
+      except Exception as e:
+        logger.error('Task interrotto per eccezione durante la prequalifica della linea: %s' % e)
+        self._updatestatus(status.Status(status.ERROR, 'Prequalifica interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
+
+      
+      
 
     logger.info('Inizio task di misura verso il server %s' % task.server)
 
@@ -407,9 +473,7 @@ class Executer:
             self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
             base_error = 50000
 
-      t = Tester(host=task.server, timeout=self._testtimeout,
-                 username=self._client.username, password=self._client.password)
-
+      
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
       id = datetime.fromtimestamp(timestampNtp()).strftime('%y%m%d%H%M')      
       #id = datetime.now().strftime('%y%m%d%H%M')
