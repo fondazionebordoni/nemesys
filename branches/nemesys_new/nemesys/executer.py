@@ -85,8 +85,11 @@ class _Channel(asyncore.dispatcher):
     self._sender = None
     self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
     self.set_reuse_addr()
-    self.bind(self._url)
-    self.listen(1)
+    try:
+      self.bind(self._url)
+      self.listen(1)
+    except socket.error:
+      self.listen(1)
 
   def sendstatus(self, status=None):
     if self._sender:
@@ -278,7 +281,7 @@ class Executer:
     self._communicator = _Communicator()
     self._communicator.start()
     certificate = self._client.isp.certificate
-    uprogress = self_uprogress
+    uprogress = self._uprogress
     httptimeout = self._httptimeout
     clientid = self._client.id
     md5conf = self._md5conf
@@ -309,7 +312,7 @@ class Executer:
           self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure: %s' % e))
 
 
-        # Se ho scaricato un taask imposto l'allarme
+        # Se ho scaricato un taak imposto l'allarme
         if (task != None):
           logger.debug('Trovato task %s' % task)
 
@@ -381,9 +384,6 @@ class Executer:
       made = self._progress.howmany(datetime.fromtimestamp(timestampNtp()).hour)
       #made = self._progress.howmany(datetime.now().hour)
       if made >= MAX_MEASURES_PER_HOUR:
-    '''
-    aggiungo il download del progress e la nuova verifica?
-    '''
         self._updatestatus(status.PAUSE)
         return
 
@@ -413,195 +413,215 @@ class Executer:
 
         logger.debug('Starting prequalifica in download')
         test = t.testftpdown(task.ftpdownpath)
-        self._bandaDown=test.bytes*8/test.value
-        logger.debug('Banda ipotizzata %d' %bandaDown)
-        #self._prequalificaDown=1
-        sleep(1)
-      except Exception as e:
-        logger.error('Task interrotto per eccezione durante la prequalifica della linea: %s' % e)
-        self._updatestatus(status.Status(status.ERROR, 'Prequalifica interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
-        'ricontrollo pc e host'
-      try:
-        try:
-          if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
-            raise Exception('Condizioni per effettuare la misura non verificate.')
-        except Exception as e:
-          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-          if self._killonerror:
-            raise e
-          else:
-            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
-            base_error = 50000
-
-        logger.debug('Starting prequalifica in upload ')
-        test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
-        self._bandaUp=test.bytes*8/test.value
-        logger.debug('Upload result: %.3f' % test.value)
-        logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
-        sleep(1)
-
-      
-      except Exception as e:
-        logger.error('Task interrotto per eccezione durante la prequalifica della linea: %s' % e)
-        self._updatestatus(status.Status(status.ERROR, 'Prequalifica interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
-
-      
-      
-
-    logger.info('Inizio task di misura verso il server %s' % task.server)
-
-    # Area riservata per l'esecuzione dei test
-    # --------------------------------------------------------------------------
-
-    # TODO Inserire il timeout complessivo di task (da posticipare)
-
-    try:
-
-      self._updatestatus(status.PLAY)
-
-      base_error = 0
-      if not self._isprobe:
-        try:
-          if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
-            raise Exception('Condizioni per effettuare la misura non verificate.')
-  
-        except Exception as e:
-          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-          if self._killonerror:
-            raise e
-          else:
-            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
-            base_error = 50000
-
-      
-      # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
-      id = datetime.fromtimestamp(timestampNtp()).strftime('%y%m%d%H%M')      
-      #id = datetime.now().strftime('%y%m%d%H%M')
-      m = Measure(id, task.server, self._client, __version__, task.start)
-
-      # Set task timeout alarm
-      # signal.alarm(self._tasktimeout)
-
-      # Testa gli ftp down
-      for i in range(1, task.download + 1):
-
-        error = 0
-        if not self._isprobe:
-          try:
-            if not sysmonitor.mediumcheck():
-              raise Exception('Condizioni per effettuare la misura non verificate.')
-  
-          except Exception as e:
-            logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-            if self._killonerror:
-              raise e
-            else:
-              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
-              error = errors.geterrorcode(e)
-
-        logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
-        test = t.testftpdown(task.ftpdownpath)
-
-        if error > 0 or base_error > 0:
-          test.seterrorcode(error + base_error)
-
-        logger.debug('Download result: %.3f' % test.value)
-        logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
-        m.savetest(test)
-        sleep(1)
-
-      # Testa gli ftp up
-      for i in range(1, task.upload + 1):
-
-        error = 0
-        if not self._isprobe:
-          try:
-            if not sysmonitor.mediumcheck():
-              raise Exception('Condizioni per effettuare la misura non verificate.')
-  
-          except Exception as e:
-            logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-            if self._killonerror:
-              raise e
-            else:
-              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
-              error = errors.geterrorcode(e)
-
-        logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
-        test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
-
-        if error > 0 or base_error > 0:
-          test.seterrorcode(error + base_error)
-
-        logger.debug('Upload result: %.3f' % test.value)
-        logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
-        m.savetest(test)
-        sleep(1)
-
-      # Testa i ping
-      for i in range(1, task.ping + 1):
-
-        error = 0
-        if not self._isprobe:
-          try:
-            if not sysmonitor.mediumcheck():
-              raise Exception('Condizioni per effettuare la misura non verificate.')
-  
-          except Exception as e:
-            logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-            if self._killonerror:
-              raise e
-            else:
-              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
-              error = errors.geterrorcode(e)
-
-        logger.debug('Starting ping test [%d]' % i)
-        test = t.testping()
-
-        if error > 0 or base_error > 0:
-          test.seterrorcode(error + base_error)
-
-        logger.debug('Ping result: %.3f' % test.value)
-        logger.debug('Ping error: %d, %d, %d' % (base_error, error, test.errorcode))
-        if (i % task.nicmp == 0):
-          sleep(task.delay)
-        m.savetest(test)
-        sleep(1)
-
-      # Unset task timeout alarm
-      # signal.alarm(0)
-
-      # Spedisci il file al repository delle misure
-      sec = datetime.fromtimestamp(timestampNtp()).strftime('%S')
-      #sec = datetime.now().strftime('%S')
-      f = open('%s/measure_%s%s.xml' % (self._outbox, m.id, sec), 'w')
-      f.write(str(m))
-
-      # Aggiungi la data di fine in fondo al file
-      f.write('\n<!-- [finished] %s -->' % datetime.fromtimestamp(timestampNtp()).isoformat())
-      #f.write('\n<!-- [finished] %s -->' % datetime.now().isoformat())
-      f.close()
-
-      if (not self._local):
-        upload = self._upload(f.name)
-        if upload:
-          self._updatestatus(status.Status(status.READY, 'Misura terminata con successo.'))
+        logger.debug('Download result: %.3f' %test.value)       
+        logger.debug('bytes trasferiti %d, tempo trascorso %f' %(test.bytes, test.value)) 
+        
+        if (test.errorcode == 0):
+          self._bandaDown=test.bytes*8/test.value
+          
+          logger.debug('Banda ipotizzata %d' %self._bandaDown)
+    
+          task.setPathD(self._bandaDown)
         else:
-          self._updatestatus(status.Status(status.READY, 'Misura terminata ma un errore si è verificato durante il suo invio.'))
-      else:
-        self._updatestatus(status.Status(status.READY, 'Misura terminata.'))
+          raise Exception('Impossibile effettuare la prequalifica della linea')
+        sleep(1)
+      except Exception as e:
+        logger.error('Task interrotto per eccezione durante la prequalifica della linea: %s' %e)
+        self._updatestatus(status.Status(status.ERROR, 'Prequalifica interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
+        return
+        'ricontrollo pc e host'
+      
+    
+      
 
-      logger.info('Fine task di misura.')
+      logger.info('Inizio task di misura verso il server %s' % task.server)
 
-    except RuntimeWarning:
-      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta per timeout.'))
-      logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
+	    # Area riservata per l'esecuzione dei test
+	    # --------------------------------------------------------------------------
 
-    except Exception as e:
-      logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
-      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
+	    # TODO Inserire il timeout complessivo di task (da posticipare)
 
-    bandwidth_sem.release() # Rilascia la risorsa condivisa: la banda
+      try:
+
+        self._updatestatus(status.PLAY)
+        base_error = 0
+        if not self._isprobe:
+          try:
+
+            if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
+              raise Exception('Condizioni per effettuare la misura non verificate.')
+  
+          except Exception as e:
+            logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+            if self._killonerror:
+              raise e
+            else:
+              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a 	misurare.' % e))
+              base_error = 50000
+
+      
+        # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
+        id = datetime.fromtimestamp(timestampNtp()).strftime('%y%m%d%H%M')      
+        #id = datetime.now().strftime('%y%m%d%H%M')
+        m = Measure(id, task.server, self._client, __version__, task.start)
+
+        # Set task timeout alarm
+        # signal.alarm(self._tasktimeout)
+
+        # Testa gli ftp down
+        i=1
+        for i in range(1,task.download+1):
+#        while (i<task.download+1):
+          if not self._isprobe:
+            error=0
+            try:
+              if not sysmonitor.mediumcheck():
+                raise Exception('Condizioni per effettuare la misura non verificate.')
+    
+            except Exception as e:
+              logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+              if self._killonerror:
+                raise e
+              else:
+                self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a 	misurare.' % e))
+                error = errors.geterrorcode(e)
+
+          logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
+          test = t.testftpdown(task.ftpdownpath)
+
+          if error > 0 or base_error > 0:
+            test.seterrorcode(error + base_error)
+
+          logger.debug('Download result: %.3f' % test.value)
+          logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
+          m.savetest(test)
+          sleep(1)
+          
+          #inserire qui prequalifica up?
+        try:
+          try:
+            if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
+              raise Exception('Condizioni per effettuare la misura non verificate.')
+          except Exception as e:
+            logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+            if self._killonerror:
+              raise e
+            else:
+              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+              base_error = 50000
+
+          logger.debug('Starting prequalifica in upload ')
+          test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
+          logger.debug('bytes trasferiti %d, tempo trascorso %f'  %(test.bytes, test.value))
+          if (test.errorcode == 0):
+            self._bandaUp=test.bytes*8/test.value
+            logger.debug('Upload result: %.3f' %test.value)
+            logger.debug('Banda ipotizzata %d' %self._bandaUp)
+            task.setPathU(self._bandaUp)
+          else:
+            raise Exception('impossibile effettuare la prequalifica della linea.')
+          sleep(1)
+     
+        except Exception as e:
+          logger.error('Task interrotto per eccezione durante la prequalifica della linea: %s' % e)
+          self._updatestatus(status.Status(status.ERROR, 'Prequalifica interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
+          return
+          'inserire blocco altrimenti continua con i nomi vecchi'
+			
+      
+     	
+        # Testa gli ftp up
+        for i in range(1, task.upload + 1):
+
+          error = 0
+          if not self._isprobe:
+            try:
+              if not sysmonitor.mediumcheck():
+                raise Exception('Condizioni per effettuare la misura non verificate.')
+    
+            except Exception as e:
+              logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+              if self._killonerror:
+                raise e
+              else:
+                self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a 	misurare.' % e))
+                error = errors.geterrorcode(e)
+
+          logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
+          test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
+
+          if error > 0 or base_error > 0:
+            test.seterrorcode(error + base_error)
+
+          logger.debug('Upload result: %.3f' % test.value)
+          logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
+          m.savetest(test)
+          sleep(1)
+
+        # Testa i ping
+        for i in range(1, task.ping + 1):
+
+          error = 0
+          if not self._isprobe:
+            try:
+              if not sysmonitor.mediumcheck():
+                raise Exception('Condizioni per effettuare la misura non verificate.')
+    
+            except Exception as e:
+              logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+              if self._killonerror:
+	              raise e
+              else:
+                self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+                error = errors.geterrorcode(e)
+
+          logger.debug('Starting ping test [%d]' % i)
+          test = t.testping()
+
+          if error > 0 or base_error > 0:
+            test.seterrorcode(error + base_error)
+
+          logger.debug('Ping result: %.3f' % test.value)
+          logger.debug('Ping error: %d, %d, %d' % (base_error, error, test.errorcode))
+          if (i % task.nicmp == 0):
+            sleep(task.delay)
+          m.savetest(test)
+          sleep(1)
+
+	      # Unset task timeout alarm
+	      # signal.alarm(0)
+
+        # Spedisci il file al repository delle misure
+        sec = datetime.fromtimestamp(timestampNtp()).strftime('%S')
+        #sec = datetime.now().strftime('%S')
+        f = open('%s/measure_%s%s.xml' % (self._outbox, m.id, sec), 'w')
+        f.write(str(m))
+
+        # Aggiungi la data di fine in fondo al file
+        f.write('\n<!-- [finished] %s -->' % datetime.fromtimestamp(timestampNtp()).isoformat())
+        #f.write('\n<!-- [finished] %s -->' % datetime.now().isoformat())
+        f.close()
+
+        if (not self._local):
+          upload = self._upload(f.name)
+          if upload:
+            self._updatestatus(status.Status(status.READY, 'Misura terminata con successo.'))
+          else:
+            self._updatestatus(status.Status(status.READY, 'Misura terminata ma un errore si è verificato durante il suo invio.'))
+        else:
+          self._updatestatus(status.Status(status.READY, 'Misura terminata.'))
+
+        logger.info('Fine task di misura.')
+
+      except RuntimeWarning:
+        self._updatestatus(status.Status(status.ERROR, 'Misura interrotta per timeout.'))
+        logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
+
+      except Exception as e:
+        logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
+        self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
+
+      bandwidth_sem.release() # Rilascia la risorsa condivisa: la banda
 
   def _uploadall(self):
     '''
@@ -815,13 +835,13 @@ def parse():
   parser.add_option('-r', '--repository', dest=option, default=value,
                     help='upload URL for deliver measures\' files [%s]' % value)
   
-  option = 'progress'
+  option = 'uprogress'
   value = 'https://finaluser.agcom244.fub.it/ProgressXML'
   try:
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('-p', '--progress', dest=option, default=value,
+  parser.add_option('-q', '--progress', dest=option, default=value,
                     help='complete URL for request progress \' [%s]' % value)
   option = 'scheduler'
   value = 'https://finaluser.agcom244.fub.it/Scheduler'
@@ -903,6 +923,7 @@ def parse():
   value = None
   try:
     value = config.get(section, option)
+    logger.debug('il valore del profilo %s' %value)
   except (ValueError, NoOptionError):
     pass
   parser.add_option('-p', '--profileid', dest=option, default=value,
