@@ -41,8 +41,8 @@ class Progress:
       self._clientid=clientid
       self._md5conf=md5conf      
       self._version=version
-      #self._xml = self._newxml()
-      self._xml = self._downloadprogress()
+      self._xml = self._newxml()
+      #self._xml = self._downloadprogress()
       self._saveonfile()
     else:
       self._xml = parse(paths.MEASURE_STATUS)
