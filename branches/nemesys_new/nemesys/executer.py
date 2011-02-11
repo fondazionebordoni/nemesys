@@ -396,70 +396,81 @@ class Executer:
 
     '''
     if not self._isprobe:
-      try:
-        try:
-          if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
-            raise Exception('Condizioni per effettuare la misura non verificate.')
-        except Exception as e:
-          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-          if self._killonerror:
-            raise e
-          else:
-            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
-            base_error = 50000
-      
-          '''faccio un unico test di down e di up'''
-        t = Tester(host=task.server, timeout=self._testtimeout, username=self._client.username,  password=self._client.password)
+      try:       
+        systemok=False
+        maxs=0
+        flag=True
 
-        logger.debug('Starting prequalifica in download')
-        test = t.testftpdown(task.ftpdownpath)
-        logger.debug('Download result: %.3f' %test.value)       
-        logger.debug('bytes trasferiti %d, tempo trascorso %f' %(test.bytes, test.value)) 
-        
-        if (test.errorcode == 0):
-          self._bandaDown=test.bytes*8/test.value
-          
-          logger.debug('Banda ipotizzata %d' %self._bandaDown)
-    
-          task.setPathD(self._bandaDown)
+  #provo per dieci volte a reperire le informazioni sulla linea
+        while(not systemok and maxs<10 and flag):
+          maxs=maxs+1
+          try:
+            systemok=sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id)
+          except Exception as e:
+            if self._killonerror:            
+              logger.error('Interruzione durante il controllo del sistema e della rete dell\'utente: %s' %e)
+              pass
+            else:
+              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+              base_error = 50000
+              flag=False
+
+
+        if (systemok or not self._killonerror):
+          #stimo profilo down
+          t = Tester(host=task.server, timeout=self._testtimeout, username=self._client.username,  password=self._client.password)
+          logger.debug('Starting prequalifica in download')
+          test = t.testftpdown(task.ftpdownpath)
+          logger.debug('Download result: %.3f' %test.value)       
+          logger.debug('bytes trasferiti %d, tempo trascorso %f' %(test.bytes, test.value)) 
+          if (test.errorcode == 0):
+            self._bandaDown=test.bytes*8/test.value
+            logger.debug('Banda ipotizzata %d' %self._bandaDown)
+            task.setPathD(self._bandaDown)
+            
+          else:
+            raise Exception('Impossibile effettuare la prequalifica della linea')
+          sleep(1)
+
         else:
-          raise Exception('Impossibile effettuare la prequalifica della linea')
-        sleep(1)
+          logger.error('Condizioni per effettuare la misura non verificate, provo tra un pò')
+          raise e
+
       except Exception as e:
         logger.error('Task interrotto per eccezione durante la prequalifica della linea: %s' %e)
         self._updatestatus(status.Status(status.ERROR, 'Prequalifica interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
-        return
-        'ricontrollo pc e host'
+
+    logger.info('Inizio task di misura verso il server %s' % task.server)
+    systemok=False
+    maxs=0
+    flag=True
       
-    
-      
+    # Area riservata per l'esecuzione dei test
+    # --------------------------------------------------------------------------
 
-      logger.info('Inizio task di misura verso il server %s' % task.server)
+    # TODO Inserire il timeout complessivo di task (da posticipare)
+    try:
 
-	    # Area riservata per l'esecuzione dei test
-	    # --------------------------------------------------------------------------
-
-	    # TODO Inserire il timeout complessivo di task (da posticipare)
-
-      try:
-
-        self._updatestatus(status.PLAY)
-        base_error = 0
-        if not self._isprobe:
+      self._updatestatus(status.PLAY)
+      base_error = 0
+      if not self._isprobe:
+        while(not systemok and maxs<10 and flag):
+          maxs=maxs+1
           try:
-
-            if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
-              raise Exception('Condizioni per effettuare la misura non verificate.')
-  
+            systemok=sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id)
           except Exception as e:
-            logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-            if self._killonerror:
-              raise e
+            if self._killonerror:            
+              logger.error('Interruzione durante il controllo del sistema e della rete dell\'utente: %s' %e)
+              pass
             else:
-              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a 	misurare.' % e))
+              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
               base_error = 50000
+              flag=False
 
-      
+
+      if (systemok or not self._killonerror or self._isprobe):
+        #inizio i test
+        i=1
         # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
         id = datetime.fromtimestamp(timestampNtp()).strftime('%y%m%d%H%M')      
         #id = datetime.now().strftime('%y%m%d%H%M')
@@ -469,23 +480,11 @@ class Executer:
         # signal.alarm(self._tasktimeout)
 
         # Testa gli ftp down
-        i=1
-        for i in range(1,task.download+1):
-#        while (i<task.download+1):
-          if not self._isprobe:
-            error=0
-            try:
-              if not sysmonitor.mediumcheck():
-                raise Exception('Condizioni per effettuare la misura non verificate.')
-    
-            except Exception as e:
-              logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-              if self._killonerror:
-                raise e
-              else:
-                self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a 	misurare.' % e))
-                error = errors.geterrorcode(e)
-
+        #for i in range(1,task.download+1):
+          #test
+          #controllo
+        before=True
+        while (i<task.download+1):
           logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
           test = t.testftpdown(task.ftpdownpath)
 
@@ -494,8 +493,77 @@ class Executer:
 
           logger.debug('Download result: %.3f' % test.value)
           logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
-          m.savetest(test)
+          #controllo sistema
+          if not self._isprobe:
+            try:
+              systemok=sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id)
+            except Exception as e:
+              if self._killonerror:            
+                after=False
+              else:
+                self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+                base_error = 50000
+                flag=False
+          if ((before and after) or self._isprobe or not self._killonerror):
+            m.savetest(test)
+            if (i==1):
+              timestampMisura=test.start
+            i=i+1
+          elif (not after):
+            maxs=0
+            flag=True
+            while(not systemok and maxs<10 and flag):
+              maxs=maxs+1
+              try:
+                systemok=sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id)
+                before=True
+              except Exception as e:
+              if self._killonerror:            
+                logger.error('Interruzione durante il controllo del sistema e della rete dell\'utente: %s' %e)
+                pass
+              else:
+                self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+                base_error = 50000
+                flag=False       
+          
           sleep(1)
+
+#controllato fin qui! :-)
+
+
+      else:
+        logger.error('Condizioni per effettuare la misura non verificate, provo tra un pò')
+          raise e
+    except Exception as e:
+      logger.error(' errore durante i download %s' %e)
+
+        
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          
+      
+
           
           #inserire qui prequalifica up?
         try:
