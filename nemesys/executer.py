@@ -370,17 +370,18 @@ class Executer:
       self._updatestatus(status.PLAY)
 
       base_error = 0
-      try:
-        if not sysmonitor.checkall():
-          raise Exception('Condizioni per effettuare la misura non verificate.')
-
-      except Exception as e:
-        logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-        if self._killonerror:
-          raise e
-        else:
-          self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
-          base_error = 50000
+      if not self._isprobe:
+        try:
+          if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
+            raise Exception('Condizioni per effettuare la misura non verificate.')
+  
+        except Exception as e:
+          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+          if self._killonerror:
+            raise e
+          else:
+            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+            base_error = 50000
 
       t = Tester(host=task.server, timeout=self._testtimeout,
                  username=self._client.username, password=self._client.password)
@@ -396,17 +397,18 @@ class Executer:
       for i in range(1, task.download + 1):
 
         error = 0
-        try:
-          if not sysmonitor.mediumcheck():
-            raise Exception('Condizioni per effettuare la misura non verificate.')
-
-        except Exception as e:
-          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-          if self._killonerror:
-            raise e
-          else:
-            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
-            error = errors.geterrorcode(e)
+        if not self._isprobe:
+          try:
+            if not sysmonitor.mediumcheck():
+              raise Exception('Condizioni per effettuare la misura non verificate.')
+  
+          except Exception as e:
+            logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+            if self._killonerror:
+              raise e
+            else:
+              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+              error = errors.geterrorcode(e)
 
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
         test = t.testftpdown(task.ftpdownpath)
@@ -423,17 +425,18 @@ class Executer:
       for i in range(1, task.upload + 1):
 
         error = 0
-        try:
-          if not sysmonitor.mediumcheck():
-            raise Exception('Condizioni per effettuare la misura non verificate.')
-
-        except Exception as e:
-          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-          if self._killonerror:
-            raise e
-          else:
-            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
-            error = errors.geterrorcode(e)
+        if not self._isprobe:
+          try:
+            if not sysmonitor.mediumcheck():
+              raise Exception('Condizioni per effettuare la misura non verificate.')
+  
+          except Exception as e:
+            logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+            if self._killonerror:
+              raise e
+            else:
+              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+              error = errors.geterrorcode(e)
 
         logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
         test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
@@ -450,17 +453,18 @@ class Executer:
       for i in range(1, task.ping + 1):
 
         error = 0
-        try:
-          if not sysmonitor.mediumcheck():
-            raise Exception('Condizioni per effettuare la misura non verificate.')
-
-        except Exception as e:
-          logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
-          if self._killonerror:
-            raise e
-          else:
-            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
-            error = errors.geterrorcode(e)
+        if not self._isprobe:
+          try:
+            if not sysmonitor.mediumcheck():
+              raise Exception('Condizioni per effettuare la misura non verificate.')
+  
+          except Exception as e:
+            logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+            if self._killonerror:
+              raise e
+            else:
+              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+              error = errors.geterrorcode(e)
 
         logger.debug('Starting ping test [%d]' % i)
         test = t.testping()
