@@ -17,12 +17,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from server import Server
-from logger import logging
 
 class Task:
 
   def __init__(self, id, start, server, ftpdownpath, ftpuppath, upload=100,
                download=100, multiplier=5, ping=100, nicmp=4, delay=1, now=False):
+    print('prova')
     self._id = id
     self._start = start
     self._server = server
@@ -35,23 +35,23 @@ class Task:
     self._nicmp = nicmp
     self._delay = delay
     self._now = now
-    self._profilesD=[256,384,512,640,768,1000,1200,1280,1500,1600,2000,2048,3000,4000,4096,6000,6122,7000,7168,8000,8192,10000,12000,16000,20000,20480,24000,30000,34000]
+   
 	
   def setPathD(self, bandaDown):	
-  
-    for i in range(0,len(self._profilesD)):
+    self._profilesD=[256,384,512,640,768,1000,1200,1280,1500,1600,2000,2048,3000,4000,4096,6000,6122,7000,7168,8000,8192,10000,12000,16000,20000,20480,24000,30000,34000]
 
-      if (bandaDown>self._profilesD[i] and bandaDown<self._profilesD[i+1]):
-        bandaDown=self._profilesD[i+1]
-        
+  
+    for i in range(1,len(self._profilesD)):
+      if (bandaDown>self._profilesD[i-1] and bandaDown<self._profilesD[i]):
+        bandaDown=self._profilesD[i]
+    
+    if (bandaDown>self._profilesD[i]):
+        bandaDown=self._profilesD[i]
+
     ind=self._ftpdownpath.rfind('/')
     self._ftpdownpath=self._ftpdownpath[0:ind+1]+str(bandaDown)+'.rnd'
 
-  def setPathU(self, bandaUp):
-    #granularita di file	
-    ind=self._ftpuppath.rfind('/')
-    self._ftpuppath=self._ftpuppath[0:ind+1]+str(bandaUp)+'.rnd'
-		
+
 
   @property
   def id(self):
@@ -101,7 +101,6 @@ class Task:
   def now(self):
     return self._now
 
-
   def __str__(self):
     return 'id: %s; start: %s; serverip: %s; ftpdownpath: %s; ftpuppath: %s; upload: %d; download: %d; multiplier %d; ping %d; ncimp: %d; delay: %d; now %d' % \
       (self.id, self.start, self.server.ip, self.ftpdownpath, self.ftpuppath, self.upload, self.download, self.multiplier, self.ping, self.nicmp, self.delay, self.now)
@@ -110,4 +109,5 @@ if __name__ == '__main__':
   s = Server('s1', '127.0.0.1')
   p = Task(0, '2010-01-01 10:01:00', s, 'r.raw', 'upload/r.raw')
   print p
+
 

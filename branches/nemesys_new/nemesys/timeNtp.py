@@ -27,11 +27,12 @@ def timestampNtp():
   x=ntplib.NTPClient()
   try:
     TimeRX = x.request(SERVERNTP, version=3)
-    
     timestamp = TimeRX.tx_time
   except Exception as e:
     timestamp=time.time()
+
   return timestamp
+
 #  now=datetime.fromtimestamp(TimeRX.tx_time)
 
 if __name__ == '__main__':

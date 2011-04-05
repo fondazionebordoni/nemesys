@@ -54,11 +54,12 @@ class Measure:
     self._client = client
     self._version = version
     self._start = start
+    logger.info ('il valore di start: %s ' %start)
     self._xml = self.getxml()
 
   def getxml(self):
-    start = '''<measure xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='measure.xsd'/>'''
-    xml = parseString(start)
+    startx = '''<measure xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='measure.xsd'/>'''
+    xml = parseString(startx)
     measure = xml.getElementsByTagName('measure')[0]
     measure.setAttribute('id', str(self._client.id) + str(self._id))
     measure.setAttribute('start', str(self._start))

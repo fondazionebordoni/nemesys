@@ -83,18 +83,22 @@ def xml2task(data):
 
   #logger.debug('Dati da convertire in XML:\n%s' % data)
   try:
+   
     xml = parseString(data)
+    
   except ExpatError as e:
     logger.error('Il dato ricevuto non è in formato XML: %s\n%s' % (e, data))
     raise Exception('Le informazioni per la programmazione delle misure non sono corrette.')
 
   nodes = xml.getElementsByTagName(tag_task)
+  
   if (len(nodes) < 1):
     logger.debug('Nessun task trovato nell\'XML:\n%s' % xml.toxml())
     return None
 
   # Considera solo il primo task
   node = nodes[0]
+
   #logger.debug('Task trovato:\n%s' % nodedata(node))
 
   # Aggancio dei dati richiesti
@@ -178,6 +182,7 @@ def xml2task(data):
   # Date
   try:
     start = datetime.strptime(start, startformat)
+   
   except ValueError:
     logger.error('Errore durante la verifica della compatibilità dei dati orari di task')
     logger.debug('XML: %s' % data)
@@ -186,8 +191,8 @@ def xml2task(data):
 
   # Ip
   # TODO Controllare validità dati IP
-
   server = Server(serverid, serverip, servername)
+
   return Task(id=id, start=start, server=server, ftpdownpath=ftpdownpath, ftpuppath=ftpuppath, upload=upload, download=download, multiplier=multiplier, ping=ping, nicmp=nicmp, delay=delay, now=now)
 
 

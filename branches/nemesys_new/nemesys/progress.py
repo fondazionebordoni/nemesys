@@ -112,7 +112,7 @@ class Progress:
 
   def _newxml(self):
     logger.debug('Creo il file dello stato delle misure.')
-    xml = parseString('<measure />')
+    xml = parseString('<measure/>')
     measure = xml.getElementsByTagName('measure')[0]
 
     start = xml.createElement('start')
