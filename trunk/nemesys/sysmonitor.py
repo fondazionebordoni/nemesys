@@ -23,6 +23,8 @@ from xml.etree import ElementTree as ET
 import paths
 import re
 import socket
+import checkhost
+import netifaces
 
 # TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
 STRICT_CHECK = True
@@ -247,16 +249,25 @@ def checkwireless():
 
   return True
 
-def checkhosts():
+def checkhosts(up, down, ispid):
+  
+  ip=getIp();
+  mask=getNetworkMask(ip)
+  logger.info("Indirizzo ip/mask: %s/%d" % (ip, mask))
+  
+  if (mask!=0):  
+    value=checkhost.countHosts(ip, mask, up, down, ispid, th_host)
+    logger.info('Trovati %d host in rete.' % value)
+      
+    if value <= 0:
+      raise Exception('Impossibile determinare il numero di host in rete.')
 
-  value = getfloattag(tag_hosts, th_host - 1)
-  if value <= 0:
-    raise Exception('Impossibile determinare il numero di host in rete.')
+    if value > th_host:
+      raise Exception('Presenza altri host in rete.')
 
-  if value > th_host:
-    raise Exception('Presenza altri host in rete.')
-
-  return True
+    return True
+  else:
+    raise Exception ('Impossibile recuperare il valore della maschera dell\'IP: %s' % ip)
 
 def checkdisk():
 
@@ -298,15 +309,11 @@ def mediumcheck():
 
   return True
 
-def checkall():
+def checkall(up, down, ispid):
 
   mediumcheck()
   #checkdisk()
-
-  ip = getIp()
-
-  if bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
-    checkhosts()
+  checkhosts(up, down, ispid)
 
   return True
 
@@ -337,12 +344,95 @@ def getIp():
   '''
   restituisce indirizzo IP del computer
   '''
-  value = getstringtag(tag_ip, '90.147.120.2')
+  s = socket.socket(socket.AF_INET)
+  s.connect(('www.google.com', 80))
+  value=s.getsockname()[0]
+
+  #value = getstringtag(tag_ip, '90.147.120.2')
 
   if not checkipsyntax(value):
     raise Exception('Impossibile ottenere il dettaglio dell\'indirizzo IP')
 
   return value
+
+def getNetworkMask(ip):
+  '''
+  Restituisce un intero rappresentante la maschera di rete, in formato CIDR, 
+	dell'indirizzo IP in uso
+  '''
+  inames=netifaces.interfaces()
+  netmask=0
+  for i in inames:
+    addrs = netifaces.ifaddresses(i)
+    try:
+      ipinfo = addrs[socket.AF_INET][0]
+      address = ipinfo['addr'] 
+      if (address==ip):
+        netmask = ipinfo['netmask']
+        return maskConversion(netmask)
+      else:
+        pass
+    except Exception as e:
+      pass
+
+  return maskConversion(netmask)
+
+def maskConversion(netmask):
+  nip=netmask.split(".")
+  if(len(nip)==4):
+    i=0
+    bini=range(0,len(nip))
+    while i<len(nip):
+      bini[i]=int(nip[i])
+      i+=1
+    bins=convertDecToBin(bini)
+    lastChar = 1
+    maskcidr= 0
+    i=0
+    while i<4:
+      j=0
+      while j<8:
+        if (bins[i][j] == 1):
+          if (lastChar == 0):
+            return 0
+          maskcidr=maskcidr+1
+        lastChar = bins[i][j]
+        j=j+1
+      i=i+1
+  else:
+    return 0
+  return maskcidr
+
+
+def convertDecToBin(dec):
+  i=0  
+  bin=range(0,4)
+  for x in range(0,4):
+    bin[x]=range(0,8)
+  
+  for i in range(0,4):
+    j=7
+    while j>=0:
+           
+      bin[i][j] = (dec[i] & 1) + 0
+      dec[i] /= 2
+      j=j-1
+  return bin
+
+#valido per windows
+def getMask(ip):
+  ris=None
+  objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
+  objSWbemServices = objWMIService.ConnectServer(".","root\cimv2")
+  colItems = objSWbemServices.ExecQuery("SELECT * FROM Win32_NetworkAdapterConfiguration")
+  for obj in colItems:
+    ipaddrlist=obj.__getattr__('IPAddress')
+    if (ipaddrlist != None) and (ip in ipaddrlist):
+      ris = obj.__getattr__('IPSubnet')
+      break
+    else:
+      pass
+  return ris
 
 def getSys():
   '''
@@ -380,13 +470,19 @@ if __name__ == '__main__':
   from errorcoder import Errorcoder
   errors = Errorcoder(paths.CONF_ERRORS)
 
-  try:
-    print 'Test sysmonitor fastcheck: %s' % fastcheck()
-    print 'Test sysmonitor mediumcheck: %s' % mediumcheck()
-    print 'Test sysmonitor checkall: %s' % checkall()
-    print 'Test sysmonitor getMac: %s' % getMac()
-    print 'Test sysmonitor getIP: %s' % getIp()
-    print 'Test sysmonitor getSys: %s' % getSys()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
+  #try:
+  print "%s " %maskConversion("255.255.255.0")
+  print "%s " %maskConversion("255.0.255.0")
+  print "%s " %maskConversion("255.255.128.0")
+  
+  #print 'Test sysmonitor fastcheck: %s' % checkhosts(2000,2000,'fst001')
+  #print 'Test sysmonitor fastcheck: %s' % checkhosts(1000,2000,'fst001')
+    #print 'Test sysmonitor mediumcheck: %s' % mediumcheck()
+    #print 'Test sysmonitor checkall: %s' % checkall()
+    #print 'Test sysmonitor getMac: %s' % getMac()
+    #print 'Test sysmonitor getIP: %s' % getIp()
+    #print 'Test sysmonitor getSys: %s' % getSys()
+  #except Exception as e:
+  
+  # errorcode = errors.geterrorcode(e)
+  # print 'Errore [%d]: %s' % (errorcode, e)
