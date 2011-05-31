@@ -32,19 +32,21 @@ logger = logging.getLogger()
 MAX_DAYS = 3
 
 class Progress:
-  #self._progress = Progress(create=True,  )
-  def __init__(self, create, uprogress, certificate , httptimeout, clientid, version, md5conf):
-    if not path.exists(paths.MEASURE_STATUS) and create:
-      self._progress=uprogress
-      self._certificate=certificate
-      self._httptimeout=httptimeout
-      self._clientid=clientid
-      self._md5conf=md5conf      
-      self._version=version
-      self._xml = self._newxml()
-      self._xml = self._downloadprogress()
+  def __init__(self, clientid, progressurl=None):
+    if not path.exists(paths.MEASURE_STATUS):
+      logger.debug('Non trovato nessun file di progresso delle misure in %s' % paths.MEASURE_STATUS)
+      if progressurl:
+        self._progressurl = progressurl
+        self._clientid = clientid
+        try:
+          self._xml = self._downloadprogress()
+        except Exception as e:
+          self._xml = self._newxml()
+      else:
+        self._xml = self._newxml()
       self._saveonfile()
     else:
+      logger.debug('Trovato file con il progresso delle misure')
       self._xml = parse(paths.MEASURE_STATUS)
 
     logger.debug('XML con lo stato delle misure:\n%s' % self._xml.toxml())
@@ -92,9 +94,7 @@ class Progress:
     Restituisce true se non sono trascorsi ancora MAX_DAYS dallo start delle misure
     '''
     start = self.start()
-    
     delta = datetime.fromtimestamp(timestampNtp()) - start
-    #delta = datetime.now() - start
     if (delta.days > MAX_DAYS):
       return False
 
@@ -109,7 +109,6 @@ class Progress:
         return False
     return True
 
-
   def _newxml(self):
     logger.debug('Creo il file dello stato delle misure.')
     xml = parseString('<measure />')
@@ -117,7 +116,6 @@ class Progress:
 
     start = xml.createElement('start')
     start.appendChild(xml.createTextNode(datetime.fromtimestamp(timestampNtp()).isoformat()))
-    #start.appendChild(xml.createTextNode(datetime.now().isoformat()))
     measure.appendChild(start)
 
     content = xml.createElement('content')
@@ -127,7 +125,6 @@ class Progress:
 
   def _saveonfile(self):
     f = open(paths.MEASURE_STATUS, 'w')
-    #f.write(self._xml)    
     f.write(str(self))
     f.close()
 
@@ -141,29 +138,25 @@ class Progress:
     content.appendChild(slot)
     self._saveonfile()
 
-
-
   def _downloadprogress(self):
-    #logger.debug('Reading resource %s for client %s' % (self._scheduler, self._client))
-    url = urlparse(self._progress)
-    certificate = self._certificate
-    connection = httputils.getverifiedconnection(url=url, certificate=certificate, timeout=self._httptimeout)
+    url = urlparse(self._progressurl)
+    connection = httputils.getverifiedconnection(url=url, timeout=5)
 
     try:
-      connection.request('GET', '%s?clientid=%s&version=%s&confid=%s' % (url.path, self._clientid, self._version, self._md5conf))
+      connection.request('GET', '%s?clientid=%s' % (url.path, self._clientid))
       data = connection.getresponse().read()
-      print data
+      logger.debug('Dati di progress ricevuti: %s' % data)
+      xml = parseString(data)
     except Exception as e:
       logger.error('Impossibile scaricare il progress xml. Errore: %s.' % e)
-      
-      return None
+      raise Exception('Impossibile scaricare il progress xml. Errore: %s.' % e)
     
-    return data
+    return xml
 
   def __str__(self):
     return self._xml.toxml('UTF-8')
 
 if __name__ == '__main__':
-  t = "a"
+  t = Progress('cli00000001', 'https://finaluser.agcom244.fub.it/ProgressXML')
   print t
 

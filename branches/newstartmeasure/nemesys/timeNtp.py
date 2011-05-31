@@ -16,26 +16,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#from datetime import datetime
 import ntplib
 import time
-SERVERNTP="tempo.cstv.to.cnr.it"
-
-#logger = logging.getLogger()
+SERVERNTP = "tempo.cstv.to.cnr.it"
 
 def timestampNtp():
-  x=ntplib.NTPClient()
+  x = ntplib.NTPClient()
   try:
     TimeRX = x.request(SERVERNTP, version=3)
-    
     timestamp = TimeRX.tx_time
   except Exception as e:
-    timestamp=time.time()
+    timestamp = time.time()
   return timestamp
-#  now=datetime.fromtimestamp(TimeRX.tx_time)
 
 if __name__ == '__main__':
   n = timestampNtp()
   print n
-
-  

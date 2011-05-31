@@ -245,7 +245,7 @@ class TrayIcon(wx.Frame):
         Inizializza le casselle ora tutte rosse
             
         '''
-        xmldoc = Progress()
+        xmldoc = Progress(True)
 
         n = 0
         for hour in range(0, 24):

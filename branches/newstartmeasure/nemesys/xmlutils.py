@@ -95,7 +95,7 @@ def xml2task(data):
 
   # Considera solo il primo task
   node = nodes[0]
-  #logger.debug('Task trovato:\n%s' % nodedata(node))
+  logger.debug('Task trovato:\n%s' % nodedata(node))
 
   # Aggancio dei dati richiesti
   try:
@@ -269,5 +269,4 @@ def getfinishedtime(filename):
   except Exception as e:
     logger.error('Errore durante il recupero del valore finished della misura: %s' % e)
     time=datetime.fromtimestamp(timestampNtp())    
-    #time = datetime.now()
   return time

@@ -41,7 +41,6 @@ def getos():
 
 class Measure:
   def __init__(self, id, server, client, version=None, start=datetime.fromtimestamp(timestampNtp()).isoformat()):  
-  #def __init__(self, id, server, client, version=None, start=datetime.now().isoformat()):
     '''
     Costruisce un oggetto Measure utilizzando i parametri ricevuti nella
     chiamata.
@@ -139,7 +138,6 @@ class Measure:
 
     end = xml.createElement('end')
     end.appendChild(xml.createTextNode(str(datetime.fromtimestamp(timestampNtp()).isoformat())))
-    #end.appendChild(xml.createTextNode(str( datetime.now().isoformat())))
     time.appendChild(end)
 
     t.appendChild(time)
