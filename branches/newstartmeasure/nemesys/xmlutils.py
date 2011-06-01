@@ -43,6 +43,7 @@ tag_serverip = 'srvip'
 tag_servername = 'srvname'
 tag_ftpdownpath = 'ftpdownpath'
 tag_ftpuppath = 'ftpuppath'
+tag_message = 'message'
 startformat = '%Y-%m-%d %H:%M:%S'
 
 logger = logging.getLogger()
@@ -95,7 +96,7 @@ def xml2task(data):
 
   # Considera solo il primo task
   node = nodes[0]
-  logger.debug('Task trovato:\n%s' % nodedata(node))
+  #logger.debug('Task trovato:\n%s' % nodedata(node))
 
   # Aggancio dei dati richiesti
   try:
@@ -112,13 +113,16 @@ def xml2task(data):
     logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
     raise Exception('Le informazioni per la programmazione delle misure sono incomplete.')
 
-  # Aggancio dei dati opzinali
+  # Aggancio dei dati opzionali
+  servername = None
+  message = None
   try:
     servername = getvalues(node, tag_servername)
     multiplier = node.getElementsByTagName(tag_upload)[0].getAttribute(att_multiplier)
     nicmp = node.getElementsByTagName(tag_ping)[0].getAttribute(att_icmp)
     delay = node.getElementsByTagName(tag_ping)[0].getAttribute(att_delay)
     now = node.getElementsByTagName(tag_start)[0].getAttribute(att_now)
+    message = getvalues(node, tag_message)
   except IndexError:
     pass
 
@@ -188,8 +192,7 @@ def xml2task(data):
   # TODO Controllare validità dati IP
 
   server = Server(serverid, serverip, servername)
-  return Task(id=id, start=start, server=server, ftpdownpath=ftpdownpath, ftpuppath=ftpuppath, upload=upload, download=download, multiplier=multiplier, ping=ping, nicmp=nicmp, delay=delay, now=now)
-
+  return Task(id=id, start=start, server=server, ftpdownpath=ftpdownpath, ftpuppath=ftpuppath, upload=upload, download=download, multiplier=multiplier, ping=ping, nicmp=nicmp, delay=delay, now=now, message=message)
 
 def getvalues(node, tag=None):
 

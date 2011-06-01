@@ -263,7 +263,7 @@ class Executer:
     self._communicator = _Communicator()
     self._communicator.start()
 
-	# Prepare Progress file
+	  # Prepare Progress file
     progressurl = self._progressurl
     clientid = self._client.id
     self._progress = Progress(clientid=clientid, progressurl=progressurl)
@@ -272,7 +272,7 @@ class Executer:
     # - non sono trascorsi 3 giorni dall'inizio delle misure
     # - non ho finito le misure
     # - sono una sonda
-    while self._isprobe or (not self._progress.doneall() and self._progress.onair()) :
+    while self._isprobe or (not self._progress.doneall() and self._progress.onair()):
 
       bandwidth_sem.acquire() # Richiedi accesso esclusivo alla banda
 
@@ -289,24 +289,16 @@ class Executer:
         try:
           task = self._download()
         except Exception as e:
+          logger.error('Errore durante la ricezione del task per le misure: %s' % e)
           self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure: %s' % e))
 
-
-        # Se ho scaricato un taask imposto l'allarme
+        # Se ho scaricato un task imposto l'allarme
         if (task != None):
           logger.debug('Trovato task %s' % task)
 
-          # Imposta l'allarme che eseguirà i test quando richiesto dal task
-          # Prima cancella il vecchio allarme
-          try:
-            if (t != None):
-              t.cancel()
-          except NameError:
-            pass
-          except AttributeError:
-            pass
+          if (task.message != None and len(task.message) > 0):
+            self._updatestatus(Status(status.READY, message))
 
-          # Imposta il nuovo allarme
           if (task.now):
             # Task immediato
             alarm = 5.00
@@ -314,9 +306,21 @@ class Executer:
             delta = task.start - datetime.fromtimestamp(timestampNtp())            
             alarm = delta.days * 86400 + delta.seconds
 
-          if alarm > 0:
+          if alarm > 0 and (task.download > 0 or task.upload > 0 or task.ping > 0):
             logger.debug('Impostazione di un nuovo task tra: %s secondi' % alarm)
             self._updatestatus(Status(status.READY, 'Inizio misura tra pochi secondi...'))
+            # Imposta l'allarme che eseguirà i test quando richiesto dal task
+            
+            # Prima cancella il vecchio allarme
+            try:
+              if (t != None):
+                t.cancel()
+            except NameError:
+              pass
+            except AttributeError:
+              pass
+            
+            # Imposta il nuovo allarme
             t = Timer(alarm, self._dotask, [task])
             t.start()
       else:

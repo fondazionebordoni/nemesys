@@ -21,7 +21,7 @@ from server import Server
 class Task:
 
   def __init__(self, id, start, server, ftpdownpath, ftpuppath, upload=100,
-               download=100, multiplier=5, ping=100, nicmp=4, delay=1, now=False):
+               download=100, multiplier=5, ping=100, nicmp=4, delay=1, now=False, message=None):
     self._id = id
     self._start = start
     self._server = server
@@ -34,6 +34,7 @@ class Task:
     self._nicmp = nicmp
     self._delay = delay
     self._now = now
+    self._message = message
 
   @property
   def id(self):
@@ -83,9 +84,13 @@ class Task:
   def now(self):
     return self._now
 
+  @property
+  def message(self):
+    return self._message
+
   def __str__(self):
-    return 'id: %s; start: %s; serverip: %s; ftpdownpath: %s; ftpuppath: %s; upload: %d; download: %d; multiplier %d; ping %d; ncimp: %d; delay: %d; now %d' % \
-      (self.id, self.start, self.server.ip, self.ftpdownpath, self.ftpuppath, self.upload, self.download, self.multiplier, self.ping, self.nicmp, self.delay, self.now)
+    return 'id: %s; start: %s; serverip: %s; ftpdownpath: %s; ftpuppath: %s; upload: %d; download: %d; multiplier %d; ping %d; ncimp: %d; delay: %d; now %d; message: %s' % \
+      (self.id, self.start, self.server.ip, self.ftpdownpath, self.ftpuppath, self.upload, self.download, self.multiplier, self.ping, self.nicmp, self.delay, self.now, self.message)
 
 if __name__ == '__main__':
   s = Server('s1', '127.0.0.1')
