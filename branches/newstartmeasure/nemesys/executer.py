@@ -543,6 +543,7 @@ class Executer:
       response = self._deliverer.upload(zipname)
 
       if (response != None):
+        # TODO ricevi progress.xml aggiornato in risposta
         (code, message) = self._parserepositorydata(response)
         code = int(code)
         logger.info('Risposta dal server di upload: [%d] %s' % (code, message))
