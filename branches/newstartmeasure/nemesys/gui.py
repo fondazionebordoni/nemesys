@@ -124,7 +124,7 @@ class _Channel(dispatcher):
         except Exception as e:
           logger.error('Errore durante l\'aggiornamento dello stato %s' % e)
 
-class TrayIcon(wx.Frame):
+class Gui(wx.Frame):
 
     def __init__(self):
         
@@ -132,8 +132,8 @@ class TrayIcon(wx.Frame):
         self._status = Status(status.ERROR, "error")
         wx.Frame.__init__ (self, None, -1, "Ne.Me.Sys.", size=(630, 370), style=(wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX)))
         panel = wx.Panel(self, -1)
-        self.Bind(wx.EVT_PAINT, self.PaintInit)
-        
+        panel.SetBackgroundColour("#ededed")
+
         xmldoc = Progress(True)
         inizioMisure = xmldoc.start()  # inizioMisure è datetime
         
@@ -150,7 +150,7 @@ class TrayIcon(wx.Frame):
         logo1 = wx.StaticBitmap(panel, -1, wx.BitmapFromImage(logo1), pos=(50, 20))
         
         #Misura Internet
-        st1 = wx.StaticText(panel, -1, 'Ne.Me.Sys.', (165, 15), (300, -1), wx.ALIGN_CENTER)
+        st1 = wx.StaticText(panel, -1, 'Ne.Me.Sys.', (165, 15), (600, -1), wx.ALIGN_CENTER)
         st1.SetFont(wx.Font(25, wx.SWISS, wx.NORMAL, wx.BOLD))
         
         #Logo 2
@@ -170,7 +170,7 @@ class TrayIcon(wx.Frame):
         box.Add(self.message, 1, wx.ALL, 5)
 
         #Stato Misura
-        self.helper = wx.StaticText (panel, -1, "Si ricorda che la misurazione va completata entro tre giorni dal suo inizio", (15, 190), (600, -1), wx.ALIGN_CENTER)
+        self.helper = wx.StaticText(panel, -1, "Si ricorda che la misurazione va completata entro tre giorni dal suo inizio", (15, 190), (600, -1), wx.ALIGN_CENTER)
                 
         # self.CreateStatusBar() # A StatusBar in the bottom of the window
 
@@ -192,8 +192,10 @@ class TrayIcon(wx.Frame):
         # Set events.
         self.Bind(wx.EVT_MENU, self.OnAbout, menuAbout)
         self.Bind(wx.EVT_MENU, self.OnExit, menuExit)
-
-        self.Show(True)
+        self.Bind(wx.EVT_PAINT, self.PaintInit)
+        self.PaintInit(None)
+        
+        #self.Show(True)
         self.Center()
         
         self._controller = _Controller(LISTENING_URL, self)
@@ -241,33 +243,33 @@ class TrayIcon(wx.Frame):
         return message      
     
     def PaintInit(self, event):
-        '''
-        Inizializza le casselle ora tutte rosse
-            
-        '''
-        xmldoc = Progress(True)
-
-        n = 0
-        for hour in range(0, 24):
-            color = "red"
-            if xmldoc.isdone(hour):
-                color = "green"
-                n = n + 1
-            self.PaintHour(hour, color)
-        logger.debug('Aggiorno lo stato di avanzamento')
-        self.avanzamento.SetLabel('Stato di Avanzamento: %d test su 24' % n)
+      '''
+      Inizializza le casselle ora tutte rosse
+          
+      '''
+      xmldoc = Progress(True)
+      dc = wx.PaintDC(self)
+  
+      n = 0
+      for hour in range(0, 24):
+          color = "red"
+          if xmldoc.isdone(hour):
+              color = "green"
+              n = n + 1
+          self.PaintHour(dc, hour, color)
+      logger.debug('Aggiorno lo stato di avanzamento')
+      self.avanzamento.SetLabel('Stato di Avanzamento: %d test su 24' % n)
 
     
-    def PaintHour(self, hour, color):
-        '''
-        Aggiorna la casella allora specificata con il colore specificatio
-        '''
-        dc = wx.PaintDC(self)
-        dc.SetPen(wx.Pen('#d4d4d4'))
-        
-        first = 15
-        dc.SetBrush(wx.Brush(color))
-        dc.DrawRectangle(first + (hour * 25), 155, 25, 25)
+    def PaintHour(self, dc, hour, color):
+      '''
+      Aggiorna la casella allora specificata con il colore specificatio
+      '''
+      dc.SetPen(wx.Pen('#d4d4d4'))
+      
+      first = 15
+      dc.SetBrush(wx.Brush(color))
+      dc.DrawRectangle(first + (hour * 25), 155, 25, 25)
         
         
     def OnAbout(self, e):
@@ -282,7 +284,7 @@ class TrayIcon(wx.Frame):
 
 
 if __name__ == '__main__':
-    app = wx.PySimpleApp ()
-    frame = TrayIcon ()
-    frame.Show (True)
-    app.MainLoop ()
+    app = wx.PySimpleApp()
+    frame = Gui()
+    frame.Show(True)
+    app.MainLoop()
