@@ -313,9 +313,9 @@ def getdate():
 
 # end of class MyFrame
 if __name__ == "__main__":
+  app = wx.PySimpleApp(0)
   if platform == 'win32':
     wx.CallLater(200, sleeper)
-  app = wx.PySimpleApp(0)
   wx.InitAllImageHandlers()
   frame_1 = MyFrame(None, -1, "")
   app.SetTopWindow(frame_1)
