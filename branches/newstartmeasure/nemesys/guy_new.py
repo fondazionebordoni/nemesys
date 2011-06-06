@@ -40,6 +40,10 @@ NOTIFY_COLORS = ('yellow', 'black')
 WAIT_RECONNECT = 15 # secondi
 logger = logging.getLogger()
 
+def sleeper():
+    sleep(.001)
+    return 1 # don't forget this otherwise the timeout will be removed
+
 class _Controller(Thread):
 
   def __init__(self, url, trayicon):
@@ -307,6 +311,8 @@ def getdate():
 
 # end of class MyFrame
 if __name__ == "__main__":
+  if platform == 'win32':
+    timeout_add(200, sleeper)
   app = wx.PySimpleApp(0)
   wx.InitAllImageHandlers()
   frame_1 = MyFrame(None, -1, "")
