@@ -314,7 +314,7 @@ def getdate():
 # end of class MyFrame
 if __name__ == "__main__":
   if platform == 'win32':
-    timeout_add(200, sleeper)
+    wx.CallLater(200, sleeper)
   app = wx.PySimpleApp(0)
   wx.InitAllImageHandlers()
   frame_1 = MyFrame(None, -1, "")
