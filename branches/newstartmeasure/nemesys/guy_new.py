@@ -17,11 +17,11 @@ class MyFrame(wx.Frame):
     self.SetMenuBar(self.frame_1_menubar)
     # Menu Bar end
     self.panel_1 = wx.Panel(self, -1)
-    self.bitmap_1 = wx.StaticBitmap(self.panel_1, -1, wx.Bitmap("/home/gpantanetti/src/nemesys-newstartmeasure/icons/logo_misurainternet.png", wx.BITMAP_TYPE_ANY))
+    self.bitmap_1 = wx.StaticBitmap(self.panel_1, -1, wx.Bitmap("../icons/logo_misurainternet.png", wx.BITMAP_TYPE_ANY))
     self.label_1 = wx.StaticText(self.panel_1, -1, "Ne.me.sys", style=wx.ALIGN_CENTRE)
     self.label_2 = wx.StaticText(self.panel_1, -1, "Inizio test di misura: <inserire data>\nLa misurazione va completata entro tre giorni dal suo inizio", style=wx.ALIGN_CENTRE)
     self.label_3 = wx.StaticText(self.panel_1, -1, "Stato di avanzamento: X test su 24", style=wx.ALIGN_CENTRE)
-    self.bitmap_2 = wx.StaticBitmap(self.panel_1, -1, wx.Bitmap("/home/gpantanetti/src/nemesys-newstartmeasure/icons/logo_nemesys.png", wx.BITMAP_TYPE_ANY))
+    self.bitmap_2 = wx.StaticBitmap(self.panel_1, -1, wx.Bitmap("../icons/logo_nemesys.png", wx.BITMAP_TYPE_ANY))
     self.text_ctrl_1 = wx.TextCtrl(self.panel_1, -1, "", style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL | wx.TE_RICH | wx.TE_RICH2 | wx.NO_BORDER)
     self.sizer_5_staticbox = wx.StaticBox(self.panel_1, -1, "Dettaglio di stato della misura")
 
@@ -44,11 +44,11 @@ class MyFrame(wx.Frame):
   def __set_properties(self):
     # begin wxGlade: MyFrame.__set_properties
     self.SetTitle("Ne.me.sys")
-    self.SetSize((600, 380))
+    self.SetSize((600, 300))
     self.label_1.SetFont(wx.Font(26, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
     self.text_ctrl_1.SetMinSize((580, -1))
     #self.text_ctrl_1.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
-    self.panel_1.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
+    #self.panel_1.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
     # end wxGlade
 
   def __do_layout(self):
@@ -68,12 +68,16 @@ class MyFrame(wx.Frame):
     sizer_3.Add(self.bitmap_2, 0, wx.LEFT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 10)
     sizer_2.Add(sizer_3, 1, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
 
-    grid_sizer_1 = wx.GridSizer(2, 24, 2, 8)
+    self._grid = wx.GridSizer(2, 24, 2, 6)
     for i in range (0, 24):
       self.label_hour = wx.StaticText(self.panel_1, -1, "%2d" % i)
-      grid_sizer_1.Add(self.label_hour, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+      self._grid.Add(self.label_hour, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
 
-    sizer_2.Add(grid_sizer_1, 1, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 8)
+    for i in range (24, 48):    
+      self.bitmap_hour = wx.StaticBitmap(self.panel_1, -1, wx.Bitmap("../icons/red.png", wx.BITMAP_TYPE_ANY))
+      self._grid.Add(self.bitmap_hour, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+
+    sizer_2.Add(self._grid, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 8)
     sizer_5.Add(self.text_ctrl_1, 1, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
     sizer_2.Add(sizer_5, 2, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 10)
     self.panel_1.SetSizer(sizer_2)
@@ -88,8 +92,6 @@ class MyFrame(wx.Frame):
         
     '''
     xmldoc = Progress(True)
-    dc.SetBackground(wx.Brush(self.GetBackgroundColour()))
-    dc.Clear()
 
     n = 0
     for hour in range(0, 24):
@@ -97,22 +99,24 @@ class MyFrame(wx.Frame):
         if xmldoc.isdone(hour):
             color = "green"
             n = n + 1
-        self.PaintHour(dc, hour, color)
-    #logger.debug('Aggiorno lo stato di avanzamento')
-    self.label_3.SetLabel('Stato di Avanzamento: %d test su 24' % n)
+        self.PaintHour(hour, color)
+    #for i in range (24, 48):    
+    #  self.bitmap_hour = wx.StaticBitmap(self.panel_1, -1, wx.Bitmap("../icons/red.png", wx.BITMAP_TYPE_ANY))
+    #  self._grid.Add(self.bitmap_hour, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
 
-  def PaintHour(self, dc, hour, color):
+    #logger.debug('Aggiorno lo stato di avanzamento')
+    if (n != 0):
+      self.label_3.SetLabel('Stato di avanzamento: %d test su 24' % n)
+    else:
+      self.label_3.SetLabel('Stato di avanzamento: nessun test effettuato su 24')
+
+  def PaintHour(self, hour, color):
     '''
     Aggiorna la casella allora specificata con il colore specificatio
     '''
-    first = 15
-    dc.SetPen(wx.Pen('#d4d4d4'))
-  
-    dc.SetBrush(wx.Brush(color))
-    dc.DrawRectangle(first + (hour * 25), 155, 25, 25)
+    self._grid._ReplaceItem()
 
 # end of class MyFrame
-
 if __name__ == "__main__":
   app = wx.PySimpleApp(0)
   wx.InitAllImageHandlers()
