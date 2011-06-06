@@ -23,6 +23,7 @@ from logger import logging
 from os import path
 from progress import Progress, Progress
 from status import Status
+from sys import platform
 from threading import Event, Thread
 from time import sleep
 from timeNtp import timestampNtp
@@ -34,6 +35,7 @@ import socket
 import status
 import wx
 import wx
+
 
 LISTENING_URL = ('127.0.0.1', 21401)
 NOTIFY_COLORS = ('yellow', 'black')
