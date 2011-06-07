@@ -140,7 +140,8 @@ class MyFrame1 ( wx.Frame ):
     self.xmldoc = Progress(True)
 
     wx.Frame.__init__ ( self, None, id = wx.ID_ANY, title = 'Ne.me.sys.', pos = wx.DefaultPosition, size = wx.Size( 750,300 ), style =  wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX) )
-    
+    self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
+
     self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
     
     bSizer2 = wx.BoxSizer( wx.VERTICAL )
