@@ -245,7 +245,6 @@ class Gui(wx.Frame):
     def PaintInit(self, event):
       '''
       Inizializza le casselle ora tutte rosse
-          
       '''
       xmldoc = Progress(True)
       dc = wx.PaintDC(self)
@@ -259,7 +258,6 @@ class Gui(wx.Frame):
           self.PaintHour(dc, hour, color)
       logger.debug('Aggiorno lo stato di avanzamento')
       self.avanzamento.SetLabel('Stato di Avanzamento: %d test su 24' % n)
-
     
     def PaintHour(self, dc, hour, color):
       '''
@@ -270,17 +268,16 @@ class Gui(wx.Frame):
       first = 15
       dc.SetBrush(wx.Brush(color))
       dc.DrawRectangle(first + (hour * 25), 155, 25, 25)
-        
-        
+
     def OnAbout(self, e):
-        # A message dialog box with an OK button. wx.OK is a standard ID in wxWidgets.
-        dlg = wx.MessageDialog(self, "Copyright (c) 2010 Fondazione Ugo Bordoni \nEmail: info@fub.it", "Ne.Me.Sys. (Network Measurement System) \nHomepage del progetto: www.misurainternet.it", wx.OK)
-        dlg.ShowModal() # Show it
-        dlg.Destroy() # finally destroy it when finished.
+      # A message dialog box with an OK button. wx.OK is a standard ID in wxWidgets.
+      dlg = wx.MessageDialog(self, "Copyright (c) 2010 Fondazione Ugo Bordoni \nEmail: info@fub.it", "Ne.Me.Sys. (Network Measurement System) \nHomepage del progetto: www.misurainternet.it", wx.OK)
+      dlg.ShowModal() # Show it
+      dlg.Destroy() # finally destroy it when finished.
 
     def OnExit(self, e):
-        self._controller.join()
-        self.Close(True)  # Close the frame.
+      self._controller.join()
+      self.Close(True)  # Close the frame.
 
 
 if __name__ == '__main__':

@@ -219,7 +219,7 @@ def nodedata(node):
 def xml2status(data):
   if (len(data) < 1):
     logger.error('Nessun dato da processare')
-    raise Exception('Il processo che effettua le misure non invia informazioni sul suo stato.');
+    raise Exception('Il processo che effettua le misure non invia informazioni, provare a riavviare il programma');
 
   #logger.debug('Dati da convertire in XML:\n%s' % data)
   try:

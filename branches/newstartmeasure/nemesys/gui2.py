@@ -139,7 +139,7 @@ class MyFrame1 ( wx.Frame ):
     self._status = Status(status.ERROR, "error")
     self.xmldoc = Progress(True)
 
-    wx.Frame.__init__ ( self, None, id = wx.ID_ANY, title = 'Ne.me.sys.', pos = wx.DefaultPosition, size = wx.Size( 750,300 ), style =  wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX) )
+    wx.Frame.__init__ ( self, None, id = wx.ID_ANY, title = 'Ne.Me.Sys.', pos = wx.DefaultPosition, size = wx.Size( 750,350 ), style =  wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX) )
     self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
 
     self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
@@ -153,7 +153,7 @@ class MyFrame1 ( wx.Frame ):
     
     bSizer4 = wx.BoxSizer( wx.VERTICAL )
     
-    self.label_nemesys = wx.StaticText( self, wx.ID_ANY, u"Ne.me.sys", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
+    self.label_nemesys = wx.StaticText( self, wx.ID_ANY, u"Ne.Me.Sys", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
     self.label_nemesys.Wrap( -1 )
     self.label_nemesys.SetFont( wx.Font( 16, 74, 90, 92, False, "Sans" ) )
     bSizer4.Add( self.label_nemesys, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
@@ -170,6 +170,10 @@ class MyFrame1 ( wx.Frame ):
     self.label_avanzamento.Wrap( -1 )
     bSizer4.Add( self.label_avanzamento, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
     
+    self.label_fasce = wx.StaticText( self, wx.ID_ANY, u"Dettaglio misure per fasce orarie:", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
+    self.label_fasce.Wrap( -1 )
+    bSizer4.Add( self.label_fasce, 0, wx.TOP|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+
     bSizer3.Add( bSizer4, 1, wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 5 )
     
     self.m_bitmap2 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap( u"icons/logo_nemesys.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
@@ -190,7 +194,7 @@ class MyFrame1 ( wx.Frame ):
     
     bSizer2.Add( self._grid, 0, wx.ALIGN_CENTER_HORIZONTAL, 5 )
     
-    sbSizer1 = wx.StaticBoxSizer( wx.StaticBox( self, wx.ID_ANY, u"label" ), wx.VERTICAL )
+    sbSizer1 = wx.StaticBoxSizer( wx.StaticBox( self, wx.ID_ANY, u"Dettaglio stato Ne.Me.Sys." ), wx.VERTICAL )
     
     self.messages_area = wx.TextCtrl( self, wx.ID_ANY, "[%s] Sto contattando il servizio di misura attendere qualche secondo." % getdate().strftime('%c'), wx.DefaultPosition, wx.DefaultSize, wx.HSCROLL|wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.TE_RICH2|wx.TE_WORDWRAP|wx.HSCROLL|wx.NO_BORDER|wx.VSCROLL )
     sbSizer1.Add( self.messages_area, 1, wx.ALL|wx.EXPAND, 5 )
@@ -254,22 +258,22 @@ class MyFrame1 ( wx.Frame ):
     messaggio.
     '''
     logger.debug('Inizio aggiornamento stato')
-    #if (self._status.icon != currentstatus.icon or self._status.message != currentstatus.message):
+    if (self._status.icon != currentstatus.icon or self._status.message != currentstatus.message):
       
-    hour = getdate().hour
-    logger.debug('Ora attuale: %d' % hour)
-    
-    if (bool(re.search(status.PLAY.message, currentstatus.message))):
-        self.PaintHour(hour, "yellow")
-    elif (bool(re.search('Misura terminata|Misura interrotta', currentstatus.message))):
-        self.PaintInit(None)
-    elif (bool(re.search(status.FINISHED.message, currentstatus.message))):
-        self.helper.SetLabel("Misura completa! Visita la tua area personale sul sito\nwww.misurainternet.it per scaricare il pdf delle misure")
+      hour = getdate().hour
+      logger.debug('Ora attuale: %d' % hour)
       
-    message = self.getformattedmessage(currentstatus.message)
-    self.messages_area.AppendText("\n[%s] %s" % (getdate().strftime('%c'), message))
-      
-    self._status = currentstatus
+      if (bool(re.search(status.PLAY.message, currentstatus.message))):
+          self.PaintHour(hour, "yellow")
+      elif (bool(re.search('Misura terminata|Misura interrotta', currentstatus.message))):
+          self.PaintInit(None)
+      elif (bool(re.search(status.FINISHED.message, currentstatus.message))):
+          self.helper.SetLabel("Misura completa! Visita la tua area personale sul sito\nwww.misurainternet.it per scaricare il pdf delle misure")
+        
+      message = self.getformattedmessage(currentstatus.message)
+      self.messages_area.AppendText("\n[%s] %s" % (getdate().strftime('%c'), message))
+        
+      self._status = currentstatus
       
   def getformattedmessage(self, message):
     logger.debug('Instanzio HTMLParser')
