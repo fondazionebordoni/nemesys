@@ -25,6 +25,7 @@ from task import Task
 from xml.dom import Node
 from xml.dom.minidom import parseString
 from xml.parsers.expat import ExpatError
+from timeNtp import timestampNtp
 import re
 
 tag_task = 'task'
@@ -42,6 +43,7 @@ tag_serverip = 'srvip'
 tag_servername = 'srvname'
 tag_ftpdownpath = 'ftpdownpath'
 tag_ftpuppath = 'ftpuppath'
+tag_message = 'message'
 startformat = '%Y-%m-%d %H:%M:%S'
 
 logger = logging.getLogger()
@@ -111,13 +113,16 @@ def xml2task(data):
     logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
     raise Exception('Le informazioni per la programmazione delle misure sono incomplete.')
 
-  # Aggancio dei dati opzinali
+  # Aggancio dei dati opzionali
+  servername = None
+  message = None
   try:
     servername = getvalues(node, tag_servername)
     multiplier = node.getElementsByTagName(tag_upload)[0].getAttribute(att_multiplier)
     nicmp = node.getElementsByTagName(tag_ping)[0].getAttribute(att_icmp)
     delay = node.getElementsByTagName(tag_ping)[0].getAttribute(att_delay)
     now = node.getElementsByTagName(tag_start)[0].getAttribute(att_now)
+    message = getvalues(node, tag_message)
   except IndexError:
     pass
 
@@ -180,14 +185,14 @@ def xml2task(data):
   except ValueError:
     logger.error('Errore durante la verifica della compatibilità dei dati orari di task')
     logger.debug('XML: %s' % data)
+    print data
     raise Exception('Le informazioni orarie per la programmazione delle misure sono errate.')
 
   # Ip
   # TODO Controllare validità dati IP
 
   server = Server(serverid, serverip, servername)
-  return Task(id=id, start=start, server=server, ftpdownpath=ftpdownpath, ftpuppath=ftpuppath, upload=upload, download=download, multiplier=multiplier, ping=ping, nicmp=nicmp, delay=delay, now=now)
-
+  return Task(id=id, start=start, server=server, ftpdownpath=ftpdownpath, ftpuppath=ftpuppath, upload=upload, download=download, multiplier=multiplier, ping=ping, nicmp=nicmp, delay=delay, now=now, message=message)
 
 def getvalues(node, tag=None):
 
@@ -214,7 +219,7 @@ def nodedata(node):
 def xml2status(data):
   if (len(data) < 1):
     logger.error('Nessun dato da processare')
-    raise Exception('Il processo che effettua le misure non invia informazioni sul suo stato.');
+    raise Exception('Il processo che effettua le misure non invia informazioni, provare a riavviare il programma');
 
   #logger.debug('Dati da convertire in XML:\n%s' % data)
   try:
@@ -232,13 +237,13 @@ def xml2status(data):
 
   # Aggancio dei dati richiesti
   try:
-    icon = getvalues(node, 'icon')
+    color = getvalues(node, 'color')
     message = getvalues(node, 'message')
   except IndexError:
     logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
     raise Exception('I messaggi di stato del processo che effettua le misure non contengono tutte le informazioni richieste.');
 
-  return Status(icon, message)
+  return Status(color, message)
 
 def getcommentvalue(filename, comment, pattern='.*'):
   '''
@@ -266,5 +271,5 @@ def getfinishedtime(filename):
     time = iso2datetime(getcommentvalue(filename, comment, pattern))
   except Exception as e:
     logger.error('Errore durante il recupero del valore finished della misura: %s' % e)
-    time = datetime.now()
+    time=datetime.fromtimestamp(timestampNtp())    
   return time

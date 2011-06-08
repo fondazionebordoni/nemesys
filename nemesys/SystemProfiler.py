@@ -23,6 +23,6 @@ def systemProfiler(file, d):
   data = ''
    
   if Path.isfile(paths.RESULTS):
-     data = open(paths.RESULTS).read()
+    data = open(paths.RESULTS).read()
   
   return data

@@ -11,7 +11,7 @@
 #  2007-10-25: Initial writeup, because I could not find any other workable
 #              implementation.
 #
-# TODO
+# TODO:
 #  * add CLI parser
 #
 # REFERENCES
