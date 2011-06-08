@@ -502,11 +502,11 @@ class Executer:
       if (not self._local):
         upload = self._upload(f.name)
         if upload:
-          self._updatestatus(status.Status(status.READY, 'Misura terminata con successo.'))
+          self._updatestatus(status.Status(status.OK, 'Misura terminata con successo.'))
         else:
-          self._updatestatus(status.Status(status.READY, 'Misura terminata ma un errore si è verificato durante il suo invio.'))
+          self._updatestatus(status.Status(status.ERROR, 'Misura terminata ma un errore si è verificato durante il suo invio.'))
       else:
-        self._updatestatus(status.Status(status.READY, 'Misura terminata.'))
+        self._updatestatus(status.Status(status.OK, 'Misura terminata.'))
 
       logger.info('Fine task di misura.')
 

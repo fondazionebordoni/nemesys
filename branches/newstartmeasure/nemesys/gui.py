@@ -20,8 +20,7 @@ from asyncore import dispatcher, loop
 from datetime import datetime
 from locale import LC_ALL, setlocale
 from logger import logging
-from os import path
-from progress import Progress, Progress
+from progress import Progress
 from status import Status
 from sys import platform
 from threading import Event, Thread
@@ -29,7 +28,6 @@ from time import sleep
 from timeNtp import timestampNtp
 from xmlutils import xml2status
 import HTMLParser
-import paths
 import re
 import socket
 import status
@@ -312,6 +310,8 @@ def getdate():
 
 if __name__ == '__main__':
   app = wx.PySimpleApp()
+  if platform == 'win32':
+    wx.CallLater(200, sleeper)
   frame = MyFrame()
   frame.Show()
   app.MainLoop()

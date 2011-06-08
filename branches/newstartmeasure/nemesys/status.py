@@ -64,6 +64,7 @@ PAUSE = Status('dark grey', 'Ne.Me.Sys. non deve effettuare misure nell\'ora cor
 PLAY = Status('orange', 'Ne.Me.Sys. sta effettuando una misura.')
 FINISHED = Status('blue', 'Ne.Me.Sys. ha terminato di fare i test sulla linea ADSL. Controllare lo stato complessivo della misura.')
 READY = Status('dark grey', 'Ne.Me.Sys. pronto e in attesa di eseguire una misura.')
+OK = Status('dark green', 'Misura terminata con successo.')
 LOGO = Status('purple', 'Ne.Me.Sys. (Network Measurement System). Sistema collegato e funzionante.')
 LOGOSTATOMISURA2 = Status('logo_nemesys.png', 'Ne.Me.Sys. (Network Measurement System).')
 LOGOSTATOMISURA1 = Status('logo_misurainternet.png', 'Misura Internet.')
