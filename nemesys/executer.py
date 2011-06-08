@@ -18,6 +18,7 @@
 
 from ConfigParser import ConfigParser, NoOptionError
 from client import Client
+from timeNtp import timestampNtp
 from datetime import datetime
 from deliverer import Deliverer
 from isp import Isp
@@ -53,7 +54,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-__version__ = '1.6.5.11'
+__version__ = '1.7'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
@@ -153,7 +154,7 @@ class OptionParser(OptionParser):
 
 class Executer:
 
-  def __init__(self, client, scheduler, repository, polling=300.0, tasktimeout=60,
+  def __init__(self, client, scheduler, repository, progressurl, polling=300.0, tasktimeout=60,
                testtimeout=30, httptimeout=60, local=False, isprobe=True, md5conf=None, killonerror=True):
 
     self._client = client
@@ -167,6 +168,7 @@ class Executer:
     self._isprobe = isprobe
     self._md5conf = md5conf
     self._killonerror = killonerror
+    self._progressurl = progressurl
 
     self._outbox = paths.OUTBOX
     self._sent = paths.SENT
@@ -203,7 +205,7 @@ class Executer:
     # Se non è una sonda, ma un client d'utente
     if not self._isprobe:
       # Se ho fatto 2 misure in questa ora, aspetto la prossima ora
-      now = datetime.now()
+      now = datetime.fromtimestamp(timestampNtp())   
       hour = now.hour
       made = self._progress.howmany(hour)
       if made >= MAX_MEASURES_PER_HOUR:
@@ -242,7 +244,7 @@ class Executer:
 
   def _hourisdone(self):
     if not self._isprobe:
-      now = datetime.now()
+      now = datetime.fromtimestamp(timestampNtp())         
       hour = now.hour
       made = self._progress.howmany(hour)
       if made >= MAX_MEASURES_PER_HOUR:
@@ -261,13 +263,16 @@ class Executer:
     self._communicator = _Communicator()
     self._communicator.start()
 
-    self._progress = Progress(create=True)
+	  # Prepare Progress file
+    progressurl = self._progressurl
+    clientid = self._client.id
+    self._progress = Progress(clientid=clientid, progressurl=progressurl)
 
     # Controllo se 
     # - non sono trascorsi 3 giorni dall'inizio delle misure
     # - non ho finito le misure
     # - sono una sonda
-    while self._isprobe or (not self._progress.doneall() and self._progress.onair()) :
+    while self._isprobe or (not self._progress.doneall() and self._progress.onair()):
 
       bandwidth_sem.acquire() # Richiedi accesso esclusivo alla banda
 
@@ -284,34 +289,38 @@ class Executer:
         try:
           task = self._download()
         except Exception as e:
+          logger.error('Errore durante la ricezione del task per le misure: %s' % e)
           self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure: %s' % e))
 
-
-        # Se ho scaricato un taask imposto l'allarme
+        # Se ho scaricato un task imposto l'allarme
         if (task != None):
           logger.debug('Trovato task %s' % task)
 
-          # Imposta l'allarme che eseguirà i test quando richiesto dal task
-          # Prima cancella il vecchio allarme
-          try:
-            if (t != None):
-              t.cancel()
-          except NameError:
-            pass
-          except AttributeError:
-            pass
+          if (task.message != None and len(task.message) > 0):
+            self._updatestatus(Status(status.READY, task.message))
 
-          # Imposta il nuovo allarme
           if (task.now):
             # Task immediato
             alarm = 5.00
           else:
-            delta = task.start - datetime.now()
+            delta = task.start - datetime.fromtimestamp(timestampNtp())            
             alarm = delta.days * 86400 + delta.seconds
 
-          if alarm > 0:
+          if alarm > 0 and (task.download > 0 or task.upload > 0 or task.ping > 0):
             logger.debug('Impostazione di un nuovo task tra: %s secondi' % alarm)
             self._updatestatus(Status(status.READY, 'Inizio misura tra pochi secondi...'))
+            # Imposta l'allarme che eseguirà i test quando richiesto dal task
+            
+            # Prima cancella il vecchio allarme
+            try:
+              if (t != None):
+                t.cancel()
+            except NameError:
+              pass
+            except AttributeError:
+              pass
+            
+            # Imposta il nuovo allarme
             t = Timer(alarm, self._dotask, [task])
             t.start()
       else:
@@ -351,7 +360,7 @@ class Executer:
     '''
 
     if not self._isprobe:
-      made = self._progress.howmany(datetime.now().hour)
+      made = self._progress.howmany(datetime.fromtimestamp(timestampNtp()).hour)
       if made >= MAX_MEASURES_PER_HOUR:
         self._updatestatus(status.PAUSE)
         return
@@ -364,7 +373,6 @@ class Executer:
     # --------------------------------------------------------------------------
 
     # TODO Inserire il timeout complessivo di task (da posticipare)
-
     try:
 
       self._updatestatus(status.PLAY)
@@ -380,15 +388,15 @@ class Executer:
           if self._killonerror:
             raise e
           else:
-            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+            self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
             base_error = 50000
 
       t = Tester(host=task.server, timeout=self._testtimeout,
                  username=self._client.username, password=self._client.password)
 
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
-      id = datetime.now().strftime('%y%m%d%H%M')
-      m = Measure(id, task.server, self._client, __version__)
+      id = datetime.fromtimestamp(timestampNtp()).strftime('%y%m%d%H%M')      
+      m = Measure(id, task.server, self._client, __version__, task.start)
 
       # Set task timeout alarm
       # signal.alarm(self._tasktimeout)
@@ -407,7 +415,7 @@ class Executer:
             if self._killonerror:
               raise e
             else:
-              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
               error = errors.geterrorcode(e)
 
         logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
@@ -435,7 +443,7 @@ class Executer:
             if self._killonerror:
               raise e
             else:
-              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
               error = errors.geterrorcode(e)
 
         logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
@@ -463,7 +471,7 @@ class Executer:
             if self._killonerror:
               raise e
             else:
-              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s\nProseguo a misurare.' % e))
+              self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
               error = errors.geterrorcode(e)
 
         logger.debug('Starting ping test [%d]' % i)
@@ -483,21 +491,22 @@ class Executer:
       # signal.alarm(0)
 
       # Spedisci il file al repository delle misure
-      sec = datetime.now().strftime('%S')
+      sec = datetime.fromtimestamp(timestampNtp()).strftime('%S')
       f = open('%s/measure_%s%s.xml' % (self._outbox, m.id, sec), 'w')
       f.write(str(m))
+
       # Aggiungi la data di fine in fondo al file
-      f.write('\n<!-- [finished] %s -->' % datetime.now().isoformat())
+      f.write('\n<!-- [finished] %s -->' % datetime.fromtimestamp(timestampNtp()).isoformat())
       f.close()
 
       if (not self._local):
         upload = self._upload(f.name)
         if upload:
-          self._updatestatus(status.Status(status.READY, 'Misura terminata con successo.'))
+          self._updatestatus(status.Status(status.OK, 'Misura terminata con successo.'))
         else:
-          self._updatestatus(status.Status(status.READY, 'Misura terminata ma un errore si è verificato durante il suo invio.'))
+          self._updatestatus(status.Status(status.ERROR, 'Misura terminata ma un errore si è verificato durante il suo invio.'))
       else:
-        self._updatestatus(status.Status(status.READY, 'Misura terminata.'))
+        self._updatestatus(status.Status(status.OK, 'Misura terminata.'))
 
       logger.info('Fine task di misura.')
 
@@ -507,7 +516,7 @@ class Executer:
 
     except Exception as e:
       logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
-      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s\nAttendo %d secondi' % (e, self._polling)))
+      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s Attendo %d secondi' % (e, self._polling)))
 
     bandwidth_sem.release() # Rilascia la risorsa condivisa: la banda
 
@@ -534,6 +543,7 @@ class Executer:
       response = self._deliverer.upload(zipname)
 
       if (response != None):
+        # TODO ricevi progress.xml aggiornato in risposta
         (code, message) = self._parserepositorydata(response)
         code = int(code)
         logger.info('Risposta dal server di upload: [%d] %s' % (code, message))
@@ -617,7 +627,7 @@ def main():
   client = getclient(options)
   isprobe = (client.isp.certificate != None)
   e = Executer(client=client, scheduler=options.scheduler,
-               repository=options.repository, polling=options.polling,
+               repository=options.repository, progressurl=options.progressurl, polling=options.polling,
                tasktimeout=options.tasktimeout, testtimeout=options.testtimeout,
                httptimeout=options.httptimeout, local=options.local,
                isprobe=isprobe, md5conf=md5conf, killonerror=options.killonerror)
@@ -720,6 +730,15 @@ def parse():
     config.set(section, option, value)
   parser.add_option('-r', '--repository', dest=option, default=value,
                     help='upload URL for deliver measures\' files [%s]' % value)
+  
+  option = 'progressurl'
+  value = 'https://finaluser.agcom244.fub.it/ProgressXML'
+  try:
+    value = config.get(section, option)
+  except (ValueError, NoOptionError):
+    config.set(section, option, value)
+  parser.add_option('--progress-url', dest=option, default=value,
+                    help='complete URL for progress request [%s]' % value)
 
   option = 'scheduler'
   value = 'https://finaluser.agcom244.fub.it/Scheduler'
