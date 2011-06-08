@@ -18,7 +18,6 @@
 
 from SystemProfiler import systemProfiler
 from logger import logging
-from os import path as Path
 from xml.etree import ElementTree as ET
 import paths
 import re

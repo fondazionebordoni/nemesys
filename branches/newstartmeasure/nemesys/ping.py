@@ -22,12 +22,11 @@
 #   -> http://www.g-loaded.eu/2009/10/30/python-ping/
 
 from exceptions import Exception
-import os
 import random
-import sys
+import select
 import socket
 import struct
-import select
+import sys
 import time
 
 ICMP_ECHO_REQUEST = 8  # Seems to be the same on Solaris.

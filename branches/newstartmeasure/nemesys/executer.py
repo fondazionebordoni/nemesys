@@ -297,7 +297,7 @@ class Executer:
           logger.debug('Trovato task %s' % task)
 
           if (task.message != None and len(task.message) > 0):
-            self._updatestatus(Status(status.READY, message))
+            self._updatestatus(Status(status.READY, task.message))
 
           if (task.now):
             # Task immediato
