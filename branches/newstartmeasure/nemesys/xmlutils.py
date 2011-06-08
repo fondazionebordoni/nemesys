@@ -237,13 +237,13 @@ def xml2status(data):
 
   # Aggancio dei dati richiesti
   try:
-    icon = getvalues(node, 'icon')
+    color = getvalues(node, 'color')
     message = getvalues(node, 'message')
   except IndexError:
     logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
     raise Exception('I messaggi di stato del processo che effettua le misure non contengono tutte le informazioni richieste.');
 
-  return Status(icon, message)
+  return Status(color, message)
 
 def getcommentvalue(filename, comment, pattern='.*'):
   '''
