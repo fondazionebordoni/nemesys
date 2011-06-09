@@ -37,7 +37,7 @@ def getos():
   except Exception as e:
     logger.error('Impossibile determinare il tipo di sistema operativo: %s' % e)
     
-  return os  
+  return os
 
 class Measure:
   def __init__(self, id, server, client, version=None, start=datetime.fromtimestamp(timestampNtp()).isoformat()):  
