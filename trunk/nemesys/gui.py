@@ -20,6 +20,7 @@ from asyncore import dispatcher, loop
 from datetime import datetime
 from locale import LC_ALL, setlocale
 from logger import logging
+from os import path
 from progress import Progress
 from status import Status
 from sys import platform
@@ -28,11 +29,11 @@ from time import sleep
 from timeNtp import timestampNtp
 from xmlutils import xml2status
 import HTMLParser
+import paths
 import re
 import socket
 import status
 import wx
-
 
 LISTENING_URL = ('127.0.0.1', 21401)
 NOTIFY_COLORS = ('yellow', 'black')
@@ -134,7 +135,7 @@ class MyFrame ( wx.Frame ):
     # Base e gestione stato
     setlocale(LC_ALL, '')
     self._status = Status(status.ERROR, "error")
-    self.xmldoc = Progress(True)
+    xmldoc = Progress(True)
 
     wx.Frame.__init__ ( self, None, id = wx.ID_ANY, title = 'Ne.Me.Sys.', pos = wx.DefaultPosition, size = wx.Size( 750,350 ), style =  wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX) )
     self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
@@ -145,7 +146,7 @@ class MyFrame ( wx.Frame ):
     
     bSizer3 = wx.BoxSizer( wx.HORIZONTAL )
     
-    self.m_bitmap1 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap( u"icons/logo_misurainternet.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
+    self.m_bitmap1 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap( path.join(paths.ICONS, u"logo_misurainternet.png"), wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
     bSizer3.Add( self.m_bitmap1, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
     
     bSizer4 = wx.BoxSizer( wx.VERTICAL )
@@ -155,7 +156,7 @@ class MyFrame ( wx.Frame ):
     self.label_nemesys.SetFont( wx.Font( 16, 74, 90, 92, False, "Sans" ) )
     bSizer4.Add( self.label_nemesys, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
         
-    self.label_startmeasures = wx.StaticText( self, wx.ID_ANY, u"Inizio test di misura: %s" % self.xmldoc.start().strftime('%c'), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
+    self.label_startmeasures = wx.StaticText( self, wx.ID_ANY, u"Inizio test di misura: %s" % xmldoc.start().strftime('%c'), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
     self.label_startmeasures.Wrap( -1 )
     bSizer4.Add( self.label_startmeasures, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
     
@@ -173,7 +174,7 @@ class MyFrame ( wx.Frame ):
 
     bSizer3.Add( bSizer4, 1, wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 5 )
     
-    self.m_bitmap2 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap( u"icons/logo_nemesys.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
+    self.m_bitmap2 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap( path.join(paths.ICONS, u"logo_nemesys.png"), wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
     bSizer3.Add( self.m_bitmap2, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
     
     bSizer2.Add( bSizer3, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.EXPAND, 5 )
@@ -236,10 +237,13 @@ class MyFrame ( wx.Frame ):
     dlg.Destroy()
 
   def PaintInit(self, event):
+    
+    xmldoc = Progress(True)
+
     n = 0
     for hour in range(0, 24):
         color = "grey"
-        if self.xmldoc.isdone(hour):
+        if xmldoc.isdone(hour):
             color = "green"
             n = n + 1
         self.PaintHour(hour, color)
@@ -301,7 +305,7 @@ class MyFrame ( wx.Frame ):
     '''
     #logger.debug('PaintHour: %d, %s' % (hour, color))
     old = self._grid.GetItem(24 + hour).GetWindow()
-    bmp = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap("icons/%s.png" % color, wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0 )
+    bmp = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, "%s.png" % color), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0 )
     self._grid.Replace(old, bmp)
     self.Layout()
   

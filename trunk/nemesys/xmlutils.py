@@ -290,7 +290,7 @@ def getstarttime(filename):
     logger.error('L\'XML ricevuto non contiene il dato di start. XML: %s' % data)
     raise Exception('Errore durante il controllo dell\'orario di inizio della misura.');
 
-  return start
+  return iso2datetime(start)
 
 def getfinishedtime(filename):
   '''
