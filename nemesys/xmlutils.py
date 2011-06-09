@@ -67,27 +67,28 @@ def iso2datetime(s):
   return dt
 
 def getxml(data):
+  
+  if (len(data) < 1):
+    logger.error('Nessun dato da processare')
+    raise Exception('Ricevuto un messaggio vuoto');
+
+  logger.debug('Dati da convertire in XML:\n%s' % data)
   try:
     xml = parseString(data)
   except ExpatError:
     logger.error('Il dato ricevuto non è in formato XML: %s' % data)
-    return None
+    raise Exception('Errore di formattazione del messaggio');
 
   return xml
 
 # Trasforma l'XML dei task nel prossimo Task da eseguire
 def xml2task(data):
-
-  if (len(data) < 1):
-    logger.error('Nessun dato da processare')
-    raise Exception('Nessun dato ricevuto dallo scheduler.')
-
-  #logger.debug('Dati da convertire in XML:\n%s' % data)
+  
   try:
-    xml = parseString(data)
-  except ExpatError as e:
-    logger.error('Il dato ricevuto non è in formato XML: %s\n%s' % (e, data))
-    raise Exception('Le informazioni per la programmazione delle misure non sono corrette.')
+    xml = getxml(data)
+  except Exception as e:
+    logger.error('Errore durante la conversione dei dati di task')
+    raise Exception('Le informazioni per la programmazione delle misure non sono corrette. %s' % e)
 
   nodes = xml.getElementsByTagName(tag_task)
   if (len(nodes) < 1):
@@ -217,16 +218,12 @@ def nodedata(node):
   return s.strip('\n')
 
 def xml2status(data):
-  if (len(data) < 1):
-    logger.error('Nessun dato da processare')
-    raise Exception('Il processo che effettua le misure non invia informazioni, provare a riavviare il programma');
 
-  #logger.debug('Dati da convertire in XML:\n%s' % data)
   try:
-    xml = parseString(data)
-  except ExpatError:
-    logger.error('Il dato ricevuto non è in formato XML: %s' % data)
-    raise Exception('Errore di formattazione del messaggio di stato del processo delle misure.');
+    xml = getxml(data)
+  except Exception as e:
+    logger.error('Errore durante la conversione dei dati di stato del processo di misura')
+    raise Exception('Le informazioni di stato del processo di misura non sono corrette. %s. Provare a riavviare il programma.' % e)
 
   nodes = xml.getElementsByTagName('status')
   if (len(nodes) < 1):
@@ -260,9 +257,44 @@ def getcommentvalue(filename, comment, pattern='.*'):
 
   return value
 
-def getfinishedtime(filename):
+def file2xml(filename):
+  with open(filename) as f:
+    data = f.read()
+
+  return getxml(data)
+
+def getstarttime(filename):
   '''
   Ricava il tempo di start da un file di misura
+  '''
+  with open(filename) as f:
+    data = f.read()
+  
+  try:
+    xml = getxml(data)
+  except Exception as e:
+    logger.error('Errore durante la conversione dei dati di misura contenuti nel file.')
+    raise Exception('Le informazioni di misura non sono corrette. %s' % e)
+
+  nodes = xml.getElementsByTagName('measure')
+  if (len(nodes) < 1):
+    logger.debug('Nessun measure trovato nell\'XML:\n%s' % xml.toxml())
+    raise Exception('Nessuna informazione di misura nel file.');
+
+  node = nodes[0]
+
+  # Aggancio dei dati richiesti
+  try:
+    start = node.getAttribute('start')
+  except IndexError:
+    logger.error('L\'XML ricevuto non contiene il dato di start. XML: %s' % data)
+    raise Exception('Errore durante il controllo dell\'orario di inizio della misura.');
+
+  return start
+
+def getfinishedtime(filename):
+  '''
+  Ricava il tempo di chiusura da un file di misura
   '''
   try:
     pattern = '[\dT\-:\.]*'
@@ -273,3 +305,111 @@ def getfinishedtime(filename):
     logger.error('Errore durante il recupero del valore finished della misura: %s' % e)
     time=datetime.fromtimestamp(timestampNtp())    
   return time
+
+
+if __name__ == '__main__':
+  
+  empty_xml = ''
+  fake_xml = 'pippo'
+  generic_xml = '''<?xml version="1.0" encoding="UTF-8"?>
+  <measure>
+    <content/>
+  </measure>
+  '''
+  task_xml = '''<?xml version="1.0" encoding="UTF-8"?>
+ <calendar>
+  <task>
+   <id>1</id>
+   <nftpup mult="10">20</nftpup>
+   <nftpdown>20</nftpdown>
+   <nping icmp="1" delay="10">10</nping>
+   <start now="1">2010-01-01 00:01:00</start>
+   <srvid>fubsrvrmnmx03</srvid>
+   <srvip>193.104.137.133</srvip>
+   <srvname>NAMEX</srvname>
+   <ftpuppath>/upload/1.rnd</ftpuppath>
+   <ftpdownpath>/download/8000.rnd</ftpdownpath>
+  </task>
+ </calendar>
+  '''
+  status_xml = '''<?xml version="1.0" encoding="UTF-8"?>
+  <status>
+    <color>orange</color>
+    <message>Ne.Me.Sys. sta effettuando una misura.</message>
+  </status>
+  '''
+  empty_xml_file = 'test/empty_xml_file.xml'
+  fake_xml_file = 'test/fake_xml_file.xml'
+  generic_xml_file = 'test/generic_xml_file.xml'
+  measure_xml_file = 'test/measure_xml_file.xml'
+  
+  # Test getxml(data)
+  print '(getxml) Errore dato vuoto: %s' % empty_xml
+  try:
+    print getxml(empty_xml)
+  except Exception as e:
+    print e
+ 
+  print '(getxml) Errore xml non corretto: %s' % fake_xml
+  try:
+    print getxml(fake_xml)
+  except Exception as e:
+    print e
+    
+  print '(getxml) XML legittimo: %s' % generic_xml
+  try:
+    print getxml(generic_xml)
+  except Exception as e:
+    print e
+  
+  # Test xml2task
+  print '(xml2task) XML legittimo ma non task: %s' % generic_xml
+  try:
+    print xml2task(generic_xml)
+  except Exception as e:
+    print e
+
+  print '(xml2task) XML di task: %s' % task_xml
+  try:
+    print xml2task(task_xml)
+  except Exception as e:
+    print e
+  
+  # Test xml2task
+  print '(xml2status) XML legittimo ma non status: %s' % generic_xml
+  try:
+    print xml2status(generic_xml)
+  except Exception as e:
+    print e
+  
+  print '(xml2status) XML di status: %s' % status_xml
+  try:
+    print xml2status(status_xml)
+  except Exception as e:
+    print e
+
+  print '(file2xml) Conversione file vuoto in xml: %s' % empty_xml_file  
+  try:
+    print file2xml(empty_xml_file)
+  except Exception as e:
+    print e
+  
+  print '(file2xml) Conversione file vuoto in xml: %s' % fake_xml_file  
+  try:
+    print file2xml(fake_xml_file)
+  except Exception as e:
+    print e
+
+  print '(file2xml) Conversione file vuoto in xml: %s' % generic_xml_file  
+  try:
+    print file2xml(generic_xml_file)
+  except Exception as e:
+    print e
+  
+  print '(getstarttime) Analisi start di misura: %s' % measure_xml_file
+  try:
+    print getstarttime(measure_xml_file)
+  except Exception as e:
+    print e
+  
+  

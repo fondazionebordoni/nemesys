@@ -34,7 +34,7 @@ from tester import Tester
 from threading import Semaphore, Thread, Timer
 from time import sleep
 from urlparse import urlparse
-from xmlutils import getvalues, getfinishedtime, getxml, xml2task
+from xmlutils import getvalues, getstarttime, getxml, xml2task
 from errorcoder import Errorcoder
 import asyncore
 import glob
@@ -358,6 +358,7 @@ class Executer:
     Esegue il complesso di test prescritti dal task entro il tempo messo a
     disposizione secondo il parametro tasktimeout
     '''
+    # TODO Mischiare i test: down, up, ping, down, up, ping, ecc...
 
     if not self._isprobe:
       made = self._progress.howmany(datetime.fromtimestamp(timestampNtp()).hour)
@@ -395,8 +396,9 @@ class Executer:
                  username=self._client.username, password=self._client.password)
 
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
-      id = datetime.fromtimestamp(timestampNtp()).strftime('%y%m%d%H%M')      
-      m = Measure(id, task.server, self._client, __version__, task.start)
+      now = datetime.fromtimestamp(timestampNtp())
+      id = now.strftime('%y%m%d%H%M')      
+      m = Measure(id, task.server, self._client, __version__, now.isoformat())
 
       # Set task timeout alarm
       # signal.alarm(self._tasktimeout)
@@ -543,17 +545,17 @@ class Executer:
       response = self._deliverer.upload(zipname)
 
       if (response != None):
-        # TODO ricevi progress.xml aggiornato in risposta
         (code, message) = self._parserepositorydata(response)
         code = int(code)
         logger.info('Risposta dal server di upload: [%d] %s' % (code, message))
 
         # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
         if (code == 0):
-          time = getfinishedtime(filename)
+          time = getstarttime(filename)
           os.remove(filename)
           self._movefiles(zipname)
-          self._progress.putstamp(time)
+          self._progress.putstamp(time)         
+          
           result = True
 
     except Exception as e:
