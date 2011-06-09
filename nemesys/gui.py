@@ -187,7 +187,7 @@ class MyFrame ( wx.Frame ):
       self._grid.Add( self.m_staticText5, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
         
     for i in range (0, 24):
-      self.m_bitmap17 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap("icons/grey.png", wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0 )
+      self.m_bitmap17 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, "grey.png"), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0 )
       self._grid.Add( self.m_bitmap17, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
     
     bSizer2.Add( self._grid, 0, wx.ALIGN_CENTER_HORIZONTAL, 5 )
