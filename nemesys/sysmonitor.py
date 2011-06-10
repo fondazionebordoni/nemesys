@@ -335,7 +335,7 @@ def checkipsyntax(ip):
     parts = ip.split('.')
     if len(parts) != 4:
       return False
-  except Exception as e:
+  except Exception:
     return False
 
   return True
@@ -372,7 +372,7 @@ def getNetworkMask(ip):
         return maskConversion(netmask)
       else:
         pass
-    except Exception as e:
+    except Exception:
       pass
 
   return maskConversion(netmask)
