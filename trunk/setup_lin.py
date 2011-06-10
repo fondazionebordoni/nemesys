@@ -9,7 +9,7 @@ from nemesys.executer import __version__
 if sys.platform == 'win':
   import py2exe
 
-setup(name='NeMeSys',
+setup(name='Nemesys',
       version=__version__,
       description='NEtwork MEasurement SYStem',
       long_description=open('README').read(),
