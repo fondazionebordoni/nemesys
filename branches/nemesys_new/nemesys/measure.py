@@ -37,11 +37,10 @@ def getos():
   except Exception as e:
     logger.error('Impossibile determinare il tipo di sistema operativo: %s' % e)
     
-  return os  
+  return os
 
 class Measure:
   def __init__(self, id, server, client, version=None, start=datetime.fromtimestamp(timestampNtp()).isoformat()):  
-  #def __init__(self, id, server, client, version=None, start=datetime.now().isoformat()):
     '''
     Costruisce un oggetto Measure utilizzando i parametri ricevuti nella
     chiamata.
@@ -54,12 +53,11 @@ class Measure:
     self._client = client
     self._version = version
     self._start = start
-    logger.info ('il valore di start: %s ' %start)
     self._xml = self.getxml()
 
   def getxml(self):
-    startx = '''<measure xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='measure.xsd'/>'''
-    xml = parseString(startx)
+    start = '''<measure xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='measure.xsd'/>'''
+    xml = parseString(start)
     measure = xml.getElementsByTagName('measure')[0]
     measure.setAttribute('id', str(self._client.id) + str(self._id))
     measure.setAttribute('start', str(self._start))
@@ -140,7 +138,6 @@ class Measure:
 
     end = xml.createElement('end')
     end.appendChild(xml.createTextNode(str(datetime.fromtimestamp(timestampNtp()).isoformat())))
-    #end.appendChild(xml.createTextNode(str( datetime.now().isoformat())))
     time.appendChild(end)
 
     t.appendChild(time)

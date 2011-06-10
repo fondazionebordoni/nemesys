@@ -63,7 +63,6 @@ class Tester:
     file = Fakefile(bytes)
     timeout = max(self._timeout, 1)
     start=datetime.fromtimestamp(timestampNtp())
-    #start = datetime.now() 
 
     try:
       # TODO Il timeout non viene onorato in Python 2.6: http://bugs.python.org/issue8493
@@ -99,7 +98,6 @@ class Tester:
     file = filename
     timeout = max(self._timeout, 1)
     start=datetime.fromtimestamp(timestampNtp())
-    #start = datetime.now()
 
     try:
       # TODO Il timeout non viene onorato in Python 2.6: http://bugs.python.org/issue8493
@@ -130,7 +128,6 @@ class Tester:
   def testping(self):
     # si utilizza funzione ping.py
     start=datetime.fromtimestamp(timestampNtp())
-    #start = datetime.now()
     elapsed = 0
 
     try:

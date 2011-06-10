@@ -17,18 +17,16 @@
 # Temple Place, Suite 330, Boston, MA 0.1.2-1307 USA
 ###############################################################################
 
-"""Pyton NTP library.
+'''
+Python NTP library.
 
-Implementation of client-side NTP (RFC-1305), and useful NTP-related
-functions.
-"""
-
+Implementation of client-side NTP (RFC-1305), and useful NTP-related functions.
+'''
 
 import socket
 import struct
 import time
 import datetime
-
    
 # compute delta between system epoch and NTP epoch
 SYSTEM_EPOCH = datetime.date(*time.gmtime(0)[0:3])
@@ -37,13 +35,17 @@ NTP_DELTA = (SYSTEM_EPOCH - NTP_EPOCH).days * 24 * 3600
 
 
 class NTPException(Exception):
-    """Exception raised by this module."""
+    '''
+    Exception raised by this module.
+    '''
 
 
 class NTPPacket(object):
-    """NTP packet class.
+    '''
+    NTP packet class.
 
-    This class abstracts the stucture of a NTP packet."""
+    This class abstracts the stucture of a NTP packet.
+    '''
     
     # packet format to pack/unpack
     ntp_packet_format = '!B B B b 11I'
@@ -64,8 +66,10 @@ class NTPPacket(object):
         self.tx_timestamp = tx_timestamp
         
     def to_data(self):
-        """convert a NTPPacket to a NTP packet that can be sent over network
-        raise a NTPException in case of invalid field"""
+        '''
+        Convert a NTPPacket to a NTP packet that can be sent over network
+        raise a NTPException in case of invalid field
+        '''
         try:
             packed = struct.pack(NTPPacket.ntp_packet_format,
                 (self.leap << 6 | self.version << 3 | self.mode),
@@ -73,7 +77,7 @@ class NTPPacket(object):
                 self.poll,
                 self.precision,
                 to_int(self.root_delay) << 16 | to_frac(self.root_delay, 16),
-                to_int(self.root_dispersion) << 16 |
+                to_int(self.root_dispersion) << 16 | 
                     to_frac(self.root_dispersion, 16),
                 self.ref_id,
                 to_int(self.ref_timestamp),
@@ -90,8 +94,10 @@ class NTPPacket(object):
         return packed
 
     def from_data(self, data):
-        """build a NTPPacket from a NTP packet received from network
-        raise an NTPException in case of invalid packet format"""
+        '''
+        Build a NTPPacket from a NTP packet received from network
+        raise an NTPException in case of invalid packet format
+        '''
         try:
             unpacked = struct.unpack(NTPPacket.ntp_packet_format,
                     data[0:struct.calcsize(NTPPacket.ntp_packet_format)])
@@ -104,18 +110,20 @@ class NTPPacket(object):
         self.stratum = unpacked[1]
         self.poll = unpacked[2]
         self.precision = unpacked[3]
-        self.root_delay = float(unpacked[4])/2**16
-        self.root_dispersion = float(unpacked[5])/2**16
+        self.root_delay = float(unpacked[4]) / 2 ** 16
+        self.root_dispersion = float(unpacked[5]) / 2 ** 16
         self.ref_id = unpacked[6]
         self.ref_timestamp = to_time(unpacked[7], unpacked[8])
         self.orig_timestamp = to_time(unpacked[9], unpacked[10])
         self.recv_timestamp = to_time(unpacked[11], unpacked[12])
         self.tx_timestamp = to_time(unpacked[13], unpacked[14])
-        
+
 
 class NTPStats(NTPPacket):
-    """wrapper for NTPPacket, offering additional statistics like offset and
-    delay, and timestamps converted to local time"""
+    '''
+    Wrapper for NTPPacket, offering additional statistics like offset and
+    delay, and timestamps converted to local time
+    '''
     
     def __init__(self, dest_timestamp):
         NTPPacket.__init__(self)
@@ -123,47 +131,66 @@ class NTPStats(NTPPacket):
         
     @property
     def offset(self):
-        """NTP offset"""
-        return ((self.recv_timestamp - self.orig_timestamp) +
-                    (self.tx_timestamp - self.dest_timestamp))/2
+        '''
+        NTP offset
+        '''
+        return ((self.recv_timestamp - self.orig_timestamp) + 
+                    (self.tx_timestamp - self.dest_timestamp)) / 2
     
     @property
     def delay(self):
-        """NTP delay"""
-        return ((self.dest_timestamp - self.orig_timestamp) -
+        '''
+        NTP delay
+        '''
+        return ((self.dest_timestamp - self.orig_timestamp) - 
                     (self.tx_timestamp - self.recv_timestamp))
     
     @property
     def tx_time(self):
-        """tx_timestamp - local time"""
+        '''
+        tx_timestamp - local time
+        '''
         return ntp_to_system_time(self.tx_timestamp)
 
     @property
     def recv_time(self):
-        """recv_timestamp - local time"""
+        '''
+        recv_timestamp - local time
+        '''
         return ntp_to_system_time(self.recv_timestamp)
     
     @property
     def orig_time(self):
-        """orig_timestamp - local time"""
+        '''
+        orig_timestamp - local time
+        '''
         return ntp_to_system_time(self.orig_timestamp)
     
     @property
     def ref_time(self):
-        """ref_timestamp - local time"""
+        '''
+        ref_timestamp - local time
+        '''
         return ntp_to_system_time(self.ref_timestamp)
     
     @property
     def dest_time(self):
-        """dest_timestamp - local time"""
+        '''
+        dest_timestamp - local time
+        '''
         return ntp_to_system_time(self.dest_timestamp)
 
 
 class NTPClient(object):
-    """Client session - for now, a mere wrapper for NTP requests"""
+    '''
+    Client session - for now, a mere wrapper for NTP requests
+    '''
     
     def request(self, host, version=2, port='ntp'):
-        """make a NTP request to a server - return a NTPStats object"""
+        '''
+        make a NTP request to a server - return a NTPStats object
+        '''
+
         # lookup server address
         addrinfo = socket.getaddrinfo(host, port)[0]
         family, sockaddr = addrinfo[0], addrinfo[4]
@@ -201,29 +228,41 @@ class NTPClient(object):
     
 
 def to_int(date):
-    """return the integral part of a timestamp"""
+    '''
+    Return the integral part of a timestamp
+    '''
     return int(date)
 
 def to_frac(date, n=32):
-    """return the fractional part of a timestamp - n is the number of bits of
-    the fractional part"""
-    return int(abs(date - to_int(date)) * 2**n)
+    '''
+    Return the fractional part of a timestamp - n is the number of bits of
+    the fractional part
+    '''
+    return int(abs(date - to_int(date)) * 2 ** n)
 
 def to_time(integ, frac, n=32):
-    """build a timestamp from an integral and fractional part - n is the
-    number of bits of the fractional part"""
-    return integ + float(frac)/2**n
+    '''
+    Build a timestamp from an integral and fractional part - n is the
+    number of bits of the fractional part
+    '''
+    return integ + float(frac) / 2 ** n
 
 def ntp_to_system_time(date):
-    """convert a NTP time to system time"""
+    '''
+    Convert a NTP time to system time
+    '''
     return date - NTP_DELTA
 
 def system_to_ntp_time(date):
-    """convert a system time to a NTP time"""
+    '''
+    Convert a system time to a NTP time
+    '''
     return date + NTP_DELTA
 
 def leap_to_text(leap):
-    """convert a leap value to text"""
+    '''
+    Convert a leap value to text
+    '''
     leap_table = {
         0: 'no warning',
         1: 'last minute has 61 seconds',
@@ -237,7 +276,9 @@ def leap_to_text(leap):
         raise NTPException('Invalid leap indicator')
 
 def mode_to_text(mode):
-    """convert a mode value to text"""
+    '''
+    Convert a mode value to text
+    '''
     mode_table = {
         0: 'unspecified',
         1: 'symmetric active',
@@ -255,7 +296,9 @@ def mode_to_text(mode):
         raise NTPException('Invalid mode')
 
 def stratum_to_text(stratum):
-    """convert a stratum value to text"""
+    '''
+    Convert a stratum value to text
+    '''
     stratum_table = {
         0: 'unspecified',
         1: 'primary reference',
@@ -269,7 +312,9 @@ def stratum_to_text(stratum):
         raise NTPException('Invalid stratum')
 
 def ref_id_to_text(ref_id, stratum=2):
-    """convert a reference identifier to text according to stratum"""
+    '''
+    Convert a reference identifier to text according to stratum
+    '''
     ref_id_table = {
             'DNC': 'DNC routing protocol',
             'NIST': 'NIST public modem',

@@ -21,8 +21,7 @@ from server import Server
 class Task:
 
   def __init__(self, id, start, server, ftpdownpath, ftpuppath, upload=100,
-               download=100, multiplier=5, ping=100, nicmp=4, delay=1, now=False):
-    print('prova')
+               download=100, multiplier=5, ping=100, nicmp=4, delay=1, now=False, message=None):
     self._id = id
     self._start = start
     self._server = server
@@ -35,8 +34,8 @@ class Task:
     self._nicmp = nicmp
     self._delay = delay
     self._now = now
-   
-	
+    self._message = message
+  	
   def setPathD(self, bandaDown):	
     self._profilesD=[256,384,512,640,768,1000,1200,1280,1500,1600,2000,2048,3000,4000,4096,6000,6122,7000,7168,8000,8192,10000,12000,16000,20000,20480,24000,30000,34000]
 
@@ -101,13 +100,16 @@ class Task:
   def now(self):
     return self._now
 
+  @property
+  def message(self):
+    return self._message
+
   def __str__(self):
-    return 'id: %s; start: %s; serverip: %s; ftpdownpath: %s; ftpuppath: %s; upload: %d; download: %d; multiplier %d; ping %d; ncimp: %d; delay: %d; now %d' % \
-      (self.id, self.start, self.server.ip, self.ftpdownpath, self.ftpuppath, self.upload, self.download, self.multiplier, self.ping, self.nicmp, self.delay, self.now)
+    return 'id: %s; start: %s; serverip: %s; ftpdownpath: %s; ftpuppath: %s; upload: %d; download: %d; multiplier %d; ping %d; ncimp: %d; delay: %d; now %d; message: %s' % \
+      (self.id, self.start, self.server.ip, self.ftpdownpath, self.ftpuppath, self.upload, self.download, self.multiplier, self.ping, self.nicmp, self.delay, self.now, self.message)
 
 if __name__ == '__main__':
   s = Server('s1', '127.0.0.1')
   p = Task(0, '2010-01-01 10:01:00', s, 'r.raw', 'upload/r.raw')
   print p
-
 
