@@ -51,7 +51,7 @@ formatter=formatter
 args=(''' + repr(logfile) + ''',)
 
 [formatter_formatter] 
-format=%(asctime)s NeMeSys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
+format=%(asctime)s Nemesys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
 datefmt=%b %d %H:%M:%S
 '''
 

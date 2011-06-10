@@ -137,7 +137,7 @@ class MyFrame ( wx.Frame ):
     self._status = Status(status.ERROR, "error")
     xmldoc = Progress(True)
 
-    wx.Frame.__init__ ( self, None, id = wx.ID_ANY, title = 'Ne.Me.Sys.', pos = wx.DefaultPosition, size = wx.Size( 750,350 ), style =  wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX) )
+    wx.Frame.__init__ ( self, None, id = wx.ID_ANY, title = 'Nemesys', pos = wx.DefaultPosition, size = wx.Size( 750,350 ), style =  wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX) )
     self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
 
     self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
@@ -151,7 +151,7 @@ class MyFrame ( wx.Frame ):
     
     bSizer4 = wx.BoxSizer( wx.VERTICAL )
     
-    self.label_nemesys = wx.StaticText( self, wx.ID_ANY, u"Ne.Me.Sys", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
+    self.label_nemesys = wx.StaticText( self, wx.ID_ANY, u"Nemesys", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
     self.label_nemesys.Wrap( -1 )
     self.label_nemesys.SetFont( wx.Font( 16, 74, 90, 92, False, "Sans" ) )
     bSizer4.Add( self.label_nemesys, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
@@ -192,7 +192,7 @@ class MyFrame ( wx.Frame ):
     
     bSizer2.Add( self._grid, 0, wx.ALIGN_CENTER_HORIZONTAL, 5 )
     
-    sbSizer1 = wx.StaticBoxSizer( wx.StaticBox( self, wx.ID_ANY, u"Dettaglio stato Ne.Me.Sys." ), wx.VERTICAL )
+    sbSizer1 = wx.StaticBoxSizer( wx.StaticBox( self, wx.ID_ANY, u"Dettaglio stato Nemesys." ), wx.VERTICAL )
     
     date = '%s' % getdate().strftime('%c')
     self.messages_area = wx.TextCtrl( self, wx.ID_ANY, "%s Sto contattando il servizio di misura attendere qualche secondo." % date, wx.DefaultPosition, wx.DefaultSize, wx.HSCROLL|wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.TE_RICH2|wx.TE_WORDWRAP|wx.HSCROLL|wx.NO_BORDER|wx.VSCROLL )
@@ -211,7 +211,7 @@ class MyFrame ( wx.Frame ):
     menu_exit = wx.MenuItem( self.menu, wx.ID_EXIT, u"&Exit", u"Chiudi il programma", wx.ITEM_NORMAL )
     self.menu.AppendItem( menu_exit )
     
-    self.m_menubar1.Append( self.menu, u"Ne.me.sys" ) 
+    self.m_menubar1.Append( self.menu, u"Nemesys" ) 
     
     self.SetMenuBar( self.m_menubar1 )
     
@@ -232,7 +232,7 @@ class MyFrame ( wx.Frame ):
     self.Close(True)
   
   def menu_info( self, event ):
-    dlg = wx.MessageDialog(self, "Copyright (c) 2010-2011 Fondazione Ugo Bordoni \nEmail: info@fub.it", "Ne.Me.Sys. (Network Measurement System) \nHomepage del progetto: www.misurainternet.it", wx.OK)
+    dlg = wx.MessageDialog(self, "Copyright (c) 2010-2011 Fondazione Ugo Bordoni \nEmail: info@fub.it", "Nemesys (Network Measurement System) \nHomepage del progetto: www.misurainternet.it", wx.OK)
     dlg.ShowModal()
     dlg.Destroy()
 
