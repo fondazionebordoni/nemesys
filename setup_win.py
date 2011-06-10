@@ -13,11 +13,11 @@ class Target:
         self.version = "1.1"
         self.company_name = "Fondazione Ugo Bordoni"
         self.copyright = "(c)2011 Fondazione Ugo Bordoni"
-        self.name = "Ne.Me.Sys."
+        self.name = "Nemesys"
 
 myservice = Target(
     # used for the versioninfo resource
-    description = "NeMeSys Service",
+    description = "Nemesys Service",
     # what to build.  For a service, the module name (not the
     # filename) must be specified!
     modules = ['nemesys'],
@@ -31,7 +31,7 @@ setup(
 			'packages': 'encodings',
 		}
 	},
-	name = 'NeMeSys',
+	name = 'Nemesys',
 	version = '1.1',
 	service = [myservice],
 	windows = [

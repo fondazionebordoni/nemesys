@@ -335,7 +335,7 @@ if __name__ == '__main__':
   status_xml = '''<?xml version="1.0" encoding="UTF-8"?>
   <status>
     <color>orange</color>
-    <message>Ne.Me.Sys. sta effettuando una misura.</message>
+    <message>Nemesys sta effettuando una misura.</message>
   </status>
   '''
   empty_xml_file = 'test/empty_xml_file.xml'

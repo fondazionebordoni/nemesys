@@ -70,7 +70,7 @@ class _Communicator(Thread):
 
   def run(self):
     asyncore.loop(5)
-    logger.debug('NeMeSys asyncore loop terminated.')
+    logger.debug('Nemesys asyncore loop terminated.')
 
   def join(self, timeout=None):
     self._channel.quit()
@@ -622,7 +622,7 @@ class Executer:
     return (code, message)
 
 def main():
-  logger.info('Starting NeMeSys v.%s' % __version__)
+  logger.info('Starting Nemesys v.%s' % __version__)
   paths.check_paths()
   (options, args, md5conf) = parse()
 
