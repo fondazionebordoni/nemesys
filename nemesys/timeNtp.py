@@ -25,7 +25,7 @@ def timestampNtp():
   try:
     TimeRX = x.request(SERVERNTP, version=3)
     timestamp = TimeRX.tx_time
-  except Exception as e:
+  except Exception:
     timestamp = time.time()
   return timestamp
 

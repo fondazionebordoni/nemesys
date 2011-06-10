@@ -40,7 +40,7 @@ class Progress:
         self._clientid = clientid
         try:
           self._xml = self._downloadprogress()
-        except Exception as e:
+        except Exception:
           self._xml = self._newxml()
       else:
         self._xml = self._newxml()
