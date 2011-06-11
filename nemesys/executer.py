@@ -360,7 +360,7 @@ class Executer:
     '''
     # TODO Mischiare i test: down, up, ping, down, up, ping, ecc...
 
-    if not self._isprobe:
+    if not self._isprobe and self._progress != None:
       made = self._progress.howmany(datetime.fromtimestamp(timestampNtp()).hour)
       if made >= MAX_MEASURES_PER_HOUR:
         self._updatestatus(status.PAUSE)
@@ -532,9 +532,9 @@ class Executer:
       self._updatestatus(status.Status(status.ERROR, 'Misura interrotta per timeout.'))
       logger.warning('Timeout during task execution. Time elapsed > %1f seconds ' % self._tasktimeout)
 
-    except Exception as e:
-      logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
-      self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s Attendo %d secondi' % (e, self._polling)))
+    #except Exception as e:
+    #  logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e)
+    #  self._updatestatus(status.Status(status.ERROR, 'Misura interrotta. %s Attendo %d secondi' % (e, self._polling)))
 
     bandwidth_sem.release() # Rilascia la risorsa condivisa: la banda
 
