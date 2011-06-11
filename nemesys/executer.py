@@ -429,6 +429,14 @@ class Executer:
         logger.debug('Download result: %.3f' % test.value)
         logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
         m.savetest(test)
+
+        # Prequalifica linea in download sul primo down
+        if (i == 1 and test.value > 0):
+          # Controlla i risultati del primo test e aggiorna il path di download
+          bandwidth = round(test.bytes * 8 / test.value)
+          logger.debug('Banda ipotizzata in download: %d' % bandwidth)
+          task.update_ftpdownpath(bandwidth)
+          
         sleep(1)
 
       # Testa gli ftp up
@@ -457,6 +465,14 @@ class Executer:
         logger.debug('Upload result: %.3f' % test.value)
         logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
         m.savetest(test)
+
+        # Prequalifica linea in upload sul primo down
+        if (i == 1 and test.value > 0):
+          # Controlla i risultati del primo test e aggiorna il path di download
+          bandwidth = round(test.bytes * 8 / test.value)
+          logger.debug('Banda ipotizzata in upload: %d' % bandwidth)
+          self._client.profile.upload = bandwidth
+          
         sleep(1)
 
       # Testa i ping
