@@ -154,23 +154,23 @@ class MyFrame ( wx.Frame ):
     self.label_nemesys = wx.StaticText( self, wx.ID_ANY, u"Nemesys", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
     self.label_nemesys.Wrap( -1 )
     self.label_nemesys.SetFont( wx.Font( 16, 74, 90, 92, False, "Sans" ) )
-    bSizer4.Add( self.label_nemesys, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+    bSizer4.Add( self.label_nemesys, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 2 )
         
     self.label_startmeasures = wx.StaticText( self, wx.ID_ANY, u"Inizio test di misura: %s" % xmldoc.start().strftime('%c'), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
     self.label_startmeasures.Wrap( -1 )
-    bSizer4.Add( self.label_startmeasures, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+    bSizer4.Add( self.label_startmeasures, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 2 )
     
-    self.label_helper = wx.StaticText( self, wx.ID_ANY, u"La misurazione va completata entro tre giorni dal suo inizio", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
+    self.label_helper = wx.StaticText( self, wx.ID_ANY, u"La misurazione va completata entro tre giorni dal suo inizio\n", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
     self.label_helper.Wrap( -1 )
-    bSizer4.Add( self.label_helper, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+    bSizer4.Add( self.label_helper, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 2 )
     
     self.label_avanzamento = wx.StaticText( self, wx.ID_ANY, u"Stato di avanzamento: 0 test su 24", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
     self.label_avanzamento.Wrap( -1 )
-    bSizer4.Add( self.label_avanzamento, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+    bSizer4.Add( self.label_avanzamento, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 2 )
     
     self.label_fasce = wx.StaticText( self, wx.ID_ANY, u"Dettaglio misure per fasce orarie:", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
     self.label_fasce.Wrap( -1 )
-    bSizer4.Add( self.label_fasce, 0, wx.TOP|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+    bSizer4.Add( self.label_fasce, 0, wx.TOP|wx.ALIGN_CENTER_HORIZONTAL, 2 )
 
     bSizer3.Add( bSizer4, 1, wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 5 )
     
@@ -190,9 +190,9 @@ class MyFrame ( wx.Frame ):
       self.m_bitmap17 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, "grey.png"), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0 )
       self._grid.Add( self.m_bitmap17, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
     
-    bSizer2.Add( self._grid, 0, wx.ALIGN_CENTER_HORIZONTAL, 5 )
+    bSizer2.Add( self._grid, 0, wx.ALIGN_CENTER_HORIZONTAL, 2 )
     
-    sbSizer1 = wx.StaticBoxSizer( wx.StaticBox( self, wx.ID_ANY, u"Dettaglio stato Nemesys." ), wx.VERTICAL )
+    sbSizer1 = wx.StaticBoxSizer( wx.StaticBox( self, wx.ID_ANY, u"Dettaglio di stato di Nemesys" ), wx.VERTICAL )
     
     date = '%s' % getdate().strftime('%c')
     self.messages_area = wx.TextCtrl( self, wx.ID_ANY, "%s Sto contattando il servizio di misura attendere qualche secondo." % date, wx.DefaultPosition, wx.DefaultSize, wx.HSCROLL|wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.TE_RICH2|wx.TE_WORDWRAP|wx.HSCROLL|wx.NO_BORDER|wx.VSCROLL )
@@ -270,9 +270,12 @@ class MyFrame ( wx.Frame ):
         self.PaintHour(hour, "yellow")
       elif (bool(re.search('Misura terminata|Misura interrotta', currentstatus.message))):
         self.PaintInit(None)
+      elif (bool(re.search('Avviso', currentstatus.message))):
+        self.label_helper.SetForegroundColour(currentstatus.color)
+        self.label_helper.SetLabel("Hai ricevuto un avviso dal server centrale!\nLeggi il messaggio nella finestra del dettaglio di stato di Nemesys")
       elif (bool(re.search(status.FINISHED.message, currentstatus.message))):
         self.label_helper.SetForegroundColour(currentstatus.color)
-        self.label_helper.SetLabel("Misura completa! Visita la tua area personale sul sito www.misurainternet.it")
+        self.label_helper.SetLabel("Misura completa! Visita la tua area personale sul sito www.misurainternet.it\nper scaricare il certificato di misura.")
         
       message = self.getformattedmessage(currentstatus.message)
       date = '\n%s' % getdate().strftime('%c')
