@@ -211,7 +211,7 @@ class MyFrame ( wx.Frame ):
     menu_exit = wx.MenuItem( self.menu, wx.ID_EXIT, u"&Exit", u"Chiudi il programma", wx.ITEM_NORMAL )
     self.menu.AppendItem( menu_exit )
     
-    self.m_menubar1.Append( self.menu, u"Nemesys" ) 
+    self.m_menubar1.Append( self.menu, u"Menu" ) 
     
     self.SetMenuBar( self.m_menubar1 )
     
@@ -232,7 +232,7 @@ class MyFrame ( wx.Frame ):
     self.Close(True)
   
   def menu_info( self, event ):
-    dlg = wx.MessageDialog(self, "Copyright (c) 2010-2011 Fondazione Ugo Bordoni \nEmail: info@fub.it", "Nemesys (Network Measurement System) \nHomepage del progetto: www.misurainternet.it", wx.OK)
+    dlg = wx.MessageDialog(self, "Nemesys (Network Measurement System)\nHomepage del progetto: www.misurainternet.it\nCopyright (c) 2010-2011 Fondazione Ugo Bordoni \nEmail: info@fub.it", "Info", wx.OK)
     dlg.ShowModal()
     dlg.Destroy()
 
