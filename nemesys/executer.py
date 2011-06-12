@@ -263,7 +263,7 @@ class Executer:
     self._communicator = _Communicator()
     self._communicator.start()
 
-	  # Prepare Progress file
+    # Prepare Progress file
     progressurl = self._progressurl
     clientid = self._client.id
     self._progress = Progress(clientid=clientid, progressurl=progressurl)
@@ -297,7 +297,8 @@ class Executer:
           logger.debug('Trovato task %s' % task)
 
           if (task.message != None and len(task.message) > 0):
-            self._updatestatus(Status(status.READY, task.message))
+            logger.debug("Trovato messaggio: %s" % task.message)
+            self._updatestatus(Status(status.MESSAGE, task.message))
 
           if (task.now):
             # Task immediato
@@ -591,7 +592,7 @@ class Executer:
     global current_status, status_sem
 
     status_sem.acquire()
-    #logger.debug('Aggiornamento stato: %s' % new.message)
+    logger.debug('Aggiornamento stato: %s' % new.message)
     current_status = new
 
     if (self._communicator != None):
