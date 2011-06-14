@@ -160,7 +160,7 @@ class MyFrame ( wx.Frame ):
     self.label_startmeasures.Wrap( -1 )
     bSizer4.Add( self.label_startmeasures, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 2 )
     
-    self.label_helper = wx.StaticText( self, wx.ID_ANY, u"La misurazione va completata entro tre giorni dal suo inizio\n", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
+    self.label_helper = wx.StaticText( self, wx.ID_ANY, u"La misurazione va completata entro tre giorni dal suo inizio\n\n", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
     self.label_helper.Wrap( -1 )
     bSizer4.Add( self.label_helper, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 2 )
     
@@ -195,7 +195,7 @@ class MyFrame ( wx.Frame ):
     sbSizer1 = wx.StaticBoxSizer( wx.StaticBox( self, wx.ID_ANY, u"Dettaglio di stato di Nemesys" ), wx.VERTICAL )
     
     date = '%s' % getdate().strftime('%c')
-    self.messages_area = wx.TextCtrl( self, wx.ID_ANY, "%s Sto contattando il servizio di misura attendere qualche secondo." % date, wx.DefaultPosition, wx.DefaultSize, wx.HSCROLL|wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.TE_RICH2|wx.TE_WORDWRAP|wx.HSCROLL|wx.NO_BORDER|wx.VSCROLL )
+    self.messages_area = wx.TextCtrl( self, wx.ID_ANY, "%s Sto contattando il servizio di misura attendere qualche secondo." % date, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.TE_RICH2|wx.TE_WORDWRAP|wx.NO_BORDER|wx.VSCROLL )
     sbSizer1.Add( self.messages_area, 1, wx.ALL|wx.EXPAND, 5 )
     self.messages_area.SetStyle(0, len(date), wx.TextAttr(status.PAUSE.color))
     
@@ -272,7 +272,7 @@ class MyFrame ( wx.Frame ):
         self.PaintInit(None)
       elif (bool(re.search('Avviso', currentstatus.message))):
         self.label_helper.SetForegroundColour(currentstatus.color)
-        self.label_helper.SetLabel("Hai ricevuto un avviso dal server centrale!\nLeggi il messaggio nella finestra del dettaglio di stato di Nemesys")
+        self.label_helper.SetLabel("Hai ricevuto un avviso dal server centrale!\nLeggi il messaggio nel dettaglio di stato di Nemesys")
       elif (bool(re.search(status.FINISHED.message, currentstatus.message))):
         self.label_helper.SetForegroundColour(currentstatus.color)
         self.label_helper.SetLabel("Misura completa! Visita la tua area personale sul sito www.misurainternet.it\nper scaricare il certificato di misura.")
