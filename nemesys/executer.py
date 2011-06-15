@@ -221,7 +221,7 @@ class Executer:
         except ValueError as e:
           logger.warning('Errore nella determinazione della prossima ora: %s.' % e)
 
-        random_sleep = randint(2, self._polling * 5 / MAX_MEASURES_PER_HOUR)
+        random_sleep = randint(2, self._polling * 15 / MAX_MEASURES_PER_HOUR)
         logger.info('La misura delle %d è completa. Aspetto %d secondi per il prossimo polling.' % (hour, wait_hour + random_sleep))
 
         # Aspetto un'ora poi aggiorno lo stato
