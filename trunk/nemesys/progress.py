@@ -31,6 +31,8 @@ logger = logging.getLogger()
 
 MAX_DAYS = 3
 
+# TODO Il file di progresso deve poter avere start nullo
+
 class Progress:
   def __init__(self, clientid, progressurl=None):
     if not path.exists(paths.MEASURE_STATUS):
