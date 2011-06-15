@@ -312,6 +312,7 @@ class MyFrame (wx.Frame):
     old = self._grid.GetItem(24 + hour).GetWindow()
     bmp = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, "%s.png" % color), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0)
     self._grid.Replace(old, bmp)
+    old.Destroy()
     self.Layout()
   
 def getdate():
