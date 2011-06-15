@@ -160,7 +160,10 @@ class MyFrame (wx.Frame):
     self.label_startmeasures.Wrap(-1)
     bSizer4.Add(self.label_startmeasures, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
     
-    self.label_helper = wx.StaticText(self, wx.ID_ANY, u"La misurazione va completata entro tre giorni dal suo inizio\n\n", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
+    label = u"La misurazione va completata entro tre giorni dal suo inizio\n"
+    if platform == 'darwin':
+      label = "%s\n" % label
+    self.label_helper = wx.StaticText(self, wx.ID_ANY, label, wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
     self.label_helper.Wrap(-1)
     bSizer4.Add(self.label_helper, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
     
