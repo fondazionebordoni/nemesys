@@ -128,110 +128,110 @@ class _Channel(dispatcher):
     except Exception as e:
       logger.error('Errore durante l\'aggiornamento dello stato %s' % e)
 
-class MyFrame ( wx.Frame ):
+class MyFrame (wx.Frame):
   
-  def __init__( self ):
+  def __init__(self):
   
     # Base e gestione stato
     setlocale(LC_ALL, '')
     self._status = Status(status.ERROR, "error")
     xmldoc = Progress(True)
 
-    wx.Frame.__init__ ( self, None, id = wx.ID_ANY, title = 'Nemesys', pos = wx.DefaultPosition, size = wx.Size( 750,350 ), style =  wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX) )
+    wx.Frame.__init__ (self, None, id=wx.ID_ANY, title='Nemesys', pos=wx.DefaultPosition, size=wx.Size(750, 350), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX))
     self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
 
-    self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
+    self.SetSizeHintsSz(wx.DefaultSize, wx.DefaultSize)
     
-    bSizer2 = wx.BoxSizer( wx.VERTICAL )
+    bSizer2 = wx.BoxSizer(wx.VERTICAL)
     
-    bSizer3 = wx.BoxSizer( wx.HORIZONTAL )
+    bSizer3 = wx.BoxSizer(wx.HORIZONTAL)
     
-    self.m_bitmap1 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap( path.join(paths.ICONS, u"logo_misurainternet.png"), wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
-    bSizer3.Add( self.m_bitmap1, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
+    self.m_bitmap1 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, u"logo_misurainternet.png"), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0)
+    bSizer3.Add(self.m_bitmap1, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
     
-    bSizer4 = wx.BoxSizer( wx.VERTICAL )
+    bSizer4 = wx.BoxSizer(wx.VERTICAL)
     
-    self.label_nemesys = wx.StaticText( self, wx.ID_ANY, u"Nemesys", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
-    self.label_nemesys.Wrap( -1 )
-    self.label_nemesys.SetFont( wx.Font( 16, 74, 90, 92, False, "Sans" ) )
-    bSizer4.Add( self.label_nemesys, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 2 )
+    self.label_nemesys = wx.StaticText(self, wx.ID_ANY, u"Nemesys", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
+    self.label_nemesys.Wrap(-1)
+    self.label_nemesys.SetFont(wx.Font(16, 74, 90, 92, False, "Sans"))
+    bSizer4.Add(self.label_nemesys, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
         
-    self.label_startmeasures = wx.StaticText( self, wx.ID_ANY, u"Inizio test di misura: %s" % xmldoc.start().strftime('%c'), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
-    self.label_startmeasures.Wrap( -1 )
-    bSizer4.Add( self.label_startmeasures, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 2 )
+    self.label_startmeasures = wx.StaticText(self, wx.ID_ANY, u"Inizio test di misura: %s" % xmldoc.start().strftime('%c'), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
+    self.label_startmeasures.Wrap(-1)
+    bSizer4.Add(self.label_startmeasures, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
     
-    self.label_helper = wx.StaticText( self, wx.ID_ANY, u"La misurazione va completata entro tre giorni dal suo inizio\n\n", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
-    self.label_helper.Wrap( -1 )
-    bSizer4.Add( self.label_helper, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 2 )
+    self.label_helper = wx.StaticText(self, wx.ID_ANY, u"La misurazione va completata entro tre giorni dal suo inizio\n\n", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
+    self.label_helper.Wrap(-1)
+    bSizer4.Add(self.label_helper, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
     
-    self.label_avanzamento = wx.StaticText( self, wx.ID_ANY, u"Stato di avanzamento: 0 test su 24", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
-    self.label_avanzamento.Wrap( -1 )
-    bSizer4.Add( self.label_avanzamento, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 2 )
+    self.label_avanzamento = wx.StaticText(self, wx.ID_ANY, u"Stato di avanzamento: 0 test su 24", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
+    self.label_avanzamento.Wrap(-1)
+    bSizer4.Add(self.label_avanzamento, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
     
-    self.label_fasce = wx.StaticText( self, wx.ID_ANY, u"Dettaglio misure per fasce orarie:", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
-    self.label_fasce.Wrap( -1 )
-    bSizer4.Add( self.label_fasce, 0, wx.TOP|wx.ALIGN_CENTER_HORIZONTAL, 2 )
+    self.label_fasce = wx.StaticText(self, wx.ID_ANY, u"Dettaglio misure per fasce orarie:", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
+    self.label_fasce.Wrap(-1)
+    bSizer4.Add(self.label_fasce, 0, wx.TOP | wx.ALIGN_CENTER_HORIZONTAL, 2)
 
-    bSizer3.Add( bSizer4, 1, wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 5 )
+    bSizer3.Add(bSizer4, 1, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 5)
     
-    self.m_bitmap2 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap( path.join(paths.ICONS, u"logo_nemesys.png"), wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE )
-    bSizer3.Add( self.m_bitmap2, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
+    self.m_bitmap2 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, u"logo_nemesys.png"), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
+    bSizer3.Add(self.m_bitmap2, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
     
-    bSizer2.Add( bSizer3, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.EXPAND, 5 )
+    bSizer2.Add(bSizer3, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND, 5)
     
-    self._grid = wx.GridSizer( 2, 24, 0, 0 )
+    self._grid = wx.GridSizer(2, 24, 0, 0)
     
     for i in range(0, 24):
-      self.m_staticText5 = wx.StaticText( self, wx.ID_ANY, u"%s" % i, wx.DefaultPosition, wx.DefaultSize, 0 )
-      self.m_staticText5.Wrap( -1 )
-      self._grid.Add( self.m_staticText5, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+      self.m_staticText5 = wx.StaticText(self, wx.ID_ANY, u"%s" % i, wx.DefaultPosition, wx.DefaultSize, 0)
+      self.m_staticText5.Wrap(-1)
+      self._grid.Add(self.m_staticText5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
         
     for i in range (0, 24):
-      self.m_bitmap17 = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, "grey.png"), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0 )
-      self._grid.Add( self.m_bitmap17, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
+      self.m_bitmap17 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, "grey.png"), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0)
+      self._grid.Add(self.m_bitmap17, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
     
-    bSizer2.Add( self._grid, 0, wx.ALIGN_CENTER_HORIZONTAL, 2 )
+    bSizer2.Add(self._grid, 0, wx.ALIGN_CENTER_HORIZONTAL, 2)
     
-    sbSizer1 = wx.StaticBoxSizer( wx.StaticBox( self, wx.ID_ANY, u"Dettaglio di stato di Nemesys" ), wx.VERTICAL )
+    sbSizer1 = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, u"Dettaglio di stato di Nemesys"), wx.VERTICAL)
     
     date = '%s' % getdate().strftime('%c')
-    self.messages_area = wx.TextCtrl( self, wx.ID_ANY, "%s Sto contattando il servizio di misura attendere qualche secondo." % date, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.TE_RICH2|wx.TE_WORDWRAP|wx.NO_BORDER|wx.VSCROLL )
-    sbSizer1.Add( self.messages_area, 1, wx.ALL|wx.EXPAND, 5 )
+    self.messages_area = wx.TextCtrl(self, wx.ID_ANY, "%s Sto contattando il servizio di misura attendere qualche secondo." % date, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP | wx.NO_BORDER | wx.VSCROLL)
+    sbSizer1.Add(self.messages_area, 1, wx.ALL | wx.EXPAND, 5)
     self.messages_area.SetStyle(0, len(date), wx.TextAttr(status.PAUSE.color))
     
-    bSizer2.Add( sbSizer1, 1, wx.ALIGN_CENTER_HORIZONTAL|wx.EXPAND, 5 )
+    bSizer2.Add(sbSizer1, 1, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND, 5)
     
-    self.SetSizer( bSizer2 )
+    self.SetSizer(bSizer2)
     self.m_menubar1 = wx.MenuBar()
     self.menu = wx.Menu()
     
-    menu_info = wx.MenuItem( self.menu, wx.ID_ABOUT, u"&Info", u"Informazioni sul programma", wx.ITEM_NORMAL )
-    self.menu.AppendItem( menu_info )
+    menu_info = wx.MenuItem(self.menu, wx.ID_ABOUT, u"&Info", u"Informazioni sul programma", wx.ITEM_NORMAL)
+    self.menu.AppendItem(menu_info)
     
-    menu_exit = wx.MenuItem( self.menu, wx.ID_EXIT, u"&Exit", u"Chiudi il programma", wx.ITEM_NORMAL )
-    self.menu.AppendItem( menu_exit )
+    menu_exit = wx.MenuItem(self.menu, wx.ID_EXIT, u"&Exit", u"Chiudi il programma", wx.ITEM_NORMAL)
+    self.menu.AppendItem(menu_exit)
     
-    self.m_menubar1.Append( self.menu, u"Menu" ) 
+    self.m_menubar1.Append(self.menu, u"Menu") 
     
-    self.SetMenuBar( self.m_menubar1 )
+    self.SetMenuBar(self.m_menubar1)
     
-    self.Centre( wx.BOTH )
+    self.Centre(wx.BOTH)
     self.Layout()
 
     # Connect Events
-    self.Bind( wx.EVT_MENU, self.menu_info, menu_info )
-    self.Bind( wx.EVT_MENU, self.menu_exit, menu_exit )
+    self.Bind(wx.EVT_MENU, self.menu_info, menu_info)
+    self.Bind(wx.EVT_MENU, self.menu_exit, menu_exit)
     self.PaintInit(None)
     
     self._controller = _Controller(LISTENING_URL, self)
     self._controller.start()
 
 
-  def menu_exit( self, event ):
+  def menu_exit(self, event):
     self._controller.join()
     self.Close(True)
   
-  def menu_info( self, event ):
+  def menu_info(self, event):
     dlg = wx.MessageDialog(self, "Nemesys (Network Measurement System)\nHomepage del progetto: www.misurainternet.it\nCopyright (c) 2010-2011 Fondazione Ugo Bordoni \nEmail: info@fub.it", "Info", wx.OK)
     dlg.ShowModal()
     dlg.Destroy()
@@ -266,13 +266,15 @@ class MyFrame ( wx.Frame ):
       hour = getdate().hour
       logger.debug('Ora attuale: %d' % hour)
       
-      if (bool(re.search(status.PLAY.message, currentstatus.message))):
+      if (bool(re.search(status.PLAY.color, currentstatus.color)) or bool(re.search('Misura in esecuzione', currentstatus.message))):
         self.PaintHour(hour, "yellow")
+      if (bool(re.search('Misura sospesa', currentstatus.message))):
+        self.PaintHour(hour, "red")
       elif (bool(re.search('Misura terminata|Misura interrotta', currentstatus.message))):
         self.PaintInit(None)
       elif (bool(re.search('Avviso', currentstatus.message))):
         self.label_helper.SetForegroundColour(currentstatus.color)
-        self.label_helper.SetLabel("Hai ricevuto un avviso dal server centrale!\nLeggi il messaggio nel dettaglio di stato di Nemesys")
+        self.label_helper.SetLabel("Hai ricevuto un avviso dal server centrale!\nLeggi il messaggio nella finestra del dettaglio di stato di Nemesys")
       elif (bool(re.search(status.FINISHED.message, currentstatus.message))):
         self.label_helper.SetForegroundColour(currentstatus.color)
         self.label_helper.SetLabel("Misura completa! Visita la tua area personale sul sito www.misurainternet.it\nper scaricare il certificato di misura.")
@@ -308,7 +310,7 @@ class MyFrame ( wx.Frame ):
     '''
     #logger.debug('PaintHour: %d, %s' % (hour, color))
     old = self._grid.GetItem(24 + hour).GetWindow()
-    bmp = wx.StaticBitmap( self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, "%s.png" % color), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0 )
+    bmp = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, "%s.png" % color), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0)
     self._grid.Replace(old, bmp)
     self.Layout()
   
