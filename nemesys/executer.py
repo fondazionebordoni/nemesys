@@ -436,9 +436,10 @@ class Executer:
           i = i + 1
   
           # Controlla i risultati del test e aggiorna il path di download
-          bandwidth = int(round(test.bytes * 8 / test.value))
-          logger.debug('Banda ipotizzata in download: %d' % bandwidth)
-          task.update_ftpdownpath(bandwidth)
+          if (test.value > 0):
+            bandwidth = int(round(test.bytes * 8 / test.value))
+            logger.debug('Banda ipotizzata in download: %d' % bandwidth)
+            task.update_ftpdownpath(bandwidth)
             
           sleep(1)
           
@@ -482,10 +483,11 @@ class Executer:
           m.savetest(test)
           i = i + 1
   
-          # Controlla i risultati del test e aggiorna il path di download
-          bandwidth = int(round(test.bytes * 8 / test.value))
-          logger.debug('Banda ipotizzata in upload: %d' % bandwidth)
-          self._client.profile.upload = bandwidth
+          # Controlla i risultati del test e aggiorna il profilo di upload
+          if (test.value > 0):
+            bandwidth = int(round(test.bytes * 8 / test.value))
+            logger.debug('Banda ipotizzata in upload: %d' % bandwidth)
+            self._client.profile.upload = bandwidth
             
           sleep(1)
 
