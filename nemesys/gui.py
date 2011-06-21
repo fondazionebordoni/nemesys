@@ -280,7 +280,7 @@ class MyFrame (wx.Frame):
         self.label_helper.SetLabel("Hai ricevuto un avviso dal server centrale!\nLeggi il messaggio nella finestra del dettaglio di stato di Nemesys")
       elif (bool(re.search(status.FINISHED.message, currentstatus.message))):
         self.label_helper.SetForegroundColour(currentstatus.color)
-        self.label_helper.SetLabel("Misura completa! Visita la tua area personale sul sito www.misurainternet.it\nper scaricare il certificato di misura.")
+        self.label_helper.SetLabel("Misura completa! Visita la tua area personale sul sito\nwww.misurainternet.it per scaricare il certificato di misura.")
         
       message = self.getformattedmessage(currentstatus.message)
       date = '\n%s' % getdate().strftime('%c')
