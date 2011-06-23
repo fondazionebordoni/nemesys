@@ -256,7 +256,6 @@ def checkhosts(up, down, ispid):
   
   if (mask != 0):  
     value = checkhost.countHosts(ip, mask, up, down, ispid, th_host)
-    value = 1
     logger.info('Trovati %d host in rete.' % value)
       
     if value <= 0:
