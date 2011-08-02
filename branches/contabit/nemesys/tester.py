@@ -33,6 +33,9 @@ from timeNtp import timestampNtp
 import timeit
 import socket
 
+from threading import Thread
+from contabit import *
+
 ftp = None
 file = None
 filepath = None
@@ -46,15 +49,65 @@ def totalsize(data):
   global size
   size += len(data)
 
+
+class counter(Thread):
+
+    def __init__(self):
+        Thread.__init__(self)
+
+    def getdev(self,req=None):
+        device=getdev(req)
+        return device
+
+    def init(self,if_ip,host,buffer=0):
+        #status_init=initialize(IFname,IF_IP,FTP_IP,buffer)
+        status_init=initialize(dev,nem)
+        return status_init
+
+    def run(self):
+        status_start=start()
+        return status_start
+
+    def stop(self):
+        status_stop=stop()
+        return status_stop
+
+    def getstat(self,req1=None,req2=None,req3=None,req4=None,req5=None,
+                     req6=None,req7=None,req8=None,req9=None,req10=None,
+                     req11=None,req12=None,req13=None,req14=None,req15=None,
+                     req16=None,req17=None,req18=None,req19=None,req20=None):
+        statistics=getstat(req1,req2,req3,req4,req5,req6,req7,req8,req9,req10,
+                           req11,req12,req13,req14,req15,req16,req17,req18,req19,req20)
+        return statistics
+
+    def geterr(self):
+        error=geterr()
+        return error
+
+    def join(self, timeout=None):
+        Thread.join(self, timeout)
+
+
 class Tester:
 
-  def __init__(self, host, username='anonymous', password='anonymous@', timeout=60):
+  def __init__(self, if_ip, host, username='anonymous', password='anonymous@', timeout=60):
+    self._if_ip=if_ip
     self._host = host
     self._username = username
     self._password = password
     self._timeout = timeout
+    self.counter = counter()
     socket.setdefaulttimeout(self._timeout)
+    
+    
+    counter_init=self.counter.init(self._if_ip, self._host, 40*1024000) #Buffer Contabit a 40Mb
+    
+    if (status_init!=0):
+        e = self.counter.geterr()
+        logger.error('Errore inizializzazione contabit: %s' % e)
+    
     # TODO Creare un contabit e inizializzarlo: se da errore, non verrà usato
+    
 
   def testftpup(self, bytes, path):
     global ftp, file, size, filepath
@@ -175,7 +228,7 @@ def main():
   (options, args) = parser.parse_args()
   #TODO inserire controllo host
     
-  t = Tester(Host(options.host), options.username, options.password)
+  t = Tester(sysmonitor.getIp(),Host(options.host), options.username, options.password)
   test = None
   print ('Prova: %s' % options.host)
     
