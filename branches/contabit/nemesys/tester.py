@@ -54,6 +54,7 @@ class Tester:
     self._password = password
     self._timeout = timeout
     socket.setdefaulttimeout(self._timeout)
+    # TODO Creare un contabit e inizializzarlo: se da errore, non verrà usato
 
   def testftpup(self, bytes, path):
     global ftp, file, size, filepath
@@ -80,7 +81,9 @@ class Tester:
 
     try:
       # Il risultato deve essere espresso in millisecondi
+      # TODO Eseguire start di contabit
       elapsed = timer.timeit(1) * 1000
+      # TODO Eseguire stop di contabit e analizzare il valore di ritorno
 
     except ftplib.all_errors as e:
       logger.error("Impossibile effettuare l'upload: %s" % e)
@@ -89,9 +92,11 @@ class Tester:
 
     ftp.quit()
     
+    # TODO Estender Proof per la memorizzazione dei dati del contabit
     return Proof('upload', start, elapsed, size)
 
   def testftpdown(self, filename):
+    # TODO Controllare TODO di ftpup
     global ftp, file, size
     size = 0
     elapsed = 0

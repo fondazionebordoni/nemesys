@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+# TODO Sysmonitor deve sollevare eccezioni di tipo SysmonitorExecption
+
 from SystemProfiler import systemProfiler
 from logger import logging
 from xml.etree import ElementTree as ET
@@ -272,7 +274,7 @@ def checkdisk():
 
   value = getfloattag(tag_wdisk, th_wdisk - 1)
   if value < 0:
-    raise Exception('Impossibile detereminare il carico in scrittura del disco.')
+    raise SysmonitorException.DISK
 
   if value > th_wdisk:
     raise Exception('Eccessivo carico in scrittura del disco.')

@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+# TODO Estendere Proof per la memorizzazione dei dati di contabit
+
 from datetime import datetime
 
 class Proof:
