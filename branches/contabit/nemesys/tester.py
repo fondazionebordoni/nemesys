@@ -91,7 +91,7 @@ class counter(Thread):
 class Tester:
 
   def __init__(self, if_ip, host, username='anonymous', password='anonymous@', timeout=60):
-    self._if_ip=if_ip
+    self._if_ip = if_ip
     self._host = host
     self._username = username
     self._password = password
@@ -99,21 +99,21 @@ class Tester:
     self.counter = counter()
     socket.setdefaulttimeout(self._timeout)
     
+    self.counter_init=self.counter.init(self._if_ip, self._host.ip, 40*1024000)  #Buffer Contabit a 40Mb
     
-    counter_init=self.counter.init(self._if_ip, self._host, 40*1024000) #Buffer Contabit a 40Mb
-    
-    if (status_init!=0):
+    if (self.counter_init!=0):
         e = self.counter.geterr()
         logger.error('Errore inizializzazione contabit: %s' % e)
     
-    # TODO Creare un contabit e inizializzarlo: se da errore, non verrà usato
+    # DONE::TODO Creare un contabit e inizializzarlo: se da errore, non verrà usato
     
 
   def testftpup(self, bytes, path):
-    global ftp, file, size, filepath
+    global ftp, file, size, counter_byte, filepath
     filepath = path
     size = 0
     elapsed = 0
+    counter_byte = 0
     file = Fakefile(bytes)
     timeout = max(self._timeout, 1)
     start=datetime.fromtimestamp(timestampNtp())
@@ -125,7 +125,7 @@ class Tester:
     except ftplib.all_errors as e:
       logger.error('Impossibile aprire la connessione FTP: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof('upload', start, elapsed, size, errorcode)	# inserire codifica codici errore
+      return Proof('upload', start, elapsed, size, counter_byte, errorcode)	# inserire codifica codici errore
 
     # TODO Se la connessione FTP viene invocata con timeout, il socket è non-blocking e il sistema può terminare i buffer di rete: http://bugs.python.org/issue8493
     function = '''ftp.storbinary('STOR %s' % filepath, file, callback=totalsize)'''
@@ -133,26 +133,43 @@ class Tester:
     timer = timeit.Timer(function, setup)
 
     try:
+      # DONE::TODO Eseguire start di contabit  
+      if (self.counter_init==0):
+        counter_start=self.counter.start()
+        if (counter_start!=None):
+          e = self.counter.geterr()
+          logger.error('Errore start contabit: %s' % e)
+      
       # Il risultato deve essere espresso in millisecondi
-      # TODO Eseguire start di contabit
       elapsed = timer.timeit(1) * 1000
-      # TODO Eseguire stop di contabit e analizzare il valore di ritorno
+      
+      # DONE::TODO Eseguire stop di contabit e analizzare il valore di ritorno
+      if (self.counter_init==0):
+        counter_stop=self.counter.stop()
+        if (counter_stop!=0):
+          e = self.counter.geterr()
+          logger.error('Errore stop contabit: %s' % e)
+        
+        counter_stats=self.counter.getstat('byte_up_all')
+        if (counter_stats!=None):  
+          counter_byte=counter_stats['byte_up_all']
 
     except ftplib.all_errors as e:
       logger.error("Impossibile effettuare l'upload: %s" % e)
       errorcode = errors.geterrorcode(e)
-      return Proof('upload', start, 0, 0, errorcode)
+      return Proof('upload', start, 0, 0, 0, errorcode)
 
     ftp.quit()
     
     # TODO Estender Proof per la memorizzazione dei dati del contabit
-    return Proof('upload', start, elapsed, size)
+    return Proof('upload', start, elapsed, size, counter_byte)
 
   def testftpdown(self, filename):
     # TODO Controllare TODO di ftpup
-    global ftp, file, size
+    global ftp, file, size, counter_byte
     size = 0
     elapsed = 0
+    counter_byte = 0
     file = filename
     timeout = max(self._timeout, 1)
     start=datetime.fromtimestamp(timestampNtp())
@@ -164,24 +181,42 @@ class Tester:
     except ftplib.all_errors as e:
       logger.error('Impossibile aprire la connessione FTP: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof('download', start, elapsed, size, errorcode)	# inserire codifica codici errore
+      return Proof('download', start, elapsed, size, counter_byte, errorcode)	# inserire codifica codici errore
 
     function = '''ftp.retrbinary('RETR %s' % file, totalsize)'''
     setup = 'from %s import ftp, file, totalsize' % __name__ 
     timer = timeit.Timer(function, setup)
 
     try:
+      # DONE::TODO Eseguire start di contabit  
+      if (self.counter_init==0):
+        counter_start=self.counter.start()
+        if (counter_start!=None):
+          e = self.counter.geterr()
+          logger.error('Errore start contabit: %s' % e)
+      
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
+      
+      # DONE::TODO Eseguire stop di contabit e analizzare il valore di ritorno
+      if (self.counter_init==0):
+        counter_stop=self.counter.stop()
+        if (counter_stop!=0):
+          e = self.counter.geterr()
+          logger.error('Errore stop contabit: %s' % e)
+          
+        counter_stats=self.counter.getstat('byte_down_all')
+        if (counter_stats!=None):  
+          counter_byte=counter_stats['byte_down_all']
 
     except ftplib.all_errors as e:
       logger.error("Impossibile effettuare il download: %s" % e)
       errorcode = errors.geterrorcode(e)
-      return Proof('download', start, elapsed, size, errorcode)
+      return Proof('download', start, elapsed, size, counter_byte, errorcode)
     
     ftp.quit()
     
-    return Proof('download', start, elapsed, size)
+    return Proof('download', start, elapsed, size, counter_byte)
 
   def testping(self):
     # si utilizza funzione ping.py

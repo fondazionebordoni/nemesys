@@ -22,11 +22,12 @@ from datetime import datetime
 
 class Proof:
 
-  def __init__(self, type, start, value, bytes, errorcode=0):
+  def __init__(self, type, start, value, bytes, counter_bytes=0, errorcode=0):
     self._type = type
     self._start = start
     self._value = value
     self._bytes = bytes
+    self._counter_bytes = counter_bytes
     self._errorcode = errorcode
 
   @property
@@ -49,6 +50,10 @@ class Proof:
     return self._bytes
 
   @property
+  def counter_bytes(self):
+      return self._counter_bytes
+
+  @property
   def errorcode(self):
     return self._errorcode
 
@@ -59,7 +64,7 @@ class Proof:
     self._errorcode = errorcode
 
   def __str__(self):
-    return 'type: %s; start: %s; value: %1.3f; bytes: %d; errorcode: %d' % (self.type, self.start.isoformat(), self.value * 1000, self.bytes, self.errorcode)
+    return 'type: %s; start: %s; value: %1.3f; bytes: %d; counter_bytes: %d; errorcode: %d' % (self.type, self.start.isoformat(), self.value * 1000, self.bytes, self.counter_bytes, self.errorcode)
 
 if __name__ == '__main__':
   t = Proof('download', datetime.now(), 20, 100000, 101)
