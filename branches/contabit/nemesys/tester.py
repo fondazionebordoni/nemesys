@@ -32,6 +32,7 @@ from proof import Proof
 from timeNtp import timestampNtp
 import timeit
 import socket
+import sysmonitor
 
 from threading import Thread
 from contabit import *
@@ -96,20 +97,19 @@ class Tester:
     self._username = username
     self._password = password
     self._timeout = timeout
-    self.counter = counter()
+    self._counter = counter()
     socket.setdefaulttimeout(self._timeout)
     
-    self.counter_init=self.counter.init(self._if_ip, self._host.ip, 40*1024000)  #Buffer Contabit a 40Mb
-    
-    if (self.counter_init!=0):
-        e = self.counter.geterr()
-        logger.error('Errore inizializzazione contabit: %s' % e)
-    
     # DONE::TODO Creare un contabit e inizializzarlo: se da errore, non verrà usato
+    self._counter_init=self._counter.init(self._if_ip, self._host.ip, 40*1024000)  #Buffer Contabit a 40Mb
+    
+    if (self._counter_init!=0):
+        e = self._counter.geterr()
+        logger.error('Errore inizializzazione contabit: %s' % e)
     
 
   def testftpup(self, bytes, path):
-    global ftp, file, size, counter_byte, filepath
+    global ftp, file, size, filepath
     filepath = path
     size = 0
     elapsed = 0
@@ -134,23 +134,23 @@ class Tester:
 
     try:
       # DONE::TODO Eseguire start di contabit  
-      if (self.counter_init==0):
-        counter_start=self.counter.start()
+      if (self._counter_init==0):
+        counter_start=self._counter.start()
         if (counter_start!=None):
-          e = self.counter.geterr()
+          e = self._counter.geterr()
           logger.error('Errore start contabit: %s' % e)
       
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
       
       # DONE::TODO Eseguire stop di contabit e analizzare il valore di ritorno
-      if (self.counter_init==0):
-        counter_stop=self.counter.stop()
+      if (self._counter_init==0):
+        counter_stop=self._counter.stop()
         if (counter_stop!=0):
-          e = self.counter.geterr()
+          e = self._counter.geterr()
           logger.error('Errore stop contabit: %s' % e)
         
-        counter_stats=self.counter.getstat('byte_up_all')
+        counter_stats=self._counter.getstat('byte_up_all')
         if (counter_stats!=None):  
           counter_byte=counter_stats['byte_up_all']
 
@@ -166,7 +166,7 @@ class Tester:
 
   def testftpdown(self, filename):
     # TODO Controllare TODO di ftpup
-    global ftp, file, size, counter_byte
+    global ftp, file, size
     size = 0
     elapsed = 0
     counter_byte = 0
@@ -189,30 +189,30 @@ class Tester:
 
     try:
       # DONE::TODO Eseguire start di contabit  
-      if (self.counter_init==0):
-        counter_start=self.counter.start()
+      if (self._counter_init==0):
+        counter_start=self._counter.start()
         if (counter_start!=None):
-          e = self.counter.geterr()
+          e = self._counter.geterr()
           logger.error('Errore start contabit: %s' % e)
       
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
       
       # DONE::TODO Eseguire stop di contabit e analizzare il valore di ritorno
-      if (self.counter_init==0):
-        counter_stop=self.counter.stop()
+      if (self._counter_init==0):
+        counter_stop=self._counter.stop()
         if (counter_stop!=0):
-          e = self.counter.geterr()
+          e = self._counter.geterr()
           logger.error('Errore stop contabit: %s' % e)
           
-        counter_stats=self.counter.getstat('byte_down_all')
+        counter_stats=self._counter.getstat('byte_down_all')
         if (counter_stats!=None):  
           counter_byte=counter_stats['byte_down_all']
 
     except ftplib.all_errors as e:
       logger.error("Impossibile effettuare il download: %s" % e)
       errorcode = errors.geterrorcode(e)
-      return Proof('download', start, elapsed, size, counter_byte, errorcode)
+      return Proof('download', start, 0, 0, 0, errorcode)
     
     ftp.quit()
     

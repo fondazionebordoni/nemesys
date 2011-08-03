@@ -47,6 +47,8 @@ import shutil
 import socket
 import status
 import sysmonitor
+from sysmonitorexception import SysmonitorException
+import sysmonitorexception
 
 
 bandwidth_sem = Semaphore()
@@ -354,6 +356,17 @@ class Executer:
 
     return xml2task(data)
 
+  def _evaluate_exception(self, e):
+    if isinstance (e, SysmonitorException):
+      # Inserire nel test tutte le eccezioni da bypassare
+      if e.alert_type == sysmonitorexception.WARNCONN or e.alert_type == sysmonitorexception.WARNPROC:
+        logger.warning('Misura in esecuzione con warning: %s' % e)
+      else:
+        raise e
+    else:                  
+      raise e
+
+
   def _dotask(self, task):
     '''
     Esegue il complesso di test prescritti dal task entro il tempo messo a
@@ -424,13 +437,13 @@ class Executer:
     
             except Exception as e:
               logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+
               if self._killonerror:
-                # TODO Check sul flag associato all'eccezione, e valuitare se risollevarla o no
-                raise e
+                self._evaluate_exception(e)
               else:
                 self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
                 error = errors.geterrorcode(e)
-  
+                
           # Esecuzione del test
           # ------------------------
           logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
@@ -439,12 +452,11 @@ class Executer:
           if error > 0 or base_error > 0:
             test.seterrorcode(error + base_error)
             
-          # TODO Analisti dei risultati del test per il confronto con la soglia
+          # TODO Analisti dei risultati del test per il confronto con la soglia THRESHOLD
           
-          # TODO Salvare il test se i parametri di soglia sono rispettati
+          # TODO Salvare il test se i parametri di soglia sono rispettati in quel caso salvare in byte il valore totale dei byte scambiati
+          # WARNING il risutato dei byte deve essere al netto degli header dei pacchetti
           
-          # TODO Definire la soglia come valore finale statico es THRESHOLD
-  
           # Salvataggio del test nella misura
           # ------------------------
           logger.debug('Download result: %.3f' % test.value)
@@ -461,6 +473,7 @@ class Executer:
             
           sleep(1)
           
+        # Cattura delle eccezioni durante la misura
         except Exception as e:
           if not datetime.fromtimestamp(timestampNtp()).hour == start.hour:
             raise e
@@ -488,8 +501,7 @@ class Executer:
             except Exception as e:
               logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
               if self._killonerror:
-                # TODO Check sul flag associato all'eccezione, e valuitare se risollevarla o no
-                raise e
+                self._evaluate_exception(e)
               else:
                 self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
                 error = errors.geterrorcode(e)
@@ -518,6 +530,7 @@ class Executer:
             
           sleep(1)
 
+        # Cattura delle eccezioni durante la misura
         except Exception as e:
           if not datetime.fromtimestamp(timestampNtp()).hour == start.hour:
             raise e
@@ -545,8 +558,7 @@ class Executer:
             except Exception as e:
               logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
               if self._killonerror:
-                # TODO Check sul flag associato all'eccezione, e valuitare se risollevarla o no
-                raise e
+                self._evaluate_exception(e)
               else:
                 self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
                 error = errors.geterrorcode(e)
@@ -569,6 +581,7 @@ class Executer:
           if ((i - 1) % task.nicmp == 0):
             sleep(task.delay)
 
+        # Cattura delle eccezioni durante la misura
         except Exception as e:
           if not datetime.fromtimestamp(timestampNtp()).hour == start.hour:
             raise e
@@ -996,7 +1009,6 @@ def parse():
     md5 = hashlib.md5(file.read()).hexdigest()
 
   return (options, args, md5)
-
 
 def runtimewarning(signum, frame):
   raise RuntimeWarning()
