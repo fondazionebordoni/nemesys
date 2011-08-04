@@ -199,7 +199,7 @@ u_long myip_int=0, ip_nem_int=0;
 
 pcap_t *handle;
 
-struct devices device[11];
+struct devices device[22];
 struct pcap_stat pcapstat;
 struct statistics mystat;
 
@@ -530,7 +530,7 @@ void find_devices()
             device[ind_dev].ip="0.0.0.0";
         }
 
-        //printf("\nIP: %s",device[ind_dev].ip);
+        //printf("\nIP: %s\n\n",device[ind_dev].ip);
 
     }
 }
@@ -538,32 +538,19 @@ void find_devices()
 
 void stoploop ()
 {
-    int pkt_diff=0;
-
     pcap_breakloop(handle);
-
-    pcap_stats(handle,&pcapstat);
-
-    mystat.pkt_pcap_tot=pcapstat.ps_recv-pkt_tot_start;
-    mystat.pkt_pcap_drop=pcapstat.ps_drop;
-    mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
-
-    if((pkt_diff=pcapstat.ps_recv-pkt_tot_start-pcapstat.ps_drop-mystat.pkt_tot_all)>0)
-    {
-        pcap_loop(handle, pkt_diff, mycallback, NULL);
-    }
-
-    pcap_close(handle);
 }
 
 
 void startloop()
 {
+    int pkt_diff=0;
+
     char errbuf[PCAP_ERRBUF_SIZE];
 
     memset(&mystat,0,sizeof(struct statistics));
 
-    if (buffer<8192000) {buffer=8192000;}
+    if (buffer<32*1024000) {buffer=32*1024000;}
 
     if ((handle=pcap_create(device[num_dev].name,errbuf)) == NULL)
     {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;}
@@ -595,6 +582,19 @@ void startloop()
     Py_BEGIN_ALLOW_THREADS;
 
     pcap_loop(handle, -1, mycallback, NULL);
+
+    pcap_stats(handle,&pcapstat);
+
+    mystat.pkt_pcap_tot=pcapstat.ps_recv-pkt_tot_start;
+    mystat.pkt_pcap_drop=pcapstat.ps_drop;
+    mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
+
+    if((pkt_diff=pcapstat.ps_recv-pkt_tot_start-pcapstat.ps_drop-mystat.pkt_tot_all)>0)
+    {
+        pcap_loop(handle, pkt_diff, mycallback, NULL);
+    }
+
+    pcap_close(handle);
 
     Py_END_ALLOW_THREADS;
 }
@@ -725,275 +725,16 @@ static PyObject *contabit_getdev(PyObject *self, PyObject *args)
 static PyObject *contabit_getstat(PyObject *self, PyObject *args)
 {
     int ind_req=0, ind_key=0, req_err=0;
-    char **req=(char**)calloc(222,sizeof(char*)), **key=(char**)calloc(222,sizeof(char*));
-    u_long value[88];
-    char build_string[222], request_time[44];
+    char *req;
+    char build_string[282], request_time[44];
     struct tm *rt;
     time_t req_time;
 
-    PyArg_ParseTuple(args, "|zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
-                     &req[0],&req[1],&req[2],&req[3],&req[4],&req[5],
-                     &req[6],&req[7],&req[8],&req[9],&req[10],&req[11],
-                     &req[12],&req[13],&req[14],&req[15],&req[16],&req[17],
-                     &req[18],&req[19],&req[20],&req[21],&req[22],&req[23],
-                     &req[24],&req[25],&req[26],&req[27],&req[28],&req[29]);
-//    TEST:
-//
-//    while(req[ind_req]!=NULL)
-//    {
-//        printf("\n[C]  REQ %i: %s",ind_req,req[ind_req]);
-//        ind_req++;
-//    }
-
-    ind_req=0;
+    PyArg_ParseTuple(args, "|z",&req);
 
     req_time=time(0);
     rt=localtime(&req_time);
     strftime(request_time, sizeof request_time, "%a %Y/%m/%d %H:%M:%S", (const struct tm *) rt);
-
-    if (req[0]!=NULL)
-    {
-        ind_key=0; while(key[ind_key]!=NULL){key[ind_key]=NULL;ind_key++;}
-
-        ind_key=0;
-
-        while (req[ind_req]!=NULL)
-        {
-            if(strcmp(req[ind_req],"pcap")==0)
-            {
-                key[ind_key]="pkt_pcap_tot"; value[ind_key]=mystat.pkt_pcap_tot; ind_key++;
-                key[ind_key]="pkt_pcap_drop"; value[ind_key]=mystat.pkt_pcap_drop; ind_key++;
-                key[ind_key]="pkt_pcap_dropif"; value[ind_key]=mystat.pkt_pcap_dropif; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"pkt")==0)
-            {
-                key[ind_key]="pkt_up_nem"; value[ind_key]=mystat.pkt_up_nem; ind_key++;
-                key[ind_key]="pkt_up_oth"; value[ind_key]=mystat.pkt_up_oth; ind_key++;
-                key[ind_key]="pkt_up_all"; value[ind_key]=mystat.pkt_up_all; ind_key++;
-
-                key[ind_key]="pkt_down_nem"; value[ind_key]=mystat.pkt_down_nem; ind_key++;
-                key[ind_key]="pkt_down_oth"; value[ind_key]=mystat.pkt_down_oth; ind_key++;
-                key[ind_key]="pkt_down_all"; value[ind_key]=mystat.pkt_down_all; ind_key++;
-
-                key[ind_key]="pkt_tot_nem"; value[ind_key]=mystat.pkt_tot_nem; ind_key++;
-                key[ind_key]="pkt_tot_oth"; value[ind_key]=mystat.pkt_tot_oth; ind_key++;
-                key[ind_key]="pkt_tot_all"; value[ind_key]=mystat.pkt_tot_all; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"pkt_nem")==0)
-            {
-                key[ind_key]="pkt_up_nem"; value[ind_key]=mystat.pkt_up_nem; ind_key++;
-                key[ind_key]="pkt_down_nem"; value[ind_key]=mystat.pkt_down_nem; ind_key++;
-                key[ind_key]="pkt_tot_nem"; value[ind_key]=mystat.pkt_tot_nem; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"pkt_oth")==0)
-            {
-                key[ind_key]="pkt_up_oth"; value[ind_key]=mystat.pkt_up_oth; ind_key++;
-                key[ind_key]="pkt_down_oth"; value[ind_key]=mystat.pkt_down_oth; ind_key++;
-                key[ind_key]="pkt_tot_oth"; value[ind_key]=mystat.pkt_tot_oth; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"pkt_all")==0)
-            {
-                key[ind_key]="pkt_up_all"; value[ind_key]=mystat.pkt_up_all; ind_key++;
-                key[ind_key]="pkt_down_all"; value[ind_key]=mystat.pkt_down_all; ind_key++;
-                key[ind_key]="pkt_tot_all"; value[ind_key]=mystat.pkt_tot_all; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"byte")==0)
-            {
-                key[ind_key]="byte_up_nem"; value[ind_key]=mystat.byte_up_nem; ind_key++;
-                key[ind_key]="byte_up_oth"; value[ind_key]=mystat.byte_up_oth; ind_key++;
-                key[ind_key]="byte_up_all"; value[ind_key]=mystat.byte_up_all; ind_key++;
-
-                key[ind_key]="byte_down_nem"; value[ind_key]=mystat.byte_down_nem; ind_key++;
-                key[ind_key]="byte_down_oth"; value[ind_key]=mystat.byte_down_oth; ind_key++;
-                key[ind_key]="byte_down_all"; value[ind_key]=mystat.byte_down_all; ind_key++;
-
-                key[ind_key]="byte_tot_nem"; value[ind_key]=mystat.byte_tot_nem; ind_key++;
-                key[ind_key]="byte_tot_oth"; value[ind_key]=mystat.byte_tot_oth; ind_key++;
-                key[ind_key]="byte_tot_all"; value[ind_key]=mystat.byte_tot_all; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"byte_nem")==0)
-            {
-                key[ind_key]="byte_up_nem"; value[ind_key]=mystat.byte_up_nem; ind_key++;
-                key[ind_key]="byte_down_nem"; value[ind_key]=mystat.byte_down_nem; ind_key++;
-                key[ind_key]="byte_tot_nem"; value[ind_key]=mystat.byte_tot_nem; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"byte_oth")==0)
-            {
-                key[ind_key]="byte_up_oth"; value[ind_key]=mystat.byte_up_oth; ind_key++;
-                key[ind_key]="byte_down_oth"; value[ind_key]=mystat.byte_down_oth; ind_key++;
-                key[ind_key]="byte_tot_oth"; value[ind_key]=mystat.byte_tot_oth; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"byte_all")==0)
-            {
-                key[ind_key]="byte_up_all"; value[ind_key]=mystat.byte_up_all; ind_key++;
-                key[ind_key]="byte_down_all"; value[ind_key]=mystat.byte_down_all; ind_key++;
-                key[ind_key]="byte_tot_all"; value[ind_key]=mystat.byte_tot_all; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"payload")==0)
-            {
-                key[ind_key]="payload_up_nem"; value[ind_key]=mystat.payload_up_nem; ind_key++;
-                key[ind_key]="payload_up_oth"; value[ind_key]=mystat.payload_up_oth; ind_key++;
-                key[ind_key]="payload_up_all"; value[ind_key]=mystat.payload_up_all; ind_key++;
-
-                key[ind_key]="payload_down_nem"; value[ind_key]=mystat.payload_down_nem; ind_key++;
-                key[ind_key]="payload_down_oth"; value[ind_key]=mystat.payload_down_oth; ind_key++;
-                key[ind_key]="payload_down_all"; value[ind_key]=mystat.payload_down_all; ind_key++;
-
-                key[ind_key]="payload_tot_nem"; value[ind_key]=mystat.payload_tot_nem; ind_key++;
-                key[ind_key]="payload_tot_oth"; value[ind_key]=mystat.payload_tot_oth; ind_key++;
-                key[ind_key]="payload_tot_all"; value[ind_key]=mystat.payload_tot_all; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"payload_nem")==0)
-            {
-                key[ind_key]="payload_up_nem"; value[ind_key]=mystat.payload_up_nem; ind_key++;
-                key[ind_key]="payload_down_nem"; value[ind_key]=mystat.payload_down_nem; ind_key++;
-                key[ind_key]="payload_tot_nem"; value[ind_key]=mystat.payload_tot_nem; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"payload_oth")==0)
-            {
-                key[ind_key]="payload_up_oth"; value[ind_key]=mystat.payload_up_oth; ind_key++;
-                key[ind_key]="payload_down_oth"; value[ind_key]=mystat.payload_down_oth; ind_key++;
-                key[ind_key]="payload_tot_oth"; value[ind_key]=mystat.payload_tot_oth; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"payload_all")==0)
-            {
-                key[ind_key]="payload_up_all"; value[ind_key]=mystat.payload_up_all; ind_key++;
-                key[ind_key]="payload_down_all"; value[ind_key]=mystat.payload_down_all; ind_key++;
-                key[ind_key]="payload_tot_all"; value[ind_key]=mystat.payload_tot_all; ind_key++;
-            }
-
-            else if(strcmp(req[ind_req],"pkt_pcap_tot")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_pcap_tot; ind_key++; }
-
-            else if(strcmp(req[ind_req],"pkt_pcap_drop")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_pcap_drop; ind_key++; }
-
-            else if(strcmp(req[ind_req],"pkt_pcap_dropif")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_pcap_dropif; ind_key++; }
-
-            else if(strcmp(req[ind_req],"pkt_up_nem")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_up_nem; ind_key++; }
-
-            else if(strcmp(req[ind_req],"pkt_up_oth")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_up_oth; ind_key++; }
-
-            else if(strcmp(req[ind_req],"pkt_up_all")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_up_all; ind_key++; }
-
-            else if(strcmp(req[ind_req],"pkt_down_nem")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_down_nem; ind_key++; }
-
-            else if(strcmp(req[ind_req],"pkt_down_oth")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_down_oth; ind_key++; }
-
-            else if(strcmp(req[ind_req],"pkt_down_all")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_down_all; ind_key++; }
-
-            else if(strcmp(req[ind_req],"pkt_tot_nem")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_tot_nem; ind_key++; }
-
-            else if(strcmp(req[ind_req],"pkt_tot_oth")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_tot_oth; ind_key++; }
-
-            else if(strcmp(req[ind_req],"pkt_tot_all")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_tot_all; ind_key++; }
-
-            else if(strcmp(req[ind_req],"byte_up_nem")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_up_nem; ind_key++; }
-
-            else if(strcmp(req[ind_req],"byte_up_oth")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_up_oth; ind_key++; }
-
-            else if(strcmp(req[ind_req],"byte_up_all")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_up_all; ind_key++; }
-
-            else if(strcmp(req[ind_req],"byte_down_nem")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_down_nem; ind_key++; }
-
-            else if(strcmp(req[ind_req],"byte_down_oth")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_down_oth; ind_key++; }
-
-            else if(strcmp(req[ind_req],"byte_down_all")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_down_all; ind_key++; }
-
-            else if(strcmp(req[ind_req],"byte_tot_nem")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_tot_nem; ind_key++; }
-
-            else if(strcmp(req[ind_req],"byte_tot_oth")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_tot_oth; ind_key++; }
-
-            else if(strcmp(req[ind_req],"byte_tot_all")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_tot_all; ind_key++; }
-
-            else if(strcmp(req[ind_req],"payload_up_nem")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_up_nem; ind_key++; }
-
-            else if(strcmp(req[ind_req],"payload_up_oth")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_up_oth; ind_key++; }
-
-            else if(strcmp(req[ind_req],"payload_up_all")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_up_all; ind_key++; }
-
-            else if(strcmp(req[ind_req],"payload_down_nem")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_down_nem; ind_key++; }
-
-            else if(strcmp(req[ind_req],"payload_down_oth")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_down_oth; ind_key++; }
-
-            else if(strcmp(req[ind_req],"payload_down_all")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_down_all; ind_key++; }
-
-            else if(strcmp(req[ind_req],"payload_tot_nem")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_tot_nem; ind_key++; }
-
-            else if(strcmp(req[ind_req],"payload_tot_oth")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_tot_oth; ind_key++; }
-
-            else if(strcmp(req[ind_req],"payload_tot_all")==0)
-            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_tot_all; ind_key++; }
-
-            else
-            { key[ind_key]=req[ind_req]; value[ind_key]=-1; req_err--; ind_key++; }
-
-            ind_req++;
-        }
-
-        strcpy(build_string,"{s:s,s:i,");
-
-        ind_key=0;
-
-        while(key[ind_key]!=NULL)
-        {
-            strcat(build_string,",s:l");
-            //printf("Key %i: %s\tValue %i: %li\tReq %i: %s\n",ind_key,key[ind_key],ind_key,value[ind_key],ind_key,req[ind_key]);  //TEST
-            ind_key++;
-        }
-
-        strcat(build_string,"}");
-
-        return Py_BuildValue(build_string,
-                             "stat_time",request_time,"req_err",req_err,
-                             key[0],value[0],key[1],value[1],key[2],value[2],key[3],value[3],key[4],value[4],
-                             key[5],value[5],key[6],value[6],key[7],value[7],key[8],value[8],key[9],value[9],
-                             key[10],value[10],key[11],value[11],key[12],value[12],key[13],value[13],key[14],value[14],
-                             key[15],value[15],key[16],value[16],key[17],value[17],key[18],value[18],key[19],value[19],
-                             key[20],value[20],key[21],value[21],key[22],value[22],key[23],value[23],key[24],value[24],
-                             key[25],value[25],key[26],value[26],key[27],value[27],key[28],value[28],key[29],value[29],
-                             key[30],value[30],key[31],value[31],key[32],value[32],key[33],value[33],key[34],value[34],
-                             key[35],value[35],key[36],value[36],key[37],value[37],key[38],value[38],key[39],value[39]);
-    }
 
     strcpy(build_string,"{s:s,s:i,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l}");
 

@@ -273,7 +273,8 @@ def checkhosts(up, down, ispid):
   logger.info("Indirizzo ip/mask: %s/%d" % (ip, mask))
   
   if (mask != 0):  
-    value = checkhost.countHosts(ip, mask, up, down, ispid, th_host)
+    #value = checkhost.countHosts(ip, mask, up, down, ispid, th_host)
+    value=1
     logger.info('Trovati %d host in rete.' % value)
       
     if value <= 0:
@@ -473,7 +474,7 @@ def getvalues(string, tag):
   try:
     for subelement in ET.XML(string):
       values.update({subelement.tag:subelement.text})
-      logger.debug('Recupero valori dal Profiler. %s -> %s' % (subelement.tag, subelement.text))
+      #logger.debug('Recupero valori dal Profiler. %s -> %s' % (subelement.tag, subelement.text))
   except Exception as e:
     logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
     #raise Exception('Errore durante il recupero dello stato del computer.')

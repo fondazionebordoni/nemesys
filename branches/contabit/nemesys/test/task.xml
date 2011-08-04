@@ -8,8 +8,8 @@
 		<srvid>fubsrvrmnmx03</srvid>
 		<srvip>193.104.137.133</srvip>
 		<srvname>NAMEX</srvname>
-		<ftpuppath>/upload/1.rnd</ftpuppath>
-		<ftpdownpath>/download/512.rnd</ftpdownpath>
+		<ftpuppath>/upload/1000.rnd</ftpuppath>
+		<ftpdownpath>/download/1000.rnd</ftpdownpath>
 		<message />
 	</task>
 </calendar>
