@@ -55,7 +55,7 @@ class counter(Thread):
     def __init__(self, if_ip, host_ip, buffer=0):
         Thread.__init__(self)
         self._counter = initialize(if_ip, host_ip, buffer)
-        if (self._counter!=0):
+        if (self._counter != 0):
           e = geterr()
           logger.error('Errore inizializzazione contabit: %s' % e)
         return self._counter
@@ -66,22 +66,22 @@ class counter(Thread):
 
     def run(self):
         self._status_start = start()
-        if (self._status_start!=None):
+        if (self._status_start != None):
           e = geterr()
           logger.error('Errore start contabit: %s' % e)
         
     def stop(self):
         self._status_stop = stop()
-        if (self._status_stop!=None):
+        if (self._status_stop != None):
           e = geterr()
           logger.error('Errore stop contabit: %s' % e)
 
-    def getstat(self,req1=None,req2=None,req3=None,req4=None,req5=None,
-                     req6=None,req7=None,req8=None,req9=None,req10=None,
-                     req11=None,req12=None,req13=None,req14=None,req15=None,
-                     req16=None,req17=None,req18=None,req19=None,req20=None):
-        self._statistics = getstat(req1,req2,req3,req4,req5,req6,req7,req8,req9,req10,
-                           req11,req12,req13,req14,req15,req16,req17,req18,req19,req20)
+    def getstat(self, req1=None, req2=None, req3=None, req4=None, req5=None,
+                     req6=None, req7=None, req8=None, req9=None, req10=None,
+                     req11=None, req12=None, req13=None, req14=None, req15=None,
+                     req16=None, req17=None, req18=None, req19=None, req20=None):
+        self._statistics = getstat(req1, req2, req3, req4, req5, req6, req7, req8, req9, req10,
+                           req11, req12, req13, req14, req15, req16, req17, req18, req19, req20)
         return self._statistics
 
     def geterr(self):
@@ -100,7 +100,7 @@ class Tester:
     self._username = username
     self._password = password
     self._timeout = timeout
-    self._counter = counter(self._if_ip, self._host.ip, 40*1024000) #Buffer Contabit a 40Mb
+    self._counter = counter(self._if_ip, self._host.ip, 40 * 1024000) #Buffer Contabit a 40Mb
     socket.setdefaulttimeout(self._timeout)  
     
   def testftpup(self, bytes, path):
@@ -108,11 +108,11 @@ class Tester:
     filepath = path
     size = 0
     elapsed = 0
-    counter_byte = 0
-    counter_payload = 0 
+    counter_total_pay = 0
+    counter_ftp_pay = 0 
     file = Fakefile(bytes)
     timeout = max(self._timeout, 1)
-    start=datetime.fromtimestamp(timestampNtp())
+    start = datetime.fromtimestamp(timestampNtp())
 
     try:
       # TODO Il timeout non viene onorato in Python 2.6: http://bugs.python.org/issue8493
@@ -121,7 +121,7 @@ class Tester:
     except ftplib.all_errors as e:
       logger.error('Impossibile aprire la connessione FTP: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof('upload', start, elapsed, size, counter_byte, counter_payload, errorcode)	# inserire codifica codici errore
+      return Proof('upload', start, elapsed, size, counter_total_pay, counter_ftp_pay, errorcode)	# inserire codifica codici errore
 
     # TODO Se la connessione FTP viene invocata con timeout, il socket è non-blocking e il sistema può terminare i buffer di rete: http://bugs.python.org/issue8493
     function = '''ftp.storbinary('STOR %s' % filepath, file, callback=totalsize)'''
@@ -130,20 +130,20 @@ class Tester:
 
     try:
       # DONE::TODO Eseguire start di contabit  
-      if (self._counter==0):
+      if (self._counter == 0):
         self._counter.start()
       
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
       
       # DONE::TODO Eseguire stop di contabit e analizzare il valore di ritorno
-      if (self._counter==0):
+      if (self._counter == 0):
         self._counter.stop()
         
-        counter_stats=self._counter.getstat('byte_up_all','payload_up_all')
-        if (counter_stats!=None):  
-          counter_byte=counter_stats['byte_up_all']
-          counter_payload=counter_stats['payload_up_all']
+        counter_stats = self._counter.getstat('payload_up_nem', 'payload_up_all')
+        if (counter_stats != None):  
+          counter_total_pay = counter_stats['payload_up_all']
+          counter_ftp_pay = counter_stats['payload_up_nem']
 
     except ftplib.all_errors as e:
       logger.error("Impossibile effettuare l'upload: %s" % e)
@@ -153,18 +153,18 @@ class Tester:
     ftp.quit()
     
     # TODO Estender Proof per la memorizzazione dei dati del contabit
-    return Proof('upload', start, elapsed, size, counter_byte, counter_payload)
+    return Proof('upload', start, elapsed, size, counter_total_pay, counter_ftp_pay)
 
   def testftpdown(self, filename):
     # TODO Controllare TODO di ftpup
     global ftp, file, size
     size = 0
     elapsed = 0
-    counter_byte = 0
-    counter_payload = 0
+    counter_total_pay = 0
+    counter_ftp_pay = 0
     file = filename
     timeout = max(self._timeout, 1)
-    start=datetime.fromtimestamp(timestampNtp())
+    start = datetime.fromtimestamp(timestampNtp())
 
     try:
       # TODO Il timeout non viene onorato in Python 2.6: http://bugs.python.org/issue8493
@@ -173,7 +173,7 @@ class Tester:
     except ftplib.all_errors as e:
       logger.error('Impossibile aprire la connessione FTP: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof('download', start, elapsed, size, counter_byte, counter_payload, errorcode)	# inserire codifica codici errore
+      return Proof('download', start, elapsed, size, counter_total_pay, counter_ftp_pay, errorcode)	# inserire codifica codici errore
 
     function = '''ftp.retrbinary('RETR %s' % file, totalsize)'''
     setup = 'from %s import ftp, file, totalsize' % __name__ 
@@ -181,20 +181,20 @@ class Tester:
 
     try:
       # DONE::TODO Eseguire start di contabit  
-      if (self._counter==0):
+      if (self._counter == 0):
         self._counter.start()
       
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
       
       # DONE::TODO Eseguire stop di contabit e analizzare il valore di ritorno
-      if (self._counter==0):
+      if (self._counter == 0):
         self._counter.stop()
           
-        counter_stats=self._counter.getstat('byte_down_all','payload_down_all')
-        if (counter_stats!=None):  
-          counter_byte=counter_stats['byte_down_all']
-          counter_payload=counter_stats['payload_down_all']
+        counter_stats = self._counter.getstat('payload_down_nem', 'payload_down_all')
+        if (counter_stats != None):  
+          counter_total_pay = counter_stats['payload_down_all']
+          counter_ftp_pay = counter_stats['payload_down_nem']
 
     except ftplib.all_errors as e:
       logger.error("Impossibile effettuare il download: %s" % e)
@@ -203,11 +203,11 @@ class Tester:
     
     ftp.quit()
     
-    return Proof('download', start, elapsed, size, counter_byte, counter_payload)
+    return Proof('download', start, elapsed, size, counter_total_pay, counter_ftp_pay)
 
   def testping(self):
     # si utilizza funzione ping.py
-    start=datetime.fromtimestamp(timestampNtp())
+    start = datetime.fromtimestamp(timestampNtp())
     elapsed = 0
 
     try:
@@ -250,7 +250,7 @@ def main():
   (options, args) = parser.parse_args()
   #TODO inserire controllo host
     
-  t = Tester(if_ip=sysmonitor.getIp,Host(options.host), options.username, options.password)
+  t = Tester(if_ip=sysmonitor.getIp, Host(options.host), options.username, options.password)
   test = None
   print ('Prova: %s' % options.host)
     
@@ -267,7 +267,7 @@ def main():
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
-    t1 = Tester('192.168.208.10',Host(ip='83.103.94.125'), 'anonymous', 'iscom')
+    t1 = Tester('192.168.208.10', Host(ip='83.103.94.125'), 'anonymous', 'iscom')
    
     test = t1.testftpdown('r.raw')
     print 'Test Download:'
