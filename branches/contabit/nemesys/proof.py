@@ -22,13 +22,13 @@ from datetime import datetime
 
 class Proof:
 
-  def __init__(self, type, start, value, bytes, counter_bytes=0, counter_payload=0, errorcode=0):
+  def __init__(self, type, start, value, bytes, counter_total_pay=0, counter_ftp_pay=0, errorcode=0):
     self._type = type
     self._start = start
     self._value = value
     self._bytes = bytes
-    self._counter_bytes = counter_bytes
-    self._counter_payload = counter_payload
+    self._counter_total_pay = counter_total_pay
+    self._counter_ftp_pay = counter_ftp_pay
     self._errorcode = errorcode
 
   @property
@@ -51,12 +51,12 @@ class Proof:
     return self._bytes
 
   @property
-  def counter_bytes(self):
-      return self._counter_bytes
+  def counter_total_pay(self):
+      return self._counter_total_pay
 
   @property
-  def counter_payload(self):
-      return self._counter_payload
+  def counter_ftp_pay(self):
+      return self._counter_ftp_pay
 
   @property
   def errorcode(self):
@@ -69,7 +69,7 @@ class Proof:
     self._errorcode = errorcode
 
   def __str__(self):
-    return 'type: %s; start: %s; value: %1.3f; bytes: %d; counter_bytes: %d; counter_payload: %d; errorcode: %d' % (self.type, self.start.isoformat(), self.value * 1000, self.bytes, self.counter_bytes, self.counter_payload, self.errorcode)
+    return 'type: %s; start: %s; value: %1.3f; bytes: %d; counter_total_pay: %d; counter_ftp_pay: %d; errorcode: %d' % (self.type, self.start.isoformat(), self.value * 1000, self.bytes, self.counter_total_pay, self.counter_ftp_pay, self.errorcode)
 
 if __name__ == '__main__':
   t = Proof('download', datetime.now(), 20, 100000, 140000, 100000, 101)

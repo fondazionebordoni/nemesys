@@ -60,6 +60,8 @@ __version__ = '1.7.1'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
+# Soglia per il rapporto tra traffico 'spurio' e traffico totale
+TH_OUTERTRAFFIC = 0.1
 
 class _Communicator(Thread):
 
@@ -452,12 +454,16 @@ class Executer:
           if error > 0 or base_error > 0:
             test.seterrorcode(error + base_error)
             
-          # TODO Analisti dei risultati del test per il confronto con la soglia THRESHOLD
+          # Analisi da contabit
+          #--------------------------
+          if test.counter_total_pay > 0 :
+            traffic_ratio = (test.counter_total_pay - test.counter_ftp_pay) / test.counter_total_pay 
+            if traffic_ratio < TH_OUTERTRAFFIC :   
+              test.bytes = test.counter_ftp_pay
+            else :
+              raise Exception('Eccessiva presenza di traffico internet non legato alla misura.')           
           
-          # TODO Salvare il test se i parametri di soglia sono rispettati in quel caso salvare in byte il valore totale dei byte scambiati
-          # WARNING il risutato dei byte deve essere al netto degli header dei pacchetti
-          
-          # Salvataggio del test nella misura
+          # Salvataggio della misura
           # ------------------------
           logger.debug('Download result: %.3f' % test.value)
           logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
