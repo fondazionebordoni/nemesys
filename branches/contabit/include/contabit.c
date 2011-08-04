@@ -2,9 +2,10 @@
 //
 //Linux: gcc contabit.c -shared -I/usr/include/python2.7 -lpython2.7 -lpcap -ocontabit.so
 //
-//cd [DMNK1220]\[WORK]\Project\ContaBit-Python-WIN
+//Win: gcc contabit.c -shared -I C:\Python27\include -I C:\winpcap\Include -I C:\winpcap\Include\pcap -L C:\Programmi\CodeBlocks\MinGW\lib -L C:\Python27\libs -L C:\winpcap\Lib -o contabit.pyd -lpython27 -lwpcap -lwsock32
 //
-//Win: gcc contabit.c -shared -I C:\Python27\include -I %progx86%\WpdPack\Include -I %progx86%\WpdPack\Include\pcap\ -L C:\MinGW\lib -L C:\Python27\libs -L %progx86%\WpdPack\Lib -o contabit.pyd -lpython27 -lwpcap -lwsock32
+// gcc -fPIC                        [per 64bit .so .pyd]
+// gcc -fno-stack-protector         [disabilitare la protezione di overflow]
 
 
 #include <Python.h>
@@ -43,6 +44,102 @@
 #include <time.h>
 #include <math.h>
 
+#define IP_ADDR_LEN 4
+#define ETHER_ADDR_LEN	6
+#define SIZE_ETHERNET 14
+
+/* Ethernet header */
+struct hdr_ethernet
+{
+    u_char ether_dhost[ETHER_ADDR_LEN]; /* Destination host address */
+    u_char ether_shost[ETHER_ADDR_LEN]; /* Source host address */
+    u_short ether_type; /* IP? ARP? RARP? etc */
+};
+
+struct hdr_arp
+{
+  u_short hwtype;           // Hardware type
+  u_short proto;            // Protocol type
+  u_short _hwlen_protolen;  // Protocol address length
+  u_short opcode;           // Opcode
+  u_short eth_src1;
+  u_short eth_src2;
+  u_short eth_src3;         // Source hardware address
+  u_char  arp_src[IP_ADDR_LEN];          // Source protocol address
+  u_short eth_dst1;
+  u_short eth_dst2;
+  u_short eth_dst3;;                         // Target hardware address
+  u_char  arp_dst[IP_ADDR_LEN];          // Target protocol address
+};
+
+/* IP header */
+struct hdr_ipv4
+{
+    u_char ip_vhl;		/* version << 4 | header length >> 2 */
+    u_char ip_tos;		/* type of service */
+    u_short ip_len;		/* total length */
+    u_short ip_id;		/* identification */
+    u_short ip_off;		/* fragment offset field */
+#define IP_RF 0x8000		/* reserved fragment flag */
+#define IP_DF 0x4000		/* dont fragment flag */
+#define IP_MF 0x2000		/* more fragments flag */
+#define IP_OFFMASK 0x1fff	/* mask for fragmenting bits */
+    u_char ip_ttl;		/* time to live */
+    u_char ip_p;		/* protocol */
+    u_short ip_sum;		/* checksum */
+    struct in_addr ip_src,ip_dst; /* source and dest address */
+};
+
+#define IP_HL(ip)		(((ip)->ip_vhl) & 0x0f)
+#define IP_V(ip)		(((ip)->ip_vhl) >> 4)
+
+/* IPv6 header */
+struct hdr_ipv6
+{
+#if defined(WORDS_BIGENDIAN)
+  u_int8_t       version:4,
+                 traffic_class_high:4;
+  u_int8_t       traffic_class_low:4,
+                 flow_label_high:4;
+#else
+  u_int8_t       traffic_class_high:4,
+                 version:4;
+  u_int8_t       flow_label_high:4,
+                 traffic_class_low:4;
+#endif
+  u_int16_t      flow_label_low;
+  u_int16_t      payload_len;
+  u_int8_t       next_header;
+  u_int8_t       hop_limit;
+  u_int8_t       src_addr[16];
+  u_int8_t       dst_addr[16];
+};
+
+/* TCP header */
+struct hdr_tcp
+{
+    u_short th_sport;	/* source port */
+    u_short th_dport;	/* destination port */
+    u_int32_t th_seq;		/* sequence number DA RIVEDERE tcp_seq*/
+    u_int32_t th_ack;		/* acknowledgement number DA RIVEDERE tcp_seq*/
+
+    u_char th_offx2;	/* data offset, rsvd */
+#define TH_OFF(th)	(((th)->th_offx2 & 0xf0) >> 4)
+    u_char th_flags;
+#define TH_FIN 0x01
+#define TH_SYN 0x02
+#define TH_RST 0x04
+#define TH_PUSH 0x08
+#define TH_ACK 0x10
+#define TH_URG 0x20
+#define TH_ECE 0x40
+#define TH_CWR 0x80
+#define TH_FLAGS (TH_FIN|TH_SYN|TH_RST|TH_ACK|TH_URG|TH_ECE|TH_CWR)
+    u_short th_win;		/* window */
+    u_short th_sum;		/* checksum */
+    u_short th_urp;		/* urgent pointer */
+};
+
 struct devices
 {
     char *name;
@@ -77,20 +174,32 @@ struct statistics
     u_long  byte_tot_oth;
     u_long  byte_tot_all;
 
+    u_long  payload_up_nem;     //NEW
+    u_long  payload_up_oth;     //NEW
+    u_long  payload_up_all;     //NEW
+
+    u_long  payload_down_nem;   //NEW
+    u_long  payload_down_oth;   //NEW
+    u_long  payload_down_all;   //NEW
+
+    u_long  payload_tot_nem;    //NEW
+    u_long  payload_tot_oth;    //NEW
+    u_long  payload_tot_all;    //NEW
+
     u_long  pkt_pcap_tot;
     u_long  pkt_pcap_drop;
     u_long  pkt_pcap_dropif;
 };
 
 int err_flag=0;
-char error_string[88]="No Error";
+char err_str[88]="No Error";
 
 u_int pkt_tot_start=0;
 u_long myip_int=0, ip_nem_int=0;
 
 pcap_t *handle;
 
-struct devices device[11]; //PARAMETRIZZARE MAX_NUM_DEVICES
+struct devices device[11];
 struct pcap_stat pcapstat;
 struct statistics mystat;
 
@@ -119,50 +228,107 @@ int invalid_ip (const char *ip_string)
 
 void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data)
 {
-    char type[22], buff_temp[22], src[22], dst[22], up_down[22], txrx[3];
-    int offset=0, proto=0, pktpad=0;
+    const struct hdr_ethernet *ethernet; /* The ethernet header */
+    const struct hdr_arp *arp; /* The Arp header */
+	const struct hdr_ipv4 *ipv4; /* The IPv4 header */
+	const struct hdr_ipv6 *ipv6; /* The IPv6 header */
+	const struct hdr_tcp *tcp; /* The TCP header */
+	const char *payload; /* Packet payload */
 
-    proto = ntohs(*((int *) &data[12]));
+	struct in_addr addr;
+
+	u_int size_ipv4=0, size_ipv6=40, size_tcp=0, size_payload=0;
+
+    char type[22], buff_temp[22], src[22], dst[22], up_down[22], txrx[3];
+    int proto=0, hdr_len=0, pktpad=0;
+
+    ethernet = (struct hdr_ethernet*)(data);
+
+    proto = ntohs(ethernet->ether_type);
 
     switch(proto)
     {
-    case 0x0800 :   offset=26;
-                    strcpy(type,"IPv4");
-                    sprintf(src,"%d.%d.%d.%d",data[offset], data[offset+1],data[offset+2], data[offset+3]);
-                    sprintf(dst,"%d.%d.%d.%d",data[offset+4], data[offset+5],data[offset+6], data[offset+7]);
+    case 0x0800 :   strcpy(type,"IPv4");
+
+                    ipv4 = (struct hdr_ipv4*)(data + SIZE_ETHERNET);
+                    size_ipv4 = IP_HL(ipv4)*4;
+
+                    strcpy(src,inet_ntoa(ipv4->ip_src));
+                    strcpy(dst,inet_ntoa(ipv4->ip_dst));
 
                     switch (data[23])
                     {
                     case 6  :   strcat(type,"|TCP");
+                                tcp = (struct hdr_tcp*)(data + SIZE_ETHERNET + size_ipv4);
+                                size_tcp = TH_OFF(tcp)*4;
+
+                                hdr_len=(SIZE_ETHERNET + size_ipv4 + size_tcp);
+                                payload = (u_char *)(data + SIZE_ETHERNET + size_ipv4 + size_tcp);
+                                size_payload = ntohs(ipv4->ip_len) - (size_ipv4 + size_tcp);
                                 break;
+
                     case 17 :   strcat(type,"|UDP");
+                                hdr_len=(SIZE_ETHERNET + size_ipv4 + 8);
+                                size_payload = ntohs(ipv4->ip_len) - (size_ipv4 + 8);
                                 break;
-                    case 1  :   strcat(type,"|ICMP");
+
+                    case 1  :   strcat(type,"|ICMPv4");
                                 break;
-                    case 2  :   strcat(type,"|IGMP");
+
+                    case 2  :   strcat(type,"|IGMPv4");
                                 break;
+
                     case 89 :   strcat(type,"|OSPF");
                                 break;
+
                     default :   sprintf(buff_temp,"|T:%d",data[23]);
                                 strcat(type,buff_temp);
                                 break;
                     }
                     break;
 
-    case 0x0806 :   offset=28;
-                    strcpy(type,"ARP\t");
-                    sprintf(src,"%d.%d.%d.%d",data[offset], data[offset+1], data[offset+2], data[offset+3]);
-                    sprintf(dst,"%d.%d.%d.%d",data[offset+10], data[offset+11],data[offset+12], data[offset+13]);
-                    break;
+    case 0x86dd :   strcpy(type,"IPv6");
 
-    case 0x86dd :   offset=0;
-                    strcpy(type,"IPv6\t");
+                    ipv6 = (struct hdr_ipv6*)(data + SIZE_ETHERNET);
+                    size_ipv6 = 40;
+
                     sprintf(src,"***.***.***.***");
                     sprintf(dst,"***.***.***.***");
+
+                    switch (data[20])
+                    {
+                    case 6  :   strcat(type,"|TCP");
+                                tcp = (struct hdr_tcp*)(data + SIZE_ETHERNET + size_ipv6);
+                                size_tcp = TH_OFF(tcp)*4;
+
+                                hdr_len=(SIZE_ETHERNET + size_ipv6 + size_tcp);
+                                payload = (u_char *)(data + SIZE_ETHERNET + size_ipv6 + size_tcp);
+                                size_payload = ntohs(ipv6->payload_len) - (size_tcp);
+                                break;
+                    case 17 :   strcat(type,"|UDP");
+                                hdr_len=(SIZE_ETHERNET + size_ipv6 + 8);
+                                size_payload = ntohs(ipv6->payload_len) - (8);
+                                break;
+                    case 1  :   strcat(type,"|ICMPv4");
+                                break;
+                    case 2  :   strcat(type,"|IGMPv4");
+                                break;
+                    case 58 :   strcat(type,"|ICMPv6");
+                                break;
+                    default :   sprintf(buff_temp,"|T:%d",data[23]);
+                                strcat(type,buff_temp);
+                                break;
+                    }
+
                     break;
 
-    default     :   offset=0;
-                    strcpy(type,"UNKNOW:");
+    case 0x0806 :   strcpy(type,"ARP\t");
+                    arp = (struct hdr_arp*)(data + SIZE_ETHERNET);
+                    strcpy(src,inet_ntoa (*(struct in_addr*)(arp->arp_src)));
+                    strcpy(dst,inet_ntoa (*(struct in_addr*)(arp->arp_dst)));
+                    break;
+
+    default     :   strcpy(type,"UNKNOW:");
                     if(proto<0x05dd)
                     {
                         sprintf(buff_temp,"%i byte",proto);
@@ -176,7 +342,6 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
                     sprintf(dst,"***.***.***.***");
                     break;
     }
-
 
     if((inet_addr(src)==myip_int || inet_addr(src)==ip_nem_int) && (inet_addr(dst)==myip_int || inet_addr(dst)==ip_nem_int))
     {
@@ -196,6 +361,9 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
         mystat.byte_down_all += ((hdr->len)+4);
         mystat.byte_tot_all += ((hdr->len)+4);
 
+        mystat.payload_down_all += size_payload;
+        mystat.payload_tot_all += size_payload;
+
         if((inet_addr(src)==ip_nem_int) && (inet_addr(dst)==myip_int))
         {
             mystat.pkt_down_nem++;
@@ -203,6 +371,9 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
 
             mystat.byte_down_nem += ((hdr->len)+4);
             mystat.byte_tot_nem += ((hdr->len)+4);
+
+            mystat.payload_down_nem += size_payload;
+            mystat.payload_tot_nem += size_payload;
         }
         else
         {
@@ -211,6 +382,9 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
 
             mystat.byte_down_oth += ((hdr->len)+4);
             mystat.byte_tot_oth += ((hdr->len)+4);
+
+            mystat.payload_down_oth += size_payload;
+            mystat.payload_tot_oth += size_payload;
         }
 
     }
@@ -233,6 +407,9 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
         mystat.byte_up_all += ((hdr->len)+pktpad+4);
         mystat.byte_tot_all += ((hdr->len)+pktpad+4);
 
+        mystat.payload_up_all += size_payload;
+        mystat.payload_tot_all += size_payload;
+
         if((inet_addr(src)==myip_int) && (inet_addr(dst)==ip_nem_int))
         {
             mystat.pkt_up_nem++;
@@ -240,6 +417,9 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
 
             mystat.byte_up_nem += ((hdr->len)+pktpad+4);
             mystat.byte_tot_nem += ((hdr->len)+pktpad+4);
+
+            mystat.payload_up_nem += size_payload;
+            mystat.payload_tot_nem += size_payload;
         }
         else
         {
@@ -248,6 +428,9 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
 
             mystat.byte_up_oth += ((hdr->len)+pktpad+4);
             mystat.byte_tot_oth += ((hdr->len)+pktpad+4);
+
+            mystat.payload_up_oth += size_payload;
+            mystat.payload_tot_oth += size_payload;
         }
     }
 
@@ -256,12 +439,14 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
     mystat.pkt_pcap_tot=pcapstat.ps_recv-pkt_tot_start;
     mystat.pkt_pcap_drop=pcapstat.ps_drop;
     mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
+
+    //printf("TYPE: %s\tLEN: %i = %i + %i\n", type, (hdr->len), hdr_len, size_payload);
 }
 
 
 void find_devices()
 {
-    int i=0;
+    int i=0, test=0;
 
     char *ip, *net, *mask, *point;
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -281,7 +466,7 @@ void find_devices()
     ind_dev=0;
 
     if (pcap_findalldevs (&alldevs, errbuf) != 0)
-    {sprintf(error_string,"FindAllDevs error: %s\n",errbuf);err_flag=1;}
+    {sprintf(err_str,"FindAllDevs error: %s\n",errbuf);err_flag=-1;}
 
     dl=alldevs;
 
@@ -291,30 +476,34 @@ void find_devices()
 
         device[ind_dev].name=dl->name;
 
+        //printf("\nNAME: %s",device[ind_dev].name);
+
         if (pcap_lookupnet(dl->name, &netp, &maskp, errbuf) != 0)
-        {sprintf (error_string,"\nLookUpNet error: %s\n", errbuf);err_flag=1;}
+        {sprintf (err_str,"LookUpNet error: %s", errbuf);err_flag=-1;}
 
         addr.s_addr = netp;
         net = inet_ntoa(addr);
-        device[ind_dev].net=malloc(22*sizeof(char));
+        device[ind_dev].net=(char*)calloc(22,sizeof(char));
         memcpy(device[ind_dev].net,net,strlen(net)+1);
+
+        //printf("\nNET: %s",device[ind_dev].net);
 
         addr.s_addr = maskp;
         mask = inet_ntoa(addr);
-        device[ind_dev].mask=malloc(22*sizeof(char));
+        device[ind_dev].mask=(char*)calloc(22,sizeof(char));
         memcpy(device[ind_dev].mask,mask,strlen(mask)+1);
+
+        //printf("\nMASK: %s",device[ind_dev].mask);
 
         if(dl->addresses!=NULL)
         {
             addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
             ip = inet_ntoa(addr);
-            device[ind_dev].ip=malloc(22*sizeof(char));
-            memcpy(device[ind_dev].ip,ip,strlen(ip)+1);
 
             point=strrchr(device[ind_dev].net,'.');
             i=point-device[ind_dev].net+1;
 
-            if(strncmp(device[ind_dev].ip,device[ind_dev].net,i) != 0)
+            if(strncmp(ip,device[ind_dev].net,i) != 0)
             {
                 #if _WIN32
                 WSAStartup(0x101,&wsa_Data);
@@ -323,22 +512,26 @@ void find_devices()
                 ip = inet_ntoa (*(struct in_addr *)*host_entry->h_addr_list);
                 WSACleanup();
                 #else
-                while(strncmp(ip,device[ind_dev].net,i) != 0)
+                while((strncmp(ip,device[ind_dev].net,i) != 0) && (dl->addresses->next))
                 {
                     dl->addresses=dl->addresses->next;
                     addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
                     ip = inet_ntoa(addr);
                 }
                 #endif
-
-                device[ind_dev].ip=malloc(22*sizeof(char));
-                memcpy(device[ind_dev].ip,ip,strlen(ip)+1);
             }
+
+            device[ind_dev].ip=(char*)calloc(22,sizeof(char));
+            memcpy(device[ind_dev].ip,ip,strlen(ip)+1);
+
         }
         else
         {
             device[ind_dev].ip="0.0.0.0";
         }
+
+        //printf("\nIP: %s",device[ind_dev].ip);
+
     }
 }
 
@@ -370,28 +563,25 @@ void startloop()
 
     memset(&mystat,0,sizeof(struct statistics));
 
-    if (buffer<8192000)
-    {
-        buffer=8192000;
-    }
+    if (buffer<8192000) {buffer=8192000;}
 
     if ((handle=pcap_create(device[num_dev].name,errbuf)) == NULL)
-    {sprintf (error_string,"\nCouldn't open device: %s\n",errbuf);err_flag=1;}
+    {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;}
 
     if (pcap_set_promisc(handle,1) != 0)
-    {sprintf(error_string,"\nPromiscuousMode error: %s\n",errbuf);err_flag=1;}
+    {sprintf(err_str,"PromiscuousMode error: %s",errbuf);err_flag=-1;}
 
     if (pcap_set_timeout(handle,1) != 0)
-    {sprintf(error_string,"\nTimeout error: %s\n",errbuf);err_flag=1;}
+    {sprintf(err_str,"Timeout error: %s",errbuf);err_flag=-1;}
 
     if (pcap_set_snaplen(handle,BUFSIZ) != 0)
-    {sprintf(error_string,"\nSnapshot error: %s\n",errbuf);err_flag=1;}
+    {sprintf(err_str,"Snapshot error: %s",errbuf);err_flag=-1;}
 
     if (pcap_set_buffer_size(handle,buffer) !=0)
-    {sprintf(error_string,"\nSetBuffer error: %s\n",errbuf);err_flag=1;}
+    {sprintf(err_str,"SetBuffer error: %s",errbuf);err_flag=-1;}
 
     if (pcap_activate(handle) !=0)
-    {sprintf(error_string,"\nActivate error: %s\n",errbuf);err_flag=1;}
+    {sprintf(err_str,"Activate error: %s",errbuf);err_flag=-1;}
 
     pcap_stats(handle,&pcapstat);
 
@@ -416,26 +606,26 @@ static PyObject *contabit_initialize(PyObject *self, PyObject *args)
 {
     int i=0;
 
-    char *dev=(char*)malloc(22*sizeof(char)), *nem=(char*)malloc(22*sizeof(char));
+    char *dev_sel=(char*)calloc(88,sizeof(char)), *nem=(char*)calloc(22,sizeof(char));
 
-    err_flag=0;
+    err_flag=0; strcpy(err_str,"No Error");
 
-    PyArg_ParseTuple(args, "sz|i", &dev, &nem, &buffer);
+    PyArg_ParseTuple(args, "sz|i", &dev_sel, &nem, &buffer);
 
     find_devices();
 
     for(i=1; i<=ind_dev; i++)
     {
-        if ((strcmp(dev,device[i].name)==0)||(strcmp(dev,device[i].ip)==0))
+        if ((strcmp(dev_sel,device[i].name)==0)||(strcmp(dev_sel,device[i].ip)==0))
         {
             num_dev=i;
         }
     }
 
-    if(num_dev==0)
-    {sprintf(error_string,"Device Not Found");err_flag=-1;}
+    if (num_dev==0)
+    {sprintf(err_str,"Device Not Found");err_flag=-1;}
 
-    if(invalid_ip(nem)){strcpy(nem,"none");}
+    if (invalid_ip(nem)) {strcpy(nem,"none");}
 
     myip_int=inet_addr(device[num_dev].ip);
     ip_nem_int=inet_addr(nem);
@@ -445,7 +635,7 @@ static PyObject *contabit_initialize(PyObject *self, PyObject *args)
 
 static PyObject *contabit_start(PyObject *self)
 {
-    err_flag=0;
+    err_flag=0; strcpy(err_str,"No Error");
 
     startloop();
 
@@ -454,7 +644,7 @@ static PyObject *contabit_start(PyObject *self)
 
 static PyObject *contabit_stop(PyObject *self)
 {
-    err_flag=0;
+    err_flag=0; strcpy(err_str,"No Error");
 
     stoploop();
 
@@ -463,41 +653,50 @@ static PyObject *contabit_stop(PyObject *self)
 
 static PyObject *contabit_getdev(PyObject *self, PyObject *args)
 {
-    int i=0;
+    int i=0, in_net=0, find_dev=0;
 
-    char build_string[88];
+    char build_string[222];
 
-    char *req=(char*)malloc(44*sizeof(char));
+    char *dev=(char*)calloc(88,sizeof(char));
 
-    err_flag=0;
+    err_flag=0; strcpy(err_str,"No Error");
 
-    PyArg_ParseTuple(args, "|z",&req);
+    PyArg_ParseTuple(args, "|z",&dev);
 
     find_devices();
 
-    if (req!=NULL)
+    if (dev!=NULL)
     {
-            for(i=1; i<=ind_dev; i++)
+        for(i=1; i<=ind_dev; i++)
+        {
+            if ((strcmp(dev,device[i].name)==0)||(strcmp(dev,device[i].ip)==0))
             {
-                if (strcmp(req,device[i].name)==0)
-                {
-                    return Py_BuildValue ("{s:i,s:s,s:s,s:s,s:s}",
-                                          "err_flag",err_flag,"err_string",error_string,
-                                          "dev_ip",device[i].ip,"dev_net",device[i].net,"dev_mask",device[i].mask);
-                }
-                else if (strcmp(req,device[i].ip)==0)
-                {
-                    return Py_BuildValue ("{s:i,s:s,s:s,s:s,s:s}",
-                                          "err_flag",err_flag,"err_string",error_string,
-                                          "dev_name",device[i].name,"dev_net",device[i].net,"dev_mask",device[i].mask);
-                }
-                else
-                {
-                    sprintf(error_string,"Device Not Found");err_flag=-1;
-                    return Py_BuildValue ("{s:i,s:s}",
-                                          "err_flag",err_flag,"err_string",error_string);
-                }
+                in_net++; //servirà per sapere quanti ip della stessa sottorete (quanti dev sulla macchina connessi al router adsl)
+                find_dev=i;
             }
+        }
+
+        if(find_dev!=0)
+        {
+            if (strcmp(dev,device[find_dev].name)==0)
+            {
+                return Py_BuildValue ("{s:i,s:s,s:s,s:s,s:s}",
+                                      "err_flag",err_flag,"err_str",err_str,
+                                      "dev_ip",device[find_dev].ip,"dev_net",device[find_dev].net,"dev_mask",device[find_dev].mask);
+            }
+            else if (strcmp(dev,device[find_dev].ip)==0)
+            {
+                return Py_BuildValue ("{s:i,s:s,s:s,s:s,s:s}",
+                                      "err_flag",err_flag,"err_str",err_str,
+                                      "dev_name",device[find_dev].name,"dev_net",device[find_dev].net,"dev_mask",device[find_dev].mask);
+            }
+        }
+        else
+        {
+            sprintf(err_str,"Device Not Found");err_flag=-1;
+            return Py_BuildValue ("{s:i,s:s}",
+                                  "err_flag",err_flag,"err_str",err_str);
+        }
     }
 
     strcpy(build_string,"{s:i,s:s,s:i");
@@ -510,42 +709,43 @@ static PyObject *contabit_getdev(PyObject *self, PyObject *args)
     strcat(build_string,"}");
 
     return Py_BuildValue (build_string,
-                          "err_flag",err_flag,"err_string",error_string,"num_dev",ind_dev,
+                          "err_flag",err_flag,"err_str",err_str,"num_dev",ind_dev,
                           "dev1_name",device[1].name,"dev1_ip",device[1].ip,"dev2_name",device[2].name,"dev2_ip",device[2].ip,
                           "dev3_name",device[3].name,"dev3_ip",device[3].ip,"dev4_name",device[4].name,"dev4_ip",device[4].ip,
                           "dev5_name",device[5].name,"dev5_ip",device[5].ip,"dev6_name",device[6].name,"dev6_ip",device[6].ip,
                           "dev7_name",device[7].name,"dev7_ip",device[7].ip,"dev8_name",device[8].name,"dev8_ip",device[8].ip,
                           "dev9_name",device[9].name,"dev9_ip",device[9].ip,"dev10_name",device[10].name,"dev10_ip",device[10].ip,
-                          "dev11_name",device[11].name,"dev11_ip",device[11].ip,"dev12_name",device[12].name,"dev12_ip",device[12].ip);
+                          "dev11_name",device[11].name,"dev11_ip",device[11].ip,"dev12_name",device[12].name,"dev12_ip",device[12].ip,
+                          "dev13_name",device[13].name,"dev13_ip",device[13].ip,"dev14_name",device[14].name,"dev14_ip",device[14].ip,
+                          "dev15_name",device[15].name,"dev15_ip",device[15].ip,"dev16_name",device[16].name,"dev16_ip",device[16].ip,
+                          "dev17_name",device[17].name,"dev17_ip",device[17].ip,"dev18_name",device[18].name,"dev18_ip",device[18].ip,
+                          "dev19_name",device[19].name,"dev19_ip",device[19].ip,"dev20_name",device[20].name,"dev20_ip",device[20].ip);
 }
 
 static PyObject *contabit_getstat(PyObject *self, PyObject *args)
 {
     int ind_req=0, ind_key=0, req_err=0;
-    char **req=malloc(48*sizeof(char*)), **key=malloc(48*sizeof(char*));
+    char **req=(char**)calloc(222,sizeof(char*)), **key=(char**)calloc(222,sizeof(char*));
     u_long value[88];
-    char build_string[202], request_time[44];
+    char build_string[222], request_time[44];
     struct tm *rt;
     time_t req_time;
 
-    for (ind_req=0 ; ind_req<22 ; ind_req++)
-    {
-        req[ind_req]=(char*)malloc(88*sizeof(char*));
-    }
+    PyArg_ParseTuple(args, "|zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+                     &req[0],&req[1],&req[2],&req[3],&req[4],&req[5],
+                     &req[6],&req[7],&req[8],&req[9],&req[10],&req[11],
+                     &req[12],&req[13],&req[14],&req[15],&req[16],&req[17],
+                     &req[18],&req[19],&req[20],&req[21],&req[22],&req[23],
+                     &req[24],&req[25],&req[26],&req[27],&req[28],&req[29]);
+//    TEST:
+//
+//    while(req[ind_req]!=NULL)
+//    {
+//        printf("\n[C]  REQ %i: %s",ind_req,req[ind_req]);
+//        ind_req++;
+//    }
 
     ind_req=0;
-
-    PyArg_ParseTuple(args, "|zzzzzzzzzzzzzzzzzzzzz",
-                     &req[0],&req[1],&req[2],
-                     &req[3],&req[4],&req[5],
-                     &req[6],&req[7],&req[8],
-                     &req[9],&req[10],&req[11],
-                     &req[12],&req[13],&req[14],
-                     &req[15],&req[16],&req[17],
-                     &req[18],&req[19],&req[20]);
-
-
-	printf("\n%s\n",req[0]);
 
     req_time=time(0);
     rt=localtime(&req_time);
@@ -638,6 +838,42 @@ static PyObject *contabit_getstat(PyObject *self, PyObject *args)
                 key[ind_key]="byte_tot_all"; value[ind_key]=mystat.byte_tot_all; ind_key++;
             }
 
+            else if(strcmp(req[ind_req],"payload")==0)
+            {
+                key[ind_key]="payload_up_nem"; value[ind_key]=mystat.payload_up_nem; ind_key++;
+                key[ind_key]="payload_up_oth"; value[ind_key]=mystat.payload_up_oth; ind_key++;
+                key[ind_key]="payload_up_all"; value[ind_key]=mystat.payload_up_all; ind_key++;
+
+                key[ind_key]="payload_down_nem"; value[ind_key]=mystat.payload_down_nem; ind_key++;
+                key[ind_key]="payload_down_oth"; value[ind_key]=mystat.payload_down_oth; ind_key++;
+                key[ind_key]="payload_down_all"; value[ind_key]=mystat.payload_down_all; ind_key++;
+
+                key[ind_key]="payload_tot_nem"; value[ind_key]=mystat.payload_tot_nem; ind_key++;
+                key[ind_key]="payload_tot_oth"; value[ind_key]=mystat.payload_tot_oth; ind_key++;
+                key[ind_key]="payload_tot_all"; value[ind_key]=mystat.payload_tot_all; ind_key++;
+            }
+
+            else if(strcmp(req[ind_req],"payload_nem")==0)
+            {
+                key[ind_key]="payload_up_nem"; value[ind_key]=mystat.payload_up_nem; ind_key++;
+                key[ind_key]="payload_down_nem"; value[ind_key]=mystat.payload_down_nem; ind_key++;
+                key[ind_key]="payload_tot_nem"; value[ind_key]=mystat.payload_tot_nem; ind_key++;
+            }
+
+            else if(strcmp(req[ind_req],"payload_oth")==0)
+            {
+                key[ind_key]="payload_up_oth"; value[ind_key]=mystat.payload_up_oth; ind_key++;
+                key[ind_key]="payload_down_oth"; value[ind_key]=mystat.payload_down_oth; ind_key++;
+                key[ind_key]="payload_tot_oth"; value[ind_key]=mystat.payload_tot_oth; ind_key++;
+            }
+
+            else if(strcmp(req[ind_req],"payload_all")==0)
+            {
+                key[ind_key]="payload_up_all"; value[ind_key]=mystat.payload_up_all; ind_key++;
+                key[ind_key]="payload_down_all"; value[ind_key]=mystat.payload_down_all; ind_key++;
+                key[ind_key]="payload_tot_all"; value[ind_key]=mystat.payload_tot_all; ind_key++;
+            }
+
             else if(strcmp(req[ind_req],"pkt_pcap_tot")==0)
             { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_pcap_tot; ind_key++; }
 
@@ -701,6 +937,33 @@ static PyObject *contabit_getstat(PyObject *self, PyObject *args)
             else if(strcmp(req[ind_req],"byte_tot_all")==0)
             { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_tot_all; ind_key++; }
 
+            else if(strcmp(req[ind_req],"payload_up_nem")==0)
+            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_up_nem; ind_key++; }
+
+            else if(strcmp(req[ind_req],"payload_up_oth")==0)
+            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_up_oth; ind_key++; }
+
+            else if(strcmp(req[ind_req],"payload_up_all")==0)
+            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_up_all; ind_key++; }
+
+            else if(strcmp(req[ind_req],"payload_down_nem")==0)
+            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_down_nem; ind_key++; }
+
+            else if(strcmp(req[ind_req],"payload_down_oth")==0)
+            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_down_oth; ind_key++; }
+
+            else if(strcmp(req[ind_req],"payload_down_all")==0)
+            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_down_all; ind_key++; }
+
+            else if(strcmp(req[ind_req],"payload_tot_nem")==0)
+            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_tot_nem; ind_key++; }
+
+            else if(strcmp(req[ind_req],"payload_tot_oth")==0)
+            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_tot_oth; ind_key++; }
+
+            else if(strcmp(req[ind_req],"payload_tot_all")==0)
+            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_tot_all; ind_key++; }
+
             else
             { key[ind_key]=req[ind_req]; value[ind_key]=-1; req_err--; ind_key++; }
 
@@ -714,7 +977,7 @@ static PyObject *contabit_getstat(PyObject *self, PyObject *args)
         while(key[ind_key]!=NULL)
         {
             strcat(build_string,",s:l");
-            //printf("Key %i: %s\tValue %i: %li\tReq %i: %s\n",ind_key,key[ind_key],ind_key,value[ind_key],ind_key,req[ind_key]);
+            //printf("Key %i: %s\tValue %i: %li\tReq %i: %s\n",ind_key,key[ind_key],ind_key,value[ind_key],ind_key,req[ind_key]);  //TEST
             ind_key++;
         }
 
@@ -732,7 +995,7 @@ static PyObject *contabit_getstat(PyObject *self, PyObject *args)
                              key[35],value[35],key[36],value[36],key[37],value[37],key[38],value[38],key[39],value[39]);
     }
 
-    strcpy(build_string,"{s:s,s:i,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l}");
+    strcpy(build_string,"{s:s,s:i,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l}");
 
     return Py_BuildValue(build_string,
                          "stat_time",request_time,"req_err",req_err,
@@ -742,12 +1005,15 @@ static PyObject *contabit_getstat(PyObject *self, PyObject *args)
                          "pkt_tot_nem",mystat.pkt_tot_nem,"pkt_tot_oth",mystat.pkt_tot_oth,"pkt_tot_all",mystat.pkt_tot_all,
                          "byte_up_nem",mystat.byte_up_nem,"byte_up_oth",mystat.byte_up_oth,"byte_up_all",mystat.byte_up_all,
                          "byte_down_nem",mystat.byte_down_nem,"byte_down_oth",mystat.byte_down_oth,"byte_down_all",mystat.byte_down_all,
-                         "byte_tot_nem",mystat.byte_tot_nem,"byte_tot_oth",mystat.byte_tot_oth,"byte_tot_all",mystat.byte_tot_all);
+                         "byte_tot_nem",mystat.byte_tot_nem,"byte_tot_oth",mystat.byte_tot_oth,"byte_tot_all",mystat.byte_tot_all,
+                         "payload_up_nem",mystat.payload_up_nem,"payload_up_oth",mystat.payload_up_oth,"payload_up_all",mystat.payload_up_all,
+                         "payload_down_nem",mystat.payload_down_nem,"payload_down_oth",mystat.payload_down_oth,"payload_down_all",mystat.payload_down_all,
+                         "payload_tot_nem",mystat.payload_tot_nem,"payload_tot_oth",mystat.payload_tot_oth,"payload_tot_all",mystat.payload_tot_all);
 }
 
 static PyObject *contabit_geterr(PyObject *self)
 {
-    return Py_BuildValue("s",error_string);
+    return Py_BuildValue("s",err_str);
 }
 
 static PyMethodDef contabit_methods[] =
