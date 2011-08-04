@@ -62,6 +62,8 @@ __version__ = '1.7.1'
 MAX_MEASURES_PER_HOUR = 1
 # Soglia per il rapporto tra traffico 'spurio' e traffico totale
 TH_OUTERTRAFFIC = 0.1
+# Tempo di attesa tra una misura e la successiva in caso di misura fallita
+TIME_LAG = 5
 
 class _Communicator(Thread):
 
@@ -368,6 +370,18 @@ class Executer:
     else:                  
       raise e
 
+  def _test_gating(self, test):
+    '''
+    Funzione per l'analisi del contabit ed eventuale gating dei risultati del test
+    '''
+    if test.counter_total_pay > 0:
+      traffic_ratio = (test.counter_total_pay - test.counter_ftp_pay) / test.counter_total_pay 
+      if traffic_ratio < 0:
+        raise Exception('Errore durante la verifica del traffico di misura: impossibile salvare i dati.')
+      if traffic_ratio < TH_OUTERTRAFFIC:   
+        test.bytes = test.counter_ftp_pay
+      else:
+        raise Exception('Eccessiva presenza di traffico internet non legato alla misura: percentuale del %d%%.' % traffic_ratio * 100)
 
   def _dotask(self, task):
     '''
@@ -456,13 +470,8 @@ class Executer:
             
           # Analisi da contabit
           #--------------------------
-          if test.counter_total_pay > 0 :
-            traffic_ratio = (test.counter_total_pay - test.counter_ftp_pay) / test.counter_total_pay 
-            if traffic_ratio < TH_OUTERTRAFFIC :   
-              test.bytes = test.counter_ftp_pay
-            else :
-              raise Exception('Eccessiva presenza di traffico internet non legato alla misura.')           
-          
+          self._test_gating(test)
+                  
           # Salvataggio della misura
           # ------------------------
           logger.debug('Download result: %.3f' % test.value)
@@ -485,8 +494,8 @@ class Executer:
             raise e
           else:
             logger.warning('Misura sospesa per eccezione %s' % e)
-            self._updatestatus(status.Status(status.ERROR, 'Misura sospesa per errore: %s Aspetto 30 secondi prima di proseguire la misura.' % e))
-            sleep(30)
+            self._updatestatus(status.Status(status.ERROR, 'Misura sospesa per errore: %s Aspetto %d secondi prima di proseguire la misura.' % (e,TIME_LAG) ))
+            sleep(TIME_LAG)
             logger.info('Misura in ripresa dopo sospensione. Test download %d di %d' % (i, task.download))
             self._updatestatus(status.Status(status.PLAY, 'Proseguo la misura. Misura in esecuzione'))
 
@@ -519,6 +528,10 @@ class Executer:
   
           if error > 0 or base_error > 0:
             test.seterrorcode(error + base_error)
+            
+          # Analisi da contabit
+          #--------------------------
+          self._test_gating(test)
   
           # Salvataggio del test nella misura
           # ------------------------
@@ -542,8 +555,8 @@ class Executer:
             raise e
           else:
             logger.warning('Misura sospesa per eccezione %s' % e)
-            self._updatestatus(status.Status(status.ERROR, 'Misura sospesa per errore: %s Aspetto 30 secondi prima di proseguire la misura.' % e))
-            sleep(30)
+            self._updatestatus(status.Status(status.ERROR, 'Misura sospesa per errore: %s Aspetto %d secondi prima di proseguire la misura.' % (e,TIME_LAG)))
+            sleep(TIME_LAG)
             logger.info('Misura in ripresa dopo sospensione. Test upload %d di %d' % (i, task.upload))
             self._updatestatus(status.Status(status.PLAY, 'Proseguo la misura. Misura in esecuzione'))
 
