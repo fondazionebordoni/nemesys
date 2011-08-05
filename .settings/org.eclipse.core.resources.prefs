@@ -1,8 +1,9 @@
-#Wed Aug 03 16:04:23 CEST 2011
+#Fri Aug 05 16:01:59 CEST 2011
 eclipse.preferences.version=1
 encoding//branches/contabit/nemesys/SystemProfiler.py=utf8
 encoding//branches/contabit/nemesys/executer.py=utf-8
 encoding//branches/contabit/nemesys/profile.py=utf8
 encoding//branches/contabit/nemesys/proof.py=utf8
 encoding//branches/contabit/nemesys/sysmonitor.py=utf8
+encoding//branches/contabit/nemesys/sysmonitorexception.py=utf8
 encoding//branches/contabit/nemesys/tester.py=utf8
