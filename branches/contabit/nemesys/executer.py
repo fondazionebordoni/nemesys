@@ -56,7 +56,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-__version__ = '1.7.1'
+__version__ = '2.0'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
@@ -420,7 +420,7 @@ class Executer:
         except Exception as e:
           logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
           if self._killonerror:
-            raise e
+            self._evaluate_exception(e)
           else:
             self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
             base_error = 50000
