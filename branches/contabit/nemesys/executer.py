@@ -363,7 +363,7 @@ class Executer:
   def _evaluate_exception(self, e):
     if isinstance (e, SysmonitorException):
       # Inserire nel test tutte le eccezioni da bypassare
-      if e.alert_type == sysmonitorexception.WARNCONN or e.alert_type == sysmonitorexception.WARNPROC:
+      if e.alert_type == sysmonitorexception.WARNCONN.alert_type or e.alert_type == sysmonitorexception.WARNPROC.alert_type:
         logger.warning('Misura in esecuzione con warning: %s' % e)
       else:
         raise e
