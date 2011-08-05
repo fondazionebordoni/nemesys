@@ -7,192 +7,15 @@
 // gcc -fPIC                        [per 64bit .so .pyd]
 // gcc -fno-stack-protector         [disabilitare la protezione di overflow]
 
+#include <contabit.h>
 
-#include <Python.h>
-
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-
-#ifndef _WIN32
-#include <arpa/inet.h>
-#include <netdb.h>
-#endif
-
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-
-#ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
-#endif
-
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <pcap.h>
-#include <signal.h>
-#include <time.h>
-#include <math.h>
-
-#define IP_ADDR_LEN 4
-#define ETHER_ADDR_LEN	6
-#define SIZE_ETHERNET 14
-
-/* Ethernet header */
-struct hdr_ethernet
-{
-    u_char ether_dhost[ETHER_ADDR_LEN]; /* Destination host address */
-    u_char ether_shost[ETHER_ADDR_LEN]; /* Source host address */
-    u_short ether_type; /* IP? ARP? RARP? etc */
-};
-
-struct hdr_arp
-{
-  u_short hwtype;           // Hardware type
-  u_short proto;            // Protocol type
-  u_short _hwlen_protolen;  // Protocol address length
-  u_short opcode;           // Opcode
-  u_short eth_src1;
-  u_short eth_src2;
-  u_short eth_src3;         // Source hardware address
-  u_char  arp_src[IP_ADDR_LEN];          // Source protocol address
-  u_short eth_dst1;
-  u_short eth_dst2;
-  u_short eth_dst3;;                         // Target hardware address
-  u_char  arp_dst[IP_ADDR_LEN];          // Target protocol address
-};
-
-/* IP header */
-struct hdr_ipv4
-{
-    u_char ip_vhl;		/* version << 4 | header length >> 2 */
-    u_char ip_tos;		/* type of service */
-    u_short ip_len;		/* total length */
-    u_short ip_id;		/* identification */
-    u_short ip_off;		/* fragment offset field */
-#define IP_RF 0x8000		/* reserved fragment flag */
-#define IP_DF 0x4000		/* dont fragment flag */
-#define IP_MF 0x2000		/* more fragments flag */
-#define IP_OFFMASK 0x1fff	/* mask for fragmenting bits */
-    u_char ip_ttl;		/* time to live */
-    u_char ip_p;		/* protocol */
-    u_short ip_sum;		/* checksum */
-    struct in_addr ip_src,ip_dst; /* source and dest address */
-};
-
-#define IP_HL(ip)		(((ip)->ip_vhl) & 0x0f)
-#define IP_V(ip)		(((ip)->ip_vhl) >> 4)
-
-/* IPv6 header */
-struct hdr_ipv6
-{
-#if defined(WORDS_BIGENDIAN)
-  u_int8_t       version:4,
-                 traffic_class_high:4;
-  u_int8_t       traffic_class_low:4,
-                 flow_label_high:4;
-#else
-  u_int8_t       traffic_class_high:4,
-                 version:4;
-  u_int8_t       flow_label_high:4,
-                 traffic_class_low:4;
-#endif
-  u_int16_t      flow_label_low;
-  u_int16_t      payload_len;
-  u_int8_t       next_header;
-  u_int8_t       hop_limit;
-  u_int8_t       src_addr[16];
-  u_int8_t       dst_addr[16];
-};
-
-/* TCP header */
-struct hdr_tcp
-{
-    u_short th_sport;	/* source port */
-    u_short th_dport;	/* destination port */
-    u_int32_t th_seq;		/* sequence number DA RIVEDERE tcp_seq*/
-    u_int32_t th_ack;		/* acknowledgement number DA RIVEDERE tcp_seq*/
-
-    u_char th_offx2;	/* data offset, rsvd */
-#define TH_OFF(th)	(((th)->th_offx2 & 0xf0) >> 4)
-    u_char th_flags;
-#define TH_FIN 0x01
-#define TH_SYN 0x02
-#define TH_RST 0x04
-#define TH_PUSH 0x08
-#define TH_ACK 0x10
-#define TH_URG 0x20
-#define TH_ECE 0x40
-#define TH_CWR 0x80
-#define TH_FLAGS (TH_FIN|TH_SYN|TH_RST|TH_ACK|TH_URG|TH_ECE|TH_CWR)
-    u_short th_win;		/* window */
-    u_short th_sum;		/* checksum */
-    u_short th_urp;		/* urgent pointer */
-};
-
-struct devices
-{
-    char *name;
-    char *ip;
-    char *net;
-    char *mask;
-};
-
-struct statistics
-{
-    u_long  pkt_up_nem;
-    u_long  pkt_up_oth;
-    u_long  pkt_up_all;
-
-    u_long  pkt_down_nem;
-    u_long  pkt_down_oth;
-    u_long  pkt_down_all;
-
-    u_long  pkt_tot_nem;
-    u_long  pkt_tot_oth;
-    u_long  pkt_tot_all;
-
-    u_long  byte_up_nem;
-    u_long  byte_up_oth;
-    u_long  byte_up_all;
-
-    u_long  byte_down_nem;
-    u_long  byte_down_oth;
-    u_long  byte_down_all;
-
-    u_long  byte_tot_nem;
-    u_long  byte_tot_oth;
-    u_long  byte_tot_all;
-
-    u_long  payload_up_nem;     //NEW
-    u_long  payload_up_oth;     //NEW
-    u_long  payload_up_all;     //NEW
-
-    u_long  payload_down_nem;   //NEW
-    u_long  payload_down_oth;   //NEW
-    u_long  payload_down_all;   //NEW
-
-    u_long  payload_tot_nem;    //NEW
-    u_long  payload_tot_oth;    //NEW
-    u_long  payload_tot_all;    //NEW
-
-    u_long  pkt_pcap_tot;
-    u_long  pkt_pcap_drop;
-    u_long  pkt_pcap_dropif;
-};
+int DEBUG_MODE=0;
+FILE *debug_log;
 
 int err_flag=0;
 char err_str[88]="No Error";
+
+int ind_dev=0, num_dev=0, buffer=0;
 
 u_int pkt_tot_start=0;
 u_long myip_int=0, ip_nem_int=0;
@@ -203,7 +26,6 @@ struct devices device[22];
 struct pcap_stat pcapstat;
 struct statistics mystat;
 
-int ind_dev=0, num_dev=0, buffer=0;
 
 int invalid_ip (const char *ip_string)
 {
@@ -228,21 +50,25 @@ int invalid_ip (const char *ip_string)
 
 void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data)
 {
-    const struct hdr_ethernet *ethernet; /* The ethernet header */
-    const struct hdr_arp *arp; /* The Arp header */
-	const struct hdr_ipv4 *ipv4; /* The IPv4 header */
-	const struct hdr_ipv6 *ipv6; /* The IPv6 header */
-	const struct hdr_tcp *tcp; /* The TCP header */
-	const char *payload; /* Packet payload */
+    const struct hdr_ethernet *ethernet;    /* The ethernet header */
+    const struct hdr_arp *arp;              /* The Arp header */
+	const struct hdr_ipv4 *ipv4;            /* The IPv4 header */
+	const struct hdr_ipv6 *ipv6;            /* The IPv6 header */
+	const struct hdr_tcp *tcp;              /* The TCP header */
+	const char *payload;                    /* Packet payload */
 
 	struct in_addr addr;
 
 	u_int size_ipv4=0, size_ipv6=40, size_tcp=0, size_payload=0;
 
-    char type[22], buff_temp[22], src[22], dst[22], up_down[22], txrx[3];
+    char type[22], buff_temp[22], mac_src[22], mac_dst[22], src[22], dst[22], up_down[22], txrx[3];
     int proto=0, hdr_len=0, pktpad=0;
 
     ethernet = (struct hdr_ethernet*)(data);
+
+//    Estrarre indirizzi MAC
+//    sprintf(mac_src,"%i",ether_ntoa((struct ether_addr*)ethernet->ether_shost));
+//    sprintf(mac_dst,"%i",ether_ntoa((struct ether_addr*)ethernet->ether_dhost));
 
     proto = ntohs(ethernet->ether_type);
 
@@ -256,7 +82,7 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
                     strcpy(src,inet_ntoa(ipv4->ip_src));
                     strcpy(dst,inet_ntoa(ipv4->ip_dst));
 
-                    switch (data[23])
+                    switch ((int)(ipv4->ip_p))
                     {
                     case 6  :   strcat(type,"|TCP");
                                 tcp = (struct hdr_tcp*)(data + SIZE_ETHERNET + size_ipv4);
@@ -269,6 +95,7 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
 
                     case 17 :   strcat(type,"|UDP");
                                 hdr_len=(SIZE_ETHERNET + size_ipv4 + 8);
+                                payload = (u_char *)(data + SIZE_ETHERNET + size_ipv4 + 8);
                                 size_payload = ntohs(ipv4->ip_len) - (size_ipv4 + 8);
                                 break;
 
@@ -281,7 +108,7 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
                     case 89 :   strcat(type,"|OSPF");
                                 break;
 
-                    default :   sprintf(buff_temp,"|T:%d",data[23]);
+                    default :   sprintf(buff_temp,"|T:%d",(int)(ipv4->ip_p));
                                 strcat(type,buff_temp);
                                 break;
                     }
@@ -295,7 +122,7 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
                     sprintf(src,"***.***.***.***");
                     sprintf(dst,"***.***.***.***");
 
-                    switch (data[20])
+                    switch (ipv6->next_header)
                     {
                     case 6  :   strcat(type,"|TCP");
                                 tcp = (struct hdr_tcp*)(data + SIZE_ETHERNET + size_ipv6);
@@ -307,6 +134,7 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
                                 break;
                     case 17 :   strcat(type,"|UDP");
                                 hdr_len=(SIZE_ETHERNET + size_ipv6 + 8);
+                                payload = (u_char *)(data + SIZE_ETHERNET + size_ipv6 + 8);
                                 size_payload = ntohs(ipv6->payload_len) - (8);
                                 break;
                     case 1  :   strcat(type,"|ICMPv4");
@@ -315,7 +143,7 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
                                 break;
                     case 58 :   strcat(type,"|ICMPv6");
                                 break;
-                    default :   sprintf(buff_temp,"|T:%d",data[23]);
+                    default :   sprintf(buff_temp,"|T:%d",ipv6->next_header);
                                 strcat(type,buff_temp);
                                 break;
                     }
@@ -440,7 +268,12 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
     mystat.pkt_pcap_drop=pcapstat.ps_drop;
     mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
 
-    //printf("TYPE: %s\tLEN: %i = %i + %i\n", type, (hdr->len), hdr_len, size_payload);
+    if(DEBUG_MODE)
+    {
+        fprintf(debug_log,"%li)\t%s\t%s\t%s\t\t%s\t%li,%.6li\t%s\t",mystat.pkt_pcap_tot,src,dst,up_down,type,hdr->ts.tv_sec,hdr->ts.tv_usec,txrx);
+        fprintf(debug_log,"SRC: %s DST: %s LEN: %i=%i+%i+4(CRC)\n",mac_src,mac_dst,(hdr->len)+4, hdr_len, size_payload);
+        fprintf(debug_log,"\n");
+    }
 }
 
 
@@ -594,9 +427,9 @@ void startloop()
         pcap_loop(handle, pkt_diff, mycallback, NULL);
     }
 
-    pcap_close(handle);
-
     Py_END_ALLOW_THREADS;
+
+    pcap_close(handle);
 }
 
 
@@ -609,6 +442,8 @@ static PyObject *contabit_initialize(PyObject *self, PyObject *args)
     char *dev_sel=(char*)calloc(88,sizeof(char)), *nem=(char*)calloc(22,sizeof(char));
 
     err_flag=0; strcpy(err_str,"No Error");
+
+    if(DEBUG_MODE) {debug_log = fopen("contabit.txt","w");}     //DEBUG
 
     PyArg_ParseTuple(args, "sz|i", &dev_sel, &nem, &buffer);
 
@@ -647,6 +482,8 @@ static PyObject *contabit_stop(PyObject *self)
     err_flag=0; strcpy(err_str,"No Error");
 
     stoploop();
+
+    if(DEBUG_MODE) {fclose(debug_log);}     //DEBUG
 
     return Py_BuildValue("i",err_flag);
 }
@@ -724,7 +561,10 @@ static PyObject *contabit_getdev(PyObject *self, PyObject *args)
 
 static PyObject *contabit_getstat(PyObject *self, PyObject *args)
 {
-    int ind_req=0, ind_key=0, req_err=0;
+    int req_err=0;
+//    int ind_req=0, ind_key=0;
+//    char **req=(char**)calloc(88,sizeof(char*)), **key=(char**)calloc(88,sizeof(char*));
+//    u_long value[88];
     char *req;
     char build_string[282], request_time[44];
     struct tm *rt;
@@ -732,9 +572,270 @@ static PyObject *contabit_getstat(PyObject *self, PyObject *args)
 
     PyArg_ParseTuple(args, "|z",&req);
 
+//    PyArg_ParseTuple(args, "|zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+//                     &req[0],&req[1],&req[2],&req[3],&req[4],&req[5],
+//                     &req[6],&req[7],&req[8],&req[9],&req[10],&req[11],
+//                     &req[12],&req[13],&req[14],&req[15],&req[16],&req[17],
+//                     &req[18],&req[19],&req[20],&req[21],&req[22],&req[23],
+//                     &req[24],&req[25],&req[26],&req[27],&req[28],&req[29]);
+//
+//    TEST:
+//
+//    while(req[ind_req]!=NULL)
+//    {
+//        printf("\n[C]  REQ %i: %s",ind_req,req[ind_req]);
+//        ind_req++;
+//    }
+//
+//    ind_req=0;
+
     req_time=time(0);
     rt=localtime(&req_time);
     strftime(request_time, sizeof request_time, "%a %Y/%m/%d %H:%M:%S", (const struct tm *) rt);
+
+//    if (req[0]!=NULL)
+//    {
+//        ind_key=0; while(key[ind_key]!=NULL){key[ind_key]=NULL;ind_key++;}
+//
+//        ind_key=0;
+//
+//        while (req[ind_req]!=NULL)
+//        {
+//            if(strcmp(req[ind_req],"pcap")==0)
+//            {
+//                key[ind_key]="pkt_pcap_tot"; value[ind_key]=mystat.pkt_pcap_tot; ind_key++;
+//                key[ind_key]="pkt_pcap_drop"; value[ind_key]=mystat.pkt_pcap_drop; ind_key++;
+//                key[ind_key]="pkt_pcap_dropif"; value[ind_key]=mystat.pkt_pcap_dropif; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"pkt")==0)
+//            {
+//                key[ind_key]="pkt_up_nem"; value[ind_key]=mystat.pkt_up_nem; ind_key++;
+//                key[ind_key]="pkt_up_oth"; value[ind_key]=mystat.pkt_up_oth; ind_key++;
+//                key[ind_key]="pkt_up_all"; value[ind_key]=mystat.pkt_up_all; ind_key++;
+//
+//                key[ind_key]="pkt_down_nem"; value[ind_key]=mystat.pkt_down_nem; ind_key++;
+//                key[ind_key]="pkt_down_oth"; value[ind_key]=mystat.pkt_down_oth; ind_key++;
+//                key[ind_key]="pkt_down_all"; value[ind_key]=mystat.pkt_down_all; ind_key++;
+//
+//                key[ind_key]="pkt_tot_nem"; value[ind_key]=mystat.pkt_tot_nem; ind_key++;
+//                key[ind_key]="pkt_tot_oth"; value[ind_key]=mystat.pkt_tot_oth; ind_key++;
+//                key[ind_key]="pkt_tot_all"; value[ind_key]=mystat.pkt_tot_all; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"pkt_nem")==0)
+//            {
+//                key[ind_key]="pkt_up_nem"; value[ind_key]=mystat.pkt_up_nem; ind_key++;
+//                key[ind_key]="pkt_down_nem"; value[ind_key]=mystat.pkt_down_nem; ind_key++;
+//                key[ind_key]="pkt_tot_nem"; value[ind_key]=mystat.pkt_tot_nem; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"pkt_oth")==0)
+//            {
+//                key[ind_key]="pkt_up_oth"; value[ind_key]=mystat.pkt_up_oth; ind_key++;
+//                key[ind_key]="pkt_down_oth"; value[ind_key]=mystat.pkt_down_oth; ind_key++;
+//                key[ind_key]="pkt_tot_oth"; value[ind_key]=mystat.pkt_tot_oth; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"pkt_all")==0)
+//            {
+//                key[ind_key]="pkt_up_all"; value[ind_key]=mystat.pkt_up_all; ind_key++;
+//                key[ind_key]="pkt_down_all"; value[ind_key]=mystat.pkt_down_all; ind_key++;
+//                key[ind_key]="pkt_tot_all"; value[ind_key]=mystat.pkt_tot_all; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"byte")==0)
+//            {
+//                key[ind_key]="byte_up_nem"; value[ind_key]=mystat.byte_up_nem; ind_key++;
+//                key[ind_key]="byte_up_oth"; value[ind_key]=mystat.byte_up_oth; ind_key++;
+//                key[ind_key]="byte_up_all"; value[ind_key]=mystat.byte_up_all; ind_key++;
+//
+//                key[ind_key]="byte_down_nem"; value[ind_key]=mystat.byte_down_nem; ind_key++;
+//                key[ind_key]="byte_down_oth"; value[ind_key]=mystat.byte_down_oth; ind_key++;
+//                key[ind_key]="byte_down_all"; value[ind_key]=mystat.byte_down_all; ind_key++;
+//
+//                key[ind_key]="byte_tot_nem"; value[ind_key]=mystat.byte_tot_nem; ind_key++;
+//                key[ind_key]="byte_tot_oth"; value[ind_key]=mystat.byte_tot_oth; ind_key++;
+//                key[ind_key]="byte_tot_all"; value[ind_key]=mystat.byte_tot_all; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"byte_nem")==0)
+//            {
+//                key[ind_key]="byte_up_nem"; value[ind_key]=mystat.byte_up_nem; ind_key++;
+//                key[ind_key]="byte_down_nem"; value[ind_key]=mystat.byte_down_nem; ind_key++;
+//                key[ind_key]="byte_tot_nem"; value[ind_key]=mystat.byte_tot_nem; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"byte_oth")==0)
+//            {
+//                key[ind_key]="byte_up_oth"; value[ind_key]=mystat.byte_up_oth; ind_key++;
+//                key[ind_key]="byte_down_oth"; value[ind_key]=mystat.byte_down_oth; ind_key++;
+//                key[ind_key]="byte_tot_oth"; value[ind_key]=mystat.byte_tot_oth; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"byte_all")==0)
+//            {
+//                key[ind_key]="byte_up_all"; value[ind_key]=mystat.byte_up_all; ind_key++;
+//                key[ind_key]="byte_down_all"; value[ind_key]=mystat.byte_down_all; ind_key++;
+//                key[ind_key]="byte_tot_all"; value[ind_key]=mystat.byte_tot_all; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"payload")==0)
+//            {
+//                key[ind_key]="payload_up_nem"; value[ind_key]=mystat.payload_up_nem; ind_key++;
+//                key[ind_key]="payload_up_oth"; value[ind_key]=mystat.payload_up_oth; ind_key++;
+//                key[ind_key]="payload_up_all"; value[ind_key]=mystat.payload_up_all; ind_key++;
+//
+//                key[ind_key]="payload_down_nem"; value[ind_key]=mystat.payload_down_nem; ind_key++;
+//                key[ind_key]="payload_down_oth"; value[ind_key]=mystat.payload_down_oth; ind_key++;
+//                key[ind_key]="payload_down_all"; value[ind_key]=mystat.payload_down_all; ind_key++;
+//
+//                key[ind_key]="payload_tot_nem"; value[ind_key]=mystat.payload_tot_nem; ind_key++;
+//                key[ind_key]="payload_tot_oth"; value[ind_key]=mystat.payload_tot_oth; ind_key++;
+//                key[ind_key]="payload_tot_all"; value[ind_key]=mystat.payload_tot_all; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"payload_nem")==0)
+//            {
+//                key[ind_key]="payload_up_nem"; value[ind_key]=mystat.payload_up_nem; ind_key++;
+//                key[ind_key]="payload_down_nem"; value[ind_key]=mystat.payload_down_nem; ind_key++;
+//                key[ind_key]="payload_tot_nem"; value[ind_key]=mystat.payload_tot_nem; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"payload_oth")==0)
+//            {
+//                key[ind_key]="payload_up_oth"; value[ind_key]=mystat.payload_up_oth; ind_key++;
+//                key[ind_key]="payload_down_oth"; value[ind_key]=mystat.payload_down_oth; ind_key++;
+//                key[ind_key]="payload_tot_oth"; value[ind_key]=mystat.payload_tot_oth; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"payload_all")==0)
+//            {
+//                key[ind_key]="payload_up_all"; value[ind_key]=mystat.payload_up_all; ind_key++;
+//                key[ind_key]="payload_down_all"; value[ind_key]=mystat.payload_down_all; ind_key++;
+//                key[ind_key]="payload_tot_all"; value[ind_key]=mystat.payload_tot_all; ind_key++;
+//            }
+//
+//            else if(strcmp(req[ind_req],"pkt_pcap_tot")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_pcap_tot; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"pkt_pcap_drop")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_pcap_drop; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"pkt_pcap_dropif")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_pcap_dropif; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"pkt_up_nem")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_up_nem; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"pkt_up_oth")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_up_oth; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"pkt_up_all")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_up_all; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"pkt_down_nem")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_down_nem; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"pkt_down_oth")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_down_oth; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"pkt_down_all")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_down_all; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"pkt_tot_nem")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_tot_nem; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"pkt_tot_oth")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_tot_oth; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"pkt_tot_all")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.pkt_tot_all; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"byte_up_nem")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_up_nem; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"byte_up_oth")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_up_oth; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"byte_up_all")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_up_all; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"byte_down_nem")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_down_nem; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"byte_down_oth")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_down_oth; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"byte_down_all")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_down_all; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"byte_tot_nem")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_tot_nem; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"byte_tot_oth")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_tot_oth; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"byte_tot_all")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.byte_tot_all; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"payload_up_nem")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_up_nem; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"payload_up_oth")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_up_oth; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"payload_up_all")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_up_all; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"payload_down_nem")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_down_nem; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"payload_down_oth")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_down_oth; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"payload_down_all")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_down_all; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"payload_tot_nem")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_tot_nem; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"payload_tot_oth")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_tot_oth; ind_key++; }
+//
+//            else if(strcmp(req[ind_req],"payload_tot_all")==0)
+//            { key[ind_key]=req[ind_req]; value[ind_key]=mystat.payload_tot_all; ind_key++; }
+//
+//            else
+//            { key[ind_key]=req[ind_req]; value[ind_key]=-1; req_err--; ind_key++; }
+//
+//            ind_req++;
+//        }
+//
+//        strcpy(build_string,"{s:s,s:i,");
+//
+//        ind_key=0;
+//
+//        while(key[ind_key]!=NULL)
+//        {
+//            strcat(build_string,",s:l");
+//            //printf("Key %i: %s\tValue %i: %li\tReq %i: %s\n",ind_key,key[ind_key],ind_key,value[ind_key],ind_key,req[ind_key]);  //TEST
+//            ind_key++;
+//        }
+//
+//        strcat(build_string,"}");
+//
+//        return Py_BuildValue(build_string,
+//                             "stat_time",request_time,"req_err",req_err,
+//                             key[0],value[0],key[1],value[1],key[2],value[2],key[3],value[3],key[4],value[4],
+//                             key[5],value[5],key[6],value[6],key[7],value[7],key[8],value[8],key[9],value[9],
+//                             key[10],value[10],key[11],value[11],key[12],value[12],key[13],value[13],key[14],value[14],
+//                             key[15],value[15],key[16],value[16],key[17],value[17],key[18],value[18],key[19],value[19],
+//                             key[20],value[20],key[21],value[21],key[22],value[22],key[23],value[23],key[24],value[24],
+//                             key[25],value[25],key[26],value[26],key[27],value[27],key[28],value[28],key[29],value[29],
+//                             key[30],value[30],key[31],value[31],key[32],value[32],key[33],value[33],key[34],value[34],
+//                             key[35],value[35],key[36],value[36],key[37],value[37],key[38],value[38],key[39],value[39]);
+//    }
 
     strcpy(build_string,"{s:s,s:i,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l}");
 
