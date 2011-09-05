@@ -24,24 +24,26 @@ import time
 import random
 import sys
 import sniffer
-import analyzer
+import contabyte
 
 debug_mode=1
 sniffer_init={}
-analyzer_init=0
+contabyte_init=0
+
+sniffer_flag=0
+analyzer_flag=0
 
 run_sniffer=0
-run_analyzer=0
+run_contabyte=0
 
-black_hole = deque ([])
+black_hole = []
 shared_buffer = deque([])
 condition = Condition()
-lock=1
 
 
 class Device:
 
-    def __init__(self):
+    def __init__(self): None
 
     def getdev(self,req=None):
         device=sniffer.getdev(req)
@@ -54,97 +56,109 @@ class Sniffer(Thread):
         Thread.__init__(self)
         global debug_mode
         global sniffer_init
+        global run_sniffer
         debug_mode=sniffer.debugmode(debug)
         sniffer_init=sniffer.initialize(dev,buff,snaplen,timeout,promisc)
-
+        if (sniffer_init['err_flag']==0):
+            run_sniffer=1
 
     def run(self,sniffer_mode=0):
-        while(run_sniffer==1):
+        global run_sniffer
+        global sniffer_flag
+        sniffer_flag=1
+        while (run_sniffer==1):
+            global analyzer_flag
             global black_hole
             global shared_buffer
             global condition
-            condition.acquire()
-            if len(shared_buffer) == 100:
-                #print("[Produzione "+str(i)+"] Buffer Pieno! Aspetto!")
-                condition.wait()
-            #time.sleep(0.2)
-            sniffer_data=sniffer.start(sniffer_mode)
-            shared_buffer.append(sniffer_data)
-            #print("[Produzione "+str(i)+"] Pacchetti in coda: "+str(len(shared_buffer)))
-            condition.notify()
-            condition.release()
-        #print("[Produzione "+str(i+1)+"] Finito!!")
+            if (analyzer_flag==1):
+                condition.acquire()
+                if (len(shared_buffer) == 100):
+                    condition.wait()
+                sniffer_data=sniffer.start(sniffer_mode)
+                shared_buffer.append(sniffer_data)
+                condition.notify()
+                condition.release()
+            else:
+                sniffer_data=sniffer.start(sniffer_mode)
+                black_hole.insert(0,sniffer_data)
+        sniffer_flag=0
+
 
     def stop(self):
+        global run_sniffer
+        global shared_buffer
+        while (len(shared_buffer) != 0): None
+        run_sniffer=0
+        while (sniffer_flag != 0): None
         sniffer_stop=sniffer.stop()
-#        if (sniffer_stop['err_flag']==0):
-#            print "Success\n"
-#        else:
-#            print "Fail:",sniffer_stop['err_flag']
-#            print "Error:",sniffer_stop['err_str']
+        return sniffer_stop
+
 
     def getstat(self):
         sniffer_stat=sniffer.getstat()
-#        if (sniffer_stat!=None):
-#            keys=sniffer_stat.keys()
-#            keys.sort()
-#            for key in keys:
-#                print "Key: %s \t Value: %s" % (key,sniffer_stat[key])
-#        else:
-#            print "No Statistics"
+        return sniffer_stat
+
 
     def join(self, timeout=None):
         Thread.join(self, timeout)
 
 
-class Analyzer(Thread):
+class Contabyte(Thread):
 
     def __init__(self,dev,nem,debug=0):
         Thread.__init__(self)
         global debug_mode
-        global analyzer_init
-        debug_mode=analyzer.debugmode(debug)
-        analyzer_init=analyzer.initialize(dev,nem)
+        global contabyte_init
+        global run_contabyte
+        debug_mode=contabyte.debugmode(debug)
+        contabyte_init=contabyte.initialize(dev,nem)
+        if (contabyte_init==0):
+            run_contabyte=1
 
 
     def run(self):
-        global lock
-        lock=1
-        for i in range(0,1000):
+        global run_contabyte
+        global analyzer_flag
+        analyzer_flag=1
+        while (run_contabyte==1):
+            global sniffer_flag
             global shared_buffer
             global condition
-            condition.acquire()
-            if len(shared_buffer) == 0:
-                #print("[Consumo "+str(i)+"]Buffer Vuoto! Aspetto!")
-                condition.wait()
-            #time.sleep(0.3)
-            analyzer_data=shared_buffer.popleft()
-            analyzer.analyze(analyzer_data['py_byte_array'],analyzer_data['block_size'],analyzer_data['blocks_num'],analyzer_data['datalink'])
-            #print("[Consumo "+str(i)+"] Pacchetti in coda: "+str(len(shared_buffer)))
-            condition.notify()
-            condition.release()
-        #print("[Consumo "+str(i+1)+"] Finito!!")
-        lock=0
+            if (sniffer_flag==1):
+                condition.acquire()
+                if (len(shared_buffer) == 0):
+                    condition.wait()
+                contabyte_data=shared_buffer.popleft()
+                contabyte.analyze(contabyte_data['py_byte_array'],contabyte_data['block_size'],contabyte_data['blocks_num'],contabyte_data['datalink'])
+                condition.notify()
+                condition.release()
+            else:
+                run_contabyte=0
+        analyzer_flag=0
+
 
     def stop(self):
-        analyzer_stop=analyzer.close()
-#        if (analyzer_stop==0):
-#            print "Success\n"
-#        else:
-#            print "Fail\n"
+        global analyzer_flag
+        global shared_buffer
+        global run_contabyte
+        analyzer_flag=0
+        while (len(shared_buffer) != 0): None
+        run_contabyte=0
+        contabyte_stop=contabyte.close()
+        return contabyte_stop
+
 
     def getstat(self):
-        analyzer_stat=analyzer.getstat()
-#        if (analyzer_stat!=None):
-#            keys=analyzer_stat.keys()
-#            keys.sort()
-#            for key in keys:
-#                print "Key: %s \t Value: %s" % (key,analyzer_stat[key])
-#        else:
-#            print "No Statistics"
+        contabyte_stat=contabyte.getstat()
+        return contabyte_stat
+
 
     def join(self, timeout=None):
         Thread.join(self, timeout)
+
+
+
 
 if __name__ == '__main__':
 
@@ -192,7 +206,7 @@ if __name__ == '__main__':
         print "No Devices"
 
 
-    print "\nInitialize Sniffer And Analyzer...."
+    print "\nInitialize Sniffer And Contabyte...."
 
     mysniffer=Sniffer('eth0',32*1024,150,1,1,1)
 
@@ -203,38 +217,67 @@ if __name__ == '__main__':
         print "Fail Sniffer:",sniffer_init['err_flag']
         print "Error Sniffer:",sniffer_init['err_str']
 
-    myanalyzer=Analyzer('192.168.208.53','194.244.5.206',1)
+    mycontabyte=Contabyte('192.168.208.53','194.244.5.206',1)
 
-    print "Debug Mode Analyzer:", debug_mode
-    if (analyzer_init==0):
-        print "Success Analyzer\n"
+    print "Debug Mode Contabyte:", debug_mode
+    if (contabyte_init==0):
+        print "Success Contabyte\n"
     else:
-        print "Fail Analyzer\n"
+        print "Fail Contabyte\n"
 
 
-    print "Start Sniffer And Analyzer...."
+    print "Start Sniffer And Contabyte...."
 
     mysniffer.start()
-    myanalyzer.start()
+    mycontabyte.start()
 
     print "Sniffing And Analyzing...."
 
-    #time.sleep(8)
+    time.sleep(30)
 
-    while(lock==1): None
+    contabyte_stop=mycontabyte.stop()
+    if (contabyte_stop==0):
+        print "Success Contabyte"
+    else:
+        print "Fail\n"
 
-    mysniffer.stop()
-    myanalyzer.stop()
+    time.sleep(1)
 
-    print "Sniffer And Analyzer Statistics:\n"
+    sniffer_stop=mysniffer.stop()
+    if (sniffer_stop['err_flag']==0):
+        print "Success Sniffer"
+    else:
+        print "Fail:",sniffer_stop['err_flag']
+        print "Error:",sniffer_stop['err_str']
 
-    mysniffer.getstat()
-    myanalyzer.getstat()
+    time.sleep(1)
+
+    print "Sniffer And Contabyte Statistics:\n"
+
+    sniffer_stat=mysniffer.getstat()
+    if (sniffer_stat!=None):
+        keys=sniffer_stat.keys()
+        keys.sort()
+        for key in keys:
+            print "Key: %s \t Value: %s" % (key,sniffer_stat[key])
+    else:
+        print "No Statistics"
+
+    print
+
+    contabyte_stat=mycontabyte.getstat()
+    if (contabyte_stat!=None):
+        keys=contabyte_stat.keys()
+        keys.sort()
+        for key in keys:
+            print "Key: %s \t Value: %s" % (key,contabyte_stat[key])
+    else:
+        print "No Statistics"
 
     print "\nJoin...."
 
     mysniffer.join()
-    myanalyzer.join()
+    mycontabyte.join()
 
     print "DONE"
 
