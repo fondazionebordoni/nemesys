@@ -61,6 +61,7 @@ class Sniffer(Thread):
         sniffer_init=sniffer.initialize(dev,buff,snaplen,timeout,promisc)
         if (sniffer_init['err_flag']==0):
             run_sniffer=1
+        #TODO else raise per eccezioni 
 
     def run(self,sniffer_mode=0):
         global run_sniffer
@@ -217,7 +218,7 @@ if __name__ == '__main__':
         print "Fail Sniffer:",sniffer_init['err_flag']
         print "Error Sniffer:",sniffer_init['err_str']
 
-    mycontabyte=Contabyte('192.168.208.53','194.244.5.206',1)
+    mycontabyte=Contabyte('192.168.208.53','192.168.208.183',1)
 
     print "Debug Mode Contabyte:", debug_mode
     if (contabyte_init==0):
@@ -233,7 +234,9 @@ if __name__ == '__main__':
 
     print "Sniffing And Analyzing...."
 
-    time.sleep(30)
+    raw_input("PREMI QUANDO FINITO!!")
+
+    #time.sleep(30)
 
     contabyte_stop=mycontabyte.stop()
     if (contabyte_stop==0):

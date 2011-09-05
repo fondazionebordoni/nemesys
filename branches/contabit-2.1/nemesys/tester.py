@@ -34,7 +34,7 @@ import timeit
 import socket
 import sysmonitor
 from threading import Thread
-from contabit import *
+from netran import Sniffer, Contabyte 
 
 ftp = None
 file = None
@@ -51,44 +51,6 @@ def totalsize(data):
   size += len(data)
 
 
-class Counter(Thread):
-
-    def __init__(self, if_ip, host_ip, buffer=0):
-        Thread.__init__(self)
-        self._counter = initialize(if_ip, host_ip, buffer)        
-        if (self._counter != 0):
-          e = self.geterr()
-          logger.error('Errore inizializzazione contabit: %s' % e)
-          return None
-        
-    def getdev(self, req=None):
-        self._device = getdev(req)
-        return self._device
-
-    def run(self):
-        self._status_start = start()
-        if (self._status_start != 0):
-          e = geterr()
-          logger.error('Errore start contabit: %s' % e)
-        
-    def stop(self):
-        self._status_stop = stop()
-        if (self._status_stop != 0):
-          e = geterr()
-          logger.error('Errore stop contabit: %s' % e)
-
-    def getstat(self):
-        self._statistics = getstat()
-        return self._statistics
-
-    def geterr(self):
-        self._error = geterr()
-        return self._error
-
-    def join(self, timeout=None):
-        Thread.join(self, timeout)
-
-
 class Tester:
 
   def __init__(self, if_ip, host, username='anonymous', password='anonymous@', timeout=60):
@@ -97,7 +59,11 @@ class Tester:
     self._username = username
     self._password = password
     self._timeout = timeout
-    socket.setdefaulttimeout(self._timeout)  
+    socket.setdefaulttimeout(self._timeout)
+    #TODO mettere un try catch
+    test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024,150,1,1,0)
+    test_sniffer.start()
+    
     
   def testftpup(self, bytes, path):
     global ftp, file, size, filepath
@@ -106,7 +72,7 @@ class Tester:
     elapsed = 0
     counter_total_pay = 0
     counter_ftp_pay = 0 
-    counter = Counter(self._if_ip, self._host.ip, BUFFER_CONTABIT_MB * 1024000)
+    counter = Contabyte(self._if_ip, self._host.ip,0)
     file = Fakefile(bytes)
     timeout = max(self._timeout, 1)
     start = datetime.fromtimestamp(timestampNtp())
@@ -162,7 +128,7 @@ class Tester:
     elapsed = 0
     counter_total_pay = 0
     counter_ftp_pay = 0
-    counter = Counter(self._if_ip, self._host.ip, BUFFER_CONTABIT_MB * 1024000)
+    counter = Contabyte(self._if_ip, self._host.ip,0)
     file = filename
     timeout = max(self._timeout, 1)
     start = datetime.fromtimestamp(timestampNtp())
