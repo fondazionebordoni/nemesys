@@ -560,7 +560,10 @@ class Executer:
             sleep(TIME_LAG)
             logger.info('Misura in ripresa dopo sospensione. Test upload %d di %d' % (i, task.upload))
             self._updatestatus(status.Status(status.PLAY, 'Proseguo la misura. Misura in esecuzione'))
-
+            
+      # Stop lo sniffer
+      t.teststopsniffer()
+            
       # Testa i ping
       i = 1
       while (i <= task.ping):
@@ -1003,6 +1006,7 @@ def parse():
 
   # Verifica che le opzioni obbligatorie siano presenti
   # --------------------------------------------------------------------------
+
 
   try:
 

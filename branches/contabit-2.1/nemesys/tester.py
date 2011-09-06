@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+
 import sys
 
 from datetime import datetime
@@ -60,10 +61,13 @@ class Tester:
     self._password = password
     self._timeout = timeout
     socket.setdefaulttimeout(self._timeout)
-    #TODO mettere un try catch
-    test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024,150,1,1,0)
-    test_sniffer.start()
-    
+    #DONE mettere un try catch
+    try:
+      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,150,1,1,0)
+      self._test_sniffer.start()
+    except: 
+      logger.error('Errore di inizializzazione dello sniffer')
+      raise Exception('Errore di inizializzazione dello sniffer')
     
   def testftpup(self, bytes, path):
     global ftp, file, size, filepath
@@ -193,6 +197,22 @@ class Tester:
       elapsed = 0
 
     return Proof('ping', start=start, value=elapsed, bytes=0)
+
+  def teststopsniffer(self):
+    #funzione per terminare l'attività dello sniffer avviata con l'inizializzazione del tester o tramite teststartsniffer
+    try:
+      checkstopsniffer = self._test_sniffer.stop()
+    except:
+      logger.error('Errore nello stop dello sniffer: %s' %checkstopsniffer['err_str'])
+        
+     
+  def teststartsniffer(self):
+    try:
+      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,150,1,1,0)
+      self._test_sniffer.start()
+    except: 
+      logger.error('Errore di inizializzazione dello sniffer')
+      raise Exception('Errore di inizializzazione dello sniffer')
 
 def main():
   #Aggancio opzioni da linea di comando
