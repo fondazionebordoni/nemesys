@@ -130,7 +130,7 @@ struct statistics
 int DEBUG_MODE=0;
 FILE *debug_log;
 
-int hdr_size=0;
+int no_stop=1, hdr_size=0;
 
 struct statistics mystat;
 
@@ -566,12 +566,16 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 
     Py_BEGIN_ALLOW_THREADS;
 
+    no_stop=1;
+
     while(block_ind<blocks_num-1)
     {
         block_ind++;
 
         analyzer((const struct pcap_pkthdr *)(blocks_box+blocks_offset+(block_ind*block_size)),blocks_box+blocks_offset+(block_ind*block_size)+hdr_size);
     }
+
+    no_stop=0;
 
     Py_END_ALLOW_THREADS;
 
@@ -580,6 +584,8 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 
 static PyObject *contabyte_close(PyObject *self)
 {
+    while(no_stop){;}
+
     //DEBUG-BEGIN
     if(DEBUG_MODE) {fclose(debug_log);}
     //DEBUG-END

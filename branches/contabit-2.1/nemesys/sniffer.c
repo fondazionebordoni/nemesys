@@ -11,8 +11,7 @@ struct devices
 
 struct statistics
 {
-    u_long  pkt_sniff_start;
-    u_long  pkt_sniff_proc;
+    u_long  pkt_pcap_proc;
     u_long  pkt_pcap_tot;
     u_long  pkt_pcap_drop;
     u_long  pkt_pcap_dropif;
@@ -132,7 +131,7 @@ void mydump(u_char *dumpfile, const struct pcap_pkthdr *pcap_hdr, const u_char *
 {
     pcap_dump(dumpfile, pcap_hdr, pcap_data);
 
-    mystat.pkt_sniff_proc++;
+    mystat.pkt_pcap_proc++;
 
     pcap_stats(handle,&pcapstat);
 
@@ -143,7 +142,7 @@ void mydump(u_char *dumpfile, const struct pcap_pkthdr *pcap_hdr, const u_char *
     // DEBUG-BEGIN
     if(DEBUG_MODE)
     {
-        fprintf(debug_log,"\n[My Dump - Packet Number %li]\n",mystat.pkt_sniff_proc);
+        fprintf(debug_log,"\n[My Dump - Packet Number %li]\n",mystat.pkt_pcap_proc);
         //analyze(pcap_hdr,pcap_data,debug_log,device[num_dev].ip,"194.244.5.206");
     }
     // DEBUG-END
@@ -152,15 +151,17 @@ void mydump(u_char *dumpfile, const struct pcap_pkthdr *pcap_hdr, const u_char *
 
 void mycallback(u_char *unused, const struct pcap_pkthdr *pcap_hdr, const u_char *pcap_data)
 {
-    int i=0;
-
     int hdr_size=sizeof(struct pcap_pkthdr);
     int data_size=(block_size-hdr_size);
     int pad_size=(data_size-(pcap_hdr->caplen));
 
     struct pcap_pkthdr *pcap_hdr_mod;
 
-    u_char block_hdr[hdr_size], block_data[data_size] ,block_pad[pad_size];
+    u_char *block_hdr, *block_data , *block_pad;
+
+    block_hdr=(u_char*)calloc(1,hdr_size);
+    block_data=(u_char*)calloc(1,data_size);
+    block_pad=(u_char*)calloc(1,pad_size);
 
     block_ind++;
 
@@ -186,7 +187,7 @@ void mycallback(u_char *unused, const struct pcap_pkthdr *pcap_hdr, const u_char
     memcpy(blocks_box+blocks_offset+(block_ind*block_size),block_hdr,hdr_size);
     memcpy(blocks_box+blocks_offset+(block_ind*block_size)+hdr_size,block_data,data_size);
 
-    mystat.pkt_sniff_proc++;
+    mystat.pkt_pcap_proc++;
 
     pcap_stats(handle,&pcapstat);
 
@@ -197,20 +198,23 @@ void mycallback(u_char *unused, const struct pcap_pkthdr *pcap_hdr, const u_char
     // DEBUG-BEGIN
     if(DEBUG_MODE)
     {
-        fprintf(debug_log,"\n[My CallBack - Packet Number %li]",mystat.pkt_sniff_proc);
+        fprintf(debug_log,"\n[My CallBack - Packet Number %li]",mystat.pkt_pcap_proc);
         fprintf(debug_log,"\nPcapHdrSize: %i\tPadSize: %i\tCapLen: %i\tLen: %i",hdr_size,pad_size,(pcap_hdr_mod->caplen),(pcap_hdr_mod->len));
-        fprintf(debug_log,"\tBlockSize: %i\tBlockHdrSize: %li\tBlockDataSize: %li\n\n",block_size,(long)(sizeof(block_hdr)),(long)(sizeof(block_data)));
+        fprintf(debug_log,"\tBlockSize: %i\tBlockHdrSize: %i\tBlockDataSize: %i\n",block_size,hdr_size,data_size);
         //analyze((const struct pcap_pkthdr *)(blocks_box+blocks_offset+(block_ind*block_size)),blocks_box+blocks_offset+(block_ind*block_size)+hdr_size,debug_log,device[num_dev].ip,"194.244.5.206");
     }
     // DEBUG-END
 
+    free(block_hdr);
+    free(block_data);
+    free(block_pad);
     free(pcap_hdr_mod);
 }
 
 
 void find_devices()
 {
-    int i=0, test=0;
+    int i=0;
 
     char *ip, *net, *mask, *point;
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -355,8 +359,6 @@ void initialize(char *dev_sel, int promisc, int timeout, int snaplen, int buffer
 
 void finite_loop()
 {
-    int i=0;
-
     if (blocks_num==0)
     {
         pcap_stats(handle,&pcapstat);
@@ -365,9 +367,9 @@ void finite_loop()
         mystat.pkt_pcap_drop=pcapstat.ps_drop;
         mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
 
-        blocks_num=mystat.pkt_pcap_tot-mystat.pkt_sniff_proc;
+        blocks_num=mystat.pkt_pcap_tot-mystat.pkt_pcap_proc;
 
-        if (blocks_num<=0) {blocks_num=1;}
+        if (blocks_num<=0) {return;}
         if (blocks_num>2000) {blocks_num=2000;}
     }
 
@@ -377,13 +379,12 @@ void finite_loop()
 
     memset(blocks_box,0,blocks_offset);
 
-    if(mystat.pkt_sniff_proc==0)
+    if(mystat.pkt_pcap_proc==0)
     {
             pcap_stats(handle,&pcapstat);
 
-            if((pcapstat.ps_recv)>0 || (pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0)
+            if((pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0)
             {
-                mystat.pkt_sniff_start=pcapstat.ps_recv;
                 pcapstat.ps_drop=0;
                 pcapstat.ps_ifdrop=0;
             }
@@ -392,7 +393,7 @@ void finite_loop()
     //DEBUG-BEGIN
     if(DEBUG_MODE)
     {
-        fprintf(debug_log,"\t[Finite Loop]\n\n");
+        fprintf(debug_log,"\n[Finite Loop]\n");
     }
     //DEBUG-END
 
@@ -410,9 +411,8 @@ void infinite_loop()
 
     pcap_stats(handle,&pcapstat);
 
-    if((pcapstat.ps_recv)>0 || (pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0)
+    if((pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0)
     {
-        mystat.pkt_sniff_start=pcapstat.ps_recv;
         pcapstat.ps_drop=0;
         pcapstat.ps_ifdrop=0;
     }
@@ -425,7 +425,7 @@ void infinite_loop()
     //DEBUG-BEGIN
     if(DEBUG_MODE)
     {
-        fprintf(debug_log,"\t[Infinite Loop]\n\n");
+        fprintf(debug_log,"\n[Infinite Loop]\n");
     }
     //DEBUG-END
 
@@ -548,13 +548,6 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
     PyArg_ParseTuple(args, "|i", &blocks_num);
 
-    // DEBUG-BEGIN
-    if(DEBUG_MODE)
-    {
-        fprintf(debug_log,"\nNumero di Loop: %i",blocks_num);
-    }
-    // DEBUG-END
-
     if (blocks_num>=0)
     {
         Py_BEGIN_ALLOW_THREADS;
@@ -563,15 +556,30 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
         finite_loop();
 
-        py_byte_array=PyByteArray_FromStringAndSize(blocks_box,(blocks_num*block_size)+blocks_offset);
-
-        // DEBUG-BEGIN
-        if(DEBUG_MODE)
+        if (blocks_num==0)
         {
-            fprintf(debug_log,"\nDimensione Pacchetto: %i\n",(int)PyByteArray_Size(py_byte_array));
-            //print_payload(blocks_box,(block_size*2)+blocks_offset);
+            free(blocks_box);
+
+            blocks_box=(u_char*)calloc(8+blocks_offset,sizeof(u_char));
+
+            memset(blocks_box,0,8+blocks_offset);
+
+            py_byte_array=PyByteArray_FromStringAndSize(blocks_box,8+blocks_offset);
         }
-        // DEBUG-END
+        else
+        {
+            py_byte_array=PyByteArray_FromStringAndSize(blocks_box,(blocks_num*block_size)+blocks_offset);
+
+            // DEBUG-BEGIN
+            if(DEBUG_MODE)
+            {
+                fprintf(debug_log,"\nNumero di Pacchetti: %i\t",blocks_num);
+                fprintf(debug_log,"Dimensione del ByteArray: %i\n\n",(int)PyByteArray_Size(py_byte_array));
+                //print_payload(blocks_box,(block_size*2)+blocks_offset);
+            }
+            // DEBUG-END
+
+        }
 
         no_stop=0;
 
@@ -631,12 +639,11 @@ static PyObject *sniffer_getstat(PyObject *self)
     rt=localtime(&req_time);
     strftime(request_time, sizeof request_time, "%a %Y/%m/%d %H:%M:%S", (const struct tm *) rt);
 
-    strcpy(build_string,"{s:s,s:l,s:l,s:l,s:l,s:l}");
+    strcpy(build_string,"{s:s,s:l,s:l,s:l,s:l}");
 
     return Py_BuildValue(build_string,
-                         "stat_time",request_time,
-                         "pkt_pcap_tot",mystat.pkt_pcap_tot,"pkt_pcap_drop",mystat.pkt_pcap_drop,"pkt_pcap_dropif",mystat.pkt_pcap_dropif,
-                         "pkt_sniff_start",mystat.pkt_sniff_start,"pkt_sniff_proc",mystat.pkt_sniff_proc);
+                         "stat_time",request_time,"pkt_pcap_proc",mystat.pkt_pcap_proc,
+                         "pkt_pcap_tot",mystat.pkt_pcap_tot,"pkt_pcap_drop",mystat.pkt_pcap_drop,"pkt_pcap_dropif",mystat.pkt_pcap_dropif);
 }
 
 static PyObject *sniffer_debugmode(PyObject *self, PyObject *args)

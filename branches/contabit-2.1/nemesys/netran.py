@@ -27,6 +27,7 @@ import sniffer
 import contabyte
 
 debug_mode=1
+
 sniffer_init={}
 contabyte_init=0
 
@@ -36,7 +37,6 @@ analyzer_flag=0
 run_sniffer=0
 run_contabyte=0
 
-black_hole = []
 shared_buffer = deque([])
 condition = Condition()
 
@@ -68,20 +68,21 @@ class Sniffer(Thread):
         sniffer_flag=1
         while (run_sniffer==1):
             global analyzer_flag
-            global black_hole
             global shared_buffer
             global condition
             if (analyzer_flag==1):
                 condition.acquire()
                 if (len(shared_buffer) == 100):
                     condition.wait()
-                sniffer_data=sniffer.start(sniffer_mode)
+                loop=0
+                while (loop == 0):
+                    sniffer_data=sniffer.start(sniffer_mode)
+                    loop=sniffer_data['blocks_num']
                 shared_buffer.append(sniffer_data)
                 condition.notify()
                 condition.release()
             else:
-                sniffer_data=sniffer.start(sniffer_mode)
-                black_hole.insert(0,sniffer_data)
+                black_hole=sniffer.start(sniffer_mode)
         sniffer_flag=0
 
 
@@ -284,4 +285,6 @@ if __name__ == '__main__':
     print "Success Contabyte"
     mysniffer.join()
     print "Success Sniffer"
+
+
 
