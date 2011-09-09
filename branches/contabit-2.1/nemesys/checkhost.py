@@ -19,26 +19,27 @@
 from logger import logging
 from threading import Thread
 import ipcalc
-import ping
+import arping
 import re
 MAX = 128
 
 logger = logging.getLogger()
 
 class sendit(Thread):
-  def __init__ (self, ip):
+  def __init__ (self, ipAddress, ip):
     Thread.__init__(self)
     self.ip = ip
+    self.ipAddress = ipAddress
     self.status = 0
     self.elapsed = 0
 
   def run(self):
     try:
-      self.elapsed = ping.do_one("%s" % self.ip, 1)
+      self.elapsed = arping.do_one("%s" % self.ipAddress, "%s" % self.ip, 1)
       if (self.elapsed > 0):
         self.status = 1
     except Exception as e:
-      logger.debug('Errore durante il ping dell\'host %s: %s' % (self.ip, e))
+      logger.debug('Errore durante l\'arping dell\'host %s: %s' % (self.ip, e))
       self.status = 0
       pass
     
@@ -84,8 +85,8 @@ def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4):
     if ((ip.hex() == net.hex() or ip.hex() == bcast.hex()) and realSubnet):
       logger.debug("Saltato ip %s" % ip)
     else:
-      logger.debug('Ping host %s' % ip)
-      current = sendit(ip)
+      logger.debug('Arping host %s' % ip)
+      current = sendit(ipAddress,ip)
       pinglist.append(current)
       current.start()
       i += 1
@@ -108,12 +109,12 @@ def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4):
 
 
 if __name__ == '__main__':
-  n = countHosts("10.10.0.100", 24, 2000, 2000, 'fst001', 255)
-  print '%d (%d)' % (n, 0)
+#  n = countHosts("10.10.0.100", 24, 2000, 2000, 'fst001', 255)
+#  print '%d (%d)' % (n, 0)
+#
+#  n = countHosts("192.168.1.1", 24, 2000, 2000, "fst001")
+#  print '%d (%d)' % (n, 0)
 
-  n = countHosts("192.168.1.1", 24, 2000, 2000, "fst001")
+  n = countHosts("192.168.208.53", 24, 200, 2000, "fst001",10)
   print '%d (%d)' % (n, 0)
-
-  #n = countHosts("192.168.208.250", 24, 200, 2000, "fst001")
-  #print '%d (%d)' % (n, 0)
   

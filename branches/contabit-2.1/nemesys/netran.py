@@ -75,7 +75,7 @@ class Sniffer(Thread):
                 if (len(shared_buffer) == 100):
                     condition.wait()
                 loop=0
-                while (loop == 0):
+                while (loop == 0 and analyzer_flag == 1):
                     sniffer_data=sniffer.start(sniffer_mode)
                     loop=sniffer_data['blocks_num']
                 shared_buffer.append(sniffer_data)
