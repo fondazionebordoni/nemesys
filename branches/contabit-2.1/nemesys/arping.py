@@ -65,7 +65,7 @@ def receive_one_arping(my_socket, IPdst, timeSend, timeout):
       hwsrc_arp, psrc_arp, hwdst_arp, pdst_arp = struct.unpack('!6s4s6s4s', ArpPkt[8:28])
       IPsrc_arp = socket.inet_ntoa(psrc_arp)
       if (hwdst_arp == hwsrc and IPsrc_arp == IPdst):
-        logger.debug('Trovato Host IP:%s MAC:%s  ' % (IPdst,display_mac(hwsrc_arp)))
+        logger.debug('Trovato Host %s con indirizzo fisico %s' % (IPdst,display_mac(hwsrc_arp)))
         return timeReceived - timeSend
 
     timeLeft = timeLeft - howLongInSelect
@@ -86,7 +86,7 @@ def send_one_arping(my_socket, IPsrc, IPdst):
   psrc = socket.inet_aton(IPsrc)
   pdst = socket.inet_aton(IPdst)
   
-  ArpPkt = struct.pack('!HHbbH6s4s6s4s', 0x1, 0x0800, 6, 4, 1, hwsrc, psrc, '\x00', pdst)
+  ArpPkt = struct.pack('!HHbbH6s4s6s4s', 0x0001, 0x0800, 6, 4, 0x0001, hwsrc, psrc, '\x00', pdst)
   
   EthPkt = struct.pack("!6s6sh", hwdst, hwsrc, proto) + ArpPkt
 
