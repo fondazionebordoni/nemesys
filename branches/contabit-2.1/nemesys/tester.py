@@ -202,6 +202,7 @@ class Tester:
     #funzione per terminare l'attività dello sniffer avviata con l'inizializzazione del tester o tramite teststartsniffer
     try:
       checkstopsniffer = self._test_sniffer.stop()
+      self._test_sniffer.join()
     except:
       logger.error('Errore nello stop dello sniffer: %s' %checkstopsniffer['err_str'])
         
@@ -268,6 +269,7 @@ if __name__ == '__main__':
     test = t1.testping()
     print 'Test Ping:'
     print test
+    t1.teststopsniffer()
   else:
     main()
 
