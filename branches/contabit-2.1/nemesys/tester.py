@@ -76,7 +76,10 @@ class Tester:
     elapsed = 0
     counter_total_pay = 0
     counter_ftp_pay = 0 
-    counter = Contabyte(self._if_ip, self._host.ip,0)
+    try:
+      counter = Contabyte(self._if_ip, self._host.ip,0)
+    except:
+      logger.error("Errore di inizializzazione del Contabyte")
     file = Fakefile(bytes)
     timeout = max(self._timeout, 1)
     start = datetime.fromtimestamp(timestampNtp())
@@ -96,24 +99,24 @@ class Tester:
     timer = timeit.Timer(function, setup)
 
     try:
-      # DONE::TODO Eseguire start di contabit  
-      if (counter):
-        counter.start()
+      #if (counter):
+      counter.start()
+      logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
       
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
       
-      # DONE::TODO Eseguire stop di contabit e analizzare il valore di ritorno
-      if (counter):
-        counter.stop()
+      #if (counter):
+      counter.stop()
+      logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
         
-        counter_stats = counter.getstat()
-        if (counter_stats != None):  
-          counter_total_pay = counter_stats['payload_up_all']
-          counter_ftp_pay = counter_stats['payload_up_nem']
-          logger.debug("Statistiche contabit %s" % counter_stats)
-          
-        counter.join()
+      counter_stats = counter.getstat()
+      if (counter_stats != None):  
+        counter_total_pay = counter_stats['payload_up_all']
+        counter_ftp_pay = counter_stats['payload_up_nem']
+        logger.debug("Statistiche contabit:\n %s \n" % counter_stats)
+        
+      counter.join()
 
     except ftplib.all_errors as e:
       logger.error("Impossibile effettuare l'upload: %s" % e)
@@ -132,7 +135,12 @@ class Tester:
     elapsed = 0
     counter_total_pay = 0
     counter_ftp_pay = 0
-    counter = Contabyte(self._if_ip, self._host.ip,0)
+    try:
+      counter = Contabyte(self._if_ip, self._host.ip,0)
+    except:
+      logger.error("Errore di inizializzazione del Contabyte")
+      counter = None
+      
     file = filename
     timeout = max(self._timeout, 1)
     start = datetime.fromtimestamp(timestampNtp())
@@ -150,25 +158,25 @@ class Tester:
     setup = 'from %s import ftp, file, totalsize' % __name__ 
     timer = timeit.Timer(function, setup)
 
-    try:
-      # DONE::TODO Eseguire start di contabit  
-      if (counter):
-        counter.start()
-      
+    try:  
+      #if (counter):
+      counter.start()
+      logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
+        
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
       
-      # DONE::TODO Eseguire stop di contabit e analizzare il valore di ritorno
-      if (counter):
-        counter.stop()
-          
-        counter_stats = counter.getstat()
-        if (counter_stats != None):  
-          counter_total_pay = counter_stats['payload_down_all']
-          counter_ftp_pay = counter_stats['payload_down_nem']
-          logger.debug("Statistiche contabit %s" % counter_stats)
+      #if (counter):
+      counter.stop()
+      logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))  
         
-        counter.join()
+      counter_stats = counter.getstat()
+      if (counter_stats != None):  
+        counter_total_pay = counter_stats['payload_down_all']
+        counter_ftp_pay = counter_stats['payload_down_nem']
+        logger.debug("Statistiche contabit:\n %s \n" % counter_stats)
+      
+      counter.join()
 
     except ftplib.all_errors as e:
       logger.error("Impossibile effettuare il download: %s" % e)
@@ -258,18 +266,27 @@ def main():
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
-    t1 = Tester('192.168.208.53', Host(ip='193.104.137.133'), 'nemesys', '4gc0m244')
-   
-    test = t1.testftpdown('/download/1000.rnd')
-    print 'Test Download:'
-    print test
-    test = t1.testftpup(1048576, '/upload/r.raw')
-    print 'Test Upload:'
-    print test
-    test = t1.testping()
-    print 'Test Ping:'
-    print test
+    t1 = Tester('192.168.88.8', Host(ip='193.104.137.133'), 'nemesys', '4gc0m244')
+    #t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
+    
+    for i in range(1,21):
+      print 'Test Download %d:' % i
+      test = t1.testftpdown('/download/1000.rnd')
+      print test
+      print
+    for i in range(1,21):
+      print 'Test Upload %d:' % i
+      test = t1.testftpup(1048576, '/upload/r.raw')
+      print test
+      print
+    for i in range(1,11):
+      print 'Test Ping %d:' % i
+      test = t1.testping()
+      print test
+      print
+
     t1.teststopsniffer()
+
   else:
     main()
 

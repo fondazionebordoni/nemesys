@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-
-from threading import Thread, Condition
+from logger import logging
+from threading import Thread, Condition, Event
 from collections import deque
 
 import time
@@ -26,137 +26,145 @@ import sys
 import sniffer
 import contabyte
 
-debug_mode=1
+logger = logging.getLogger()
 
-sniffer_init={}
-contabyte_init=0
+debug_mode = 1
 
-sniffer_flag=0
-analyzer_flag=0
-
-run_sniffer=0
-run_contabyte=0
+sniffer_init = {}
+contabyte_init = 0
 
 shared_buffer = deque([])
 condition = Condition()
-
+analyzer_flag = Event()
 
 class Device:
 
   def __init__(self): None
-  
-  def getdev(self,req=None):
-    device=sniffer.getdev(req)
+
+  def getdev(self, req=None):
+    device = sniffer.getdev(req)
     return device
 
 
 class Sniffer(Thread):
 
-  def __init__(self,dev,buff=32*1024000,snaplen=8192,timeout=1,promisc=1,debug=0):
+  def __init__(self, dev, buff=32 * 1024000, snaplen=8192, timeout=1, promisc=1, debug=0):
     Thread.__init__(self)
     global debug_mode
     global sniffer_init
-    global run_sniffer
-    debug_mode=sniffer.debugmode(debug)
-    sniffer_init=sniffer.initialize(dev,buff,snaplen,timeout,promisc)
-    if (sniffer_init['err_flag']==0):
-      run_sniffer=1
-  
-  def run(self,sniffer_mode=0):
-    global run_sniffer
-    global sniffer_flag
-    sniffer_flag=1
-    while (run_sniffer==1):
+    self._run_sniffer = 0
+    debug_mode = sniffer.debugmode(debug)
+    sniffer_init = sniffer.initialize(dev, buff, snaplen, timeout, promisc)
+    if (sniffer_init['err_flag'] == 0):
+      self._run_sniffer = 1
+    else: 
+      logger.error('Errore inizializzazione dello Sniffer')
+
+  def run(self, sniffer_mode=1):
+    while (self._run_sniffer == 1):
       global analyzer_flag
       global shared_buffer
       global condition
-      if (analyzer_flag==1):
+      if (analyzer_flag.isSet()):
         condition.acquire()
-        if (len(shared_buffer) == 100):
-          condition.wait()
-        loop=0
-        while (loop == 0 and analyzer_flag == 1):
-          sniffer_data=sniffer.start(sniffer_mode)
-          loop=sniffer_data['blocks_num']
-        shared_buffer.append(sniffer_data)
-        condition.notify()
+        while (len(shared_buffer) >= 10000):
+          logger.debug("BUFFER PIENO")
+          condition.wait(1)
+          
+        try:  
+          sniffer_data = sniffer.start(sniffer_mode)
+          shared_buffer.append(sniffer_data)
+          condition.notify()
+        except:
+          logger.error("Errore nello Sniffer: %s" % str(sys.exc_info()[0]))
+          raise
+          
         condition.release()
+        
       else:
-        black_hole=sniffer.start(sniffer_mode)
-    sniffer_flag=0
-  
-  
+        black_hole = sniffer.start(sniffer_mode)
+
   def stop(self):
-    global run_sniffer
     global shared_buffer
-    run_sniffer=0
-    while (sniffer_flag != 0): None
-    sniffer_stop=sniffer.stop()
+    self._run_sniffer = 0
+    while (self.isAlive()):
+      None
+    sniffer_stop = sniffer.stop()
     return sniffer_stop
-  
-  
+
+
   def getstat(self):
-    sniffer_stat=sniffer.getstat()
+    sniffer_stat = sniffer.getstat()
     return sniffer_stat
-  
-  
+
+
   def join(self, timeout=None):
+    #logger.debug('ALIVE SNIFFER: %s' % str(self.isAlive()))
     Thread.join(self, timeout)
 
 
 class Contabyte(Thread):
 
-  def __init__(self,dev,nem,debug=0):
+  def __init__(self, dev, nem, debug=0):
     Thread.__init__(self)
     global debug_mode
     global contabyte_init
-    global run_contabyte
-    debug_mode=contabyte.debugmode(debug)
-    contabyte_init=contabyte.initialize(dev,nem)
-    if (contabyte_init==0):
-      run_contabyte=1
-
+    self._run_contabyte = 0
+    debug_mode = contabyte.debugmode(debug)
+    contabyte_init = contabyte.initialize(dev, nem)
+    if (contabyte_init == 0):
+      self._run_contabyte = 1
+    else: 
+      logger.error('Errore inizializzazione del Contabyte')
+      raise Exception('Errore inizializzazione del Contabyte')
 
   def run(self):
-    global run_contabyte
     global analyzer_flag
-    analyzer_flag=1
-    while (run_contabyte==1):
-      global sniffer_flag
-      global shared_buffer
-      global condition
-      if (sniffer_flag==1):
-        condition.acquire()
-        if (len(shared_buffer) == 0):
-          if (analyzer_flag==1):
-            condition.wait()
-        else:
-          contabyte_data=shared_buffer.popleft()
-          contabyte.analyze(contabyte_data['py_byte_array'],contabyte_data['block_size'],contabyte_data['blocks_num'],contabyte_data['datalink'])
+    global shared_buffer
+    global condition
+    analyzer_flag.set()
+    logger.debug("START ANALYZER")
+    condition.acquire()
+    condition.wait(1)
+    condition.release()
+    while (self._run_contabyte == 1):  
+      condition.acquire()
+      while (len(shared_buffer) <= 0 and analyzer_flag.isSet()):
+        condition.wait(1)
+      
+      if(len(shared_buffer) > 0):    
+        try:
+          contabyte_data = shared_buffer.popleft()
+          contabyte.analyze(contabyte_data['py_byte_array'], contabyte_data['block_size'], contabyte_data['blocks_num'], contabyte_data['datalink'])
           condition.notify()
-          condition.release()
-      else:
-        run_contabyte=0
-    analyzer_flag=0
+        except:
+          logger.error("Errore nello Sniffer: %s" % str(sys.exc_info()[0]))
+          raise
+      
+      condition.release()
 
 
   def stop(self):
     global analyzer_flag
     global shared_buffer
-    global run_contabyte
-    analyzer_flag=2
-    while (len(shared_buffer) != 0): None
-    run_contabyte=0
-    contabyte_stop=contabyte.close()
+    analyzer_flag.clear()
+    logger.debug("STOP ANALYZER")
+    while (len(shared_buffer) != 0):
+      None
+    self._run_contabyte = 0
+    while (self.isAlive()):
+      None
+    contabyte_stop = contabyte.close()
     return contabyte_stop
 
 
   def getstat(self):
-    contabyte_stat=contabyte.getstat()
+    contabyte_stat = contabyte.getstat()
     return contabyte_stat
 
 
   def join(self, timeout=None):
+    #logger.debug('ALIVE CONTABYTE: %s' % str(self.isAlive()))
     Thread.join(self, timeout)
 
 
@@ -164,69 +172,69 @@ class Contabyte(Thread):
 
 if __name__ == '__main__':
 
-  mydev='192.168.208.53'
-  mynem='194.244.5.206'
-  debug=1
+  mydev = '192.168.88.8'
+  mynem = '194.244.5.206'
+  debug = 1
 
   print "\nDevices:"
 
-  mydevice=Device()
+  mydevice = Device()
 
   print "\nFirst Request: All Devices"
 
-  device=mydevice.getdev()
+  device = mydevice.getdev()
 
-  if (device!=None):
+  if (device != None):
     print
-    keys=device.keys()
+    keys = device.keys()
     keys.sort()
     for key in keys:
-      print "%s \t %s" % (key,device[key])
+      print "%s \t %s" % (key, device[key])
   else:
     print "No Devices"
 
   print "\nSecond Request: Device by IP not assigned to the machine"
 
-  device=mydevice.getdev('194.244.5.206')
+  device = mydevice.getdev('194.244.5.206')
 
-  if (device!=None):
+  if (device != None):
     print
-    keys=device.keys()
+    keys = device.keys()
     keys.sort()
     for key in keys:
-      print "%s \t %s" % (key,device[key])
+      print "%s \t %s" % (key, device[key])
   else:
     print "No Devices"
 
   print "\nThird Request: Device by IP assigned to the machine"
 
-  device=mydevice.getdev(mydev)
+  device = mydevice.getdev(mydev)
 
-  if (device!=None):
+  if (device != None):
     print
-    keys=device.keys()
+    keys = device.keys()
     keys.sort()
     for key in keys:
-      print "%s \t %s" % (key,device[key])
+      print "%s \t %s" % (key, device[key])
   else:
     print "No Devices"
 
 
   print "\nInitialize Sniffer And Contabyte...."
 
-  mysniffer=Sniffer(mydev,32*1024000,150,1,1,debug)
+  mysniffer = Sniffer(mydev, 32 * 1024000, 150, 1, 1, debug)
 
   print "Debug Mode Sniffer:", debug_mode
-  if (sniffer_init['err_flag']==0):
+  if (sniffer_init['err_flag'] == 0):
     print "Success Sniffer\n"
   else:
-    print "Fail Sniffer:",sniffer_init['err_flag']
-    print "Error Sniffer:",sniffer_init['err_str']
+    print "Fail Sniffer:", sniffer_init['err_flag']
+    print "Error Sniffer:", sniffer_init['err_str']
 
-  mycontabyte=Contabyte(mydev,mynem,debug)
+  mycontabyte = Contabyte(mydev, mynem, debug)
 
   print "Debug Mode Contabyte:", debug_mode
-  if (contabyte_init==0):
+  if (contabyte_init == 0):
     print "Success Contabyte\n"
   else:
     print "Fail Contabyte\n"
@@ -242,38 +250,38 @@ if __name__ == '__main__':
   raw_input("Enter When Finished!!")
   #time.sleep(30)
 
-  contabyte_stop=mycontabyte.stop()
-  if (contabyte_stop==0):
+  contabyte_stop = mycontabyte.stop()
+  if (contabyte_stop == 0):
     print "Success Contabyte"
   else:
     print "Fail\n"
 
-  sniffer_stop=mysniffer.stop()
-  if (sniffer_stop['err_flag']==0):
+  sniffer_stop = mysniffer.stop()
+  if (sniffer_stop['err_flag'] == 0):
     print "Success Sniffer"
   else:
-    print "Fail:",sniffer_stop['err_flag']
-    print "Error:",sniffer_stop['err_str']
+    print "Fail:", sniffer_stop['err_flag']
+    print "Error:", sniffer_stop['err_str']
 
   print "Sniffer And Contabyte Statistics:\n"
 
-  contabyte_stat=mycontabyte.getstat()
-  if (contabyte_stat!=None):
-    keys=contabyte_stat.keys()
+  contabyte_stat = mycontabyte.getstat()
+  if (contabyte_stat != None):
+    keys = contabyte_stat.keys()
     keys.sort()
     for key in keys:
-      print "Key: %s \t Value: %s" % (key,contabyte_stat[key])
+      print "Key: %s \t Value: %s" % (key, contabyte_stat[key])
   else:
     print "No Statistics"
 
   print
 
-  sniffer_stat=mysniffer.getstat()
-  if (sniffer_stat!=None):
-    keys=sniffer_stat.keys()
+  sniffer_stat = mysniffer.getstat()
+  if (sniffer_stat != None):
+    keys = sniffer_stat.keys()
     keys.sort()
     for key in keys:
-      print "Key: %s \t Value: %s" % (key,sniffer_stat[key])
+      print "Key: %s \t Value: %s" % (key, sniffer_stat[key])
   else:
     print "No Statistics"
 

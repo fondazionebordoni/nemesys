@@ -369,11 +369,9 @@ void finite_loop()
 
         blocks_num=mystat.pkt_pcap_tot-mystat.pkt_pcap_proc;
 
-        if (blocks_num<=0) {return;}
+        if (blocks_num<=0) {blocks_num=1;}
         if (blocks_num>2000) {blocks_num=2000;}
     }
-
-    free(blocks_box);
 
     blocks_box=(u_char*)calloc((blocks_num*block_size)+blocks_offset,sizeof(u_char));
 
@@ -556,10 +554,8 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
         finite_loop();
 
-        if (blocks_num==0)
+        if (blocks_num<=0)
         {
-            free(blocks_box);
-
             blocks_box=(u_char*)calloc(8+blocks_offset,sizeof(u_char));
 
             memset(blocks_box,0,8+blocks_offset);
@@ -578,8 +574,9 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
                 //print_payload(blocks_box,(block_size*2)+blocks_offset);
             }
             // DEBUG-END
-
         }
+
+        free(blocks_box);
 
         no_stop=0;
 
@@ -614,8 +611,6 @@ static PyObject *sniffer_stop(PyObject *self)
         mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
 
         pcap_close(handle);
-
-        free(blocks_box);
     }
     else
     {

@@ -515,7 +515,8 @@ void analyzer (const struct pcap_pkthdr *hdr, const u_char *data)
 
 static PyObject *contabyte_initialize(PyObject *self, PyObject *args)
 {
-    char *dev=(char*)calloc(22,sizeof(char)), *nem=(char*)calloc(22,sizeof(char));
+    //char *dev=(char*)calloc(22,sizeof(char)), *nem=(char*)calloc(22,sizeof(char));
+    char *dev, *nem;
 
     PyArg_ParseTuple(args,"zz",&dev,&nem);
 
@@ -578,6 +579,8 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
     no_stop=0;
 
     Py_END_ALLOW_THREADS;
+
+    free(blocks_box);
 
     return Py_BuildValue("i",0);
 }
