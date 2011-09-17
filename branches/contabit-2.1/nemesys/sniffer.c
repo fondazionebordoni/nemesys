@@ -370,7 +370,7 @@ void finite_loop()
         blocks_num=mystat.pkt_pcap_tot-mystat.pkt_pcap_proc;
 
         if (blocks_num<=0) {blocks_num=1;}
-        if (blocks_num>2000) {blocks_num=2000;}
+        if (blocks_num>200) {blocks_num=200;}
     }
 
     blocks_box=(u_char*)calloc((blocks_num*block_size)+blocks_offset,sizeof(u_char));

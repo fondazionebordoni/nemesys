@@ -541,6 +541,8 @@ static PyObject *contabyte_initialize(PyObject *self, PyObject *args)
 
 static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 {
+    Py_BEGIN_ALLOW_THREADS;
+
     PyObject *py_byte_array;
 
     u_char *blocks_box;
@@ -565,8 +567,6 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 
     block_ind=-1;
 
-    Py_BEGIN_ALLOW_THREADS;
-
     no_stop=1;
 
     while(block_ind<blocks_num-1)
@@ -578,9 +578,9 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 
     no_stop=0;
 
-    Py_END_ALLOW_THREADS;
-
     free(blocks_box);
+
+    Py_END_ALLOW_THREADS;
 
     return Py_BuildValue("i",0);
 }

@@ -33,7 +33,7 @@ debug_mode = 1
 sniffer_init = {}
 contabyte_init = 0
 
-shared_buffer = deque([])
+shared_buffer = deque([],maxlen=10000)
 condition = Condition()
 analyzer_flag = Event()
 
@@ -53,6 +53,7 @@ class Sniffer(Thread):
     global debug_mode
     global sniffer_init
     self._run_sniffer = 0
+    self._sniffer_data = {}
     debug_mode = sniffer.debugmode(debug)
     sniffer_init = sniffer.initialize(dev, buff, snaplen, timeout, promisc)
     if (sniffer_init['err_flag'] == 0):
@@ -60,20 +61,20 @@ class Sniffer(Thread):
     else: 
       logger.error('Errore inizializzazione dello Sniffer')
 
-  def run(self, sniffer_mode=1):
+  def run(self, sniffer_mode=0):
+    global analyzer_flag
+    global shared_buffer
+    global condition
     while (self._run_sniffer == 1):
-      global analyzer_flag
-      global shared_buffer
-      global condition
       if (analyzer_flag.isSet()):
         condition.acquire()
         while (len(shared_buffer) >= 10000):
-          logger.debug("BUFFER PIENO")
+          logger.debug("WAIT: Buffer Pieno!!")
           condition.wait(1)
           
         try:  
-          sniffer_data = sniffer.start(sniffer_mode)
-          shared_buffer.append(sniffer_data)
+          self._sniffer_data = sniffer.start(sniffer_mode)
+          shared_buffer.append(self._sniffer_data)
           condition.notify()
         except:
           logger.error("Errore nello Sniffer: %s" % str(sys.exc_info()[0]))
@@ -82,7 +83,7 @@ class Sniffer(Thread):
         condition.release()
         
       else:
-        black_hole = sniffer.start(sniffer_mode)
+        sniffer.start(sniffer_mode)       #black hole
 
   def stop(self):
     global shared_buffer
@@ -122,8 +123,8 @@ class Contabyte(Thread):
     global analyzer_flag
     global shared_buffer
     global condition
+    shared_buffer.clear()
     analyzer_flag.set()
-    logger.debug("START ANALYZER")
     condition.acquire()
     condition.wait(1)
     condition.release()
@@ -135,10 +136,12 @@ class Contabyte(Thread):
       if(len(shared_buffer) > 0):    
         try:
           contabyte_data = shared_buffer.popleft()
+          if (contabyte_data['blocks_num'] > 10):
+            logger.debug("|%d|" % contabyte_data['blocks_num'])
           contabyte.analyze(contabyte_data['py_byte_array'], contabyte_data['block_size'], contabyte_data['blocks_num'], contabyte_data['datalink'])
           condition.notify()
         except:
-          logger.error("Errore nello Sniffer: %s" % str(sys.exc_info()[0]))
+          logger.error("Errore nello Contabyte: %s" % str(sys.exc_info()[0]))
           raise
       
       condition.release()
@@ -148,7 +151,6 @@ class Contabyte(Thread):
     global analyzer_flag
     global shared_buffer
     analyzer_flag.clear()
-    logger.debug("STOP ANALYZER")
     while (len(shared_buffer) != 0):
       None
     self._run_contabyte = 0

@@ -63,7 +63,7 @@ class Tester:
     socket.setdefaulttimeout(self._timeout)
     #DONE mettere un try catch
     try:
-      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,150,1,1,0)
+      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,180,1,1,0)
       self._test_sniffer.start()
     except: 
       logger.error('Errore di inizializzazione dello sniffer')
@@ -101,14 +101,14 @@ class Tester:
     try:
       #if (counter):
       counter.start()
-      logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
+      #logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
       
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
       
       #if (counter):
       counter.stop()
-      logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
+      #logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
         
       counter_stats = counter.getstat()
       if (counter_stats != None):  
@@ -161,20 +161,20 @@ class Tester:
     try:  
       #if (counter):
       counter.start()
-      logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
+      #logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
         
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
       
       #if (counter):
       counter.stop()
-      logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))  
+      #logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))  
         
       counter_stats = counter.getstat()
       if (counter_stats != None):  
         counter_total_pay = counter_stats['payload_down_all']
         counter_ftp_pay = counter_stats['payload_down_nem']
-        logger.debug("Statistiche contabit:\n %s \n" % counter_stats)
+        logger.debug("Statistiche contabit:\n%s\n" % counter_stats)
       
       counter.join()
 
@@ -217,7 +217,7 @@ class Tester:
      
   def teststartsniffer(self):
     try:
-      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,150,1,1,0)
+      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,180,1,1,0)
       self._test_sniffer.start()
     except: 
       logger.error('Errore di inizializzazione dello sniffer')
@@ -269,22 +269,24 @@ if __name__ == '__main__':
     t1 = Tester('192.168.88.8', Host(ip='193.104.137.133'), 'nemesys', '4gc0m244')
     #t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
     
-    for i in range(1,21):
-      print 'Test Download %d:' % i
-      test = t1.testftpdown('/download/1000.rnd')
-      print test
-      print
-    for i in range(1,21):
-      print 'Test Upload %d:' % i
-      test = t1.testftpup(1048576, '/upload/r.raw')
-      print test
-      print
-    for i in range(1,11):
-      print 'Test Ping %d:' % i
-      test = t1.testping()
-      print test
-      print
-
+    for k in range(1,11):
+      print "[-------- TEST 20-20-10 numero:%d --------]" % k
+      for i in range(1,21):
+        print 'Test Download %d.%d:' % (k,i)
+        test = t1.testftpdown('/download/1000.rnd')
+        print test
+        print("\n")
+      for i in range(1,21):
+        print 'Test Upload %d.%d:' % (k,i)
+        test = t1.testftpup(1048576, '/upload/r.raw')
+        print test
+        print("\n")
+      for i in range(1,11):
+        print 'Test Ping %d.%d:' % (k,i)
+        test = t1.testping()
+        print test
+        print("\n")
+  
     t1.teststopsniffer()
 
   else:

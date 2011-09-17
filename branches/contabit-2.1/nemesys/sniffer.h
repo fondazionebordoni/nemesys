@@ -1,3 +1,12 @@
+//
+//Linux: gcc sniffer.c -shared -I./ -I/usr/include/python2.7 -lpython2.7 -lpcap -osniffer.so
+//
+//Win: gcc sniffer.c -shared -I. -I C:\Python27\include -I C:\winpcap\Include -I C:\winpcap\Include\pcap -L C:\Programmi\CodeBlocks\MinGW\lib -L C:\Python27\libs -L C:\winpcap\Lib -o sniffer.pyd -lpython27 -lwpcap -lwsock32
+//
+// gcc -fPIC                        [per 64bit .so .pyd]
+// gcc -fno-stack-protector         [disabilitare la protezione di overflow]
+
+
 #include <Python.h>
 #include <pcap.h>
 
@@ -33,5 +42,3 @@
 #include <signal.h>
 #include <time.h>
 #include <math.h>
-
-//void analyze (const struct pcap_pkthdr *hdr, const u_char *data, FILE *debug_log, char *dev, char *nem);
