@@ -409,7 +409,6 @@ void analyzer (const struct pcap_pkthdr *hdr, const u_char *data)
     ip_src_int=(u_long)inet_addr(src);
     ip_dst_int=(u_long)inet_addr(dst);
 
-
     if((ip_src_int==ip_dev_int || ip_src_int==ip_nem_int) && (ip_dst_int==ip_dev_int || ip_dst_int==ip_nem_int))
     {
         strcat(type,"|NEM");
@@ -550,7 +549,7 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 
     PyArg_ParseTuple(args,"Oiii",&py_byte_array,&block_size,&blocks_num,&datalink);
 
-    blocks_offset=((int)PyByteArray_Size(py_byte_array)-(blocks_num*block_size));
+    blocks_offset=(((int)PyByteArray_Size(py_byte_array)-(blocks_num*block_size))/2);
 
     blocks_box=(u_char*)PyByteArray_AsString(py_byte_array);
 

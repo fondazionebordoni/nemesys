@@ -55,7 +55,7 @@ def totalsize(data):
 class Tester:
 
   def __init__(self, if_ip, host, username='anonymous', password='anonymous@', timeout=60):
-    self._debug = 1
+    self._debug = 0
     self._if_ip = if_ip
     self._host = host
     self._username = username
@@ -265,11 +265,11 @@ if __name__ == '__main__':
     
     for k in range(1,11):
       print "[-------- TEST 20-20-10 numero:%d --------]" % k
-#      for i in range(1,21):
-#        print 'Test Download %d.%d:' % (k,i)
-#        test = t1.testftpdown('/download/1000.rnd')
-#        print test
-#        print("\n")
+      for i in range(1,21):
+        print 'Test Download %d.%d:' % (k,i)
+        test = t1.testftpdown('/download/1000.rnd')
+        print test
+        print("\n")
       for i in range(1,21):
         print 'Test Upload %d.%d:' % (k,i)
         test = t1.testftpup(512000, '/upload/r.raw')

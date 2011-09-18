@@ -133,9 +133,7 @@ class Contabyte(Thread):
           contabyte_data = shared_buffer.popleft()
           if (contabyte_data['blocks_num'] > max_headers):
             max_headers = contabyte_data['blocks_num']
-          #print("on"),
           contabyte.analyze(contabyte_data['py_byte_array'], contabyte_data['block_size'], contabyte_data['blocks_num'], contabyte_data['datalink'])
-          #print("off"),
           condition.notify()
         except:
           logger.error("Errore nel Contabyte: %s" % str(sys.exc_info()[0]))

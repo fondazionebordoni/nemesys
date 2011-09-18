@@ -27,7 +27,7 @@ u_char *blocks_box;
 
 int no_stop=1, ind_dev=0, num_dev=0;
 
-int blocks_num=0, block_ind=0, block_size=0, blocks_offset=0;
+int blocks_num=0, block_ind=0, block_size=0, blocks_offset=10;
 
 pcap_t *handle;
 
@@ -371,9 +371,10 @@ void finite_loop()
         if (blocks_num>2000) {blocks_num=2000;}
     }
 
-    blocks_box=(u_char*)calloc((blocks_num*block_size)+blocks_offset,sizeof(u_char));
+    blocks_box=(u_char*)calloc((blocks_num*block_size)+(blocks_offset*2),sizeof(u_char));
 
     memset(blocks_box,0,blocks_offset);
+    memset(blocks_box+blocks_offset+(blocks_num*block_size),0,blocks_offset);
 
     if(mystat.pkt_pcap_proc==0)
     {
@@ -554,15 +555,15 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
         if (blocks_num<=0)
         {
-            blocks_box=(u_char*)calloc(8+blocks_offset,sizeof(u_char));
+            blocks_box=(u_char*)calloc((blocks_offset*2),sizeof(u_char));
 
-            memset(blocks_box,0,8+blocks_offset);
+            memset(blocks_box,0,(blocks_offset*2));
 
-            py_byte_array=PyByteArray_FromStringAndSize(blocks_box,8+blocks_offset);
+            py_byte_array=PyByteArray_FromStringAndSize(blocks_box,(blocks_offset*2));
         }
         else
         {
-            py_byte_array=PyByteArray_FromStringAndSize(blocks_box,(blocks_num*block_size)+blocks_offset);
+            py_byte_array=PyByteArray_FromStringAndSize(blocks_box,(blocks_num*block_size)+(blocks_offset*2));
 
             // DEBUG-BEGIN
             if(DEBUG_MODE)
