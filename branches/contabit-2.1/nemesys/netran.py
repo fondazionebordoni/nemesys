@@ -70,8 +70,7 @@ class Sniffer(Thread):
         condition.acquire()
         while (len(shared_buffer) >= 10000):
           logger.debug("WAIT: Buffer Pieno!!")
-          condition.wait(1)
-          
+          condition.wait(2.0) 
         try:  
           self._sniffer_data = sniffer.start(sniffer_mode)
           shared_buffer.append(self._sniffer_data)
@@ -79,9 +78,7 @@ class Sniffer(Thread):
         except:
           logger.error("Errore nello Sniffer: %s" % str(sys.exc_info()[0]))
           raise
-          
         condition.release()
-        
       else:
         sniffer.start(sniffer_mode)       #black hole
 
@@ -93,11 +90,9 @@ class Sniffer(Thread):
     sniffer_stop = sniffer.stop()
     return sniffer_stop
 
-
   def getstat(self):
     sniffer_stat = sniffer.getstat()
     return sniffer_stat
-
 
   def join(self, timeout=None):
     #logger.debug('ALIVE SNIFFER: %s' % str(self.isAlive()))
@@ -126,26 +121,29 @@ class Contabyte(Thread):
     shared_buffer.clear()
     analyzer_flag.set()
     condition.acquire()
-    condition.wait(1)
+    condition.wait(2.0)
     condition.release()
-    while (self._run_contabyte == 1):  
+    max_headers = 0
+    while (self._run_contabyte == 1):
       condition.acquire()
       while (len(shared_buffer) <= 0 and analyzer_flag.isSet()):
-        condition.wait(1)
-      
-      if(len(shared_buffer) > 0):    
-        try:
+        condition.wait(2.0)
+      if(len(shared_buffer) > 0):
+        try: 
           contabyte_data = shared_buffer.popleft()
-          if (contabyte_data['blocks_num'] > 10):
-            logger.debug("|%d|" % contabyte_data['blocks_num'])
+          if (contabyte_data['blocks_num'] > max_headers):
+            max_headers = contabyte_data['blocks_num']
+          #print("on"),
           contabyte.analyze(contabyte_data['py_byte_array'], contabyte_data['block_size'], contabyte_data['blocks_num'], contabyte_data['datalink'])
+          #print("off"),
           condition.notify()
         except:
-          logger.error("Errore nello Contabyte: %s" % str(sys.exc_info()[0]))
+          logger.error("Errore nel Contabyte: %s" % str(sys.exc_info()[0]))
           raise
-      
-      condition.release()
-
+      elif (not analyzer_flag.isSet()):
+        condition.wait(2.0)
+      condition.release()   
+    logger.debug("|Headers Max nel blocco:%d|" % max_headers)
 
   def stop(self):
     global analyzer_flag
@@ -159,11 +157,9 @@ class Contabyte(Thread):
     contabyte_stop = contabyte.close()
     return contabyte_stop
 
-
   def getstat(self):
     contabyte_stat = contabyte.getstat()
     return contabyte_stat
-
 
   def join(self, timeout=None):
     #logger.debug('ALIVE CONTABYTE: %s' % str(self.isAlive()))

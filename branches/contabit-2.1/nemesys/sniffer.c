@@ -143,7 +143,6 @@ void mydump(u_char *dumpfile, const struct pcap_pkthdr *pcap_hdr, const u_char *
     if(DEBUG_MODE)
     {
         fprintf(debug_log,"\n[My Dump - Packet Number %li]\n",mystat.pkt_pcap_proc);
-        //analyze(pcap_hdr,pcap_data,debug_log,device[num_dev].ip,"194.244.5.206");
     }
     // DEBUG-END
 }
@@ -201,7 +200,6 @@ void mycallback(u_char *unused, const struct pcap_pkthdr *pcap_hdr, const u_char
         fprintf(debug_log,"\n[My CallBack - Packet Number %li]",mystat.pkt_pcap_proc);
         fprintf(debug_log,"\nPcapHdrSize: %i\tPadSize: %i\tCapLen: %i\tLen: %i",hdr_size,pad_size,(pcap_hdr_mod->caplen),(pcap_hdr_mod->len));
         fprintf(debug_log,"\tBlockSize: %i\tBlockHdrSize: %i\tBlockDataSize: %i\n",block_size,hdr_size,data_size);
-        //analyze((const struct pcap_pkthdr *)(blocks_box+blocks_offset+(block_ind*block_size)),blocks_box+blocks_offset+(block_ind*block_size)+hdr_size,debug_log,device[num_dev].ip,"194.244.5.206");
     }
     // DEBUG-END
 
@@ -370,7 +368,7 @@ void finite_loop()
         blocks_num=mystat.pkt_pcap_tot-mystat.pkt_pcap_proc;
 
         if (blocks_num<=0) {blocks_num=1;}
-        if (blocks_num>200) {blocks_num=200;}
+        if (blocks_num>2000) {blocks_num=2000;}
     }
 
     blocks_box=(u_char*)calloc((blocks_num*block_size)+blocks_offset,sizeof(u_char));
@@ -379,13 +377,13 @@ void finite_loop()
 
     if(mystat.pkt_pcap_proc==0)
     {
-            pcap_stats(handle,&pcapstat);
+        pcap_stats(handle,&pcapstat);
 
-            if((pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0)
-            {
-                pcapstat.ps_drop=0;
-                pcapstat.ps_ifdrop=0;
-            }
+        if((pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0)
+        {
+            pcapstat.ps_drop=0;
+            pcapstat.ps_ifdrop=0;
+        }
     }
 
     //DEBUG-BEGIN
@@ -667,5 +665,3 @@ void initsniffer(void)
 {
     Py_InitModule("sniffer", sniffer_methods);
 }
-
-//printf("\n\nFIN QUI TUTTO OK\n\n");

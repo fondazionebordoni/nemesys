@@ -515,7 +515,6 @@ void analyzer (const struct pcap_pkthdr *hdr, const u_char *data)
 
 static PyObject *contabyte_initialize(PyObject *self, PyObject *args)
 {
-    //char *dev=(char*)calloc(22,sizeof(char)), *nem=(char*)calloc(22,sizeof(char));
     char *dev, *nem;
 
     PyArg_ParseTuple(args,"zz",&dev,&nem);
@@ -553,8 +552,6 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 
     blocks_offset=((int)PyByteArray_Size(py_byte_array)-(blocks_num*block_size));
 
-    blocks_box=(u_char*)calloc(1,(int)PyByteArray_Size(py_byte_array));
-
     blocks_box=(u_char*)PyByteArray_AsString(py_byte_array);
 
     // DEBUG-BEGIN
@@ -577,8 +574,6 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
     }
 
     no_stop=0;
-
-    free(blocks_box);
 
     Py_END_ALLOW_THREADS;
 

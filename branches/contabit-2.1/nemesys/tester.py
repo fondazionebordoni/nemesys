@@ -55,15 +55,15 @@ def totalsize(data):
 class Tester:
 
   def __init__(self, if_ip, host, username='anonymous', password='anonymous@', timeout=60):
+    self._debug = 1
     self._if_ip = if_ip
     self._host = host
     self._username = username
     self._password = password
     self._timeout = timeout
     socket.setdefaulttimeout(self._timeout)
-    #DONE mettere un try catch
     try:
-      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,180,1,1,0)
+      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,180,1,1,self._debug)
       self._test_sniffer.start()
     except: 
       logger.error('Errore di inizializzazione dello sniffer')
@@ -77,7 +77,7 @@ class Tester:
     counter_total_pay = 0
     counter_ftp_pay = 0 
     try:
-      counter = Contabyte(self._if_ip, self._host.ip,0)
+      counter = Contabyte(self._if_ip, self._host.ip,self._debug)
     except:
       logger.error("Errore di inizializzazione del Contabyte")
     file = Fakefile(bytes)
@@ -98,15 +98,14 @@ class Tester:
     setup = 'from %s import file, ftp, totalsize, filepath' % __name__
     timer = timeit.Timer(function, setup)
 
+    
     try:
-      #if (counter):
       counter.start()
       #logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
       
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
       
-      #if (counter):
       counter.stop()
       #logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
         
@@ -114,29 +113,27 @@ class Tester:
       if (counter_stats != None):  
         counter_total_pay = counter_stats['payload_up_all']
         counter_ftp_pay = counter_stats['payload_up_nem']
-        logger.debug("Statistiche contabit:\n %s \n" % counter_stats)
+        #logger.debug("Statistiche contabit:\n %s \n" % counter_stats)
         
       counter.join()
-
+      
     except ftplib.all_errors as e:
       logger.error("Impossibile effettuare l'upload: %s" % e)
       errorcode = errors.geterrorcode(e)
       return Proof('upload', start, 0, 0, 0, 0, errorcode)
-
+    
     ftp.quit()
     
-    # TODO Estender Proof per la memorizzazione dei dati del contabit
     return Proof('upload', start, elapsed, size, counter_total_pay, counter_ftp_pay)
 
   def testftpdown(self, filename):
-    # TODO Controllare TODO di ftpup
     global ftp, file, size
     size = 0
     elapsed = 0
     counter_total_pay = 0
     counter_ftp_pay = 0
     try:
-      counter = Contabyte(self._if_ip, self._host.ip,0)
+      counter = Contabyte(self._if_ip, self._host.ip,self._debug)
     except:
       logger.error("Errore di inizializzazione del Contabyte")
       counter = None
@@ -159,14 +156,12 @@ class Tester:
     timer = timeit.Timer(function, setup)
 
     try:  
-      #if (counter):
       counter.start()
       #logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
         
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
       
-      #if (counter):
       counter.stop()
       #logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))  
         
@@ -174,7 +169,7 @@ class Tester:
       if (counter_stats != None):  
         counter_total_pay = counter_stats['payload_down_all']
         counter_ftp_pay = counter_stats['payload_down_nem']
-        logger.debug("Statistiche contabit:\n%s\n" % counter_stats)
+        #logger.debug("Statistiche contabit:\n%s\n" % counter_stats)
       
       counter.join()
 
@@ -214,10 +209,9 @@ class Tester:
     except:
       logger.error('Errore nello stop dello sniffer: %s' %checkstopsniffer['err_str'])
         
-     
   def teststartsniffer(self):
     try:
-      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,180,1,1,0)
+      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,180,1,1,self._debug)
       self._test_sniffer.start()
     except: 
       logger.error('Errore di inizializzazione dello sniffer')
@@ -271,14 +265,14 @@ if __name__ == '__main__':
     
     for k in range(1,11):
       print "[-------- TEST 20-20-10 numero:%d --------]" % k
-      for i in range(1,21):
-        print 'Test Download %d.%d:' % (k,i)
-        test = t1.testftpdown('/download/1000.rnd')
-        print test
-        print("\n")
+#      for i in range(1,21):
+#        print 'Test Download %d.%d:' % (k,i)
+#        test = t1.testftpdown('/download/1000.rnd')
+#        print test
+#        print("\n")
       for i in range(1,21):
         print 'Test Upload %d.%d:' % (k,i)
-        test = t1.testftpup(1048576, '/upload/r.raw')
+        test = t1.testftpup(512000, '/upload/r.raw')
         print test
         print("\n")
       for i in range(1,11):
