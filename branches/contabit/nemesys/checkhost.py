@@ -20,30 +20,39 @@ from logger import logging
 from threading import Thread
 import ipcalc
 import ping
+import arping
 import re
 MAX = 128
 
 logger = logging.getLogger()
 
 class sendit(Thread):
-  def __init__ (self, ip):
+  def __init__ (self, ipAddress, ip, arping):
     Thread.__init__(self)
     self.ip = ip
+    self.ipAddress = ipAddress
     self.status = 0
     self.elapsed = 0
+    self.arping = arping
 
   def run(self):
     try:
-      self.elapsed = ping.do_one("%s" % self.ip, 1)
+      if (self.arping == 1):
+        self.elapsed = arping.do_one("%s" % self.ipAddress, "%s" % self.ip, 1)
+      else:
+        self.elapsed = ping.do_one("%s" % self.ip, 1)
       if (self.elapsed > 0):
         self.status = 1
     except Exception as e:
-      logger.debug('Errore durante il ping dell\'host %s: %s' % (self.ip, e))
+      if (self.arping == 1):
+        logger.debug('Errore durante l\'arping dell\'host %s: %s' % (self.ip, e))
+      else:
+        logger.debug('Errore durante il ping dell\'host %s: %s' % (self.ip, e))  
       self.status = 0
       pass
     
 
-def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, threshold=4):
+def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, threshold=4, arping=0):
   realSubnet = True
   if(provider == "fst001" and not bool(re.search('^192\.168\.', ipAddress))):
     realSubnet = False
@@ -62,10 +71,10 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, th
 
   logger.info("Indirizzo: %s/%d; Realsubnet: %s; Threshold: %d" % (ipAddress, netMask, realSubnet, threshold))
 
-  n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold)
+  n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold, arping)
   return n_host
 
-def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4):
+def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4, arping=0):
   '''
   Ritorna il numero di host che rispondono al ping nella sottorete ipAddress/net_mask.
   Di default effettua i ping dei soli host appartenenti alla sottorete indicata (escludendo il 
@@ -84,8 +93,11 @@ def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4):
     if ((ip.hex() == net.hex() or ip.hex() == bcast.hex()) and realSubnet):
       logger.debug("Saltato ip %s" % ip)
     else:
-      logger.debug('Ping host %s' % ip)
-      current = sendit(ip)
+      if (arping == 1):
+        logger.debug('Arping host %s' % ip)
+      else:
+        logger.debug('Ping host %s' % ip)
+      current = sendit(ipAddress,ip,arping)
       pinglist.append(current)
       current.start()
       i += 1
@@ -108,12 +120,15 @@ def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4):
 
 
 if __name__ == '__main__':
-  n = countHosts("10.10.0.100", 24, 2000, 2000, 'fst001', 255)
-  print '%d (%d)' % (n, 0)
+#  n = countHosts("10.10.0.100", 24, 2000, 2000, 'fst001', 255)
+#  print '%d (%d)' % (n, 0)
+#
+#  n = countHosts("192.168.1.1", 24, 2000, 2000, "fst001")
+#  print '%d (%d)' % (n, 0)
 
-  n = countHosts("192.168.1.1", 24, 2000, 2000, "fst001")
+  n = countHosts("192.168.208.53", 24, 200, 2000, "fst001",4,1)
   print '%d (%d)' % (n, 0)
-
-  #n = countHosts("192.168.208.250", 24, 200, 2000, "fst001")
-  #print '%d (%d)' % (n, 0)
+  
+  n = countHosts("192.168.208.53", 24, 200, 2000, "fst001")
+  print '%d (%d)' % (n, 0)
   

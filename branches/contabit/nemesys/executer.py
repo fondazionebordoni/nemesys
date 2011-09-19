@@ -414,7 +414,8 @@ class Executer:
       base_error = 0
       if not self._isprobe:
         try:
-          if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
+          arping = 1
+          if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id, arping):
             raise Exception('Condizioni per effettuare la misura non verificate.')
   
         except Exception as e:
