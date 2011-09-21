@@ -318,17 +318,17 @@ def fastcheck():
 
 def mediumcheck():
 
-  fastcheck()
-  #checkfw()
   checkwireless()
+  #checkfw()
+  fastcheck()
 
   return True
 
 def checkall(up, down, ispid, arping=0):
 
-  mediumcheck()
-  #checkdisk()
   checkhosts(up, down, ispid, arping)
+  #checkdisk()
+  mediumcheck()
 
   return True
 
@@ -493,6 +493,18 @@ if __name__ == '__main__':
     print 'Errore [%d]: %s' % (errorcode, e)
 
   try:
+    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001',1)
+  except Exception as e:
+    errorcode = errors.geterrorcode(e)
+    print 'Errore [%d]: %s' % (errorcode, e)
+
+  try:
+    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001')
+  except Exception as e:
+    errorcode = errors.geterrorcode(e)
+    print 'Errore [%d]: %s' % (errorcode, e)
+
+  try:
     print 'Test sysmonitor checkconnections: %s' % checkconnections()
   except Exception as e:
     errorcode = errors.geterrorcode(e)
@@ -518,11 +530,6 @@ if __name__ == '__main__':
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
 
-  try:
-    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001')
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
 
   try:
     print 'Test sysmonitor checkmem: %s' % checkmem()
