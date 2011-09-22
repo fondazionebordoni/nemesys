@@ -18,33 +18,28 @@
 
 from logger import logging
 from threading import Thread
+from arping import do_arping
 import ipcalc
 import ping
-import arping
 import re
 MAX = 128
 
 logger = logging.getLogger()
 
 class sendit(Thread):
-  def __init__ (self, ipAddress, ip, arping):
+  def __init__ (self, ip):
     Thread.__init__(self)
     self.ip = ip
-    self.ipAddress = ipAddress
     self.status = 0
     self.elapsed = 0
-    self.arping = arping
 
   def run(self):
     try:
-      if (self.arping == 1):
-        self.elapsed = arping.do_one("%s" % self.ipAddress, "%s" % self.ip, 1)
-      else:
-        self.elapsed = ping.do_one("%s" % self.ip, 1)
+      self.elapsed = ping.do_one("%s" % self.ip, 1)
       if (self.elapsed > 0):
         self.status = 1
     except Exception as e:
-      logger.debug('Errore durante l\'arping dell\'host %s: %s' % (self.ip, e))
+      logger.debug('Errore durante il ping dell\'host %s: %s' % (self.ip, e))  
       self.status = 0
       pass
     
@@ -83,35 +78,36 @@ def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4, arping=0):
   bcast = ips.broadcast()
   pinglist = []
 
-  i = 0
-  lasting = 2 ** (32 - netMask)
-  for ip in ips:
-    lasting -= 1
-    if ((ip.hex() == net.hex() or ip.hex() == bcast.hex()) and realSubnet):
-      logger.debug("Saltato ip %s" % ip)
-    else:
-      if (arping == 1):
-        logger.debug('Arping host %s' % ip)
+  if (arping == 1):
+    nHosts = do_arping(ipAddress, netMask, realSubnet, 1)
+
+  else:
+    i = 0
+    lasting = 2 ** (32 - netMask)
+    for ip in ips:
+      lasting -= 1
+      if ((ip.hex() == net.hex() or ip.hex() == bcast.hex()) and realSubnet):
+        logger.debug("Saltato ip %s" % ip)
       else:
         logger.debug('Ping host %s' % ip)
-      current = sendit(ipAddress,ip,arping)
-      pinglist.append(current)
-      current.start()
-      i += 1
-
-    if (i > MAX or lasting <= 0):
-      i = 0
-      for pingle in pinglist:
-        pingle.join()
-      
-        if(pingle.status):
-          logger.debug("Trovato host: %s (in %.2f ms)" % (pingle.ip, pingle.elapsed * 1000))
-          nHosts = nHosts + 1
-
-      pinglist = []
+        current = sendit(ip)
+        pinglist.append(current)
+        current.start()
+        i += 1
+  
+      if (i > MAX or lasting <= 0):
+        i = 0
+        for pingle in pinglist:
+          pingle.join()
         
-    if(nHosts > threshold):
-      break
+          if(pingle.status):
+            logger.debug("Trovato host: %s (in %.2f ms)" % (pingle.ip, pingle.elapsed * 1000))
+            nHosts = nHosts + 1
+  
+        pinglist = []
+          
+      if(nHosts > threshold):
+        break
         
   return nHosts		
 

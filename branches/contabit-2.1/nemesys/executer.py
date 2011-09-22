@@ -1008,7 +1008,6 @@ def parse():
   # Verifica che le opzioni obbligatorie siano presenti
   # --------------------------------------------------------------------------
 
-
   try:
 
     parser.check_required('--clientid')

@@ -16,15 +16,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from collections import deque
 from logger import logging
 from threading import Thread, Condition, Event
-from collections import deque
 
-import time
-import random
-import sys
-import sniffer
 import contabyte
+import random
+import sniffer
+import sys
+import time
 
 logger = logging.getLogger()
 
@@ -33,9 +33,10 @@ debug_mode = 1
 sniffer_init = {}
 contabyte_init = 0
 
-shared_buffer = deque([],maxlen=10000)
-condition = Condition()
+buffer_shared = deque([],maxlen=10000)
 analyzer_flag = Event()
+condition = Condition()
+
 
 class Device:
 
@@ -54,36 +55,37 @@ class Sniffer(Thread):
     global sniffer_init
     self._run_sniffer = 0
     self._sniffer_data = {}
+    self._sniffer_mode = 0
     debug_mode = sniffer.debugmode(debug)
     sniffer_init = sniffer.initialize(dev, buff, snaplen, timeout, promisc)
     if (sniffer_init['err_flag'] == 0):
       self._run_sniffer = 1
-    else: 
+    else:
       logger.error('Errore inizializzazione dello Sniffer')
 
-  def run(self, sniffer_mode=0):
+  def run(self):
+    global buffer_shared
     global analyzer_flag
-    global shared_buffer
     global condition
     while (self._run_sniffer == 1):
       if (analyzer_flag.isSet()):
         condition.acquire()
-        while (len(shared_buffer) >= 10000):
+        if (len(buffer_shared) < 10000):
+          try:
+            self._sniffer_data = sniffer.start(self._sniffer_mode)
+            buffer_shared.append(self._sniffer_data)
+            condition.notify()
+          except:
+            logger.error("Errore nello Sniffer: %s" % str(sys.exc_info()[0]))
+            raise
+        else:
           logger.debug("WAIT: Buffer Pieno!!")
-          condition.wait(2.0) 
-        try:  
-          self._sniffer_data = sniffer.start(sniffer_mode)
-          shared_buffer.append(self._sniffer_data)
-          condition.notify()
-        except:
-          logger.error("Errore nello Sniffer: %s" % str(sys.exc_info()[0]))
-          raise
+          condition.wait(2.0)
         condition.release()
       else:
-        sniffer.start(sniffer_mode)       #black hole
+        sniffer.start(self._sniffer_mode)       #black hole
 
   def stop(self):
-    global shared_buffer
     self._run_sniffer = 0
     while (self.isAlive()):
       None
@@ -106,48 +108,46 @@ class Contabyte(Thread):
     global debug_mode
     global contabyte_init
     self._run_contabyte = 0
+    self._contabyte_data = {}
     debug_mode = contabyte.debugmode(debug)
     contabyte_init = contabyte.initialize(dev, nem)
     if (contabyte_init == 0):
       self._run_contabyte = 1
-    else: 
+    else:
       logger.error('Errore inizializzazione del Contabyte')
       raise Exception('Errore inizializzazione del Contabyte')
 
   def run(self):
+    global buffer_shared
     global analyzer_flag
-    global shared_buffer
     global condition
-    shared_buffer.clear()
+    buffer_shared.clear()
     analyzer_flag.set()
-    condition.acquire()
-    condition.wait(2.0)
-    condition.release()
     max_headers = 0
     while (self._run_contabyte == 1):
       condition.acquire()
-      while (len(shared_buffer) <= 0 and analyzer_flag.isSet()):
-        condition.wait(2.0)
-      if(len(shared_buffer) > 0):
-        try: 
-          contabyte_data = shared_buffer.popleft()
-          if (contabyte_data['blocks_num'] > max_headers):
-            max_headers = contabyte_data['blocks_num']
-          contabyte.analyze(contabyte_data['py_byte_array'], contabyte_data['block_size'], contabyte_data['blocks_num'], contabyte_data['datalink'])
+      if (len(buffer_shared) > 0):
+        try:
+          self._contabyte_data = buffer_shared.popleft()
+          if (self._contabyte_data['blocks_num'] > max_headers):
+            max_headers = self._contabyte_data['blocks_num']
+          contabyte.analyze(self._contabyte_data['py_byte_array'], self._contabyte_data['block_size'], self._contabyte_data['blocks_num'], self._contabyte_data['datalink'])
           condition.notify()
         except:
           logger.error("Errore nel Contabyte: %s" % str(sys.exc_info()[0]))
           raise
-      elif (not analyzer_flag.isSet()):
+      else:
         condition.wait(2.0)
-      condition.release()   
+      condition.release()
     logger.debug("|Headers Max nel blocco:%d|" % max_headers)
 
   def stop(self):
+    global buffer_shared
     global analyzer_flag
-    global shared_buffer
+    time.sleep(0.08)
     analyzer_flag.clear()
-    while (len(shared_buffer) != 0):
+    logger.debug("|Coda Buffer:%d|" % len(buffer_shared))
+    while (len(buffer_shared) != 0):
       None
     self._run_contabyte = 0
     while (self.isAlive()):

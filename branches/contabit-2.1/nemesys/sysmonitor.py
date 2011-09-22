@@ -318,17 +318,17 @@ def fastcheck():
 
 def mediumcheck():
 
-  fastcheck()
-  #checkfw()
   checkwireless()
+  #checkfw()
+  fastcheck()
 
   return True
 
 def checkall(up, down, ispid, arping=0):
 
-  mediumcheck()
-  #checkdisk()
   checkhosts(up, down, ispid, arping)
+  #checkdisk()
+  mediumcheck()
 
   return True
 
@@ -487,7 +487,19 @@ if __name__ == '__main__':
   errors = Errorcoder(paths.CONF_ERRORS)
 
   try:
-    print 'Test sysmonitor checkall: %s' % checkall(1000,2000,'fst001',1)
+    print 'Test sysmonitor checkall: %s' % checkall(1000, 2000, 'fst001',1)
+  except Exception as e:
+    errorcode = errors.geterrorcode(e)
+    print 'Errore [%d]: %s' % (errorcode, e)
+
+  try:
+    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001',1)
+  except Exception as e:
+    errorcode = errors.geterrorcode(e)
+    print 'Errore [%d]: %s' % (errorcode, e)
+
+  try:
+    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001')
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
@@ -514,12 +526,6 @@ if __name__ == '__main__':
 
   try:
     print 'Test sysmonitor checkfw: %s' % checkfw()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000,2000,'fst001')
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)

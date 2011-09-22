@@ -27,7 +27,7 @@ u_char *blocks_box;
 
 int no_stop=1, ind_dev=0, num_dev=0;
 
-int blocks_num=0, block_ind=0, block_size=0, blocks_offset=10;
+int blocks_num=0, block_ind=0, block_size=0, blocks_offset=8;
 
 pcap_t *handle;
 
@@ -154,17 +154,17 @@ void mycallback(u_char *unused, const struct pcap_pkthdr *pcap_hdr, const u_char
     int data_size=(block_size-hdr_size);
     int pad_size=(data_size-(pcap_hdr->caplen));
 
-    struct pcap_pkthdr *pcap_hdr_mod;
-
     u_char *block_hdr, *block_data , *block_pad;
 
-    block_hdr=(u_char*)calloc(1,hdr_size);
-    block_data=(u_char*)calloc(1,data_size);
-    block_pad=(u_char*)calloc(1,pad_size);
+    struct pcap_pkthdr *pcap_hdr_mod;
 
     block_ind++;
 
-    pcap_hdr_mod=(struct pcap_pkthdr*)calloc(1,hdr_size);
+    block_hdr=PyMem_New(u_char,hdr_size);
+    block_data=PyMem_New(u_char,data_size);
+    block_pad=PyMem_New(u_char,pad_size);
+
+    pcap_hdr_mod=PyMem_New(struct pcap_pkthdr,hdr_size);
 
     memcpy(pcap_hdr_mod,pcap_hdr,hdr_size);
 
@@ -188,12 +188,6 @@ void mycallback(u_char *unused, const struct pcap_pkthdr *pcap_hdr, const u_char
 
     mystat.pkt_pcap_proc++;
 
-    pcap_stats(handle,&pcapstat);
-
-    mystat.pkt_pcap_tot=pcapstat.ps_recv;
-    mystat.pkt_pcap_drop=pcapstat.ps_drop;
-    mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
-
     // DEBUG-BEGIN
     if(DEBUG_MODE)
     {
@@ -203,10 +197,10 @@ void mycallback(u_char *unused, const struct pcap_pkthdr *pcap_hdr, const u_char
     }
     // DEBUG-END
 
-    free(block_hdr);
-    free(block_data);
-    free(block_pad);
-    free(pcap_hdr_mod);
+    PyMem_Del(block_hdr);
+    PyMem_Del(block_data);
+    PyMem_Del(block_pad);
+    PyMem_Del(pcap_hdr_mod);
 }
 
 
@@ -249,14 +243,14 @@ void find_devices()
 
         addr.s_addr = netp;
         net = inet_ntoa(addr);
-        device[ind_dev].net=(char*)calloc(22,sizeof(char));
+        device[ind_dev].net=PyMem_New(char,22);
         memcpy(device[ind_dev].net,net,strlen(net)+1);
 
         //printf("\nNET: %s",device[ind_dev].net);
 
         addr.s_addr = maskp;
         mask = inet_ntoa(addr);
-        device[ind_dev].mask=(char*)calloc(22,sizeof(char));
+        device[ind_dev].mask=PyMem_New(char,22);
         memcpy(device[ind_dev].mask,mask,strlen(mask)+1);
 
         //printf("\nMASK: %s",device[ind_dev].mask);
@@ -287,7 +281,7 @@ void find_devices()
                 #endif
             }
 
-            device[ind_dev].ip=(char*)calloc(22,sizeof(char));
+            device[ind_dev].ip=PyMem_New(char,22);
             memcpy(device[ind_dev].ip,ip,strlen(ip)+1);
 
         }
@@ -334,7 +328,7 @@ void initialize(char *dev_sel, int promisc, int timeout, int snaplen, int buffer
     if (pcap_set_timeout(handle,timeout) != 0)
     {sprintf(err_str,"Timeout error: %s",errbuf);err_flag=-1;return;}
 
-    if (pcap_set_snaplen(handle,snaplen) != 0)
+    if (pcap_set_snaplen(handle,BUFSIZ) != 0)       //bug con snaplen: crash randomico
     {sprintf(err_str,"Snapshot error: %s",errbuf);err_flag=-1;return;}
 
     if (pcap_set_buffer_size(handle,buffer) !=0)
@@ -371,7 +365,7 @@ void finite_loop()
         if (blocks_num>2000) {blocks_num=2000;}
     }
 
-    blocks_box=(u_char*)calloc((blocks_num*block_size)+(blocks_offset*2),sizeof(u_char));
+    blocks_box=PyMem_New(u_char,((blocks_num*block_size)+(blocks_offset*2)));
 
     memset(blocks_box,0,blocks_offset);
     memset(blocks_box+blocks_offset+(blocks_num*block_size),0,blocks_offset);
@@ -397,6 +391,12 @@ void finite_loop()
     block_ind=-1;
 
     pcap_loop(handle, blocks_num, mycallback, NULL);
+
+    pcap_stats(handle,&pcapstat);
+
+    mystat.pkt_pcap_tot=pcapstat.ps_recv;
+    mystat.pkt_pcap_drop=pcapstat.ps_drop;
+    mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
 }
 
 
@@ -448,7 +448,7 @@ static PyObject *sniffer_getdev(PyObject *self, PyObject *args)
 
     char build_string[202];
 
-    char *dev=(char*)calloc(88,sizeof(char));
+    char *dev;
 
     err_flag=0; strcpy(err_str,"No Error");
 
@@ -516,7 +516,7 @@ static PyObject *sniffer_initialize(PyObject *self, PyObject *args)
 {
     int promisc=1, timeout=1, snaplen=BUFSIZ, buffer=32*1024000;
 
-    char *dev_sel=(char*)calloc(88,sizeof(char));
+    char *dev_sel;
 
     err_flag=0; strcpy(err_str,"No Error");
 
@@ -553,29 +553,18 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
         finite_loop();
 
-        if (blocks_num<=0)
+        py_byte_array=PyByteArray_FromStringAndSize(blocks_box,(blocks_num*block_size)+(blocks_offset*2));
+
+        // DEBUG-BEGIN
+        if(DEBUG_MODE)
         {
-            blocks_box=(u_char*)calloc((blocks_offset*2),sizeof(u_char));
-
-            memset(blocks_box,0,(blocks_offset*2));
-
-            py_byte_array=PyByteArray_FromStringAndSize(blocks_box,(blocks_offset*2));
+            fprintf(debug_log,"\nNumero di Pacchetti: %i\t",blocks_num);
+            fprintf(debug_log,"Dimensione del ByteArray: %i\n\n",(int)PyByteArray_Size(py_byte_array));
+            //print_payload(blocks_box,(block_size*2)+blocks_offset);
         }
-        else
-        {
-            py_byte_array=PyByteArray_FromStringAndSize(blocks_box,(blocks_num*block_size)+(blocks_offset*2));
+        // DEBUG-END
 
-            // DEBUG-BEGIN
-            if(DEBUG_MODE)
-            {
-                fprintf(debug_log,"\nNumero di Pacchetti: %i\t",blocks_num);
-                fprintf(debug_log,"Dimensione del ByteArray: %i\n\n",(int)PyByteArray_Size(py_byte_array));
-                //print_payload(blocks_box,(block_size*2)+blocks_offset);
-            }
-            // DEBUG-END
-        }
-
-        free(blocks_box);
+        PyMem_Del(blocks_box);
 
         no_stop=0;
 
