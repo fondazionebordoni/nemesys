@@ -1,15 +1,152 @@
-//contabit per python by DMNK1220
-//
-//Linux: gcc contabit.c -shared -I/usr/include/python2.7 -lpython2.7 -lpcap -ocontabit.so
-//
-//Win: gcc contabit.c -shared -I C:\Python27\include -I C:\winpcap\Include -I C:\winpcap\Include\pcap -L C:\Programmi\CodeBlocks\MinGW\lib -L C:\Python27\libs -L C:\winpcap\Lib -o contabit.pyd -lpython27 -lwpcap -lwsock32
-//
-// gcc -fPIC                        [per 64bit .so .pyd]
-// gcc -fno-stack-protector         [disabilitare la protezione di overflow]
 
-#include <contabit.h>
+#include <headers.h>
 
-int DEBUG_MODE=0;
+#define IP_ADDR_LEN 4
+#define ETHER_ADDR_LEN	6
+#define SIZE_ETHERNET 14
+
+/* Ethernet header */
+struct hdr_ethernet
+{
+    u_char ether_dhost[ETHER_ADDR_LEN]; /* Destination host address */
+    u_char ether_shost[ETHER_ADDR_LEN]; /* Source host address */
+    u_short ether_type;                 /* IP? ARP? RARP? etc */
+};
+
+/* Arp header */
+struct hdr_arp
+{
+  u_short hwtype;                   /* Hardware type */
+  u_short proto;                    /* Protocol type */
+  u_short _hwlen_protolen;          /* Protocol address length */
+  u_short opcode;                   /* Opcode */
+  u_char  mac_src[ETHER_ADDR_LEN];  /* Source hardware address */
+  u_char  arp_src[IP_ADDR_LEN];     /* Source protocol address */
+  u_char  mac_dst[ETHER_ADDR_LEN];  /* Target hardware address */
+  u_char  arp_dst[IP_ADDR_LEN];     /* Target protocol address */
+};
+
+/* IP header */
+struct hdr_ipv4
+{
+    u_char ip_vhl;		    /* version << 4 | header length >> 2 */
+    u_char ip_tos;		    /* type of service */
+    u_short ip_len;		    /* total length */
+    u_short ip_id;		    /* identification */
+    u_short ip_off;		    /* fragment offset field */
+#define IP_RF 0x8000		/* reserved fragment flag */
+#define IP_DF 0x4000		/* dont fragment flag */
+#define IP_MF 0x2000		/* more fragments flag */
+#define IP_OFFMASK 0x1fff	/* mask for fragmenting bits */
+    u_char ip_ttl;		    /* time to live */
+    u_char ip_p;		    /* protocol */
+    u_short ip_sum;		    /* checksum */
+    struct in_addr ip_src,ip_dst; /* source and dest address */
+};
+
+#define IP_HL(ip)   (((ip)->ip_vhl) & 0x0f)
+#define IP_V(ip)    (((ip)->ip_vhl) >> 4)
+
+/* IPv6 header */
+struct hdr_ipv6
+{
+#if defined(WORDS_BIGENDIAN)
+  u_int8_t       version:4,
+                 traffic_class_high:4;
+  u_int8_t       traffic_class_low:4,
+                 flow_label_high:4;
+#else
+  u_int8_t       traffic_class_high:4,
+                 version:4;
+  u_int8_t       flow_label_high:4,
+                 traffic_class_low:4;
+#endif
+  u_int16_t      flow_label_low;
+  u_int16_t      payload_len;
+  u_int8_t       next_header;
+  u_int8_t       hop_limit;
+  u_int8_t       src_addr[16];
+  u_int8_t       dst_addr[16];
+};
+
+/* TCP header */
+struct hdr_tcp
+{
+    u_short th_sport;	    /* source port */
+    u_short th_dport;	    /* destination port */
+    u_int32_t th_seq;		/* sequence number DA RIVEDERE tcp_seq*/
+    u_int32_t th_ack;		/* acknowledgement number DA RIVEDERE tcp_seq*/
+
+    u_char th_offx2;	    /* data offset, rsvd */
+#define TH_OFF(th)  (((th)->th_offx2 & 0xf0) >> 4)
+    u_char th_flags;
+#define TH_FIN 0x01
+#define TH_SYN 0x02
+#define TH_RST 0x04
+#define TH_PUSH 0x08
+#define TH_ACK 0x10
+#define TH_URG 0x20
+#define TH_ECE 0x40
+#define TH_CWR 0x80
+#define TH_FLAGS (TH_FIN|TH_SYN|TH_RST|TH_ACK|TH_URG|TH_ECE|TH_CWR)
+    u_short th_win;		    /* window */
+    u_short th_sum;		    /* checksum */
+    u_short th_urp;		    /* urgent pointer */
+};
+
+struct devices
+{
+    char *name;
+    char *ip;
+    char *net;
+    char *mask;
+};
+
+struct statistics
+{
+    u_long  pkt_up_nem;
+    u_long  pkt_up_oth;
+    u_long  pkt_up_all;
+
+    u_long  pkt_down_nem;
+    u_long  pkt_down_oth;
+    u_long  pkt_down_all;
+
+    u_long  pkt_tot_nem;
+    u_long  pkt_tot_oth;
+    u_long  pkt_tot_all;
+
+    u_long  byte_up_nem;
+    u_long  byte_up_oth;
+    u_long  byte_up_all;
+
+    u_long  byte_down_nem;
+    u_long  byte_down_oth;
+    u_long  byte_down_all;
+
+    u_long  byte_tot_nem;
+    u_long  byte_tot_oth;
+    u_long  byte_tot_all;
+
+    u_long  payload_up_nem;
+    u_long  payload_up_oth;
+    u_long  payload_up_all;
+
+    u_long  payload_down_nem;
+    u_long  payload_down_oth;
+    u_long  payload_down_all;
+
+    u_long  payload_tot_nem;
+    u_long  payload_tot_oth;
+    u_long  payload_tot_all;
+
+    u_long  pkt_pcap_tot;
+    u_long  pkt_pcap_drop;
+    u_long  pkt_pcap_dropif;
+};
+
+
+int DEBUG_MODE=1;
 FILE *debug_log;
 
 int err_flag=0;
@@ -62,19 +199,23 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
 	u_int size_ipv4=0, size_ipv6=40, size_tcp=0, size_payload=0;
 
     char type[22], buff_temp[22], mac_src[22], mac_dst[22], src[22], dst[22], up_down[22], txrx[3];
-    int proto=0, hdr_len=0, pktpad=0;
+    int proto=0, size_hdr=0, pktpad=0;
 
+    sprintf(type,"%s",pcap_datalink_val_to_description(pcap_datalink(handle)));
     ethernet = (struct hdr_ethernet*)(data);
 
-//    Estrarre indirizzi MAC
-//    sprintf(mac_src,"%i",ether_ntoa((struct ether_addr*)ethernet->ether_shost));
-//    sprintf(mac_dst,"%i",ether_ntoa((struct ether_addr*)ethernet->ether_dhost));
+    sprintf(mac_src,"%.2X:%.2X:%.2X:%.2X:%.2X:%.2X",
+            ethernet->ether_shost[0],ethernet->ether_shost[1],ethernet->ether_shost[2],
+            ethernet->ether_shost[3],ethernet->ether_shost[4],ethernet->ether_shost[5]);
+    sprintf(mac_dst,"%.2X:%.2X:%.2X:%.2X:%.2X:%.2X",
+            ethernet->ether_dhost[0],ethernet->ether_dhost[1],ethernet->ether_dhost[2],
+            ethernet->ether_dhost[3],ethernet->ether_dhost[4],ethernet->ether_dhost[5]);
 
     proto = ntohs(ethernet->ether_type);
 
     switch(proto)
     {
-    case 0x0800 :   strcpy(type,"IPv4");
+    case 0x0800 :   strcat(type,"|IPv4");
 
                     ipv4 = (struct hdr_ipv4*)(data + SIZE_ETHERNET);
                     size_ipv4 = IP_HL(ipv4)*4;
@@ -88,13 +229,13 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
                                 tcp = (struct hdr_tcp*)(data + SIZE_ETHERNET + size_ipv4);
                                 size_tcp = TH_OFF(tcp)*4;
 
-                                hdr_len=(SIZE_ETHERNET + size_ipv4 + size_tcp);
+                                size_hdr=(SIZE_ETHERNET + size_ipv4 + size_tcp);
                                 payload = (u_char *)(data + SIZE_ETHERNET + size_ipv4 + size_tcp);
                                 size_payload = ntohs(ipv4->ip_len) - (size_ipv4 + size_tcp);
                                 break;
 
                     case 17 :   strcat(type,"|UDP");
-                                hdr_len=(SIZE_ETHERNET + size_ipv4 + 8);
+                                size_hdr=(SIZE_ETHERNET + size_ipv4 + 8);
                                 payload = (u_char *)(data + SIZE_ETHERNET + size_ipv4 + 8);
                                 size_payload = ntohs(ipv4->ip_len) - (size_ipv4 + 8);
                                 break;
@@ -114,7 +255,7 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
                     }
                     break;
 
-    case 0x86dd :   strcpy(type,"IPv6");
+    case 0x86dd :   strcat(type,"|IPv6");
 
                     ipv6 = (struct hdr_ipv6*)(data + SIZE_ETHERNET);
                     size_ipv6 = 40;
@@ -128,12 +269,12 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
                                 tcp = (struct hdr_tcp*)(data + SIZE_ETHERNET + size_ipv6);
                                 size_tcp = TH_OFF(tcp)*4;
 
-                                hdr_len=(SIZE_ETHERNET + size_ipv6 + size_tcp);
+                                size_hdr=(SIZE_ETHERNET + size_ipv6 + size_tcp);
                                 payload = (u_char *)(data + SIZE_ETHERNET + size_ipv6 + size_tcp);
                                 size_payload = ntohs(ipv6->payload_len) - (size_tcp);
                                 break;
                     case 17 :   strcat(type,"|UDP");
-                                hdr_len=(SIZE_ETHERNET + size_ipv6 + 8);
+                                size_hdr=(SIZE_ETHERNET + size_ipv6 + 8);
                                 payload = (u_char *)(data + SIZE_ETHERNET + size_ipv6 + 8);
                                 size_payload = ntohs(ipv6->payload_len) - (8);
                                 break;
@@ -150,13 +291,24 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
 
                     break;
 
-    case 0x0806 :   strcpy(type,"ARP\t");
+    case 0x0806 :   //strcat(type,"|ARP\t");
                     arp = (struct hdr_arp*)(data + SIZE_ETHERNET);
+                    switch (ntohs(arp->opcode))
+                    {
+                    case 1 : strcat(type,"|ARP:REQ");
+                             break;
+                    case 2 : strcat(type,"|ARP:REP");
+                             break;
+                    case 3 : strcat(type,"|RARP:REQ");
+                             break;
+                    case 4 : strcat(type,"|RARP:REP");
+                             break;
+                    }
                     strcpy(src,inet_ntoa (*(struct in_addr*)(arp->arp_src)));
                     strcpy(dst,inet_ntoa (*(struct in_addr*)(arp->arp_dst)));
                     break;
 
-    default     :   strcpy(type,"UNKNOW:");
+    default     :   strcat(type,"|UNKNOW:");
                     if(proto<0x05dd)
                     {
                         sprintf(buff_temp,"%i byte",proto);
@@ -270,8 +422,8 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
 
     if(DEBUG_MODE)
     {
-        fprintf(debug_log,"%li)\t%s\t%s\t%s\t\t%s\t%li,%.6li\t%s\t",mystat.pkt_pcap_tot,src,dst,up_down,type,hdr->ts.tv_sec,hdr->ts.tv_usec,txrx);
-        fprintf(debug_log,"SRC: %s DST: %s LEN: %i=%i+%i+4(CRC)\n",mac_src,mac_dst,(hdr->len)+4, hdr_len, size_payload);
+        fprintf(debug_log,"%li)\t%s\t\t%s\t\t%s\t\t%s\t%li,%.6li\t%s\n",mystat.pkt_pcap_tot,src,dst,up_down,type,hdr->ts.tv_sec,hdr->ts.tv_usec,txrx);
+        fprintf(debug_log,"\t%s\t%s\t%i(%i)=%i+%i+4(CRC)\n\n",mac_src,mac_dst,(hdr->len)+4,(hdr->caplen)+4, size_hdr, size_payload);
         fprintf(debug_log,"\n");
     }
 }
@@ -410,6 +562,11 @@ void startloop()
         pkt_tot_start=pcapstat.ps_recv;
         pcapstat.ps_drop=0;
         pcapstat.ps_ifdrop=0;
+    }
+
+    if(DEBUG_MODE)
+    {
+        fprintf(debug_log,"\nData Link Type: [%s] %s\n\n",pcap_datalink_val_to_name(pcap_datalink(handle)),pcap_datalink_val_to_description(pcap_datalink(handle)));
     }
 
     Py_BEGIN_ALLOW_THREADS;

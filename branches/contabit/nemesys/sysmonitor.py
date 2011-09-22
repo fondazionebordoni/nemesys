@@ -530,7 +530,6 @@ if __name__ == '__main__':
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
 
-
   try:
     print 'Test sysmonitor checkmem: %s' % checkmem()
   except Exception as e:
