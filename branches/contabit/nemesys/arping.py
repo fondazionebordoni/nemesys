@@ -53,20 +53,18 @@ def send_arping(IPsrc, IPdst):
   
   EthPkt = struct.pack("!6s6sh", hwdst, hwsrc, 0x0806) + ArpPkt
 
-  Pkt = EthPkt + (60-len(EthPkt)) * '\x00'
-      
-  logger.debug('Arping host %s' % IPdst)  
+  Pkt = EthPkt + (60-len(EthPkt)) * '\x00'  
     
   sended = arpinger.send(Pkt)
   if (sended['err_flag'] != 0):
-    logger.debug("%s:" %received['err_str'])
+    logger.debug("%s" %sended['err_str'])
     
 
 def receive_arping():
   
   hwsrc = "\x00\x26\x2d\x70\x51\xcd"
   
-  nHosts = 0
+  IPtable = {}
   
   while True:
     
@@ -75,7 +73,7 @@ def receive_arping():
     PktRcv = received['py_pcap_data']
   
     if (received['err_flag'] < 1):
-      logger.debug("%s" %received['err_str'])
+      logger.debug("%s - Numero di Host trovati: %d" % (received['err_str'],len(IPtable)))
       break
         
     elif (len(PktRcv) > 30):
@@ -89,13 +87,16 @@ def receive_arping():
           hwsrc_arp, psrc_arp, hwdst_arp, pdst_arp = struct.unpack('!6s4s6s4s', ArpPkt[8:28])
           IPsrc_arp = socket.inet_ntoa(psrc_arp)
           IPdst_arp = socket.inet_ntoa(pdst_arp)
-          logger.debug('Trovato Host %s con indirizzo fisico %s' % (IPsrc_arp,display_mac(hwsrc_arp)))
-          nHosts += 1
+          if (IPsrc_arp not in IPtable):
+            IPtable[IPsrc_arp] = display_mac(hwsrc_arp)
+            logger.debug('Trovato Host %s con indirizzo fisico %s' % (IPsrc_arp,display_mac(hwsrc_arp)))
   
-  return nHosts
+  return len(IPtable)
 
   
 def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1):  
+  
+  nHosts = 0
   
   IPsrc = socket.gethostbyname(IPsrc)
   IPnet = ipcalc.Network('%s/%d' % (IPsrc, NETmask))
@@ -106,17 +107,18 @@ def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1):
 
   rec_init = arpinger.initialize(IPsrc,filter,timeout*1000)
   if (rec_init['err_flag'] != 0):
-    logger.debug("%s:" %rec_init['err_str'])
+    raise Exception (rec_init['err_str'])
+  else:
+    for IPdst in IPnet:
+      if ((IPdst.hex() == net.hex() or IPdst.hex() == bcast.hex()) and realSubnet):
+        logger.debug("Saltato ip %s" % IPdst)
+      else:
+        logger.debug('Arping host %s' % IPdst)
+        send_arping(IPsrc, IPdst)
+        
+    nHosts = receive_arping()
     
-  for IPdst in IPnet:
-    if ((IPdst.hex() == net.hex() or IPdst.hex() == bcast.hex()) and realSubnet):
-      logger.debug("Saltato ip %s" % IPdst)
-    else:
-      send_arping(IPsrc, IPdst)
-      
-  nHosts = receive_arping()
-  
-  arpinger.close()
+    arpinger.close()
     
   return nHosts
 

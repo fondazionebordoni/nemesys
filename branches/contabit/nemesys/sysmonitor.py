@@ -266,7 +266,7 @@ def checkwireless():
 
   return True
 
-def checkhosts(up, down, ispid, arping=0):
+def checkhosts(up, down, ispid, arping=1):
   
   ip = getIp();
   mask = getNetworkMask(ip)
@@ -324,7 +324,7 @@ def mediumcheck():
 
   return True
 
-def checkall(up, down, ispid, arping=0):
+def checkall(up, down, ispid, arping=1):
 
   checkhosts(up, down, ispid, arping)
   #checkdisk()
@@ -487,19 +487,19 @@ if __name__ == '__main__':
   errors = Errorcoder(paths.CONF_ERRORS)
 
   try:
-    print 'Test sysmonitor checkall: %s' % checkall(1000, 2000, 'fst001',1)
+    print 'Test sysmonitor checkall: %s' % checkall(1000, 2000, 'fst001')
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
 
   try:
-    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001',1)
+    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001',1)  #ARPING
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
 
   try:
-    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001')
+    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001',0)  #PING
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)

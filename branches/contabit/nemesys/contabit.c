@@ -146,7 +146,7 @@ struct statistics
 };
 
 
-int DEBUG_MODE=1;
+int DEBUG_MODE=0;
 FILE *debug_log;
 
 int err_flag=0;
@@ -431,7 +431,7 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
 
 void find_devices()
 {
-    int i=0, test=0;
+    int i=0;
 
     char *ip, *net, *mask, *point;
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -451,7 +451,10 @@ void find_devices()
     ind_dev=0;
 
     if (pcap_findalldevs (&alldevs, errbuf) != 0)
-    {sprintf(err_str,"FindAllDevs error: %s\n",errbuf);err_flag=-1;}
+    {sprintf(err_str,"FindAllDevs error: %s\n",errbuf);err_flag=-1;return;}
+
+    if (alldevs == NULL)
+    {sprintf(err_str,"No Sniffable Device or User Without Root Permissions");err_flag=-1;return;}
 
     dl=alldevs;
 
@@ -464,18 +467,18 @@ void find_devices()
         //printf("\nNAME: %s",device[ind_dev].name);
 
         if (pcap_lookupnet(dl->name, &netp, &maskp, errbuf) != 0)
-        {sprintf (err_str,"LookUpNet error: %s", errbuf);err_flag=-1;}
+        {sprintf (err_str,"LookUpNet Warnings: %s", errbuf);err_flag=0;}
 
         addr.s_addr = netp;
         net = inet_ntoa(addr);
-        device[ind_dev].net=(char*)calloc(22,sizeof(char));
+        device[ind_dev].net=PyMem_New(char,22);
         memcpy(device[ind_dev].net,net,strlen(net)+1);
 
         //printf("\nNET: %s",device[ind_dev].net);
 
         addr.s_addr = maskp;
         mask = inet_ntoa(addr);
-        device[ind_dev].mask=(char*)calloc(22,sizeof(char));
+        device[ind_dev].mask=PyMem_New(char,22);
         memcpy(device[ind_dev].mask,mask,strlen(mask)+1);
 
         //printf("\nMASK: %s",device[ind_dev].mask);
@@ -506,7 +509,7 @@ void find_devices()
                 #endif
             }
 
-            device[ind_dev].ip=(char*)calloc(22,sizeof(char));
+            device[ind_dev].ip=PyMem_New(char,22);
             memcpy(device[ind_dev].ip,ip,strlen(ip)+1);
 
         }
@@ -516,14 +519,13 @@ void find_devices()
         }
 
         //printf("\nIP: %s\n\n",device[ind_dev].ip);
-
     }
 }
 
 
 void stoploop ()
 {
-    pcap_breakloop(handle);
+    if (handle != NULL) {pcap_breakloop(handle);}
 }
 
 
@@ -537,23 +539,26 @@ void startloop()
 
     if (buffer<32*1024000) {buffer=32*1024000;}
 
+    if (num_dev==0)
+    {sprintf(err_str,"Device Not Found or Not Initialized");err_flag=-1;return;}
+
     if ((handle=pcap_create(device[num_dev].name,errbuf)) == NULL)
-    {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;}
+    {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;return;}
 
     if (pcap_set_promisc(handle,1) != 0)
-    {sprintf(err_str,"PromiscuousMode error: %s",errbuf);err_flag=-1;}
+    {sprintf(err_str,"PromiscuousMode error: %s",errbuf);err_flag=-1;return;}
 
     if (pcap_set_timeout(handle,1) != 0)
-    {sprintf(err_str,"Timeout error: %s",errbuf);err_flag=-1;}
+    {sprintf(err_str,"Timeout error: %s",errbuf);err_flag=-1;return;}
 
     if (pcap_set_snaplen(handle,BUFSIZ) != 0)
-    {sprintf(err_str,"Snapshot error: %s",errbuf);err_flag=-1;}
+    {sprintf(err_str,"Snapshot error: %s",errbuf);err_flag=-1;return;}
 
     if (pcap_set_buffer_size(handle,buffer) !=0)
-    {sprintf(err_str,"SetBuffer error: %s",errbuf);err_flag=-1;}
+    {sprintf(err_str,"SetBuffer error: %s",errbuf);err_flag=-1;return;}
 
     if (pcap_activate(handle) !=0)
-    {sprintf(err_str,"Activate error: %s",errbuf);err_flag=-1;}
+    {sprintf(err_str,"Activate error: %s",errbuf);err_flag=-1;return;}
 
     pcap_stats(handle,&pcapstat);
 
@@ -596,7 +601,7 @@ static PyObject *contabit_initialize(PyObject *self, PyObject *args)
 {
     int i=0;
 
-    char *dev_sel=(char*)calloc(88,sizeof(char)), *nem=(char*)calloc(22,sizeof(char));
+    char *dev_sel, *nem;
 
     err_flag=0; strcpy(err_str,"No Error");
 
@@ -606,21 +611,24 @@ static PyObject *contabit_initialize(PyObject *self, PyObject *args)
 
     find_devices();
 
-    for(i=1; i<=ind_dev; i++)
+    if(err_flag == 0)
     {
-        if ((strcmp(dev_sel,device[i].name)==0)||(strcmp(dev_sel,device[i].ip)==0))
+        for(i=1; i<=ind_dev; i++)
         {
-            num_dev=i;
+            if ((strcmp(dev_sel,device[i].name)==0)||(strcmp(dev_sel,device[i].ip)==0))
+            {
+                num_dev=i;
+            }
         }
+
+        if (num_dev==0)
+        {sprintf(err_str,"Device Not Found");err_flag=-1;}
+
+        if (invalid_ip(nem)) {strcpy(nem,"none");}
+
+        myip_int=inet_addr(device[num_dev].ip);
+        ip_nem_int=inet_addr(nem);
     }
-
-    if (num_dev==0)
-    {sprintf(err_str,"Device Not Found");err_flag=-1;}
-
-    if (invalid_ip(nem)) {strcpy(nem,"none");}
-
-    myip_int=inet_addr(device[num_dev].ip);
-    ip_nem_int=inet_addr(nem);
 
     return Py_BuildValue("i",err_flag);
 }
@@ -651,7 +659,7 @@ static PyObject *contabit_getdev(PyObject *self, PyObject *args)
 
     char build_string[222];
 
-    char *dev=(char*)calloc(88,sizeof(char));
+    char *dev;
 
     err_flag=0; strcpy(err_str,"No Error");
 
@@ -659,7 +667,7 @@ static PyObject *contabit_getdev(PyObject *self, PyObject *args)
 
     find_devices();
 
-    if (dev!=NULL)
+    if (err_flag == 0 && dev!=NULL)
     {
         for(i=1; i<=ind_dev; i++)
         {
