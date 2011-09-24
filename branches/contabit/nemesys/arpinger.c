@@ -21,9 +21,37 @@ pcap_t *handle;
 
 struct devices device[22];
 
+unsigned int dot_to_int(const char *dot)
+{
+    u_int res;
+    u_int dot1,dot2,dot3,dot4;
+
+    if (sscanf(dot,"%u.%u.%u.%u", &dot1, &dot2, &dot3, &dot4) == 4)
+    {
+        res=(dot1*16777216)+(dot2*65536)+(dot3*256)+(dot4*1);
+        return res;
+    }
+
+    return 0;
+}
+
+int ip_in_net (const char *ip, const char *net, const char *mask)
+{
+    u_int ui_ip=0, ui_net=0, ui_mask=0;
+
+    ui_ip = dot_to_int(ip);
+    ui_net = dot_to_int(net);
+    ui_mask = dot_to_int(mask);
+
+    if ((ui_ip & ui_mask) == (ui_net & ui_mask))
+    {return 1;}
+    else
+    {return 0;}
+}
+
 void find_devices()
 {
-    int i=0;
+    int IpInNet=0;
 
     char *ip, *net, *mask, *point;
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -80,10 +108,9 @@ void find_devices()
             addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
             ip = inet_ntoa(addr);
 
-            point=strrchr(device[ind_dev].net,'.');
-            i=point-device[ind_dev].net+1;
+            IpInNet = ip_in_net(ip,device[ind_dev].net,device[ind_dev].mask);
 
-            if(strncmp(ip,device[ind_dev].net,i) != 0)
+            if(IpInNet != 1)
             {
                 #if _WIN32
                 WSAStartup(0x101,&wsa_Data);
@@ -92,11 +119,12 @@ void find_devices()
                 ip = inet_ntoa (*(struct in_addr *)*host_entry->h_addr_list);
                 WSACleanup();
                 #else
-                while((strncmp(ip,device[ind_dev].net,i) != 0) && (dl->addresses->next))
+                while((IpInNet != 1) && (dl->addresses->next))
                 {
                     dl->addresses=dl->addresses->next;
                     addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
                     ip = inet_ntoa(addr);
+                    IpInNet = ip_in_net(ip,device[ind_dev].net,device[ind_dev].mask);
                 }
                 #endif
             }

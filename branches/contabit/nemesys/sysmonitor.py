@@ -21,7 +21,7 @@
 from SystemProfiler import systemProfiler
 from logger import logging
 from sysmonitorexception import SysmonitorException
-from xml.etree import ElementTree as ET
+from xmlutils import getvalues
 import checkhost
 import netifaces
 import paths
@@ -56,7 +56,7 @@ tag_task = 'taskList'
 # Soglie di sistema
 # ------------------------------------------------------------------------------
 # Massima quantità di host in rete
-th_host = 2
+th_host = 1
 # Minima memoria disponibile
 th_avMem = 134217728
 # Massimo carico percentuale sulla memoria
@@ -272,15 +272,20 @@ def checkhosts(up, down, ispid, arping=1):
   mask = getNetworkMask(ip)
   logger.info("Indirizzo ip/mask: %s/%d" % (ip, mask))
   
+  if (arping == 0):
+    thres = th_host + 1
+  else:
+    thres = th_host
+  
   if (mask != 0):  
-    value = checkhost.countHosts(ip, mask, up, down, ispid, th_host, arping)
+    value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping)
     #value=1
     logger.info('Trovati %d host in rete.' % value)
-      
+          
     if value <= 0:
       #raise Exception('Impossibile determinare il numero di host in rete.')
       raise sysmonitorexception.BADHOST
-    if value > th_host:
+    if value > thres:
       #raise Exception('Presenza altri host in rete.')
       raise sysmonitorexception.TOOHOST
       
@@ -466,21 +471,6 @@ def getSys():
 
   return r
 
-def getvalues(string, tag):
-  '''
-  Estrae informazioni dal SystemProfiler 
-  '''
-  values = {}
-  try:
-    for subelement in ET.XML(string):
-      values.update({subelement.tag:subelement.text})
-      #logger.debug('Recupero valori dal Profiler. %s -> %s' % (subelement.tag, subelement.text))
-  except Exception as e:
-    logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
-    #raise Exception('Errore durante il recupero dello stato del computer.')
-    raise sysmonitorexception.FAILSTATUS 
-
-  return values
 
 if __name__ == '__main__':
   from errorcoder import Errorcoder

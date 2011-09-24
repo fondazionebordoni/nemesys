@@ -17,6 +17,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from exceptions import Exception
+from logger import logging
+from xmlutils import getvalues
+from SystemProfiler import systemProfiler
+
 import arpinger
 import ipcalc
 import random
@@ -27,7 +31,6 @@ import string
 import struct
 import sys
 import time
-from logger import logging
 
 
 ETH_P_IP = 0x0800
@@ -36,15 +39,33 @@ ARP_REPLY = 0x0002
 
 logger = logging.getLogger()
 
+def getMac():
+  '''
+  restituisce indirizzo MAC del computer
+  '''
+  
+  string = ''
+
+  try:
+    string = systemProfiler('test', {'macAddr':''})
+  except Exception as e:
+    logger.error('Non sono riuscito a trovare lo stato del computer con SystemProfiler: %s.' % e)
+    #raise Exception('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
+    raise sysmonitorexception.FAILPROF
+
+  values = getvalues(string, 'SystemProfilerResults')
+
+  return values['macAddr']
+
 
 def display_mac(value):
     return string.join(["%02X" % ord(b) for b in value], ':')
 
 
-def send_arping(IPsrc, IPdst):
+def send_arping(IPsrc, IPdst, MACsrc, MACdst):
   
-  hwdst = "\xFF"*6
-  hwsrc = "\x00\x26\x2d\x70\x51\xcd"
+  hwsrc = MACsrc
+  hwdst = MACdst
   
   psrc = socket.inet_aton(IPsrc)
   pdst = socket.inet_aton(str(IPdst))
@@ -60,9 +81,9 @@ def send_arping(IPsrc, IPdst):
     logger.debug("%s" %sended['err_str'])
     
 
-def receive_arping():
+def receive_arping(MACsrc):
   
-  hwsrc = "\x00\x26\x2d\x70\x51\xcd"
+  hwsrc = MACsrc
   
   IPtable = {}
   
@@ -98,6 +119,11 @@ def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1):
   
   nHosts = 0
   
+  Mac = getMac().split(':')
+  
+  MACsrc = struct.pack("!BBBBBB",int(Mac[0],16),int(Mac[1],16),int(Mac[2],16),int(Mac[3],16),int(Mac[4],16),int(Mac[5],16))
+  MACdst = "\xFF"*6
+  
   IPsrc = socket.gethostbyname(IPsrc)
   IPnet = ipcalc.Network('%s/%d' % (IPsrc, NETmask))
   net = IPnet.network()
@@ -114,9 +140,9 @@ def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1):
         logger.debug("Saltato ip %s" % IPdst)
       else:
         logger.debug('Arping host %s' % IPdst)
-        send_arping(IPsrc, IPdst)
+        send_arping(IPsrc, IPdst, MACsrc, MACdst)
         
-    nHosts = receive_arping()
+    nHosts = receive_arping(MACsrc)
     
     arpinger.close()
     
@@ -127,5 +153,5 @@ def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1):
 
 if __name__ == '__main__':
   
-  do_arping('192.168.208.53', 24, True, 1)
+  do_arping('192.168.88.8', 24, True, 1)
 
