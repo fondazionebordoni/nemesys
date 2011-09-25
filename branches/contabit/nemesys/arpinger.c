@@ -299,20 +299,25 @@ static PyObject *arpinger_receive(PyObject *self)
         {
             case  0 :   err_flag=pkt_received;
                         sprintf(err_str,"Timeout was reached during ARP packet receive");
+                        py_pcap_hdr = Py_None;
+                        py_pcap_data = Py_None;
                         break;
             case -1 :   err_flag=pkt_received;
                         sprintf(err_str,"Error reading the packet: %s",pcap_geterr(handle));
+                        py_pcap_hdr = Py_None;
+                        py_pcap_data = Py_None;
                         break;
             case -2 :   err_flag=pkt_received;
                         sprintf(err_str,"Error reading the packet: %s",pcap_geterr(handle));
+                        py_pcap_hdr = Py_None;
+                        py_pcap_data = Py_None;
                         break;
             default :   err_flag=pkt_received;
                         sprintf(err_str,"ARP packet received");
+                        py_pcap_hdr=PyString_FromStringAndSize((u_char *)pcap_hdr,sizeof(struct pcap_pkthdr));
+                        py_pcap_data=PyString_FromStringAndSize(pcap_data,(pcap_hdr->caplen));
                         break;
         }
-
-        py_pcap_hdr=PyString_FromStringAndSize((u_char *)pcap_hdr,sizeof(struct pcap_pkthdr));
-        py_pcap_data=PyString_FromStringAndSize(pcap_data,(pcap_hdr->caplen));
     }
     else
     {

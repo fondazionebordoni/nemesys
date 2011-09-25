@@ -23,21 +23,17 @@ from SystemProfiler import systemProfiler
 
 import arpinger
 import ipcalc
-import random
-import select
-import signal
 import socket
 import string
 import struct
-import sys
 import time
 
+logger = logging.getLogger()
 
 ETH_P_IP = 0x0800
 ETH_P_ARP = 0x0806
 ARP_REPLY = 0x0002
 
-logger = logging.getLogger()
 
 def getMac():
   '''
@@ -70,13 +66,13 @@ def send_arping(IPsrc, IPdst, MACsrc, MACdst):
   psrc = socket.inet_aton(IPsrc)
   pdst = socket.inet_aton(str(IPdst))
   
-  ArpPkt = struct.pack('!HHbbH6s4s6s4s', 0x0001, 0x0800, 6, 4, 0x0001, hwsrc, psrc, '\x00', pdst)
+  arpPkt = struct.pack('!HHbbH6s4s6s4s', 0x0001, 0x0800, 6, 4, 0x0001, hwsrc, psrc, '\x00', pdst)
   
-  EthPkt = struct.pack("!6s6sh", hwdst, hwsrc, 0x0806) + ArpPkt
+  ethPkt = struct.pack("!6s6sh", hwdst, hwsrc, 0x0806) + arpPkt
 
-  Pkt = EthPkt + (60-len(EthPkt)) * '\x00'  
+  netPkt = ethPkt + (60-len(ethPkt)) * '\x00'  
     
-  sended = arpinger.send(Pkt)
+  sended = arpinger.send(netPkt)
   if (sended['err_flag'] != 0):
     logger.debug("%s" %sended['err_str'])
     
@@ -90,22 +86,30 @@ def receive_arping(MACsrc):
   while True:
     
     received = arpinger.receive()
-  
-    PktRcv = received['py_pcap_data']
-  
+    
     if (received['err_flag'] < 1):
       logger.debug("%s - Numero di Host trovati: %d" % (received['err_str'],len(IPtable)))
       break
         
-    elif (len(PktRcv) > 30):
+    elif (len(received['py_pcap_hdr']) > 16 and len(received['py_pcap_data']) > 30):
       
-      hwdst_eth, hwsrc_eth, proto = struct.unpack("!6s6sh", PktRcv[:14])
+      pktHdr = received['py_pcap_hdr']
+      
+      pktSec, pktUsec, pktCaplen, pktLen = struct.unpack("LLII", pktHdr)
+      
+      pktTimeStamp = float(pktSec) + (float(pktUsec)/1000000)
+      
+      #logger.debug(time.localtime(pktTimeStamp))
+      
+      pktData = received['py_pcap_data']
+      
+      hwdst_eth, hwsrc_eth, proto = struct.unpack("!6s6sh", pktData[:14])
       
       if (hwdst_eth == hwsrc):
       
-        ArpPkt = PktRcv[14:]
-        if struct.unpack('!H', ArpPkt[6:8])[0] == ARP_REPLY:
-          hwsrc_arp, psrc_arp, hwdst_arp, pdst_arp = struct.unpack('!6s4s6s4s', ArpPkt[8:28])
+        arpPkt = pktData[14:]
+        if struct.unpack('!H', arpPkt[6:8])[0] == ARP_REPLY:
+          hwsrc_arp, psrc_arp, hwdst_arp, pdst_arp = struct.unpack('!6s4s6s4s', arpPkt[8:28])
           IPsrc_arp = socket.inet_ntoa(psrc_arp)
           IPdst_arp = socket.inet_ntoa(pdst_arp)
           if (IPsrc_arp not in IPtable):
@@ -119,9 +123,7 @@ def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1):
   
   nHosts = 0
   
-  Mac = getMac().split(':')
-  
-  MACsrc = struct.pack("!BBBBBB",int(Mac[0],16),int(Mac[1],16),int(Mac[2],16),int(Mac[3],16),int(Mac[4],16),int(Mac[5],16))
+  MACsrc = "".join(chr(int(macEL,16)) for macEL in getMac().split(':'))
   MACdst = "\xFF"*6
   
   IPsrc = socket.gethostbyname(IPsrc)
