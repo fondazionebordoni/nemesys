@@ -1,5 +1,5 @@
 
-#include <sniffer.h>
+#include <headers.h>
 
 struct devices
 {
@@ -127,6 +127,36 @@ void print_payload(const u_char *payload, int len)
 }
 
 
+unsigned int dot_to_int(const char *dot)
+{
+    u_int res;
+    u_int dot1,dot2,dot3,dot4;
+
+    if (sscanf(dot,"%u.%u.%u.%u", &dot1, &dot2, &dot3, &dot4) == 4)
+    {
+        res=(dot1*16777216)+(dot2*65536)+(dot3*256)+(dot4*1);
+        return res;
+    }
+
+    return 0;
+}
+
+
+int ip_in_net (const char *ip, const char *net, const char *mask)
+{
+    u_int ui_ip=0, ui_net=0, ui_mask=0;
+
+    ui_ip = dot_to_int(ip);
+    ui_net = dot_to_int(net);
+    ui_mask = dot_to_int(mask);
+
+    if ((ui_ip & ui_mask) == (ui_net & ui_mask))
+    {return 1;}
+    else
+    {return 0;}
+}
+
+
 void mydump(u_char *dumpfile, const struct pcap_pkthdr *pcap_hdr, const u_char *pcap_data)
 {
     pcap_dump(dumpfile, pcap_hdr, pcap_data);
@@ -206,7 +236,7 @@ void mycallback(u_char *unused, const struct pcap_pkthdr *pcap_hdr, const u_char
 
 void find_devices()
 {
-    int i=0;
+    int IpInNet=0;
 
     char *ip, *net, *mask, *point;
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -228,6 +258,9 @@ void find_devices()
     if (pcap_findalldevs (&alldevs, errbuf) != 0)
     {sprintf(err_str,"FindAllDevs error: %s\n",errbuf);err_flag=-1;return;}
 
+    if (alldevs == NULL)
+    {sprintf(err_str,"No Sniffable Device or User Without Root Permissions");err_flag=-1;return;}
+
     dl=alldevs;
 
     for(dl=alldevs; dl; dl=dl->next)
@@ -239,7 +272,7 @@ void find_devices()
         //printf("\nNAME: %s",device[ind_dev].name);
 
         if (pcap_lookupnet(dl->name, &netp, &maskp, errbuf) != 0)
-        {sprintf (err_str,"LookUpNet error: %s", errbuf);err_flag=-1;}
+        {sprintf (err_str,"LookUpNet Warnings: %s", errbuf);err_flag=0;}
 
         addr.s_addr = netp;
         net = inet_ntoa(addr);
@@ -260,10 +293,9 @@ void find_devices()
             addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
             ip = inet_ntoa(addr);
 
-            point=strrchr(device[ind_dev].net,'.');
-            i=point-device[ind_dev].net+1;
+            IpInNet = ip_in_net(ip,device[ind_dev].net,device[ind_dev].mask);
 
-            if(strncmp(ip,device[ind_dev].net,i) != 0)
+            if(IpInNet != 1)
             {
                 #if _WIN32
                 WSAStartup(0x101,&wsa_Data);
@@ -272,11 +304,12 @@ void find_devices()
                 ip = inet_ntoa (*(struct in_addr *)*host_entry->h_addr_list);
                 WSACleanup();
                 #else
-                while((strncmp(ip,device[ind_dev].net,i) != 0) && (dl->addresses->next))
+                while((IpInNet != 1) && (dl->addresses->next))
                 {
                     dl->addresses=dl->addresses->next;
                     addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
                     ip = inet_ntoa(addr);
+                    IpInNet = ip_in_net(ip,device[ind_dev].net,device[ind_dev].mask);
                 }
                 #endif
             }
@@ -291,7 +324,6 @@ void find_devices()
         }
 
         //printf("\nIP: %s\n\n",device[ind_dev].ip);
-
     }
 }
 

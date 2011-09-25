@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-
 import sys
 
 from datetime import datetime
@@ -97,8 +96,7 @@ class Tester:
     function = '''ftp.storbinary('STOR %s' % filepath, file, callback=totalsize)'''
     setup = 'from %s import file, ftp, totalsize, filepath' % __name__
     timer = timeit.Timer(function, setup)
-
-    
+  
     try:
       counter.start()
       #logger.debug('ALIVE CONTABYTE: %s' % str(counter.isAlive()))
@@ -121,7 +119,7 @@ class Tester:
       logger.error("Impossibile effettuare l'upload: %s" % e)
       errorcode = errors.geterrorcode(e)
       return Proof('upload', start, 0, 0, 0, 0, errorcode)
-    
+
     ftp.quit()
     
     return Proof('upload', start, elapsed, size, counter_total_pay, counter_ftp_pay)
@@ -268,18 +266,20 @@ if __name__ == '__main__':
       for i in range(1,21):
         print 'Test Download %d.%d:' % (k,i)
         test = t1.testftpdown('/download/1000.rnd')
+        #logger.debug("Statistiche Sniffer:\n%s\n" % t1._test_sniffer.getstat())
         print test
         print("\n")
       for i in range(1,21):
         print 'Test Upload %d.%d:' % (k,i)
         test = t1.testftpup(512000, '/upload/r.raw')
+        #logger.debug("Statistiche Sniffer:\n%s\n" % t1._test_sniffer.getstat())
         print test
         print("\n")
-      for i in range(1,11):
-        print 'Test Ping %d.%d:' % (k,i)
-        test = t1.testping()
-        print test
-        print("\n")
+#      for i in range(1,11):
+#        print 'Test Ping %d.%d:' % (k,i)
+#        test = t1.testping()
+#        print test
+#        print("\n")
   
     t1.teststopsniffer()
 
