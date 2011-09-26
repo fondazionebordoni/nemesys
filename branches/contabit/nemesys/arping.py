@@ -91,7 +91,7 @@ def receive_arping(MACsrc):
       logger.debug("%s - Numero di Host trovati: %d" % (received['err_str'],len(IPtable)))
       break
         
-    elif (len(received['py_pcap_hdr']) >= 16 and len(received['py_pcap_data']) >= 30):
+    elif (len(received['py_pcap_hdr']) >= 16 and len(received['py_pcap_data']) >= 42):
       
       pktHdr = received['py_pcap_hdr']
       
