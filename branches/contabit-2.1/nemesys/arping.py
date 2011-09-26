@@ -18,7 +18,7 @@
 
 from exceptions import Exception
 from logger import logging
-from xmlutils import getvalues
+from xmlutils import getXMLvalues
 from SystemProfiler import systemProfiler
 
 import arpinger
@@ -49,7 +49,7 @@ def getMac():
     #raise Exception('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
     raise sysmonitorexception.FAILPROF
 
-  values = getvalues(string, 'SystemProfilerResults')
+  values = getXMLvalues(string, 'SystemProfilerResults')
 
   return values['macAddr']
 
@@ -91,7 +91,7 @@ def receive_arping(MACsrc):
       logger.debug("%s - Numero di Host trovati: %d" % (received['err_str'],len(IPtable)))
       break
         
-    elif (len(received['py_pcap_hdr']) > 16 and len(received['py_pcap_data']) > 30):
+    elif (len(received['py_pcap_hdr']) >= 16 and len(received['py_pcap_data']) >= 30):
       
       pktHdr = received['py_pcap_hdr']
       

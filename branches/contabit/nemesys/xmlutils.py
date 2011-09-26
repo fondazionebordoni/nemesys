@@ -27,6 +27,7 @@ from xml.dom.minidom import parseString
 from xml.etree import ElementTree as ET
 from xml.parsers.expat import ExpatError
 from timeNtp import timestampNtp
+import sysmonitorexception
 import re
 
 tag_task = 'task'
@@ -307,7 +308,7 @@ def getfinishedtime(filename):
     time=datetime.fromtimestamp(timestampNtp())    
   return time
 
-def getvalues(string, tag):
+def getXMLvalues(string, tag):
   '''
   Estrae informazioni dal SystemProfiler 
   '''

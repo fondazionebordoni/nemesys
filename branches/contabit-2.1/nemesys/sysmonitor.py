@@ -21,7 +21,7 @@
 from SystemProfiler import systemProfiler
 from logger import logging
 from sysmonitorexception import SysmonitorException
-from xmlutils import getvalues
+from xmlutils import getXMLvalues
 import checkhost
 import netifaces
 import paths
@@ -83,7 +83,7 @@ def getstatus(d):
     #raise Exception('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
     raise sysmonitorexception.FAILPROF
 
-  return getvalues(data, tag_results)
+  return getXMLvalues(data, tag_results)
 
 def getstringtag(tag, value):
   d = {tag:''}
