@@ -36,6 +36,67 @@ struct pcap_stat pcapstat;
 struct statistics mystat;
 
 
+void mydump(u_char *dumpfile, const struct pcap_pkthdr *pcap_hdr, const u_char *pcap_data)
+{
+    pcap_dump(dumpfile, pcap_hdr, pcap_data);
+
+    mystat.pkt_pcap_proc++;
+
+    pcap_stats(handle,&pcapstat);
+
+    mystat.pkt_pcap_tot=pcapstat.ps_recv;
+    mystat.pkt_pcap_drop=pcapstat.ps_drop;
+    mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
+
+    // DEBUG-BEGIN
+    if(DEBUG_MODE)
+    {
+        fprintf(debug_log,"\n[My Dump - Packet Number %li]\n",mystat.pkt_pcap_proc);
+    }
+    // DEBUG-END
+}
+
+
+void infinite_loop()
+{
+    pcap_dumper_t *dumpfile;
+
+    char filename[]="dumpfile.pcap";
+
+    pcap_stats(handle,&pcapstat);
+
+    if((pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0)
+    {
+        pcapstat.ps_drop=0;
+        pcapstat.ps_ifdrop=0;
+    }
+
+    dumpfile = pcap_dump_open(handle,filename);
+
+    if (dumpfile == NULL)
+    {sprintf(err_str,"Error opening savefile %s for writing: %s\n",filename, pcap_geterr(handle));err_flag=-1;return;}
+
+    //DEBUG-BEGIN
+    if(DEBUG_MODE)
+    {
+        fprintf(debug_log,"\n[Infinite Loop]\n");
+    }
+    //DEBUG-END
+
+    pcap_loop(handle, blocks_num, mydump, (u_char *)dumpfile);
+
+    pcap_stats(handle,&pcapstat);
+
+    mystat.pkt_pcap_tot=pcapstat.ps_recv;
+    mystat.pkt_pcap_drop=pcapstat.ps_drop;
+    mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
+
+    pcap_close(handle);
+
+    pcap_dump_close(dumpfile);
+}
+
+
 void print_hex_ascii_line(const u_char *payload, int len, int offset)
 {
 
@@ -142,7 +203,7 @@ unsigned int dot_to_int(const char *dot)
 }
 
 
-int ip_in_net (const char *ip, const char *net, const char *mask)
+int ip_in_net(const char *ip, const char *net, const char *mask)
 {
     u_int ui_ip=0, ui_net=0, ui_mask=0;
 
@@ -154,83 +215,6 @@ int ip_in_net (const char *ip, const char *net, const char *mask)
     {return 1;}
     else
     {return 0;}
-}
-
-
-void mydump(u_char *dumpfile, const struct pcap_pkthdr *pcap_hdr, const u_char *pcap_data)
-{
-    pcap_dump(dumpfile, pcap_hdr, pcap_data);
-
-    mystat.pkt_pcap_proc++;
-
-    pcap_stats(handle,&pcapstat);
-
-    mystat.pkt_pcap_tot=pcapstat.ps_recv;
-    mystat.pkt_pcap_drop=pcapstat.ps_drop;
-    mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
-
-    // DEBUG-BEGIN
-    if(DEBUG_MODE)
-    {
-        fprintf(debug_log,"\n[My Dump - Packet Number %li]\n",mystat.pkt_pcap_proc);
-    }
-    // DEBUG-END
-}
-
-
-void mycallback(u_char *unused, const struct pcap_pkthdr *pcap_hdr, const u_char *pcap_data)
-{
-    int hdr_size=sizeof(struct pcap_pkthdr);
-    int data_size=(block_size-hdr_size);
-    int pad_size=(data_size-(pcap_hdr->caplen));
-
-    u_char *block_hdr, *block_data , *block_pad;
-
-    struct pcap_pkthdr *pcap_hdr_mod;
-
-    block_ind++;
-
-    block_hdr=PyMem_New(u_char,hdr_size);
-    block_data=PyMem_New(u_char,data_size);
-    block_pad=PyMem_New(u_char,pad_size);
-
-    pcap_hdr_mod=PyMem_New(struct pcap_pkthdr,hdr_size);
-
-    memcpy(pcap_hdr_mod,pcap_hdr,hdr_size);
-
-    if (pad_size>0)
-    {
-        memcpy(block_data,pcap_data,(pcap_hdr->caplen));
-        memset(block_pad,0,pad_size);
-        memcpy(block_data+(pcap_hdr->caplen),block_pad,pad_size);
-    }
-    else
-    {
-        pad_size=0;
-        pcap_hdr_mod->caplen=data_size;
-        memcpy(block_data,pcap_data,data_size);
-    }
-
-    memcpy(block_hdr,pcap_hdr_mod,hdr_size);
-
-    memcpy(blocks_box+blocks_offset+(block_ind*block_size),block_hdr,hdr_size);
-    memcpy(blocks_box+blocks_offset+(block_ind*block_size)+hdr_size,block_data,data_size);
-
-    mystat.pkt_pcap_proc++;
-
-    // DEBUG-BEGIN
-    if(DEBUG_MODE)
-    {
-        fprintf(debug_log,"\n[My CallBack - Packet Number %li]",mystat.pkt_pcap_proc);
-        fprintf(debug_log,"\nPcapHdrSize: %i\tPadSize: %i\tCapLen: %i\tLen: %i",hdr_size,pad_size,(pcap_hdr_mod->caplen),(pcap_hdr_mod->len));
-        fprintf(debug_log,"\tBlockSize: %i\tBlockHdrSize: %i\tBlockDataSize: %i\n",block_size,hdr_size,data_size);
-    }
-    // DEBUG-END
-
-    PyMem_Del(block_hdr);
-    PyMem_Del(block_data);
-    PyMem_Del(block_pad);
-    PyMem_Del(pcap_hdr_mod);
 }
 
 
@@ -409,95 +393,6 @@ void setfilter(const char *filter)
 }
 
 
-//void finite_loop()
-//{
-//    if (blocks_num==0)
-//    {
-//        pcap_stats(handle,&pcapstat);
-//
-//        mystat.pkt_pcap_tot=pcapstat.ps_recv;
-//        mystat.pkt_pcap_drop=pcapstat.ps_drop;
-//        mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
-//
-//        blocks_num=mystat.pkt_pcap_tot-mystat.pkt_pcap_proc;
-//
-//        if (blocks_num<=0) {blocks_num=1;}
-//        if (blocks_num>2000) {blocks_num=2000;}
-//    }
-//
-//    blocks_box=PyMem_New(u_char,((blocks_num*block_size)+(blocks_offset*2)));
-//
-//    memset(blocks_box,0,blocks_offset);
-//    memset(blocks_box+blocks_offset+(blocks_num*block_size),0,blocks_offset);
-//
-//    if(mystat.pkt_pcap_proc==0)
-//    {
-//        pcap_stats(handle,&pcapstat);
-//
-//        if((pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0)
-//        {
-//            pcapstat.ps_drop=0;
-//            pcapstat.ps_ifdrop=0;
-//        }
-//    }
-//
-//    //DEBUG-BEGIN
-//    if(DEBUG_MODE)
-//    {
-//        fprintf(debug_log,"\n[Finite Loop]\n");
-//    }
-//    //DEBUG-END
-//
-//    block_ind=-1;
-//
-//    pcap_loop(handle, blocks_num, mycallback, NULL);
-//
-//    pcap_stats(handle,&pcapstat);
-//
-//    mystat.pkt_pcap_tot=pcapstat.ps_recv;
-//    mystat.pkt_pcap_drop=pcapstat.ps_drop;
-//    mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
-//}
-
-
-void infinite_loop()
-{
-    pcap_dumper_t *dumpfile;
-
-    char filename[]="dumpfile.pcap";
-
-    pcap_stats(handle,&pcapstat);
-
-    if((pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0)
-    {
-        pcapstat.ps_drop=0;
-        pcapstat.ps_ifdrop=0;
-    }
-
-    dumpfile = pcap_dump_open(handle,filename);
-
-    if (dumpfile == NULL)
-    {sprintf(err_str,"Error opening savefile %s for writing: %s\n",filename, pcap_geterr(handle));err_flag=-1;return;}
-
-    //DEBUG-BEGIN
-    if(DEBUG_MODE)
-    {
-        fprintf(debug_log,"\n[Infinite Loop]\n");
-    }
-    //DEBUG-END
-
-    pcap_loop(handle, blocks_num, mydump, (u_char *)dumpfile);
-
-    pcap_stats(handle,&pcapstat);
-
-    mystat.pkt_pcap_tot=pcapstat.ps_recv;
-    mystat.pkt_pcap_drop=pcapstat.ps_drop;
-    mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
-
-    pcap_close(handle);
-
-    pcap_dump_close(dumpfile);
-}
 
 
 /*----Python----*/
@@ -604,7 +499,6 @@ static PyObject *sniffer_initialize(PyObject *self, PyObject *args)
 static PyObject *sniffer_start(PyObject *self, PyObject *args)
 {
     PyObject *py_pcap_hdr, *py_pcap_data;
-    //PyObject *py_byte_array;
 
     struct pcap_pkthdr *pcap_hdr;
     const u_char *pcap_data;
@@ -627,49 +521,55 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
             switch (pkt_received)
             {
-                case  0 :   err_flag=pkt_received;
-                            sprintf(err_str,"Timeout was reached during packet receive");
-                            py_pcap_hdr = Py_None;
-                            py_pcap_data = Py_None;
-                            break;
-                case -1 :   err_flag=pkt_received;
-                            sprintf(err_str,"Error reading the packet: %s",pcap_geterr(handle));
-                            py_pcap_hdr = Py_None;
-                            py_pcap_data = Py_None;
-                            break;
-                case -2 :   err_flag=pkt_received;
-                            sprintf(err_str,"Error reading the packet: %s",pcap_geterr(handle));
-                            py_pcap_hdr = Py_None;
-                            py_pcap_data = Py_None;
-                            break;
+            case  0 : err_flag=pkt_received;
+                      sprintf(err_str,"Timeout was reached during packet receive");
+                      py_pcap_hdr = Py_None;
+                      py_pcap_data = Py_None;
+                      break;
+            case -1 : err_flag=pkt_received;
+                      sprintf(err_str,"Error reading the packet: %s",pcap_geterr(handle));
+                      py_pcap_hdr = Py_None;
+                      py_pcap_data = Py_None;
+                      break;
+            case -2 : err_flag=pkt_received;
+                      sprintf(err_str,"Error reading the packet: %s",pcap_geterr(handle));
+                      py_pcap_hdr = Py_None;
+                      py_pcap_data = Py_None;
+                      break;
 
-                default :   err_flag=pkt_received;
-                            sprintf(err_str,"One packet received");
+            default : err_flag=pkt_received;
+                      sprintf(err_str,"One packet received");
 
-                            py_pcap_hdr=PyString_FromStringAndSize((u_char *)pcap_hdr,sizeof(struct pcap_pkthdr));
-                            py_pcap_data=PyString_FromStringAndSize(pcap_data,(pcap_hdr->caplen));
+                      py_pcap_hdr=PyString_FromStringAndSize((u_char *)pcap_hdr,sizeof(struct pcap_pkthdr));
+                      py_pcap_data=PyString_FromStringAndSize(pcap_data,(pcap_hdr->caplen));
 
-                            pcap_stats(handle,&pcapstat);
+                      pcap_stats(handle,&pcapstat);
 
-                            mystat.pkt_pcap_proc++;
-                            mystat.pkt_pcap_tot=pcapstat.ps_recv;
-                            mystat.pkt_pcap_drop=pcapstat.ps_drop;
-                            mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
-                            break;
+                      if((mystat.pkt_pcap_proc==0) && ((pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0))
+                      {
+                          pcapstat.ps_drop=0;
+                          pcapstat.ps_ifdrop=0;
+                      }
 
-//                            // DEBUG-BEGIN
-//                            if(DEBUG_MODE)
-//                            {
-//                                fprintf(debug_log,"\n[My CallBack - Packet Number %li]",mystat.pkt_pcap_proc);
-//                                fprintf(debug_log,"\nCapLen: %i\tLen: %i",(pcap_hdr->caplen),(pcap_hdr->len));
-//                            }
-//                            // DEBUG-END
-//
+                      mystat.pkt_pcap_proc++;
+                      mystat.pkt_pcap_tot=pcapstat.ps_recv;
+                      mystat.pkt_pcap_drop=pcapstat.ps_drop;
+                      mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
+                      break;
+
+                      // DEBUG-BEGIN
+                      if(DEBUG_MODE)
+                      {
+                          fprintf(debug_log,"\n[My CallBack - Packet Number %li]",mystat.pkt_pcap_proc);
+                          fprintf(debug_log,"\nCapLen: %i\tLen: %i",(pcap_hdr->caplen),(pcap_hdr->len));
+                      }
+                      // DEBUG-END
+
             }
         }
         else
         {
-            if (blocks_num > 0)
+            if (handle == NULL)
             {
                 sprintf(err_str,"Couldn't receive any packet: No Hadle Active on Networks Interfaces");err_flag=-1;
             }
@@ -678,18 +578,14 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
             py_pcap_data = Py_None;
         }
 
-        //py_byte_array=PyByteArray_FromStringAndSize(blocks_box,(blocks_num*block_size)+(blocks_offset*2));
-
-        // DEBUG-BEGIN
-        if(DEBUG_MODE)
-        {
-            //fprintf(debug_log,"\nNumero di Pacchetti: %i\t",blocks_num);
-            //fprintf(debug_log,"Dimensione del ByteArray: %i\n\n",(int)PyByteArray_Size(py_byte_array));
-            //print_payload(blocks_box,(block_size*2)+blocks_offset);
-        }
-        // DEBUG-END
-
-        //PyMem_Del(blocks_box);
+//        // DEBUG-BEGIN
+//        if(DEBUG_MODE)
+//        {
+//            fprintf(debug_log,"\nNumero di Pacchetti: %i\t",blocks_num);
+//            fprintf(debug_log,"Dimensione del ByteArray: %i\n\n",(int)PyByteArray_Size(py_byte_array));
+//            print_payload(blocks_box,(block_size*2)+blocks_offset);
+//        }
+//        // DEBUG-END
 
         no_stop=0;
 

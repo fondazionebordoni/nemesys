@@ -228,7 +228,7 @@ void print_payload(const u_char *payload, int len)
 }
 
 
-int tipo_frame (int datalink)
+int tipo_frame(int datalink)
 {
     switch (datalink)
     {
@@ -245,7 +245,7 @@ int tipo_frame (int datalink)
 }
 
 
-int invalid_ip (const char *ip_string)
+int invalid_ip(const char *ip_string)
 {
 	char ip_cmp[88];
 	u_int ip1,ip2,ip3,ip4;
@@ -266,7 +266,7 @@ int invalid_ip (const char *ip_string)
 }
 
 
-void analyzer (const struct pcap_pkthdr *hdr, const u_char *data)
+void analyzer(const struct pcap_pkthdr *hdr, const u_char *data)
 {
     const struct hdr_ethernet *ethernet;    /* The ethernet header */
     const struct hdr_arp *arp;              /* The Arp header */
@@ -539,52 +539,50 @@ static PyObject *contabyte_initialize(PyObject *self, PyObject *args)
 
 static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 {
+    char build_string[282], request_time[44];
+
     Py_BEGIN_ALLOW_THREADS;
 
+    struct tm *rt;
+    time_t req_time;
+
+    int datalink=0;
+
     PyObject *py_pcap_hdr, *py_pcap_data;
-    //PyObject *py_byte_array;
 
     u_char *pcap_hdr;
     u_char *pcap_data;
-    //u_char *blocks_box;
-
-    int datalink=0; //blocks_offset=0, block_size=0, blocks_num=0, block_ind=0;
 
     PyArg_ParseTuple(args,"OOi",&py_pcap_hdr,&py_pcap_data,&datalink);
-
-    //blocks_offset=(((int)PyByteArray_Size(py_byte_array)-(blocks_num*block_size))/2);
-
-    //blocks_box=(u_char*)PyByteArray_AsString(py_byte_array);
 
     pcap_hdr = (u_char*)PyString_AsString(py_pcap_hdr);
     pcap_data = (u_char*)PyString_AsString(py_pcap_data);
 
-    // DEBUG-BEGIN
-    if(DEBUG_MODE)
-    {
-        //fprintf(debug_log,"\nComposizione del Blocco: %i=(%i*%i)+%i\n",(int)PyByteArray_Size(py_byte_array),block_size,blocks_num,blocks_offset);
-        //print_payload(blocks_box,(block_size*2)+blocks_offset);
-    }
-    // DEBUG-END
-
-    //block_ind=-1;
-
     no_stop=1;
 
-//    while(block_ind<blocks_num-1)
-//    {
-//        block_ind++;
-//
-//        analyzer((const struct pcap_pkthdr *)(blocks_box+blocks_offset+(block_ind*block_size)),blocks_box+blocks_offset+(block_ind*block_size)+hdr_size);
-//    }
-
     analyzer((const struct pcap_pkthdr *)pcap_hdr, pcap_data);
+
+    req_time=time(0);
+    rt=localtime(&req_time);
+    strftime(request_time, sizeof request_time, "%a %Y/%m/%d %H:%M:%S", (const struct tm *) rt);
+
+    strcpy(build_string,"{s:s,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l}");
 
     no_stop=0;
 
     Py_END_ALLOW_THREADS;
 
-    return Py_BuildValue("i",0);
+    return Py_BuildValue(build_string,
+                         "stat_time",request_time,
+                         "pkt_up_nem",mystat.pkt_up_nem,"pkt_up_oth",mystat.pkt_up_oth,"pkt_up_all",mystat.pkt_up_all,
+                         "pkt_down_nem",mystat.pkt_down_nem,"pkt_down_oth",mystat.pkt_down_oth,"pkt_down_all",mystat.pkt_down_all,
+                         "pkt_tot_nem",mystat.pkt_tot_nem,"pkt_tot_oth",mystat.pkt_tot_oth,"pkt_tot_all",mystat.pkt_tot_all,
+                         "byte_up_nem",mystat.byte_up_nem,"byte_up_oth",mystat.byte_up_oth,"byte_up_all",mystat.byte_up_all,
+                         "byte_down_nem",mystat.byte_down_nem,"byte_down_oth",mystat.byte_down_oth,"byte_down_all",mystat.byte_down_all,
+                         "byte_tot_nem",mystat.byte_tot_nem,"byte_tot_oth",mystat.byte_tot_oth,"byte_tot_all",mystat.byte_tot_all,
+                         "payload_up_nem",mystat.payload_up_nem,"payload_up_oth",mystat.payload_up_oth,"payload_up_all",mystat.payload_up_all,
+                         "payload_down_nem",mystat.payload_down_nem,"payload_down_oth",mystat.payload_down_oth,"payload_down_all",mystat.payload_down_all,
+                         "payload_tot_nem",mystat.payload_tot_nem,"payload_tot_oth",mystat.payload_tot_oth,"payload_tot_all",mystat.payload_tot_all);
 }
 
 static PyObject *contabyte_close(PyObject *self)

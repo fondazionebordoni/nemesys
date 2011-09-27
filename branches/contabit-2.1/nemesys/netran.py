@@ -126,16 +126,23 @@ class Contabyte(Thread):
     global condition
     buffer_shared.clear()
     analyzer_flag.set()
-    max_headers = 0
+    pktNum = 0
     while (self._run_contabyte == 1):
       condition.acquire()
       if (len(buffer_shared) > 0):
         try:
           self._contabyte_data = buffer_shared.popleft()
           if (self._contabyte_data['py_pcap_hdr'] != None):
-            #max_headers = self._contabyte_data['blocks_num']
-            contabyte.analyze(self._contabyte_data['py_pcap_hdr'], self._contabyte_data['py_pcap_data'], self._contabyte_data['datalink'])
-            stat = contabyte2.analyze(self._dev, self._nem, self._contabyte_data['py_pcap_hdr'], self._contabyte_data['py_pcap_data'])
+            
+            pktNum += 1
+            
+            logger.debug("="*121)
+            
+            stat1 = contabyte.analyze(self._contabyte_data['py_pcap_hdr'], self._contabyte_data['py_pcap_data'], self._contabyte_data['datalink'])
+            stat2 = contabyte2.analyze(self._dev, self._nem, self._contabyte_data['py_pcap_hdr'], self._contabyte_data['py_pcap_data'])
+            
+            logger.debug("%d) %d = %d" % (pktNum,stat1['payload_tot_all'],stat2['payload_tot_all']))
+            
             condition.notify()
         except:
           logger.error("Errore nel Contabyte: %s" % str(sys.exc_info()[0]))
@@ -144,11 +151,11 @@ class Contabyte(Thread):
         condition.wait(2.0)
       condition.release()
   
-    if (stat != None):
-      keys = stat.keys()
+    if (stat2 != None):
+      keys = stat2.keys()
       keys.sort()
       for key in keys:
-        print "Key: %s \t Value: %s" % (key, stat[key])
+        print "Key: %s \t Value: %s" % (key, stat2[key])
     else:
       print "No Statistics"
     #logger.debug("|Headers Max nel blocco:%d|" % max_headers)
@@ -180,7 +187,7 @@ class Contabyte(Thread):
 
 if __name__ == '__main__':
 
-  mydev = '192.168.88.8'
+  mydev = '192.168.208.53'
   mynem = '194.244.5.206'
   debug = 1
 

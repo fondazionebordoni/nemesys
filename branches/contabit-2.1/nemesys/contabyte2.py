@@ -286,34 +286,34 @@ IP_PR_MAX           = 255
 
 # IPv4 Header Structure and Dictionary
 IPv4_HDR_STRUCT  = "!BBHHHBBH4s4s"
-IPv4_HDR =                         \
-{                                  \
-'ipv4Ver'       : IPv4_VER,        \
-'ipv4HdrLen'    : IPv4_HDR_LEN,    \
-'ipv4ToS'       : None,            \
-'ipv4TotLen'    : IPv4_HDR_LEN,    \
-'ipv4Id'        : 0,               \
-'ipv4Offset'    : None,            \
-'ipv4Ttl'       : IP_TTL_MIN,      \
-'ipv4PayType'   : 0,               \
-'ipv4CheckSum'  : None,            \
-'ipv4Src'       : None,            \
-'ipv4Dst'       : None,            \
-'ipv4Options'   : None,            \
-}                                  \
+IPv4_HDR =                        \
+{                                 \
+'ipVer'       : IPv4_VER,         \
+'ipHdrLen'    : IPv4_HDR_LEN,     \
+'ipToS'       : None,             \
+'ipTotLen'    : IPv4_HDR_LEN,     \
+'ipId'        : 0,                \
+'ipOffset'    : None,             \
+'ipTtl'       : IP_TTL_MIN,       \
+'ipPayType'   : 0,                \
+'ipCheckSum'  : None,             \
+'ipSrc'       : None,             \
+'ipDst'       : None,             \
+'ipOptions'   : None,             \
+}                                 \
 
 # IPv6 Header Structure and Dictionary
 IPv6_HDR_STRUCT  = "!IHBB16s16s"
 IPv6_HDR =                      \
 {                               \
-'ipv6Ver'        : IPv6_VER,   \
-'ipv6TrClass'    : None,        \
-'ipv6FlowLabel'  : None,        \
-'ipv6PayLen'     : 0,           \
-'ipv6PayType'    : 0,           \
-'ipv6Ttl'        : IP_TTL_MIN,  \
-'ipv6Src'        : None,        \
-'ipv6Dst'        : None,        \
+'ipVer'        : IPv6_VER,      \
+'ipTrClass'    : None,          \
+'ipFlowLabel'  : None,          \
+'ipPayLen'     : 0,             \
+'ipPayType'    : 0,             \
+'ipTtl'        : IP_TTL_MIN,    \
+'ipSrc'        : None,          \
+'ipDst'        : None,          \
 }                               \
 
 
@@ -445,11 +445,10 @@ def _pcap_hdr_unpack(pcapHdrPkt):
   
   if (len(pcapHdrPkt) >= PCAP_HDR_LEN):
     
-    print len(pcapHdrPkt)
-    
     pcap01, pcap02, pcap03, pcap04 = struct.unpack(PCAP_HDR_STRUCT,pcapHdrPkt[:len(pcapHdrPkt)])
     
-    #pcapTimeStamp = float(pcap01) + (float(pcap02)/1000000)
+    pcapTimeStamp = float(pcap01) + (float(pcap02)/1000000)
+    logger.debug("%6f" % pcapTimeStamp)
     
     pcapHdr['tsSec']      = pcap01
     pcapHdr['tsUsec']     = pcap02

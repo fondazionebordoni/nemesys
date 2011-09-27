@@ -229,7 +229,8 @@ void mycallback (u_char *user, const struct pcap_pkthdr *hdr, const u_char *data
     char type[22], buff_temp[22], mac_src[22], mac_dst[22], src[22], dst[22], up_down[22], txrx[3];
     int proto=0, size_hdr=0, pktpad=0;
 
-    sprintf(type,"%s",pcap_datalink_val_to_description(pcap_datalink(handle)));
+    strcpy(type,"ETH");		//pcap_datalink_val_to_description(pcap_datalink(handle)));	
+
     ethernet = (struct hdr_ethernet*)(data);
 
     sprintf(mac_src,"%.2X:%.2X:%.2X:%.2X:%.2X:%.2X",
@@ -604,7 +605,8 @@ void startloop()
 
     Py_BEGIN_ALLOW_THREADS;
 
-    pcap_loop(handle, -1, mycallback, NULL);
+    if (pcap_loop(handle, -1, mycallback, NULL) == -1)
+    {sprintf(err_str,"Pcap loop error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
     pcap_stats(handle,&pcapstat);
 
@@ -614,7 +616,8 @@ void startloop()
 
     if((pkt_diff=pcapstat.ps_recv-pkt_tot_start-pcapstat.ps_drop-mystat.pkt_tot_all)>0)
     {
-        pcap_loop(handle, pkt_diff, mycallback, NULL);
+        if (pcap_loop(handle, pkt_diff, mycallback, NULL) == -1)
+        {sprintf(err_str,"Pcap loop error: %s",pcap_geterr(handle));err_flag=-1;return;}
     }
 
     Py_END_ALLOW_THREADS;
