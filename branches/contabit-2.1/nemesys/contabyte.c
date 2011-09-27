@@ -541,36 +541,44 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 {
     Py_BEGIN_ALLOW_THREADS;
 
-    PyObject *py_byte_array;
+    PyObject *py_pcap_hdr, *py_pcap_data;
+    //PyObject *py_byte_array;
 
-    u_char *blocks_box;
+    u_char *pcap_hdr;
+    u_char *pcap_data;
+    //u_char *blocks_box;
 
-    int datalink=0, blocks_offset=0, block_size=0, blocks_num=0, block_ind=0;
+    int datalink=0; //blocks_offset=0, block_size=0, blocks_num=0, block_ind=0;
 
-    PyArg_ParseTuple(args,"Oiii",&py_byte_array,&block_size,&blocks_num,&datalink);
+    PyArg_ParseTuple(args,"OOi",&py_pcap_hdr,&py_pcap_data,&datalink);
 
-    blocks_offset=(((int)PyByteArray_Size(py_byte_array)-(blocks_num*block_size))/2);
+    //blocks_offset=(((int)PyByteArray_Size(py_byte_array)-(blocks_num*block_size))/2);
 
-    blocks_box=(u_char*)PyByteArray_AsString(py_byte_array);
+    //blocks_box=(u_char*)PyByteArray_AsString(py_byte_array);
+
+    pcap_hdr = (u_char*)PyString_AsString(py_pcap_hdr);
+    pcap_data = (u_char*)PyString_AsString(py_pcap_data);
 
     // DEBUG-BEGIN
     if(DEBUG_MODE)
     {
-        fprintf(debug_log,"\nComposizione del Blocco: %i=(%i*%i)+%i\n",(int)PyByteArray_Size(py_byte_array),block_size,blocks_num,blocks_offset);
+        //fprintf(debug_log,"\nComposizione del Blocco: %i=(%i*%i)+%i\n",(int)PyByteArray_Size(py_byte_array),block_size,blocks_num,blocks_offset);
         //print_payload(blocks_box,(block_size*2)+blocks_offset);
     }
     // DEBUG-END
 
-    block_ind=-1;
+    //block_ind=-1;
 
     no_stop=1;
 
-    while(block_ind<blocks_num-1)
-    {
-        block_ind++;
+//    while(block_ind<blocks_num-1)
+//    {
+//        block_ind++;
+//
+//        analyzer((const struct pcap_pkthdr *)(blocks_box+blocks_offset+(block_ind*block_size)),blocks_box+blocks_offset+(block_ind*block_size)+hdr_size);
+//    }
 
-        analyzer((const struct pcap_pkthdr *)(blocks_box+blocks_offset+(block_ind*block_size)),blocks_box+blocks_offset+(block_ind*block_size)+hdr_size);
-    }
+    analyzer((const struct pcap_pkthdr *)pcap_hdr, pcap_data);
 
     no_stop=0;
 

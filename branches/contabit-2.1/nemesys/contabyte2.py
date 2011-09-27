@@ -288,10 +288,10 @@ IP_PR_MAX           = 255
 IPv4_HDR_STRUCT  = "!BBHHHBBH4s4s"
 IPv4_HDR =                         \
 {                                  \
-'ipv4Ver'       : IP_V4_VER,       \
-'ipv4HdrLen'    : IP_V4_HDR_LEN,   \
+'ipv4Ver'       : IPv4_VER,        \
+'ipv4HdrLen'    : IPv4_HDR_LEN,    \
 'ipv4ToS'       : None,            \
-'ipv4TotLen'    : IP_V4_HDR_LEN,   \
+'ipv4TotLen'    : IPv4_HDR_LEN,    \
 'ipv4Id'        : 0,               \
 'ipv4Offset'    : None,            \
 'ipv4Ttl'       : IP_TTL_MIN,      \
@@ -306,7 +306,7 @@ IPv4_HDR =                         \
 IPv6_HDR_STRUCT  = "!IHBB16s16s"
 IPv6_HDR =                      \
 {                               \
-'ipv6Ver'        : IP_V4_VER,   \
+'ipv6Ver'        : IPv6_VER,   \
 'ipv6TrClass'    : None,        \
 'ipv6FlowLabel'  : None,        \
 'ipv6PayLen'     : 0,           \
@@ -390,7 +390,7 @@ TCP_HDR =                     \
 # Costant
 UDP_HDR_LEN     = 8
 
-TCP_PORT_MAX    = 65535        # maximum port
+UDP_PORT_MAX    = 65535        # maximum port
 
 # Header Structure and Dictionary
 UDP_HDR_STRUCT  = "!HHHH"
@@ -409,15 +409,15 @@ UDP_HDR =                     \
 
 STATISTICS =              \
 {                         \
-'pkt_up_nem'        : 0,  \
-'pkt_up_oth'        : 0,  \
-'pkt_up_all'        : 0,  \
-'pkt_down_nem'      : 0,  \
-'pkt_down_oth'      : 0,  \
-'pkt_down_all'      : 0,  \
-'pkt_tot_nem'       : 0,  \
-'pkt_tot_oth'       : 0,  \
-'pkt_tot_all'       : 0,  \
+'packet_up_nem'     : 0,  \
+'packet_up_oth'     : 0,  \
+'packet_up_all'     : 0,  \
+'packet_down_nem'   : 0,  \
+'packet_down_oth'   : 0,  \
+'packet_down_all'   : 0,  \
+'packet_tot_nem'    : 0,  \
+'packet_tot_oth'    : 0,  \
+'packet_tot_all'    : 0,  \
 'byte_up_nem'       : 0,  \
 'byte_up_oth'       : 0,  \
 'byte_up_all'       : 0,  \
@@ -445,7 +445,9 @@ def _pcap_hdr_unpack(pcapHdrPkt):
   
   if (len(pcapHdrPkt) >= PCAP_HDR_LEN):
     
-    pcap01, pcap02, pcap03, pcap04 = struct.unpack(PCAP_HDR_STRUCT,pcapHdrPkt)
+    print len(pcapHdrPkt)
+    
+    pcap01, pcap02, pcap03, pcap04 = struct.unpack(PCAP_HDR_STRUCT,pcapHdrPkt[:len(pcapHdrPkt)])
     
     #pcapTimeStamp = float(pcap01) + (float(pcap02)/1000000)
     
@@ -621,22 +623,31 @@ def _udp_unpack(udpPkt):
   return (udpHdr,udpData)
 
 
-def analyze (pcapHdrPkt,pcapDataPkt):
+def analyze (ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
   
-  my_stat = STATISTICS
+  global STATISTICS
   
-  eth_switch =                          \
-  {                                     \
-   ETH_PR_ARP : _arp_unpack(payload),   \
-   ETH_PR_IP  : _ipv4_unpack(payload),  \
-   ETH_PR_IP6 : _ipv6_unpack(payload),  \
-  }[protocol](payload)                  \
+  statistics = STATISTICS
   
-  ip_switch =                       \
-  {                                   \
-   IP_PR_TCP : _tcp_unpack(payload),  \
-   IP_PR_UDP : _udp_unpack(payload),  \
-  }[protocol](payload)                \
+  tcpHdrLen = 0
+  udpHdrLen = 0
+  PayloadLen = 0
+  
+  ipSrc = None
+  ipDst = None
+  
+  eth_switch =                 \
+  {                            \
+   ETH_PR_ARP : _arp_unpack,   \
+   ETH_PR_IP  : _ipv4_unpack,  \
+   ETH_PR_IP6 : _ipv6_unpack,  \
+  }                            \
+  
+  ip_switch =                \
+  {                          \
+   IP_PR_TCP : _tcp_unpack,  \
+   IP_PR_UDP : _udp_unpack,  \
+  }                          \
   
   pcapHdr = _pcap_hdr_unpack(pcapHdrPkt)
   
@@ -645,24 +656,124 @@ def analyze (pcapHdrPkt,pcapDataPkt):
   (l2_hdr,l2_data) = _eth_unpack(pcapDataPkt)
   
   logger.debug(l2_hdr)
-  logger.debug(l2_data)
+  #logger.debug(l2_data)
   
   if (l2_hdr['ethPayType'] in eth_switch):
   
     (l3_hdr,l3_data) = eth_switch[l2_hdr['ethPayType']](l2_data)
     
     logger.debug(l3_hdr)
-    logger.debug(l3_data)
+    #logger.debug(l3_data)
     
-    if (l2_hdr['ethPayType'] == ETH_PR_IP or l2_hdr['ethPayType'] == ETH_PR_IP6):
+    if (l2_hdr['ethPayType'] == ETH_PR_ARP):
       
+      ipSrc = socket.inet_ntoa(l3_hdr['arpPrSrc'])
+      ipDst = socket.inet_ntoa(l3_hdr['arpPrDst'])
+    
+    elif (l2_hdr['ethPayType'] == ETH_PR_IP or l2_hdr['ethPayType'] == ETH_PR_IP6):
+            
+      if ('ipPayLen' in l3_hdr):
+        
+        ipPayLen = l3_hdr['ipPayLen']
+          
+      else:
+        
+        ipPayLen = (l3_hdr['ipTotLen']) - (l3_hdr['ipHdrLen'])
+        
+        ipSrc = socket.inet_ntoa(l3_hdr['ipSrc'])
+        ipDst = socket.inet_ntoa(l3_hdr['ipDst'])
+        
+        
       if (l3_hdr['ipPayType'] in ip_switch):
       
         (l4_hdr,l4_data) = ip_switch[l3_hdr['ipPayType']](l3_data)
         
         logger.debug(l4_hdr)
-        logger.debug(l4_data)
+        #logger.debug(l4_data)
+          
+        if ('tcpHdrLen' in l4_hdr):
+          tcpHdrLen = l4_hdr['tcpHdrLen']
+          
+        elif ('udpTotLen' in l4_hdr):
+          udpHdrLen = UDP_HDR_LEN
+        
+        
+      PayloadLen = ipPayLen - tcpHdrLen - udpHdrLen
+        
+  
+  if (ipSrc != ipDev):
+    
+    statistics['packet_down_all']   += 1
+    statistics['packet_tot_all']    += 1
+
+    statistics['byte_down_all']     += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+    statistics['byte_tot_all']      += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+
+    statistics['payload_down_all']  += PayloadLen
+    statistics['payload_tot_all']   += PayloadLen
+
+    if ((ipSrc == ipNem) and (ipDst == ipDev)):
+        
+      statistics['packet_down_nem']   += 1
+      statistics['packet_tot_nem']    += 1
+  
+      statistics['byte_down_nem']     += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+      statistics['byte_tot_nem']      += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+  
+      statistics['payload_down_nem']  += PayloadLen
+      statistics['payload_tot_nem']   += PayloadLen
+
+    else:
+      
+      statistics['packet_down_oth']   += 1
+      statistics['packet_tot_oth']    += 1
+  
+      statistics['byte_down_oth']     += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+      statistics['byte_tot_oth']      += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+  
+      statistics['payload_down_oth']  += PayloadLen
+      statistics['payload_tot_oth']   += PayloadLen
+
+  else:
+
+    pktPad = (ETH_LEN_MIN - pcapHdr['pktLen'] - ETH_CRC_LEN)
+      
+    if (pktPad < 0):
+      pktPad = 0
+
+    statistics['packet_up_all']    += 1
+    statistics['packet_tot_all']   += 1
+
+    statistics['byte_up_all']      += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+    statistics['byte_tot_all']     += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+
+    statistics['payload_up_all']   += PayloadLen
+    statistics['payload_tot_all']  += PayloadLen
+
+    if ((ipSrc == ipDev) and (ipDst == ipNem)):
+        
+      statistics['packet_up_nem']    += 1
+      statistics['packet_tot_nem']   += 1
+  
+      statistics['byte_up_nem']      += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+      statistics['byte_tot_nem']     += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+  
+      statistics['payload_up_nem']   += PayloadLen
+      statistics['payload_tot_nem']  += PayloadLen
+
+    else:
+      
+      statistics['packet_up_oth']    += 1
+      statistics['packet_tot_oth']   += 1
+  
+      statistics['byte_up_oth']      += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+      statistics['byte_tot_oth']     += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+  
+      statistics['payload_up_oth']   += PayloadLen
+      statistics['payload_tot_oth']  += PayloadLen
   
   
-  return
+  STATISTICS = statistics
+  
+  return statistics
 

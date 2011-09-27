@@ -21,6 +21,7 @@ from logger import logging
 from threading import Thread, Condition, Event
 
 import contabyte
+import contabyte2
 import random
 import sniffer
 import sys
@@ -55,7 +56,7 @@ class Sniffer(Thread):
     global sniffer_init
     self._run_sniffer = 0
     self._sniffer_data = {}
-    self._sniffer_mode = 0
+    self._sniffer_mode = 1
     debug_mode = sniffer.debugmode(debug)
     sniffer_init = sniffer.initialize(dev, buff, snaplen, timeout, promisc)
     if (sniffer_init['err_flag'] == 0):
@@ -109,6 +110,8 @@ class Contabyte(Thread):
     global contabyte_init
     self._run_contabyte = 0
     self._contabyte_data = {}
+    self._dev = dev
+    self._nem = nem 
     debug_mode = contabyte.debugmode(debug)
     contabyte_init = contabyte.initialize(dev, nem)
     if (contabyte_init == 0):
@@ -129,17 +132,26 @@ class Contabyte(Thread):
       if (len(buffer_shared) > 0):
         try:
           self._contabyte_data = buffer_shared.popleft()
-          if (self._contabyte_data['blocks_num'] > max_headers):
-            max_headers = self._contabyte_data['blocks_num']
-          contabyte.analyze(self._contabyte_data['py_byte_array'], self._contabyte_data['block_size'], self._contabyte_data['blocks_num'], self._contabyte_data['datalink'])
-          condition.notify()
+          if (self._contabyte_data['py_pcap_hdr'] != None):
+            #max_headers = self._contabyte_data['blocks_num']
+            contabyte.analyze(self._contabyte_data['py_pcap_hdr'], self._contabyte_data['py_pcap_data'], self._contabyte_data['datalink'])
+            stat = contabyte2.analyze(self._dev, self._nem, self._contabyte_data['py_pcap_hdr'], self._contabyte_data['py_pcap_data'])
+            condition.notify()
         except:
           logger.error("Errore nel Contabyte: %s" % str(sys.exc_info()[0]))
           raise
       else:
         condition.wait(2.0)
       condition.release()
-    logger.debug("|Headers Max nel blocco:%d|" % max_headers)
+  
+    if (stat != None):
+      keys = stat.keys()
+      keys.sort()
+      for key in keys:
+        print "Key: %s \t Value: %s" % (key, stat[key])
+    else:
+      print "No Statistics"
+    #logger.debug("|Headers Max nel blocco:%d|" % max_headers)
 
   def stop(self):
     global buffer_shared
