@@ -695,9 +695,8 @@ def analyze (ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
           
         elif ('udpTotLen' in l4_hdr):
           udpHdrLen = UDP_HDR_LEN
-        
-        
-      PayloadLen = ipPayLen - tcpHdrLen - udpHdrLen
+                
+        PayloadLen = ipPayLen - tcpHdrLen - udpHdrLen
         
   
   if (ipSrc != ipDev):

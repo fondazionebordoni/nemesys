@@ -45,24 +45,17 @@ struct hdr_ipv4         /* IPv4 header */
 
 struct hdr_ipv6         /* IPv6 header */
 {
-#if defined(WORDS_BIGENDIAN)
-  u_int8_t       version:4,
-                 traffic_class_high:4;
-  u_int8_t       traffic_class_low:4,
-                 flow_label_high:4;
-#else
-  u_int8_t       traffic_class_high:4,
-                 version:4;
-  u_int8_t       flow_label_high:4,
-                 traffic_class_low:4;
-#endif
-  u_int16_t      flow_label_low;
-  u_int16_t      payload_len;
-  u_int8_t       next_header;
-  u_int8_t       hop_limit;
-  u_int8_t       src_addr[16];
-  u_int8_t       dst_addr[16];
+    u_int32_t    ver_tr_flo;
+    u_int16_t    payload_len;
+    u_int8_t     next_header;
+    u_int8_t     hop_limit;
+    u_char       src_addr[16];
+    u_char       dst_addr[16];
 };
+
+#define IP_VER(ip)  ((((ip)->ver_tr_flo) & 0xf0000000) >> 28)
+#define IP_TR(ip)   ((((ip)->ver_tr_flo) & 0x0ff00000) >> 20)
+#define IP_FLO(ip)  (((ip)->ver_tr_flo) & 0x000fffff)
 
 struct hdr_tcp          /* TCP header */
 {
