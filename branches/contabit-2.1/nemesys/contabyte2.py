@@ -37,12 +37,12 @@ PCAP_HDR_LEN        = 16
 # Header Structure and Dictionary
 PCAP_HDR_STRUCT = "LLII"
 PCAP_HDR =              \
-{                           \
-'tsSec'     : 0,            \
-'tsUsec'    : 0,            \
-'pktCaplen' : 0,            \
-'pktLen'    : 0,            \
-}                           \
+{                       \
+'tsSec'     : 0,        \
+'tsUsec'    : 0,        \
+'pktCaplen' : 0,        \
+'pktLen'    : 0,        \
+}                       \
 
 
 ###########
@@ -328,14 +328,14 @@ TCP_PORT_MAX        = 65535    # maximum port
 TCP_WIN_MAX         = 65535    # maximum (unscaled) window
 
 # TCP control flags
-TH_FIN              = 0x01     # end of data
-TH_SYN              = 0x02     # synchronize sequence numbers
-TH_RST              = 0x04     # reset connection
-TH_PUSH             = 0x08     # push
-TH_ACK              = 0x10     # acknowledgment number set
-TH_URG              = 0x20     # urgent pointer set
-TH_ECE              = 0x40     # ECN echo, RFC 3168
-TH_CWR              = 0x80     # congestion window reduced
+TCP_FIN             = 0x01     # end of data
+TCP_SYN             = 0x02     # synchronize sequence numbers
+TCP_RST             = 0x04     # reset connection
+TCP_PSH             = 0x08     # push
+TCP_ACK             = 0x10     # acknowledgment number set
+TCP_URG             = 0x20     # urgent pointer set
+TCP_ECE             = 0x40     # ECN echo, RFC 3168
+TCP_CWR             = 0x80     # congestion window reduced
 
 # Options - http://www.iana.org/assignments/tcp-parameters
 TCP_OPT_EOL         = 0        # end of option list
@@ -375,7 +375,14 @@ TCP_HDR =                     \
 'tcpSeqNum'    : 0,           \
 'tcpAckNum'    : 0,           \
 'tcpHdrLen'    : TCP_HDR_LEN, \
-'tcpFlags'     : None,        \
+'tcpFin'       : 0,           \
+'tcpSyn'       : 0,           \
+'tcpRst'       : 0,           \
+'tcpPsh'       : 0,           \
+'tcpAck'       : 0,           \
+'tcpUrg'       : 0,           \
+'tcpEce'       : 0,           \
+'tcpCwr'       : 0,           \
 'tcpWin'       : None,        \
 'tcpCheckSum'  : None,        \
 'tcpUrgent'    : None,        \
@@ -473,8 +480,8 @@ def _eth_unpack(ethPkt):
     
     eth01, eth02, eth03 = struct.unpack(ETH_HDR_STRUCT,ethPkt[:ETH_HDR_LEN])
 
-    ethHdr['ethDst']      = eth01
-    ethHdr['ethSrc']      = eth02
+    ethHdr['ethDst']      = _display_mac(eth01)
+    ethHdr['ethSrc']      = _display_mac(eth02)
     ethHdr['ethPayType']  = eth03
     
     ethData = ethPkt[ETH_HDR_LEN:]
@@ -531,8 +538,8 @@ def _ipv4_unpack(ipv4Pkt):
     ipv4Hdr['ipTtl']       = ip06
     ipv4Hdr['ipPayType']   = ip07
     ipv4Hdr['ipCheckSum']  = ip08
-    ipv4Hdr['ipSrc']       = ip09
-    ipv4Hdr['ipDst']       = ip10
+    ipv4Hdr['ipSrc']       = socket.inet_ntop(socket.AF_INET,ip09)
+    ipv4Hdr['ipDst']       = socket.inet_ntop(socket.AF_INET,ip10)
     
     if (ipHdrLen > IPv4_HDR_LEN):
       ipv4Hdr['ipOptions'] = ipv4Pkt[IPv4_HDR_LEN:ipHdrLen]
@@ -555,12 +562,12 @@ def _ipv6_unpack(ipv6Pkt):
     
     ipv6Hdr['ipVer']        = ((ip01 & 0xf0000000) >> 28)
     ipv6Hdr['ipTrClass']    = ((ip01 & 0x0ff00000) >> 20)
-    ipv6Hdr['ipFlowLabel']  = ((ip01 & 0x000fffff))
+    ipv6Hdr['ipFlowLabel']  = ((ip01 & 0x000fffff)      )
     ipv6Hdr['ipPayLen']     = ip02
     ipv6Hdr['ipPayType']    = ip03
     ipv6Hdr['ipTtl']        = ip04
-    ipv6Hdr['ipSrc']        = ip05
-    ipv6Hdr['ipDst']        = ip06
+    ipv6Hdr['ipSrc']        = socket.inet_ntop(socket.AF_INET6,ip05)
+    ipv6Hdr['ipDst']        = socket.inet_ntop(socket.AF_INET6,ip06)
     
     ipv6Data = ipv6Pkt[IPv6_HDR_LEN:]
     
@@ -579,13 +586,28 @@ def _tcp_unpack(tcpPkt):
     tcp01, tcp02, tcp03, tcp04, tcp05, tcp06, tcp07, tcp08, tcp09 = struct.unpack(TCP_HDR_STRUCT,tcpPkt[:TCP_HDR_LEN])
     
     tcpHdrLen = ((tcp05 & 0xf0) >> 2)
+    tcpFin    = ((tcp06 & TCP_FIN)     )
+    tcpSyn    = ((tcp06 & TCP_SYN) >> 1)
+    tcpRst    = ((tcp06 & TCP_RST) >> 2)
+    tcpPsh    = ((tcp06 & TCP_PSH) >> 3)
+    tcpAck    = ((tcp06 & TCP_ACK) >> 4)
+    tcpUrg    = ((tcp06 & TCP_URG) >> 5)
+    tcpEce    = ((tcp06 & TCP_ECE) >> 6)
+    tcpCwr    = ((tcp06 & TCP_CWR) >> 7)
     
     tcpHdr['tcpSrcPort']   = tcp01
     tcpHdr['tcpDstPort']   = tcp02
     tcpHdr['tcpSeqNum']    = tcp03
     tcpHdr['tcpAckNum']    = tcp04
     tcpHdr['tcpHdrLen']    = tcpHdrLen
-    tcpHdr['tcpFlags']     = tcp06
+    tcpHdr['tcpFin']       = tcpFin
+    tcpHdr['tcpSyn']       = tcpSyn
+    tcpHdr['tcpRst']       = tcpRst
+    tcpHdr['tcpPsh']       = tcpPsh
+    tcpHdr['tcpAck']       = tcpAck
+    tcpHdr['tcpUrg']       = tcpUrg
+    tcpHdr['tcpEce']       = tcpEce
+    tcpHdr['tcpCwr']       = tcpCwr
     tcpHdr['tcpWin']       = tcp07
     tcpHdr['tcpCheckSum']  = tcp08
     tcpHdr['tcpUrgent']    = tcp09
@@ -666,8 +688,8 @@ def analyze (ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
     
     if (l2_hdr['ethPayType'] == ETH_PR_ARP):
       
-      ipSrc = socket.inet_ntoa(l3_hdr['arpPrSrc'])
-      ipDst = socket.inet_ntoa(l3_hdr['arpPrDst'])
+      ipSrc = l3_hdr['arpPrSrc']
+      ipDst = l3_hdr['arpPrDst']
     
     elif (l2_hdr['ethPayType'] == ETH_PR_IP or l2_hdr['ethPayType'] == ETH_PR_IP6):
             
@@ -679,8 +701,8 @@ def analyze (ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
         
         ipPayLen = (l3_hdr['ipTotLen']) - (l3_hdr['ipHdrLen'])
         
-        ipSrc = socket.inet_ntoa(l3_hdr['ipSrc'])
-        ipDst = socket.inet_ntoa(l3_hdr['ipDst'])
+        ipSrc = l3_hdr['ipSrc']
+        ipDst = l3_hdr['ipDst']
         
         
       if (l3_hdr['ipPayType'] in ip_switch):
@@ -692,6 +714,9 @@ def analyze (ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
           
         if ('tcpHdrLen' in l4_hdr):
           tcpHdrLen = l4_hdr['tcpHdrLen']
+          
+          if(l4_hdr['tcpSyn'] == 1):
+            logger.debug("SYN PACKET: %i - %i" % (l4_hdr['tcpAckNum'],l4_hdr['tcpSeqNum']))
           
         elif ('udpTotLen' in l4_hdr):
           udpHdrLen = UDP_HDR_LEN
