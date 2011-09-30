@@ -203,7 +203,7 @@ void setfilter(const char *filter)
     char errbuf[PCAP_ERRBUF_SIZE];
 
     if (pcap_lookupnet(device[num_dev].name, &netp, &maskp, errbuf) != 0)
-    {sprintf (err_str,"LookUpNet error: %s", errbuf);err_flag=-1;}
+    {sprintf (err_str,"LookUpNet Warnings: %s", errbuf);err_flag=0;}
 
     if (pcap_compile(handle,&filterprog,filter,0,maskp) == -1)
     {sprintf(err_str,"Error in pcap_compile filter");err_flag=-1;return;}

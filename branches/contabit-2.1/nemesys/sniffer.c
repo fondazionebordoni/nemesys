@@ -23,11 +23,9 @@ FILE *debug_log;
 int err_flag=0;
 char err_str[88]="No Error";
 
-u_char *blocks_box;
+int no_stop=0, ind_dev=0, num_dev=0;
 
-int no_stop=1, ind_dev=0, num_dev=0;
-
-int blocks_num=0, block_ind=0, block_size=0, blocks_offset=8;
+int data_link=0, sniff_mode=0;
 
 pcap_t *handle;
 
@@ -42,12 +40,6 @@ void mydump(u_char *dumpfile, const struct pcap_pkthdr *pcap_hdr, const u_char *
 
     mystat.pkt_pcap_proc++;
 
-    pcap_stats(handle,&pcapstat);
-
-    mystat.pkt_pcap_tot=pcapstat.ps_recv;
-    mystat.pkt_pcap_drop=pcapstat.ps_drop;
-    mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
-
     // DEBUG-BEGIN
     if(DEBUG_MODE)
     {
@@ -57,7 +49,7 @@ void mydump(u_char *dumpfile, const struct pcap_pkthdr *pcap_hdr, const u_char *
 }
 
 
-void infinite_loop()
+void dump_mode()
 {
     pcap_dumper_t *dumpfile;
 
@@ -83,7 +75,8 @@ void infinite_loop()
     }
     //DEBUG-END
 
-    pcap_loop(handle, blocks_num, mydump, (u_char *)dumpfile);
+    if (pcap_loop(handle, sniff_mode, mydump, (u_char *)dumpfile) == -1)
+    {sprintf(err_str,"Pcap loop error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
     pcap_stats(handle,&pcapstat);
 
@@ -222,7 +215,7 @@ void find_devices()
 {
     int IpInNet=0;
 
-    char *ip, *net, *mask, *point;
+    char *ip, *net, *mask;
     char errbuf[PCAP_ERRBUF_SIZE];
 
     struct in_addr addr;
@@ -353,15 +346,17 @@ void initialize(char *dev_sel, int promisc, int timeout, int snaplen, int buffer
     if (pcap_activate(handle) !=0)
     {sprintf(err_str,"Activate error: %s",errbuf);err_flag=-1;return;}
 
-    //DEBUG-BEGIN
-    if(DEBUG_MODE)
-    {
-        if(num_dev>0)
-        {
-            fprintf(debug_log,"\nData Link Type: [%s] %s\n",pcap_datalink_val_to_name(pcap_datalink(handle)),pcap_datalink_val_to_description(pcap_datalink(handle)));
-        }
-    }
-    //DEBUG-END
+    data_link=pcap_datalink(handle);
+
+//    //DEBUG-BEGIN
+//    if(DEBUG_MODE)
+//    {
+//        if(num_dev>0)
+//        {
+//            fprintf(debug_log,"\nData Link Type: [%s] %s\n",pcap_datalink_val_to_name(pcap_datalink(handle)),pcap_datalink_val_to_description(pcap_datalink(handle)));
+//        }
+//    }
+//    //DEBUG-END
 }
 
 
@@ -374,7 +369,7 @@ void setfilter(const char *filter)
     char errbuf[PCAP_ERRBUF_SIZE];
 
     if (pcap_lookupnet(device[num_dev].name, &netp, &maskp, errbuf) != 0)
-    {sprintf (err_str,"LookUpNet error: %s", errbuf);err_flag=-1;}
+    {sprintf (err_str,"LookUpNet Warnings: %s", errbuf);err_flag=0;}
 
     if (pcap_compile(handle,&filterprog,filter,0,maskp) == -1)
     {sprintf(err_str,"Error in pcap_compile filter");err_flag=-1;return;}
@@ -383,19 +378,23 @@ void setfilter(const char *filter)
     {sprintf(err_str,"Error setting filter");err_flag=-1;return;}
 
     pcap_freecode(&filterprog);
-
-    //DEBUG-BEGIN
-    if(DEBUG_MODE)
-    {
-        fprintf(debug_log,"\nFILTRO: %s \n",filter);
-    }
-    //DEBUG-END
 }
 
 
 
 
 /*----Python----*/
+
+static PyObject *sniffer_debugmode(PyObject *self, PyObject *args)
+{
+    PyArg_ParseTuple(args, "i", &DEBUG_MODE);
+
+    // DEBUG-BEGIN
+    if(DEBUG_MODE) {debug_log = fopen("sniffer.txt","w");}
+    // DEBUG-END
+
+    return Py_BuildValue("i",DEBUG_MODE);
+}
 
 static PyObject *sniffer_getdev(PyObject *self, PyObject *args)
 {
@@ -411,7 +410,7 @@ static PyObject *sniffer_getdev(PyObject *self, PyObject *args)
 
     find_devices();
 
-    if (dev!=NULL)
+    if (err_flag == 0 && dev!=NULL)
     {
         for(i=1; i<=ind_dev; i++)
         {
@@ -471,27 +470,43 @@ static PyObject *sniffer_initialize(PyObject *self, PyObject *args)
 {
     int promisc=1, timeout=1, snaplen=BUFSIZ, buffer=44*1024000;
 
-    char *dev, *filter;
+    char *dev;
 
     err_flag=0; strcpy(err_str,"No Error");
 
-    PyArg_ParseTuple(args, "s|iiiiz", &dev, &buffer, &snaplen, &timeout, &promisc, &filter);
+    PyArg_ParseTuple(args, "s|iiii", &dev, &buffer, &snaplen, &timeout, &promisc);
 
     if (err_flag == 0)
     {initialize(dev, promisc, timeout, snaplen, buffer);}
-
-//    if (err_flag == 0 && filter != NULL)
-//    {setfilter(filter);}
-
-    block_size=snaplen;
 
     // DEBUG-BEGIN
     if(DEBUG_MODE)
     {
         fprintf(debug_log,"\nInitialize Device: %s\n",dev);
-        fprintf(debug_log,"\nPromisc: %i\tTimeout: %i\tSnaplen: %i\tBuffer: %i\tBlock Size: %i\n",promisc,timeout,snaplen,buffer,block_size);
+        fprintf(debug_log,"\nPromisc: %i\tTimeout: %i\tSnaplen: %i\tBuffer: %i\n",promisc,timeout,snaplen,buffer);
     }
     // DEBUG-END
+
+    return Py_BuildValue("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);
+}
+
+static PyObject *sniffer_setfilter(PyObject *self, PyObject *args)
+{
+    char *filter;
+
+    err_flag=0; strcpy(err_str,"No Error");
+
+    PyArg_ParseTuple(args, "s", &filter);
+
+    if (err_flag == 0 && filter != NULL)
+    {setfilter(filter);}
+
+    //DEBUG-BEGIN
+    if(DEBUG_MODE)
+    {
+        fprintf(debug_log,"\nFILTRO: %s \n",filter);
+    }
+    //DEBUG-END
 
     return Py_BuildValue("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);
 }
@@ -507,15 +522,15 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
     err_flag=0; strcpy(err_str,"No Error");
 
-    PyArg_ParseTuple(args, "|i", &blocks_num);
+    PyArg_ParseTuple(args, "|i", &sniff_mode);
 
-    if (blocks_num >= 0)
+    if (sniff_mode >= 0)
     {
         Py_BEGIN_ALLOW_THREADS;
 
         no_stop=1;
 
-        if (handle != NULL && blocks_num > 0)
+        if (handle != NULL)
         {
             pkt_received=pcap_next_ex(handle,&pcap_hdr,&pcap_data);
 
@@ -540,8 +555,16 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
             default : err_flag=pkt_received;
                       sprintf(err_str,"One packet received");
 
-                      py_pcap_hdr=PyString_FromStringAndSize((u_char *)pcap_hdr,sizeof(struct pcap_pkthdr));
-                      py_pcap_data=PyString_FromStringAndSize(pcap_data,(pcap_hdr->caplen));
+                      if (sniff_mode > 0)
+                      {
+                          py_pcap_hdr=PyString_FromStringAndSize((u_char *)pcap_hdr,sizeof(struct pcap_pkthdr));
+                          py_pcap_data=PyString_FromStringAndSize(pcap_data,(pcap_hdr->caplen));
+                      }
+                      else
+                      {
+                          py_pcap_hdr = Py_None;
+                          py_pcap_data = Py_None;
+                      }
 
                       pcap_stats(handle,&pcapstat);
 
@@ -551,57 +574,52 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
                           pcapstat.ps_ifdrop=0;
                       }
 
-                      mystat.pkt_pcap_proc++;
                       mystat.pkt_pcap_tot=pcapstat.ps_recv;
                       mystat.pkt_pcap_drop=pcapstat.ps_drop;
                       mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
-                      break;
+
+                      mystat.pkt_pcap_proc++;
 
                       // DEBUG-BEGIN
                       if(DEBUG_MODE)
                       {
-                          fprintf(debug_log,"\n[My CallBack - Packet Number %li]",mystat.pkt_pcap_proc);
-                          fprintf(debug_log,"\nCapLen: %i\tLen: %i",(pcap_hdr->caplen),(pcap_hdr->len));
+                          fprintf(debug_log,"\n%li) CapLen: %i\tLen: %i",mystat.pkt_pcap_proc,(pcap_hdr->caplen),(pcap_hdr->len));
                       }
                       // DEBUG-END
 
+                      break;
             }
         }
         else
         {
-            if (handle == NULL)
-            {
-                sprintf(err_str,"Couldn't receive any packet: No Hadle Active on Networks Interfaces");err_flag=-1;
-            }
+            sprintf(err_str,"Couldn't receive any packet: No Hadle Active on Networks Interfaces");err_flag=-1;
 
             py_pcap_hdr = Py_None;
             py_pcap_data = Py_None;
         }
 
-//        // DEBUG-BEGIN
-//        if(DEBUG_MODE)
-//        {
-//            fprintf(debug_log,"\nNumero di Pacchetti: %i\t",blocks_num);
-//            fprintf(debug_log,"Dimensione del ByteArray: %i\n\n",(int)PyByteArray_Size(py_byte_array));
-//            print_payload(blocks_box,(block_size*2)+blocks_offset);
-//        }
-//        // DEBUG-END
+        // DEBUG-BEGIN
+        if(DEBUG_MODE)
+        {;}
+        // DEBUG-END
 
         no_stop=0;
 
         Py_END_ALLOW_THREADS;
 
-        return Py_BuildValue("{s:i,s:s,s:i,s:O,s:O}","err_flag",err_flag,"err_str",err_str,"datalink",pcap_datalink(handle),"py_pcap_hdr",py_pcap_hdr,"py_pcap_data",py_pcap_data);
+        return Py_BuildValue("{s:i,s:s,s:i,s:O,s:O}","err_flag",err_flag,"err_str",err_str,"datalink",data_link,"py_pcap_hdr",py_pcap_hdr,"py_pcap_data",py_pcap_data);
     }
     else
     {
         Py_BEGIN_ALLOW_THREADS;
 
-        infinite_loop();
+        sniff_mode = -1;
+
+        dump_mode();
 
         Py_END_ALLOW_THREADS;
 
-        return Py_BuildValue("{s:i,s:s,s:i,s:s}","err_flag",err_flag,"err_str",err_str,"datalink",pcap_datalink(handle),"dumpfile","dumpfile.pcap");
+        return Py_BuildValue("{s:i,s:s,s:i,s:s}","err_flag",err_flag,"err_str",err_str,"datalink",data_link,"dumpfile","dumpfile.pcap");
     }
 }
 
@@ -609,7 +627,7 @@ static PyObject *sniffer_stop(PyObject *self)
 {
     err_flag=0; strcpy(err_str,"No Error");
 
-    if (blocks_num>=0)
+    if (sniff_mode>=0)
     {
         while(no_stop){;}
 
@@ -620,6 +638,8 @@ static PyObject *sniffer_stop(PyObject *self)
 //        mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
 
         pcap_close(handle);
+
+        handle = NULL;
     }
     else
     {
@@ -639,6 +659,15 @@ static PyObject *sniffer_getstat(PyObject *self)
     struct tm *rt;
     time_t req_time;
 
+    if (handle != NULL)
+    {
+        pcap_stats(handle,&pcapstat);
+
+        mystat.pkt_pcap_tot=pcapstat.ps_recv;
+        mystat.pkt_pcap_drop=pcapstat.ps_drop;
+        mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
+    }
+
     req_time=time(0);
     rt=localtime(&req_time);
     strftime(request_time, sizeof request_time, "%a %Y/%m/%d %H:%M:%S", (const struct tm *) rt);
@@ -650,22 +679,12 @@ static PyObject *sniffer_getstat(PyObject *self)
                          "pkt_pcap_tot",mystat.pkt_pcap_tot,"pkt_pcap_drop",mystat.pkt_pcap_drop,"pkt_pcap_dropif",mystat.pkt_pcap_dropif);
 }
 
-static PyObject *sniffer_debugmode(PyObject *self, PyObject *args)
-{
-    PyArg_ParseTuple(args, "i", &DEBUG_MODE);
-
-    // DEBUG-BEGIN
-    if(DEBUG_MODE) {debug_log = fopen("sniffer.txt","w");}
-    // DEBUG-END
-
-    return Py_BuildValue("i",DEBUG_MODE);
-}
-
 static PyMethodDef sniffer_methods[] =
 {
     { "debugmode", (PyCFunction)sniffer_debugmode, METH_VARARGS, NULL},
     { "getdev", (PyCFunction)sniffer_getdev, METH_VARARGS, NULL},
     { "initialize", (PyCFunction)sniffer_initialize, METH_VARARGS, NULL},
+    { "setfilter", (PyCFunction)sniffer_setfilter, METH_VARARGS, NULL},
     { "start", (PyCFunction)sniffer_start, METH_VARARGS, NULL},
     { "stop", (PyCFunction)sniffer_stop, METH_NOARGS, NULL},
     { "getstat", (PyCFunction)sniffer_getstat, METH_NOARGS, NULL},

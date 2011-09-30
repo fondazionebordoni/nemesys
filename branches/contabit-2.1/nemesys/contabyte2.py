@@ -35,14 +35,15 @@ logger = logging.getLogger()
 PCAP_HDR_LEN        = 16
 
 # Header Structure and Dictionary
-PCAP_HDR_STRUCT = "LLII"
-PCAP_HDR =              \
-{                       \
-'tsSec'     : 0,        \
-'tsUsec'    : 0,        \
-'pktCaplen' : 0,        \
-'pktLen'    : 0,        \
-}                       \
+PCAP_HDR =                      \
+{                               \
+'hdrType'    : 'PCAP',          \
+'hdrStruct'  : 'LLII',          \
+'tsSec'      : 0,               \
+'tsUsec'     : 0,               \
+'pktCaplen'  : 0,               \
+'pktLen'     : 0,               \
+}                               \
 
 
 ###########
@@ -76,13 +77,14 @@ ETH_PR_PPPoE_DISC  = 0x8863    # PPP Over Ethernet Discovery Stage
 ETH_PR_PPPoE       = 0x8864    # PPP Over Ethernet Session Stage
 
 # Header Structure and Dictionary
-ETH_HDR_STRUCT  = "!6s6sH"
-ETH_HDR =                   \
-{                           \
-'ethDst'      : None,       \
-'ethSrc'      : None,       \
-'ethPayType'  : ETH_PR_IP,  \
-}                           \
+ETH_HDR =                       \
+{                               \
+'hdrType'     : 'ETH',          \
+'hdrStruct'   : '!6s6sH',       \
+'ethDst'      : None,           \
+'ethSrc'      : None,           \
+'ethPayType'  : ETH_PR_IP,      \
+}                               \
 
 
 #####
@@ -109,9 +111,10 @@ ARP_OP_REVREQUEST  = 3       # request to resolve pa given ha
 ARP_OP_REVREPLY    = 4       # response giving protocol address
 
 # Header Structure and Dictionary
-ARP_HDR_STRUCT  = "!HHBBH6s4s6s4s"
 ARP_HDR =                         \
 {                                 \
+'hdrType'    : 'ARP',             \
+'hdrStruct'  : '!HHBBH6s4s6s4s',  \
 'arpHwAT'    : ARP_HW_ETH,        \
 'arpPrAT'    : ARP_PR_IP,         \
 'arpHwAL'    : ARP_HW_ETH_LEN,    \
@@ -285,36 +288,38 @@ IP_PR_RESERVED      = IP_PR_RAW    # Reserved
 IP_PR_MAX           = 255
 
 # IPv4 Header Structure and Dictionary
-IPv4_HDR_STRUCT  = "!BBHHHBBH4s4s"
-IPv4_HDR =                        \
-{                                 \
-'ipVer'       : IPv4_VER,         \
-'ipHdrLen'    : IPv4_HDR_LEN,     \
-'ipToS'       : None,             \
-'ipTotLen'    : IPv4_HDR_LEN,     \
-'ipId'        : 0,                \
-'ipOffset'    : None,             \
-'ipTtl'       : IP_TTL_MIN,       \
-'ipPayType'   : 0,                \
-'ipCheckSum'  : None,             \
-'ipSrc'       : None,             \
-'ipDst'       : None,             \
-'ipOptions'   : None,             \
-}                                 \
+IPv4_HDR =                           \
+{                                    \
+'hdrType'     : 'IPv4',              \
+'hdrStruct'   : '!BBHHHBBH4s4s',     \
+'ipVer'       : IPv4_VER,            \
+'ipHdrLen'    : IPv4_HDR_LEN,        \
+'ipToS'       : None,                \
+'ipTotLen'    : IPv4_HDR_LEN,        \
+'ipId'        : 0,                   \
+'ipOffset'    : None,                \
+'ipTtl'       : IP_TTL_MIN,          \
+'ipPayType'   : 0,                   \
+'ipCheckSum'  : None,                \
+'ipSrc'       : None,                \
+'ipDst'       : None,                \
+'ipOptions'   : None,                \
+}                                    \
 
 # IPv6 Header Structure and Dictionary
-IPv6_HDR_STRUCT  = "!IHBB16s16s"
-IPv6_HDR =                      \
-{                               \
-'ipVer'        : IPv6_VER,      \
-'ipTrClass'    : None,          \
-'ipFlowLabel'  : None,          \
-'ipPayLen'     : 0,             \
-'ipPayType'    : 0,             \
-'ipTtl'        : IP_TTL_MIN,    \
-'ipSrc'        : None,          \
-'ipDst'        : None,          \
-}                               \
+IPv6_HDR =                           \
+{                                    \
+'hdrType'     : 'IPv6',              \
+'hdrStruct'   : '!IHBB16s16s',       \
+'ipVer'        : IPv6_VER,           \
+'ipTrClass'    : None,               \
+'ipFlowLabel'  : None,               \
+'ipPayLen'     : 0,                  \
+'ipPayType'    : 0,                  \
+'ipTtl'        : IP_TTL_MIN,         \
+'ipSrc'        : None,               \
+'ipDst'        : None,               \
+}                                    \
 
 
 #####
@@ -367,27 +372,28 @@ TCP_OPT_TCPCOMP     = 26       # TCP compression filter
 TCP_OPT_MAX         = 27
 
 # Header Structure and Dictionary
-TCP_HDR_STRUCT  = "!HHIIBBHHH"
-TCP_HDR =                     \
-{                             \
-'tcpSrcPort'   : 0,           \
-'tcpDstPort'   : 0,           \
-'tcpSeqNum'    : 0,           \
-'tcpAckNum'    : 0,           \
-'tcpHdrLen'    : TCP_HDR_LEN, \
-'tcpFin'       : 0,           \
-'tcpSyn'       : 0,           \
-'tcpRst'       : 0,           \
-'tcpPsh'       : 0,           \
-'tcpAck'       : 0,           \
-'tcpUrg'       : 0,           \
-'tcpEce'       : 0,           \
-'tcpCwr'       : 0,           \
-'tcpWin'       : None,        \
-'tcpCheckSum'  : None,        \
-'tcpUrgent'    : None,        \
-'tcpOptions'   : None,        \
-}                             \
+TCP_HDR =                       \
+{                               \
+'hdrType'     : 'TCP',          \
+'hdrStruct'   : '!HHIIBBHHH',   \
+'tcpSrcPort'   : 0,             \
+'tcpDstPort'   : 0,             \
+'tcpSeqNum'    : 0,             \
+'tcpAckNum'    : 0,             \
+'tcpHdrLen'    : TCP_HDR_LEN,   \
+'tcpFin'       : 0,             \
+'tcpSyn'       : 0,             \
+'tcpRst'       : 0,             \
+'tcpPsh'       : 0,             \
+'tcpAck'       : 0,             \
+'tcpUrg'       : 0,             \
+'tcpEce'       : 0,             \
+'tcpCwr'       : 0,             \
+'tcpWin'       : None,          \
+'tcpCheckSum'  : None,          \
+'tcpUrgent'    : None,          \
+'tcpOptions'   : None,          \
+}                               \
 
 
 #####
@@ -400,14 +406,15 @@ UDP_HDR_LEN     = 8
 UDP_PORT_MAX    = 65535        # maximum port
 
 # Header Structure and Dictionary
-UDP_HDR_STRUCT  = "!HHHH"
-UDP_HDR =                     \
-{                             \
-'udpSrcPort'   : 0,           \
-'udpDstPort'   : 0,           \
-'udpTotLen'    : UDP_HDR_LEN, \
-'udpCheckSum'  : None,        \
-}                             \
+UDP_HDR =                       \
+{                               \
+'hdrType'     : 'UDP',          \
+'hdrStruct'   : '!HHHH',        \
+'udpSrcPort'   : 0,             \
+'udpDstPort'   : 0,             \
+'udpTotLen'    : UDP_HDR_LEN,   \
+'udpCheckSum'  : None,          \
+}                               \
 
 
 ############
@@ -452,10 +459,9 @@ def _pcap_hdr_unpack(pcapHdrPkt):
   
   if (len(pcapHdrPkt) >= PCAP_HDR_LEN):
     
-    pcap01, pcap02, pcap03, pcap04 = struct.unpack(PCAP_HDR_STRUCT,pcapHdrPkt[:len(pcapHdrPkt)])
+    pcap01, pcap02, pcap03, pcap04 = struct.unpack(pcapHdr['hdrStruct'],pcapHdrPkt[:len(pcapHdrPkt)])
     
-    pcapTimeStamp = float(pcap01) + (float(pcap02)/1000000)
-    logger.debug("%6f" % pcapTimeStamp)
+    #pcapTimeStamp = float(pcap01) + (float(pcap02)/1000000)
     
     pcapHdr['tsSec']      = pcap01
     pcapHdr['tsUsec']     = pcap02
@@ -478,7 +484,7 @@ def _eth_unpack(ethPkt):
   
   if (len(ethPkt) >= ETH_HDR_LEN):
     
-    eth01, eth02, eth03 = struct.unpack(ETH_HDR_STRUCT,ethPkt[:ETH_HDR_LEN])
+    eth01, eth02, eth03 = struct.unpack(ethHdr['hdrStruct'],ethPkt[:ETH_HDR_LEN])
 
     ethHdr['ethDst']      = _display_mac(eth01)
     ethHdr['ethSrc']      = _display_mac(eth02)
@@ -498,17 +504,17 @@ def _arp_unpack(arpPkt):
   
   if (len(arpPkt) >= ARP_HDR_LEN):
     
-    arp01, arp02, arp03, arp04, arp05, arp06, arp07, arp08, arp09 = struct.unpack(ARP_HDR_STRUCT,arpPkt[:ARP_HDR_LEN])
+    arp01, arp02, arp03, arp04, arp05, arp06, arp07, arp08, arp09 = struct.unpack(arpHdr['hdrStruct'],arpPkt[:ARP_HDR_LEN])
     
     arpHdr['arpHwAT']    = arp01 
     arpHdr['arpPrAT']    = arp02
     arpHdr['arpHwAL']    = arp03
     arpHdr['arpPrAL']    = arp04
     arpHdr['arpOpCode']  = arp05
-    arpHdr['arpHwSrc']   = arp06
-    arpHdr['arpPrSrc']   = arp07
-    arpHdr['arpHwDst']   = arp08
-    arpHdr['arpPrDst']   = arp09
+    arpHdr['arpHwSrc']   = _display_mac(arp06)
+    arpHdr['arpPrSrc']   = socket.inet_ntop(socket.AF_INET,arp07)
+    arpHdr['arpHwDst']   = _display_mac(arp08)
+    arpHdr['arpPrDst']   = socket.inet_ntop(socket.AF_INET,arp09)
     
     arpData = arpPkt[ARP_HDR_LEN:]
     
@@ -524,7 +530,7 @@ def _ipv4_unpack(ipv4Pkt):
   
   if (len(ipv4Pkt) >= IPv4_HDR_LEN):
     
-    ip01, ip02, ip03, ip04, ip05, ip06, ip07, ip08, ip09, ip10 = struct.unpack(IPv4_HDR_STRUCT,ipv4Pkt[:IPv4_HDR_LEN])
+    ip01, ip02, ip03, ip04, ip05, ip06, ip07, ip08, ip09, ip10 = struct.unpack(ipv4Hdr['hdrStruct'],ipv4Pkt[:IPv4_HDR_LEN])
     
     ipVer     = ((ip01 & 0xf0) >> 4)
     ipHdrLen  = ((ip01 & 0x0f) << 2)
@@ -541,8 +547,8 @@ def _ipv4_unpack(ipv4Pkt):
     ipv4Hdr['ipSrc']       = socket.inet_ntop(socket.AF_INET,ip09)
     ipv4Hdr['ipDst']       = socket.inet_ntop(socket.AF_INET,ip10)
     
-    if (ipHdrLen > IPv4_HDR_LEN):
-      ipv4Hdr['ipOptions'] = ipv4Pkt[IPv4_HDR_LEN:ipHdrLen]
+#    if (ipHdrLen > IPv4_HDR_LEN):
+#      ipv4Hdr['ipOptions'] = str(ipv4Pkt[IPv4_HDR_LEN:ipHdrLen])
     
     ipv4Data = ipv4Pkt[ipHdrLen:]
     
@@ -558,7 +564,7 @@ def _ipv6_unpack(ipv6Pkt):
   
   if (len(ipv6Pkt) >= IPv6_HDR_LEN):
     
-    ip01, ip02, ip03, ip04, ip05, ip06 = struct.unpack(IPv6_HDR_STRUCT,ipv6Pkt[:IPv6_HDR_LEN])
+    ip01, ip02, ip03, ip04, ip05, ip06 = struct.unpack(ipv6Hdr['hdrStruct'],ipv6Pkt[:IPv6_HDR_LEN])
     
     ipv6Hdr['ipVer']        = ((ip01 & 0xf0000000) >> 28)
     ipv6Hdr['ipTrClass']    = ((ip01 & 0x0ff00000) >> 20)
@@ -583,7 +589,7 @@ def _tcp_unpack(tcpPkt):
   
   if (len(tcpPkt) >= TCP_HDR_LEN):
     
-    tcp01, tcp02, tcp03, tcp04, tcp05, tcp06, tcp07, tcp08, tcp09 = struct.unpack(TCP_HDR_STRUCT,tcpPkt[:TCP_HDR_LEN])
+    tcp01, tcp02, tcp03, tcp04, tcp05, tcp06, tcp07, tcp08, tcp09 = struct.unpack(tcpHdr['hdrStruct'],tcpPkt[:TCP_HDR_LEN])
     
     tcpHdrLen = ((tcp05 & 0xf0) >> 2)
     tcpFin    = ((tcp06 & TCP_FIN)     )
@@ -612,8 +618,8 @@ def _tcp_unpack(tcpPkt):
     tcpHdr['tcpCheckSum']  = tcp08
     tcpHdr['tcpUrgent']    = tcp09
 
-    if (tcpHdrLen > TCP_HDR_LEN):
-      tcpHdr['tcpOptions'] = tcpPkt[TCP_HDR_LEN:tcpHdrLen]
+#    if (tcpHdrLen > TCP_HDR_LEN):
+#      tcpHdr['tcpOptions'] = str(tcpPkt[TCP_HDR_LEN:tcpHdrLen])
     
     tcpData = tcpPkt[tcpHdrLen:]
     
@@ -629,7 +635,7 @@ def _udp_unpack(udpPkt):
   
   if (len(udpPkt) >= UDP_HDR_LEN):
     
-    udp01, udp02, udp03, udp04 = struct.unpack(UDP_HDR_STRUCT,udpPkt[:UDP_HDR_LEN])
+    udp01, udp02, udp03, udp04 = struct.unpack(udpHdr['hdrStruct'],udpPkt[:UDP_HDR_LEN])
         
     udpHdr['udpSrcPort']   = udp01
     udpHdr['udpDstPort']   = udp02
@@ -670,21 +676,45 @@ def analyze (ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
    IP_PR_UDP : _udp_unpack,  \
   }                          \
   
+#  #LOGGER#
+#  logger.debug("  ")
+#  logger.debug("="*88 + " [PACKET N°:%d]" % (STATISTICS['packet_tot_all']+1))
+#  ########
+  
   pcapHdr = _pcap_hdr_unpack(pcapHdrPkt)
   
-  logger.debug(pcapHdr)
-  
+#  #LOGGER#
+#  logger.debug("|%s|" % pcapHdr['hdrType'])
+#  keys = pcapHdr.keys()
+#  keys.sort()
+#  for key in keys:
+#    logger.debug("%s:\t%s" % (key,pcapHdr[key]))
+#  logger.debug("-"*88)
+#  ########
+#  
   (l2_hdr,l2_data) = _eth_unpack(pcapDataPkt)
-  
-  logger.debug(l2_hdr)
-  #logger.debug(l2_data)
+   
+#  #LOGGER#  
+#  logger.debug("|%s|" % l2_hdr['hdrType'])
+#  keys = l2_hdr.keys()
+#  keys.sort()
+#  for key in keys:
+#    logger.debug("%s:\t%s" % (key,l2_hdr[key]))
+#  logger.debug("-"*88)
+#  ########
   
   if (l2_hdr['ethPayType'] in eth_switch):
   
     (l3_hdr,l3_data) = eth_switch[l2_hdr['ethPayType']](l2_data)
     
-    logger.debug(l3_hdr)
-    #logger.debug(l3_data)
+#    #LOGGER#
+#    logger.debug("|%s|" % l3_hdr['hdrType'])
+#    keys = l3_hdr.keys()
+#    keys.sort()
+#    for key in keys:
+#      logger.debug("%s:\t%s" % (key,l3_hdr[key]))
+#    logger.debug("-"*88)
+#    ########
     
     if (l2_hdr['ethPayType'] == ETH_PR_ARP):
       
@@ -709,14 +739,20 @@ def analyze (ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
       
         (l4_hdr,l4_data) = ip_switch[l3_hdr['ipPayType']](l3_data)
         
-        logger.debug(l4_hdr)
-        #logger.debug(l4_data)
+#        #LOGGER#
+#        logger.debug("|%s|" % l4_hdr['hdrType'])
+#        keys = l4_hdr.keys()
+#        keys.sort()
+#        for key in keys:
+#          logger.debug("%s:\t%s" % (key,l4_hdr[key]))
+#        logger.debug("-"*88)
+#        ########  
           
         if ('tcpHdrLen' in l4_hdr):
           tcpHdrLen = l4_hdr['tcpHdrLen']
           
           if(l4_hdr['tcpSyn'] == 1):
-            logger.debug("SYN PACKET: %i - %i" % (l4_hdr['tcpAckNum'],l4_hdr['tcpSeqNum']))
+            logger.debug("|SYN| SEQ:%i\tACK:%i" % (l4_hdr['tcpSeqNum'],l4_hdr['tcpAckNum']))
           
         elif ('udpTotLen' in l4_hdr):
           udpHdrLen = UDP_HDR_LEN

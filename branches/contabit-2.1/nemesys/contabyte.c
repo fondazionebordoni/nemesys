@@ -123,7 +123,7 @@ struct statistics
 int DEBUG_MODE=0;
 FILE *debug_log;
 
-int no_stop=1, hdr_size=0;
+int no_stop=0, hdr_size=0;
 
 struct statistics mystat;
 
@@ -534,8 +534,6 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 {
     char build_string[282], request_time[44];
 
-    Py_BEGIN_ALLOW_THREADS;
-
     struct tm *rt;
     time_t req_time;
 
@@ -551,17 +549,19 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
     pcap_hdr = (u_char*)PyString_AsString(py_pcap_hdr);
     pcap_data = (u_char*)PyString_AsString(py_pcap_data);
 
+    Py_BEGIN_ALLOW_THREADS;
+
     no_stop=1;
 
     analyzer((const struct pcap_pkthdr *)pcap_hdr, pcap_data);
+
+    no_stop=0;
 
     req_time=time(0);
     rt=localtime(&req_time);
     strftime(request_time, sizeof request_time, "%a %Y/%m/%d %H:%M:%S", (const struct tm *) rt);
 
     strcpy(build_string,"{s:s,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l}");
-
-    no_stop=0;
 
     Py_END_ALLOW_THREADS;
 
@@ -580,7 +580,7 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 
 static PyObject *contabyte_close(PyObject *self)
 {
-    while(no_stop){;}
+    while(no_stop){printf("%i|",no_stop);}
 
     //DEBUG-BEGIN
     if(DEBUG_MODE) {fclose(debug_log);}

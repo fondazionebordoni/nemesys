@@ -455,7 +455,7 @@ void find_devices()
 {
     int IpInNet=0;
 
-    char *ip, *net, *mask, *point;
+    char *ip, *net, *mask;
     char errbuf[PCAP_ERRBUF_SIZE];
 
     struct in_addr addr;
@@ -679,9 +679,9 @@ static PyObject *contabit_stop(PyObject *self)
 
 static PyObject *contabit_getdev(PyObject *self, PyObject *args)
 {
-    int i=0, in_net=0, find_dev=0;
+    int i=0, find_dev=0;
 
-    char build_string[222];
+    char build_string[202];
 
     char *dev;
 
@@ -697,7 +697,6 @@ static PyObject *contabit_getdev(PyObject *self, PyObject *args)
         {
             if ((strcmp(dev,device[i].name)==0)||(strcmp(dev,device[i].ip)==0))
             {
-                in_net++; //servirà per sapere quanti ip della stessa sottorete (quanti dev sulla macchina connessi al router adsl)
                 find_dev=i;
             }
         }
