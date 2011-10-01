@@ -332,19 +332,22 @@ void initialize(char *dev_sel, int promisc, int timeout, int snaplen, int buffer
     {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;return;}
 
     if (pcap_set_promisc(handle,promisc) != 0)
-    {sprintf(err_str,"PromiscuousMode error: %s",errbuf);err_flag=-1;return;}
+    {sprintf(err_str,"PromiscuousMode error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
     if (pcap_set_timeout(handle,timeout) != 0)
-    {sprintf(err_str,"Timeout error: %s",errbuf);err_flag=-1;return;}
+    {sprintf(err_str,"Timeout error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
     if (pcap_set_snaplen(handle,snaplen) != 0)
-    {sprintf(err_str,"Snapshot error: %s",errbuf);err_flag=-1;return;}
+    {sprintf(err_str,"Snapshot error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
     if (pcap_set_buffer_size(handle,buffer) !=0)
-    {sprintf(err_str,"SetBuffer error: %s",errbuf);err_flag=-1;return;}
+    {sprintf(err_str,"SetBuffer error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
     if (pcap_activate(handle) !=0)
-    {sprintf(err_str,"Activate error: %s",errbuf);err_flag=-1;return;}
+    {sprintf(err_str,"Activate error: %s",pcap_geterr(handle));err_flag=-1;return;}
+
+    if (pcap_setnonblock(handle,1,errbuf) !=0)
+    {sprintf(err_str,"Non Block error: %s",errbuf);err_flag=-1;return;}
 
     data_link=pcap_datalink(handle);
 
@@ -353,7 +356,7 @@ void initialize(char *dev_sel, int promisc, int timeout, int snaplen, int buffer
 //    {
 //        if(num_dev>0)
 //        {
-//            fprintf(debug_log,"\nData Link Type: [%s] %s\n",pcap_datalink_val_to_name(pcap_datalink(handle)),pcap_datalink_val_to_description(pcap_datalink(handle)));
+//            fprintf(debug_log,"\nData Link Type: [%s] %s\n",pcap_datalink_val_to_name(data_link),pcap_datalink_val_to_description(data_link));
 //        }
 //    }
 //    //DEBUG-END
@@ -541,11 +544,13 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
                       py_pcap_hdr = Py_None;
                       py_pcap_data = Py_None;
                       break;
+
             case -1 : err_flag=pkt_received;
                       sprintf(err_str,"Error reading the packet: %s",pcap_geterr(handle));
                       py_pcap_hdr = Py_None;
                       py_pcap_data = Py_None;
                       break;
+
             case -2 : err_flag=pkt_received;
                       sprintf(err_str,"Error reading the packet: %s",pcap_geterr(handle));
                       py_pcap_hdr = Py_None;
@@ -557,8 +562,8 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
                       if (sniff_mode > 0)
                       {
-                          py_pcap_hdr=PyString_FromStringAndSize((u_char *)pcap_hdr,sizeof(struct pcap_pkthdr));
-                          py_pcap_data=PyString_FromStringAndSize(pcap_data,(pcap_hdr->caplen));
+                          py_pcap_hdr = PyString_FromStringAndSize((u_char *)pcap_hdr,sizeof(struct pcap_pkthdr));
+                          py_pcap_data = PyString_FromStringAndSize(pcap_data,(pcap_hdr->caplen));
                       }
                       else
                       {

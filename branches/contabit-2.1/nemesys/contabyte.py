@@ -420,7 +420,6 @@ UDP_HDR =                       \
 ############
 #STATISTICS#
 ############
-
 STATISTICS =              \
 {                         \
 'packet_up_nem'     : 0,  \
@@ -451,7 +450,6 @@ STATISTICS =              \
 'payload_tot_oth'   : 0,  \
 'payload_tot_all'   : 0,  \
 }                         \
-
 
 def _pcap_hdr_unpack(pcapHdrPkt):
   
@@ -649,8 +647,50 @@ def _udp_unpack(udpPkt):
     
   return (udpHdr,udpData)
 
+def reset():
+  
+  global STATISTICS
+  
+  STATISTICS =              \
+  {                         \
+  'packet_up_nem'     : 0,  \
+  'packet_up_oth'     : 0,  \
+  'packet_up_all'     : 0,  \
+  'packet_down_nem'   : 0,  \
+  'packet_down_oth'   : 0,  \
+  'packet_down_all'   : 0,  \
+  'packet_tot_nem'    : 0,  \
+  'packet_tot_oth'    : 0,  \
+  'packet_tot_all'    : 0,  \
+  'byte_up_nem'       : 0,  \
+  'byte_up_oth'       : 0,  \
+  'byte_up_all'       : 0,  \
+  'byte_down_nem'     : 0,  \
+  'byte_down_oth'     : 0,  \
+  'byte_down_all'     : 0,  \
+  'byte_tot_nem'      : 0,  \
+  'byte_tot_oth'      : 0,  \
+  'byte_tot_all'      : 0,  \
+  'payload_up_nem'    : 0,  \
+  'payload_up_oth'    : 0,  \
+  'payload_up_all'    : 0,  \
+  'payload_down_nem'  : 0,  \
+  'payload_down_oth'  : 0,  \
+  'payload_down_all'  : 0,  \
+  'payload_tot_nem'   : 0,  \
+  'payload_tot_oth'   : 0,  \
+  'payload_tot_all'   : 0,  \
+  }                         \
+  
+#  if (STATISTICS != None):
+#    keys = STATISTICS.keys()
+#    keys.sort()
+#    for key in keys:
+#      STATISTICS[key] = 0
+  
+  return None
 
-def analyze (ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
+def analyze(ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
   
   global STATISTICS
   
@@ -751,8 +791,8 @@ def analyze (ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
         if ('tcpHdrLen' in l4_hdr):
           tcpHdrLen = l4_hdr['tcpHdrLen']
           
-          if(l4_hdr['tcpSyn'] == 1):
-            logger.debug("|SYN| SEQ:%i\tACK:%i" % (l4_hdr['tcpSeqNum'],l4_hdr['tcpAckNum']))
+#          if(l4_hdr['tcpSyn'] == 1):
+#            logger.debug("|SYN| SEQ:%i\tACK:%i" % (l4_hdr['tcpSeqNum'],l4_hdr['tcpAckNum']))
           
         elif ('udpTotLen' in l4_hdr):
           udpHdrLen = UDP_HDR_LEN
@@ -834,5 +874,5 @@ def analyze (ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
   
   STATISTICS = statistics
   
-  return statistics
+  return STATISTICS
 

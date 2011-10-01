@@ -21,18 +21,12 @@ from logger import logging
 from threading import Thread, Condition, Event
 
 import contabyte
-import contabyte2
 import random
 import sniffer
 import sys
 import time
 
 logger = logging.getLogger()
-
-debug_mode = 1
-
-sniffer_init = {}
-contabyte_init = 0
 
 buffer_shared = deque([],maxlen=10000)
 analyzer_flag = Event()
@@ -52,13 +46,11 @@ class Sniffer(Thread):
 
   def __init__(self, dev, buff=32 * 1024000, snaplen=8192, timeout=1, promisc=1, debug=0):
     Thread.__init__(self)
-    global debug_mode
-    global sniffer_init
     self._run_sniffer = 0
     self._sniffer_data = {}
-    debug_mode = sniffer.debugmode(debug)
-    sniffer_init = sniffer.initialize(dev, buff, snaplen, timeout, promisc)
-    if (sniffer_init['err_flag'] == 0):
+    self._debug_mode = sniffer.debugmode(debug)
+    self._init = sniffer.initialize(dev, buff, snaplen, timeout, promisc)
+    if (self._init['err_flag'] == 0):
       self._run_sniffer = 1
     else:
       logger.error('Errore inizializzazione dello Sniffer')
@@ -72,9 +64,10 @@ class Sniffer(Thread):
     while (self._run_sniffer == 1):
       if (analyzer_flag.isSet()):
         stat = sniffer.getstat()
+        
         loop = stat['pkt_pcap_tot'] - stat['pkt_pcap_proc']
-
         sniff_mode = 1
+        
         if (loop < 0):
           loop = 0
           sniff_mode = 0
@@ -120,32 +113,24 @@ class Sniffer(Thread):
     return sniffer_stat
 
   def join(self, timeout=None):
-    #logger.debug('ALIVE SNIFFER: %s' % str(self.isAlive()))
     Thread.join(self, timeout)
 
 
 class Contabyte(Thread):
 
-  def __init__(self, dev, nem, debug=0):
+  def __init__(self, dev, nem):
     Thread.__init__(self)
-    global debug_mode
-    global contabyte_init
-    self._run_contabyte = 0
-    self._contabyte_data = {}
     self._dev = dev
-    self._nem = nem 
-    debug_mode = contabyte.debugmode(debug)
-    contabyte_init = contabyte.initialize(dev, nem)
-    if (contabyte_init == 0):
-      self._run_contabyte = 1
-    else:
-      logger.error('Errore inizializzazione del Contabyte')
-      raise Exception('Errore inizializzazione del Contabyte')
+    self._nem = nem
+    self._stat = {}
+    self._contabyte_data = {}
+    self._run_contabyte = 1
 
   def run(self):
     global buffer_shared
     global analyzer_flag
     global condition
+    contabyte.reset()
     buffer_shared.clear()
     analyzer_flag.set()
     while (self._run_contabyte == 1):
@@ -153,11 +138,8 @@ class Contabyte(Thread):
       if (len(buffer_shared) > 0):
         try:
           self._contabyte_data = buffer_shared.popleft()
-          if (self._contabyte_data['py_pcap_hdr'] != None):
-            
-            stat1 = contabyte.analyze(self._contabyte_data['py_pcap_hdr'], self._contabyte_data['py_pcap_data'], self._contabyte_data['datalink'])
-            #stat2 = contabyte2.analyze(self._dev, self._nem, self._contabyte_data['py_pcap_hdr'], self._contabyte_data['py_pcap_data'])
-            
+          if (self._contabyte_data['py_pcap_hdr'] != None):            
+            self._stat = contabyte.analyze(self._dev, self._nem, self._contabyte_data['py_pcap_hdr'], self._contabyte_data['py_pcap_data'])
             condition.notify()
         except:
           logger.error("Errore nel Contabyte: %s" % str(sys.exc_info()[0]))
@@ -166,35 +148,30 @@ class Contabyte(Thread):
         condition.wait(2.0)
       condition.release()
   
-#    if (stat2 != None):
-#      keys = stat2.keys()
+#    if (self._stat != None):
+#      keys = self._stat.keys()
 #      keys.sort()
 #      for key in keys:
-#        print "Key: %s \t Value: %s" % (key, stat2[key])
+#        print "Key: %s \t Value: %s" % (key, self._stat[key])
 #    else:
 #      print "No Statistics"
 
   def stop(self):
     global buffer_shared
     global analyzer_flag
+    time.sleep(0.8)
     analyzer_flag.clear()
-    logger.debug("|Coda Buffer:%d|" % len(buffer_shared))
     while (len(buffer_shared) != 0):
       None
     self._run_contabyte = 0
-    logger.debug("STOPPO CONTABYTE")
     while (self.isAlive()):
       None
-    logger.debug("STOPPATO")
-    contabyte_stop = contabyte.close()
-    return contabyte_stop
 
   def getstat(self):
-    contabyte_stat = contabyte.getstat()
+    contabyte_stat = self._stat
     return contabyte_stat
 
   def join(self, timeout=None):
-    #logger.debug('ALIVE CONTABYTE: %s' % str(self.isAlive()))
     Thread.join(self, timeout)
 
 
@@ -202,7 +179,7 @@ class Contabyte(Thread):
 
 if __name__ == '__main__':
 
-  mydev = '192.168.208.53'
+  mydev = '192.168.88.8'
   mynem = '194.244.5.206'
   debug = 1
 
@@ -252,23 +229,8 @@ if __name__ == '__main__':
 
   print "\nInitialize Sniffer And Contabyte...."
 
-  mysniffer = Sniffer(mydev, 32 * 1024000, 200, 100, 1, debug)
-
-  print "Debug Mode Sniffer:", debug_mode
-  if (sniffer_init['err_flag'] == 0):
-    print "Success Sniffer\n"
-  else:
-    print "Fail Sniffer:", sniffer_init['err_flag']
-    print "Error Sniffer:", sniffer_init['err_str']
-
-  mycontabyte = Contabyte(mydev, mynem, debug)
-
-  print "Debug Mode Contabyte:", debug_mode
-  if (contabyte_init == 0):
-    print "Success Contabyte\n"
-  else:
-    print "Fail Contabyte\n"
-
+  mysniffer = Sniffer(mydev, 32 * 1024000, 150, 1, 1, debug)
+  mycontabyte = Contabyte(mydev, mynem)
 
   print "Start Sniffer And Contabyte...."
 
@@ -280,11 +242,7 @@ if __name__ == '__main__':
   raw_input("Enter When Finished!!")
   #time.sleep(30)
 
-  contabyte_stop = mycontabyte.stop()
-  if (contabyte_stop == 0):
-    print "Success Contabyte"
-  else:
-    print "Fail\n"
+  mycontabyte.stop()
 
   sniffer_stop = mysniffer.stop()
   if (sniffer_stop['err_flag'] == 0):

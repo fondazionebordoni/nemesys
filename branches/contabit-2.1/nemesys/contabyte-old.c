@@ -557,13 +557,13 @@ static PyObject *contabyte_analyze(PyObject *self, PyObject *args)
 
     no_stop=0;
 
+    Py_END_ALLOW_THREADS;
+
     req_time=time(0);
     rt=localtime(&req_time);
     strftime(request_time, sizeof request_time, "%a %Y/%m/%d %H:%M:%S", (const struct tm *) rt);
 
     strcpy(build_string,"{s:s,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l,s:l}");
-
-    Py_END_ALLOW_THREADS;
 
     return Py_BuildValue(build_string,
                          "stat_time",request_time,
