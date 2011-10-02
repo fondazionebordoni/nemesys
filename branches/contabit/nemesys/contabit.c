@@ -484,7 +484,8 @@ void find_devices()
     {
         ind_dev++;
 
-        device[ind_dev].name=dl->name;
+        device[ind_dev].name=PyMem_New(char,strlen(dl->name)+1);
+        memcpy(device[ind_dev].name,dl->name,strlen(dl->name)+1);
 
         //printf("\nNAME: %s",device[ind_dev].name);
 
@@ -493,14 +494,14 @@ void find_devices()
 
         addr.s_addr = netp;
         net = inet_ntoa(addr);
-        device[ind_dev].net=PyMem_New(char,22);
+        device[ind_dev].net=PyMem_New(char,strlen(net)+1);
         memcpy(device[ind_dev].net,net,strlen(net)+1);
 
         //printf("\nNET: %s",device[ind_dev].net);
 
         addr.s_addr = maskp;
         mask = inet_ntoa(addr);
-        device[ind_dev].mask=PyMem_New(char,22);
+        device[ind_dev].mask=PyMem_New(char,strlen(mask)+1);
         memcpy(device[ind_dev].mask,mask,strlen(mask)+1);
 
         //printf("\nMASK: %s",device[ind_dev].mask);
@@ -531,7 +532,7 @@ void find_devices()
                 #endif
             }
 
-            device[ind_dev].ip=PyMem_New(char,22);
+            device[ind_dev].ip=PyMem_New(char,strlen(ip)+1);
             memcpy(device[ind_dev].ip,ip,strlen(ip)+1);
 
         }
@@ -542,6 +543,8 @@ void find_devices()
 
         //printf("\nIP: %s\n\n",device[ind_dev].ip);
     }
+
+    pcap_freealldevs(alldevs);
 }
 
 

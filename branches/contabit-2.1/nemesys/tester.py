@@ -40,7 +40,7 @@ ftp = None
 file = None
 filepath = None
 size = 0
-BUFFER_CONTABIT_MB = 32
+BUFFER_CONTABIT_MB = 44
 
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
@@ -54,7 +54,6 @@ def totalsize(data):
 class Tester:
 
   def __init__(self, if_ip, host, username='anonymous', password='anonymous@', timeout=60):
-    self._debug = 0
     self._if_ip = if_ip
     self._host = host
     self._username = username
@@ -62,7 +61,7 @@ class Tester:
     self._timeout = timeout
     socket.setdefaulttimeout(self._timeout)
     try:
-      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,180,1,1,self._debug)
+      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,180,1,1)
       self._test_sniffer.start()
     except: 
       logger.error('Errore di inizializzazione dello sniffer')
@@ -76,7 +75,7 @@ class Tester:
     counter_total_pay = 0
     counter_ftp_pay = 0 
     try:
-      counter = Contabyte(self._if_ip, self._host.ip,self._debug)
+      counter = Contabyte(self._if_ip, self._host.ip)
     except:
       logger.error("Errore di inizializzazione del Contabyte")
     file = Fakefile(bytes)
@@ -131,7 +130,7 @@ class Tester:
     counter_total_pay = 0
     counter_ftp_pay = 0
     try:
-      counter = Contabyte(self._if_ip, self._host.ip,self._debug)
+      counter = Contabyte(self._if_ip, self._host.ip)
     except:
       logger.error("Errore di inizializzazione del Contabyte")
       counter = None
@@ -258,30 +257,30 @@ def main():
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
-    t1 = Tester('192.168.208.53', Host(ip='193.104.137.133'), 'nemesys', '4gc0m244')
-    #t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
+    for k in range(1,11):
+      t1 = Tester('192.168.88.8', Host(ip='193.104.137.133'), 'nemesys', '4gc0m244')
+      #t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
     
-    for k in range(1,3):
       print "[-------- TEST 20-20-10 numero:%d --------]" % k
-      for i in range(1,3):
+      for i in range(1,21):
         print 'Test Download %d.%d:' % (k,i)
-        test = t1.testftpdown('/download/40000.rnd')
+        test = t1.testftpdown('/download/2000.rnd')
         #logger.debug("Statistiche Sniffer:\n%s\n" % t1._test_sniffer.getstat())
         print test
         print("\n")
-      for i in range(1,3):
+      for i in range(1,21):
         print 'Test Upload %d.%d:' % (k,i)
-        test = t1.testftpup(1024000, '/upload/r.raw')
+        test = t1.testftpup(512000, '/upload/r.raw')
         #logger.debug("Statistiche Sniffer:\n%s\n" % t1._test_sniffer.getstat())
         print test
         print("\n")
-#      for i in range(1,11):
-#        print 'Test Ping %d.%d:' % (k,i)
-#        test = t1.testping()
-#        print test
-#        print("\n")
+      for i in range(1,11):
+        print 'Test Ping %d.%d:' % (k,i)
+        test = t1.testping()
+        print test
+        print("\n")
   
-    t1.teststopsniffer()
+      t1.teststopsniffer()
 
   else:
     main()

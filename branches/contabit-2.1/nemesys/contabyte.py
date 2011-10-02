@@ -467,6 +467,7 @@ def _pcap_hdr_unpack(pcapHdrPkt):
     pcapHdr['pktLen']     = pcap04
         
   else:
+    logger.error ("Contabyte Error: Pcap Hdr too small")
     raise Exception ("Contabyte Error: Pcap Hdr too small")
     
   return (pcapHdr)
@@ -491,6 +492,7 @@ def _eth_unpack(ethPkt):
     ethData = ethPkt[ETH_HDR_LEN:]
     
   else:
+    logger.error ("Contabyte Error: Eth Pkt too small")
     raise Exception ("Contabyte Error: Eth Pkt too small")
     
   return (ethHdr,ethData)
@@ -517,6 +519,7 @@ def _arp_unpack(arpPkt):
     arpData = arpPkt[ARP_HDR_LEN:]
     
   else:
+    logger.error ("Contabyte Error: Arp Pkt too small")
     raise Exception ("Contabyte Error: Arp Pkt too small")
     
   return (arpHdr,arpData)
@@ -551,6 +554,7 @@ def _ipv4_unpack(ipv4Pkt):
     ipv4Data = ipv4Pkt[ipHdrLen:]
     
   else:
+    logger.error ("Contabyte Error: Ipv4 Pkt too small")
     raise Exception ("Contabyte Error: Ipv4 Pkt too small")
     
   return (ipv4Hdr,ipv4Data)
@@ -576,6 +580,7 @@ def _ipv6_unpack(ipv6Pkt):
     ipv6Data = ipv6Pkt[IPv6_HDR_LEN:]
     
   else:
+    logger.error ("Contabyte Error: Ipv6 Pkt too small")
     raise Exception ("Contabyte Error: Ipv6 Pkt too small")
     
   return (ipv6Hdr,ipv6Data)
@@ -622,6 +627,7 @@ def _tcp_unpack(tcpPkt):
     tcpData = tcpPkt[tcpHdrLen:]
     
   else:
+    logger.error ("Contabyte Error: Tcp Pkt too small")
     raise Exception ("Contabyte Error: Tcp Pkt too small")
     
   return (tcpHdr,tcpData)
@@ -643,6 +649,7 @@ def _udp_unpack(udpPkt):
     udpData = udpPkt[UDP_HDR_LEN:]
     
   else:
+    logger.error ("Contabyte Error: Udp Pkt too small")
     raise Exception ("Contabyte Error: Udp Pkt too small")
     
   return (udpHdr,udpData)

@@ -244,7 +244,8 @@ void find_devices()
     {
         ind_dev++;
 
-        device[ind_dev].name=dl->name;
+        device[ind_dev].name=PyMem_New(char,strlen(dl->name)+1);
+        memcpy(device[ind_dev].name,dl->name,strlen(dl->name)+1);
 
         //printf("\nNAME: %s",device[ind_dev].name);
 
@@ -253,14 +254,14 @@ void find_devices()
 
         addr.s_addr = netp;
         net = inet_ntoa(addr);
-        device[ind_dev].net=PyMem_New(char,22);
+        device[ind_dev].net=PyMem_New(char,strlen(net)+1);
         memcpy(device[ind_dev].net,net,strlen(net)+1);
 
         //printf("\nNET: %s",device[ind_dev].net);
 
         addr.s_addr = maskp;
         mask = inet_ntoa(addr);
-        device[ind_dev].mask=PyMem_New(char,22);
+        device[ind_dev].mask=PyMem_New(char,strlen(mask)+1);
         memcpy(device[ind_dev].mask,mask,strlen(mask)+1);
 
         //printf("\nMASK: %s",device[ind_dev].mask);
@@ -291,7 +292,7 @@ void find_devices()
                 #endif
             }
 
-            device[ind_dev].ip=PyMem_New(char,22);
+            device[ind_dev].ip=PyMem_New(char,strlen(ip)+1);
             memcpy(device[ind_dev].ip,ip,strlen(ip)+1);
 
         }
@@ -302,6 +303,8 @@ void find_devices()
 
         //printf("\nIP: %s\n\n",device[ind_dev].ip);
     }
+
+    pcap_freealldevs(alldevs);
 }
 
 
@@ -346,20 +349,20 @@ void initialize(char *dev_sel, int promisc, int timeout, int snaplen, int buffer
     if (pcap_activate(handle) !=0)
     {sprintf(err_str,"Activate error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
-    if (pcap_setnonblock(handle,1,errbuf) !=0)
+    if (pcap_setnonblock(handle,0,errbuf) !=0)
     {sprintf(err_str,"Non Block error: %s",errbuf);err_flag=-1;return;}
 
     data_link=pcap_datalink(handle);
 
-//    //DEBUG-BEGIN
-//    if(DEBUG_MODE)
-//    {
-//        if(num_dev>0)
-//        {
-//            fprintf(debug_log,"\nData Link Type: [%s] %s\n",pcap_datalink_val_to_name(data_link),pcap_datalink_val_to_description(data_link));
-//        }
-//    }
-//    //DEBUG-END
+    //DEBUG-BEGIN
+    if(DEBUG_MODE)
+    {
+        if(num_dev>0)
+        {
+            fprintf(debug_log,"\nData Link Type: [%s] %s\n",pcap_datalink_val_to_name(data_link),pcap_datalink_val_to_description(data_link));
+        }
+    }
+    //DEBUG-END
 }
 
 
@@ -529,7 +532,7 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
     if (sniff_mode >= 0)
     {
-        Py_BEGIN_ALLOW_THREADS;
+        //Py_BEGIN_ALLOW_THREADS;
 
         no_stop=1;
 
@@ -560,10 +563,16 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
             default : err_flag=pkt_received;
                       sprintf(err_str,"One packet received");
 
-                      if (sniff_mode > 0)
+                      if ((sniff_mode>0) && (pcap_hdr!=NULL) && (pcap_data!=NULL))
                       {
-                          py_pcap_hdr = PyString_FromStringAndSize((u_char *)pcap_hdr,sizeof(struct pcap_pkthdr));
-                          py_pcap_data = PyString_FromStringAndSize(pcap_data,(pcap_hdr->caplen));
+                          py_pcap_hdr = PyString_FromStringAndSize((const char *)pcap_hdr,sizeof(struct pcap_pkthdr));
+                          py_pcap_data = PyString_FromStringAndSize((const char *)pcap_data,(pcap_hdr->caplen));
+
+                          if ((py_pcap_hdr==NULL) || (py_pcap_data==NULL))
+                          {
+                              py_pcap_hdr = Py_None;
+                              py_pcap_data = Py_None;
+                          }
                       }
                       else
                       {
@@ -610,7 +619,7 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
         no_stop=0;
 
-        Py_END_ALLOW_THREADS;
+        //Py_END_ALLOW_THREADS;
 
         return Py_BuildValue("{s:i,s:s,s:i,s:O,s:O}","err_flag",err_flag,"err_str",err_str,"datalink",data_link,"py_pcap_hdr",py_pcap_hdr,"py_pcap_data",py_pcap_data);
     }
@@ -635,12 +644,6 @@ static PyObject *sniffer_stop(PyObject *self)
     if (sniff_mode>=0)
     {
         while(no_stop){;}
-
-//        pcap_stats(handle,&pcapstat);
-//
-//        mystat.pkt_pcap_tot=pcapstat.ps_recv;
-//        mystat.pkt_pcap_drop=pcapstat.ps_drop;
-//        mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
 
         pcap_close(handle);
 
