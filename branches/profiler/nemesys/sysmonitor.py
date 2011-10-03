@@ -34,23 +34,23 @@ STRICT_CHECK = True
 tag_results = 'SystemProfilerResults'
 tag_threshold = 'SystemProfilerThreshold'
 tag_vers = 'vers'
-tag_avMem = 'availableMemory'
-tag_wireless = 'wirelessON'
-tag_fw = 'firewall'
-tag_memLoad = 'memoryLoad'
-tag_ip = 'ipAddr'
-tag_sys = 'system'
-tag_wdisk = 'diskWrite'
-tag_cpu = 'cpuLoad'
-tag_mac = 'macAddr'
-tag_rdisk = 'diskRead'
-tag_release = 'release'
-tag_cores = 'cores'
-tag_arch = 'arch'
-tag_proc = 'processor'
+tag_avMem = 'RAM.totalPhysicalMemory'#to check
+tag_memLoad = 'RAM.RAMUsage'
+tag_wireless = 'rete.NetworkDevice/Type'
+tag_fw = 'firewall' #dismesso
+tag_ip = 'ipAddr' #to check
+tag_sys = 'sistemaOperativo.OperatingSystem'
+tag_wdisk = 'diskWrite'# deprecated
+tag_cpu = 'CPU.cpuLoad'
+tag_mac = 'macAddr'# to check
+tag_rdisk = 'diskRead'# deprecated
+tag_release = 'release'# deprecated
+tag_cores = 'CPU.cores'
+tag_arch = 'arch'#deprecated
+tag_proc = 'CPU.processor'
 tag_hosts = 'hostNumber'
-tag_conn = 'activeConnections'
-tag_task = 'taskList'
+tag_conn = 'activeConnections'# deprecated 
+tag_task = 'taskList' # deprecated
 
 # Soglie di sistema
 # ------------------------------------------------------------------------------
@@ -76,7 +76,6 @@ logger = logging.getLogger()
 
 # TODO Caricare da threshold SOLO se è una sonda
 if Path.isfile(paths.THRESHOLD):
-
   th_values = {}
   try:
     for subelement in ET.XML(open(paths.THRESHOLD).read()):
@@ -87,10 +86,10 @@ if Path.isfile(paths.THRESHOLD):
 
   try:
     th_host = int(th_values[tag_hosts])
-    th_avMem = float(th_values[tag_avMem])
-    th_memLoad = float(th_values[tag_memLoad])
+    th_avMem = float(th_values[tag_avMem.split('.')[1]])
+    th_memLoad = float(th_values[tag_memLoad.split('.')[1]])
     th_wdisk = float(th_values[tag_wdisk])
-    th_cpu = float(th_values[tag_cpu])
+    th_cpu = float(th_values[tag_cpu.split('.')[1]])
     th_rdisk = float(th_values[tag_rdisk])
     bad_conn = []
     for j in th_values[tag_conn].split(';'):
@@ -105,26 +104,24 @@ if Path.isfile(paths.THRESHOLD):
 else:
   pass
 
-try:
-  from SystemProfiler import systemProfiler
-except Exception as e:
-  logger.warning('Impossibile importare SystemProfiler')
-  pass
+#try:
+#  from SystemProfiler import systemProfiler
+#except Exception as e:
+#  logger.warning('Impossibile importare SystemProfiler')
+#  pass
 
 def getstatus(res):
-    data=ET.ElementTree()
-    try:
-        profiler=LocalProfilerFactory.getProfiler()
-        data=profiler.profile([res])        
-#        print mytostring(result)
-#        print "Finito"
-    except NotImplementedError as e:
-        print e
-    except KeyError:
-        print "sistema operativo non supportato"
-    except LocalProfilerException as e:
-        print ("Problema nel tentativo di istanziare il profiler: %s" % e)
-    return getvalues(data, tag_results)
+  data=ET.ElementTree()
+  try:
+      profiler=LocalProfilerFactory.getProfiler()
+      data=profiler.profile([res])        
+  except NotImplementedError as e:
+      print e
+  except KeyError:
+      print "sistema operativo non supportato"
+  except LocalProfilerException as e:
+      print ("Problema nel tentativo di istanziare il profiler: %s" % e)
+  return getvalues(data, tag_results, res)
 
 #  data = ''
 #
@@ -141,7 +138,6 @@ def getstatus(res):
 def getfloattag(tag, value,res):
   d = {tag:''}
   values = getstatus(res)
-
   try:
     value = float(values[tag])
   except Exception as e:
@@ -151,10 +147,23 @@ def getfloattag(tag, value,res):
 
   return value
 
-def getbooltag(tag, value):
-  d = {tag:''}
-  values = getstatus(d)
+def getResProperty(tag,res):
+  data=ET.ElementTree()
+  try:
+      profiler=LocalProfilerFactory.getProfiler()
+      data=profiler.profile([res])        
+  except NotImplementedError as e:
+      print e
+  except KeyError:
+      print "sistema operativo non supportato"
+  except LocalProfilerException as e:
+      print ("Problema nel tentativo di istanziare il profiler: %s" % e)
+  wtf= res + '/' + tag
+  return data.findall(wtf)
 
+def getbooltag(tag, value,res):
+  d = {tag:''}
+  values = getstatus(res)
   try:
     value = str(values[tag]).lower()
   except Exception as e:
@@ -231,9 +240,7 @@ def checktasks():
   return True
 
 def checkcpu():
-
-  value = getfloattag(tag_cpu, th_cpu - 1,'CPU')
-  print value
+  value = getfloattag(tag_cpu.split('.',1)[1], th_cpu - 1,tag_cpu.split('.',1)[0])
   if value > th_cpu:
     raise Exception('CPU occupata.')
 
@@ -241,11 +248,11 @@ def checkcpu():
 
 def checkmem():
 
-  avMem = getfloattag(tag_avMem, th_avMem + 1)
+  avMem = getfloattag(tag_avMem.split('.')[1], th_avMem + 1,tag_avMem.split('.')[0])
   if avMem < th_avMem:
     raise Exception('Memoria non sufficiente.')
 
-  memLoad = getfloattag(tag_memLoad, th_memLoad - 1)
+  memLoad = getfloattag(tag_memLoad.split('.')[1], th_memLoad - 1,tag_memLoad.split('.')[0])
   if memLoad > th_memLoad:
     raise Exception('Memoria non sufficiente.')
 
@@ -260,11 +267,10 @@ def checkfw():
   return True
 
 def checkwireless():
-
-  value = getbooltag(tag_wireless, 'False')
-  if value:
-    raise Exception('Wireless LAN attiva.')
-
+  values = getResProperty(tag_wireless.split('.')[1],tag_wireless.split('.')[0])
+  for devs in values:
+    if devs.text == 'Wireless':
+      raise Exception('Wireless LAN attiva')
   return True
 
 def checkhosts():
@@ -295,7 +301,7 @@ def fastcheck():
   '''
   
   checkcpu()
-#  checkmem()
+  checkmem()
 #  checktasks()
 #  checkconnections()
 
@@ -353,14 +359,15 @@ def getSys():
 
   return r
 
-def getvalues(xmlresult, tag):
+def getvalues(xmlresult, tag,tagrisorsa):
   '''
   Estrae informazioni dal SystemProfiler 
   '''
   values = {}
   try:
 #    for subelement in ET.XML(string):
-    for subelement in xmlresult:
+#    for subelement in xmlresult:
+    for subelement in xmlresult.find(tagrisorsa):
       values.update({subelement.tag:subelement.text})
   except Exception as e:
     logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
@@ -370,7 +377,7 @@ def getvalues(xmlresult, tag):
 
 if __name__ == '__main__':
   print 'Test sysmonitor fastcheck: %s' % fastcheck()
-#  print 'Test sysmonitor mediumcheck: %s' % mediumcheck()
+  print 'Test sysmonitor mediumcheck: %s' % mediumcheck()
 #  print 'Test sysmonitor checkall: %s' % checkall()
 #  print 'Test sysmonitor getMac: %s' % getMac()
 #  print 'Test sysmonitor getIP: %s' % getIp()

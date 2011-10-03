@@ -20,7 +20,6 @@ def executeQuery(wmi_class,whereCondition=""):
     try: 
         objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
         objSWbemServices = objWMIService.ConnectServer(".","root\cimv2")
-#        print "SELECT * FROM " + wmi_class + whereCondition
         colItems = objSWbemServices.ExecQuery("SELECT * FROM " + wmi_class + whereCondition)
     except:
         raise RisorsaException("Errore nella query al server root\cimv2")
@@ -162,7 +161,6 @@ class rete(RisorsaWin):
         self.whereCondition= " WHERE Manufacturer != 'Microsoft' "# AND NOT PNPDeviceID LIKE 'ROOT\\*' "
         self._activeMAC = None
         self._checked = False
-        print "Inizializzo la rete"
            
     def getipaddr(self):
         if self.ipaddr =="":
@@ -197,7 +195,7 @@ class rete(RisorsaWin):
             
     def profileDevice(self,obj):
         running = 0X3 #running Net Interface CODE
-        devxml = ET.Element('Network Device')
+        devxml = ET.Element('NetworkDevice')
         features = {'Name':'','AdapterType':'','MACAddress':'','StatusInfo':''}
         devName= 'unknown'
         devType= 'unknown'
@@ -206,7 +204,6 @@ class rete(RisorsaWin):
         devStatus = 'unknown'
         if (not self._checked):
             try:
-                print "Check IP"
                 self._checked = self.findActiveInterface()
             except RisorsaException as e:
                 raise e 
@@ -233,52 +230,7 @@ class rete(RisorsaWin):
             devxml.append(self.xmlFormat('isActive',devIsActive))
             devxml.append(self.xmlFormat('Status',devStatus))
             return devxml
-            
-                
-            
-            
-            
-#    def netIType(self,obj): 
-#        running = 0X3 #running Net Interface CODE
-#        tag="Type"
-#        try:
-#            if (self.getSingleInfo(obj, 'Availability') == running):
-#                print "Funziona l'interfaccia"
-#                macad = self.getSingleInfo(obj,'MACAddress')
-#                ris=self.getSingleInfo(obj, 'AdapterType')
-#                manu = self.getSingleInfo(obj,'Manufacturer')
-#                pnpid = self.getSingleInfo(obj,'PNPDeviceID')
-#        except AttributeError as e:
-#            ris = "False"
-#            macad = None 
-#            manu = None
-#            pnpid= None
-#        print macad 
-#        print manu
-#        print pnpid 
-#        return self.xmlFormat(tag,ris)
-#         
-#    def active_interface_mac(self,obj):
-#        ris=None
-#        retexml=ET.Element('Device')
-##        tag="InterfaceNotConnected"
-#        ipaddr = self.getipaddr()
-#        try:
-#            ipaddrlist=self.getSingleInfo(obj, 'IPAddress')
-#            if ipaddr in ipaddrlist:
-#                ris = self.getSingleInfo(obj,'MACAddress')
-#                self._activeMAC=ris#Albenzio
-##                tag = "ActiveInterfaceMAC"
-#            else:
-#                raise AttributeError("Interfaccia con indirizzo non corrispondente a quello desiderato")
-#        finally:
-#            for feat in self._features['Win32_NetworkAdapter']:
-#                tag = feat
-#                cmd = getattr(obj,tag)
-#                retexml.append(cmd(obj))
-#                
-#            return self.xmlFormat(tag, ris)  
-        
+                    
 class processi(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
