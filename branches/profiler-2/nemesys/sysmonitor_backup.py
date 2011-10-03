@@ -16,17 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from SysProf import LocalProfilerFactory
-#import xml.etree.ElementTree as ET
-from SysProf.NemesysException import LocalProfilerException, RisorsaException
-from SysProf import Factory
-
 from logger import logging
 from xml.etree import ElementTree as ET
 from os import path as Path
 import paths
 import re
-
 
 # TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
 STRICT_CHECK = True
@@ -54,7 +48,7 @@ tag_task = 'taskList'
 
 # Soglie di sistema
 # ------------------------------------------------------------------------------
-# Massima quantità di host in rete
+# Massima quantit di host in rete
 th_host = 2
 # Minima memoria disponibile
 th_avMem = 134217728
@@ -74,7 +68,7 @@ good_fqdn = ['finaluser.agcom244.fub.it']
 
 logger = logging.getLogger()
 
-# TODO Caricare da threshold SOLO se è una sonda
+# TODO Caricare da threshold SOLO se � una sonda
 if Path.isfile(paths.THRESHOLD):
 
   th_values = {}
@@ -111,36 +105,23 @@ except Exception as e:
   logger.warning('Impossibile importare SystemProfiler')
   pass
 
-def getstatus(res):
-    data=ET.ElementTree()
+def getstatus(d):
+
+  data = ''
+
+  if Path.isfile(paths.RESULTS):
+    data = open(paths.RESULTS).read()
+  else:
     try:
-        profiler=LocalProfilerFactory.getProfiler()
-        data=profiler.profile([res])        
-#        print mytostring(result)
-#        print "Finito"
-    except NotImplementedError as e:
-        print e
-    except KeyError:
-        print "sistema operativo non supportato"
-    except LocalProfilerException as e:
-        print ("Problema nel tentativo di istanziare il profiler: %s" % e)
-    return getvalues(data, tag_results)
+      data = systemProfiler('test', d)
+    except Exception as e:
+      logger.warning('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
 
-#  data = ''
-#
-#  if Path.isfile(paths.RESULTS):
-#    data = open(paths.RESULTS).read()
-#  else:
-#    try:
-#      data = systemProfiler('test', d)
-#    except Exception as e:
-#      logger.warning('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
-#
-#  return getvalues(data, tag_results)
+  return getvalues(data, tag_results)
 
-def getfloattag(tag, value,res):
+def getfloattag(tag, value):
   d = {tag:''}
-  values = getstatus(res)
+  values = getstatus(d)
 
   try:
     value = float(values[tag])
@@ -180,7 +161,7 @@ def checkconnections():
   Effettua il controllo sulle connessioni attive
   '''
 
-  #TODO Se la connessione è verso un nostro server non dobbiamo farne il controllo
+  #TODO Se la connessione � verso un nostro server non dobbiamo farne il controllo
   d = {tag_conn:''}
   values = getstatus(d)
   connActive = values[tag_conn]
@@ -232,8 +213,7 @@ def checktasks():
 
 def checkcpu():
 
-  value = getfloattag(tag_cpu, th_cpu - 1,'CPU')
-  print value
+  value = getfloattag(tag_cpu, th_cpu - 1)
   if value > th_cpu:
     raise Exception('CPU occupata.')
 
@@ -293,11 +273,11 @@ def fastcheck():
   Ritorna True se le condizioni per effettuare le misure sono corrette,
   altrimenti solleva un'eccezione
   '''
-  
+
   checkcpu()
-#  checkmem()
-#  checktasks()
-#  checkconnections()
+  checkmem()
+  checktasks()
+  checkconnections()
 
   return True
 
@@ -353,14 +333,13 @@ def getSys():
 
   return r
 
-def getvalues(xmlresult, tag):
+def getvalues(string, tag):
   '''
   Estrae informazioni dal SystemProfiler 
   '''
   values = {}
   try:
-#    for subelement in ET.XML(string):
-    for subelement in xmlresult:
+    for subelement in ET.XML(string):
       values.update({subelement.tag:subelement.text})
   except Exception as e:
     logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
@@ -370,8 +349,8 @@ def getvalues(xmlresult, tag):
 
 if __name__ == '__main__':
   print 'Test sysmonitor fastcheck: %s' % fastcheck()
-#  print 'Test sysmonitor mediumcheck: %s' % mediumcheck()
-#  print 'Test sysmonitor checkall: %s' % checkall()
-#  print 'Test sysmonitor getMac: %s' % getMac()
-#  print 'Test sysmonitor getIP: %s' % getIp()
-#  print 'Test sysmonitor getSys: %s' % getSys()
+  print 'Test sysmonitor mediumcheck: %s' % mediumcheck()
+  print 'Test sysmonitor checkall: %s' % checkall()
+  print 'Test sysmonitor getMac: %s' % getMac()
+  print 'Test sysmonitor getIP: %s' % getIp()
+  print 'Test sysmonitor getSys: %s' % getSys()
