@@ -411,7 +411,7 @@ class Profiler(LocalProfiler):
     
     def __init__(self):
         LocalProfiler.__init__(self)
-        self._resources =['CPU','RAM','sistemaOperativo','disco', 'rete', 'processi','connection']
+        self._resources =['CPU','RAM','sistemaOperativo','disco', 'rete']#, 'processi','connection']
 #        self._resources =['rete']
         
     '''
