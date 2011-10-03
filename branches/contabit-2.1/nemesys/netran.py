@@ -54,7 +54,6 @@ class Sniffer(Thread):
     self._init = sniffer.initialize(dev, buff, snaplen, timeout, promisc)
     if (self._init['err_flag'] != 0):
       self._run_sniffer = 0
-    else:
       logger.error('Errore inizializzazione dello Sniffer')
 
   def run(self):
@@ -73,17 +72,20 @@ class Sniffer(Thread):
           loop=1         
         if (len(buffer_shared) < 20000):  
           while (loop > 0):
-            self._sniffer_data = sniffer.start(sniff_mode)          
-            if ('err_flag' in self._sniffer_data):
-              if (self._sniffer_data['err_flag'] < 0):
-                logger.error(self._sniffer_data['err_str'])
-                raise Exception (self._sniffer_data['err_str'])      
-            if ('py_pcap_hdr' in self._sniffer_data):
-              if (self._sniffer_data['py_pcap_hdr'] != None):
-                condition.acquire()      
-                buffer_shared.append(self._sniffer_data)
-                condition.notify()
-                condition.release()
+            try:
+              self._sniffer_data = sniffer.start(sniff_mode)          
+              if ('err_flag' in self._sniffer_data):
+                if (self._sniffer_data['err_flag'] < 0):
+                  logger.error(self._sniffer_data['err_str'])
+                  raise Exception (self._sniffer_data['err_str'])      
+              if ('py_pcap_hdr' in self._sniffer_data):
+                if (self._sniffer_data['py_pcap_hdr'] != None):
+                  condition.acquire()      
+                  buffer_shared.append(self._sniffer_data)
+                  condition.notify()
+                  condition.release()
+            except:
+              logger.error("Errore nello Sniffer: %s" % str(sys.exc_info()[0]))
             loop -= 1
         else:
           condition.acquire()
@@ -153,7 +155,7 @@ class Contabyte(Thread):
   def stop(self):
     global buffer_shared
     global analyzer_flag
-    time.sleep(0.8)
+    time.sleep(2.0)
     analyzer_flag.clear()
     while (len(buffer_shared) != 0):
       None
@@ -173,9 +175,8 @@ class Contabyte(Thread):
 
 if __name__ == '__main__':
 
-  mydev = '192.168.88.8'
+  mydev = '192.168.208.53'
   mynem = '194.244.5.206'
-  debug = 1
 
   print "\nDevices:"
 
@@ -223,7 +224,7 @@ if __name__ == '__main__':
 
   print "\nInitialize Sniffer And Contabyte...."
 
-  mysniffer = Sniffer(mydev, 32 * 1024000, 150, 1, 1, debug)
+  mysniffer = Sniffer(mydev, 22 * 1024000, 150, 1, 1)
   mycontabyte = Contabyte(mydev, mynem)
 
   print "Start Sniffer And Contabyte...."

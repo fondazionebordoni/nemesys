@@ -23,6 +23,8 @@ FILE *debug_log;
 int err_flag=0;
 char err_str[88]="No Error";
 
+PyGILState_STATE gil_state;
+
 int no_stop=0, ind_dev=0, num_dev=0;
 
 int data_link=0, sniff_mode=0;
@@ -532,7 +534,8 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
     if (sniff_mode >= 0)
     {
-        //Py_BEGIN_ALLOW_THREADS;
+        Py_BEGIN_ALLOW_THREADS;
+        gil_state = PyGILState_Ensure();
 
         no_stop=1;
 
@@ -619,18 +622,21 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
         no_stop=0;
 
-        //Py_END_ALLOW_THREADS;
+        PyGILState_Release(gil_state);
+        Py_END_ALLOW_THREADS;
 
         return Py_BuildValue("{s:i,s:s,s:i,s:O,s:O}","err_flag",err_flag,"err_str",err_str,"datalink",data_link,"py_pcap_hdr",py_pcap_hdr,"py_pcap_data",py_pcap_data);
     }
     else
     {
         Py_BEGIN_ALLOW_THREADS;
+        gil_state = PyGILState_Ensure();
 
         sniff_mode = -1;
 
         dump_mode();
 
+        PyGILState_Release(gil_state);
         Py_END_ALLOW_THREADS;
 
         return Py_BuildValue("{s:i,s:s,s:i,s:s}","err_flag",err_flag,"err_str",err_str,"datalink",data_link,"dumpfile","dumpfile.pcap");
