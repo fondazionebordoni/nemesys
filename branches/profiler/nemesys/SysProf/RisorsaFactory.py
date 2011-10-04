@@ -23,7 +23,6 @@ class Risorsa(object):
                 cmd = getattr(self,tag)            
                 root.append(self.xmlFormat(tag, cmd()))
         except AttributeError as e:
-            print RisorsaException(e)
             raise RisorsaException("errore get status info")
         return root
     #'''

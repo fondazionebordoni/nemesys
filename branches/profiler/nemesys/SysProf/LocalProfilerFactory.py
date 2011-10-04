@@ -35,13 +35,12 @@ class LocalProfiler(object):
         try:
             for r in self._resources:
                 singleresxml=ET.Element(str(r))
-#                print package_home(".",path,r)
                 ris = RisorsaFactory.getRisorsa(package_home(".",path,r), r)
                 singleresxml=ris.getStatusInfo(singleresxml)
                 result.append(singleresxml)
                 del ris
                 del singleresxml
         except RisorsaException as e:
-            raise NotImplementedError(e)
+            raise RisorsaException(e) 
         return result
         

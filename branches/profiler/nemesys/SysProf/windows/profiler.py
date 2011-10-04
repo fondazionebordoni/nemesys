@@ -51,11 +51,13 @@ class RisorsaWin(Risorsa):
                         for val in self._params[wmi_class]:
                             tag = val
                             cmd = getattr(self,tag)
-                            root.append(cmd(obj))
+                            xmlres=cmd(obj)
+                            if (xmlres is not None):
+                              root.append(xmlres)
         except AttributeError as e:
-            print (e)
-            print RisorsaException(e)
             raise RisorsaException("errore get status info")
+        except RisorsaException as e:
+            raise RisorsaException(e)
         except:
             raise RisorsaException("errore query")
         return root
@@ -185,18 +187,17 @@ class rete(RisorsaWin):
                     if ipaddrlist:
                         if ipaddr in ipaddrlist:
                             ris = self.getSingleInfo(obj,'MACAddress')
-                            self._activeMAC=ris#Albenzio
-    #                else:
-    #                    raise AttributeError("Interfaccia con indirizzo non corrispondente a quello desiderato")
+                            self._activeMAC=ris
+            except:
+                raise RisorsaException("Impossibile specificare l'interfaccia attiva") 
             finally:
                 return True
         else:
-            raise RisorsaException("La risorsa con le caratteristiche richieste non e' presente nel server")
+            raise RisorsaException("E' impossibile interrogare le risorse di rete")
             
     def profileDevice(self,obj):
         running = 0X3 #running Net Interface CODE
-        devxml = ET.Element('NetworkDevice')
-        features = {'Name':'','AdapterType':'','MACAddress':'','StatusInfo':''}
+        features = {'Name':'','AdapterType':'','MACAddress':'','Availability':''}
         devName= 'unknown'
         devType= 'unknown'
         devMac = 'unknown'
@@ -206,9 +207,7 @@ class rete(RisorsaWin):
             try:
                 self._checked = self.findActiveInterface()
             except RisorsaException as e:
-                raise e 
-            except AttributeError as e:
-                raise e
+                raise RisorsaException(e) 
         try:
             keys = features.keys()
             for key in keys:
@@ -222,14 +221,18 @@ class rete(RisorsaWin):
                 devMac=features['MACAddress']
                 if devMac==self._activeMAC:
                     devIsActive = 'True'
-            if (features['StatusInfo']==running):
-                devStatus= 'Enabled'        
-            devxml.append(self.xmlFormat('Name',devName))
-            devxml.append(self.xmlFormat('Type',devType))
-            devxml.append(self.xmlFormat('MACAddress',devMac))
-            devxml.append(self.xmlFormat('isActive',devIsActive))
-            devxml.append(self.xmlFormat('Status',devStatus))
-            return devxml
+            if (features['Availability']==running):
+                devStatus= 'Enabled'
+            if devStatus == 'Enabled':      
+              devxml = ET.Element('NetworkDevice')
+              devxml.append(self.xmlFormat('Name',devName))
+              devxml.append(self.xmlFormat('Type',devType))
+              devxml.append(self.xmlFormat('MACAddress',devMac))
+              devxml.append(self.xmlFormat('isActive',devIsActive))
+              devxml.append(self.xmlFormat('Status',devStatus))
+              return devxml
+            else:
+              return None
                     
 class processi(RisorsaWin):
     def __init__(self):
