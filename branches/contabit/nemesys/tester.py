@@ -271,28 +271,28 @@ def main():
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
-    t1 = Tester('192.168.208.53', Host(ip='193.104.137.133'), 'nemesys', '4gc0m244')
-    #t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
+    for k in range(1,3):
+      #t1 = Tester('192.168.208.53', Host(ip='193.104.137.133'), 'nemesys', '4gc0m244')
+      t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
     
-    for k in range(1,2):
       print "[-------- TEST 20-20-10 numero:%d --------]" % k
-      for i in range(1,21):
+      for i in range(1,11):
         print 'Test Download %d.%d:' % (k,i)
-        test = t1.testftpdown('/download/1000.rnd')
+        test = t1.testftpdown('/download/40000.rnd')
         #logger.debug("Statistiche Sniffer:\n%s\n" % t1._test_sniffer.getstat())
         print test
         print("\n")
-      for i in range(1,21):
+      for i in range(1,11):
         print 'Test Upload %d.%d:' % (k,i)
-        test = t1.testftpup(512000, '/upload/r.raw')
+        test = t1.testftpup(1024000, '/upload/r.raw')
         #logger.debug("Statistiche Sniffer:\n%s\n" % t1._test_sniffer.getstat())
         print test
         print("\n")
-#      for i in range(1,11):
-#        print 'Test Ping %d.%d:' % (k,i)
-#        test = t1.testping()
-#        print test
-#        print("\n")
+      for i in range(1,2):
+        print 'Test Ping %d.%d:' % (k,i)
+        test = t1.testping()
+        print test
+        print("\n")
   else:
     main()
 
