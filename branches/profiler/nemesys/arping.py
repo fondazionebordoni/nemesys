@@ -19,8 +19,8 @@
 from exceptions import Exception
 from logger import logging
 from SysProf import LocalProfilerFactory
+from xml.etree import ElementTree as ET
 from SysProf.NemesysException import LocalProfilerException, RisorsaException
-from sysmonitor import getResProperty
 
 
 import arpinger
@@ -32,11 +32,32 @@ import time
 
 logger = logging.getLogger()
 
+tag_activeNic= 'rete.NetworkDevice/isActive'
+tag_mac = 'rete.NetworkDevice/MACAddress'
+
 ETH_P_IP = 0x0800
 ETH_P_ARP = 0x0806
 ARP_REPLY = 0x0002
 
 
+def getResProperty(tag,res):
+  data=ET.ElementTree()
+  try:
+      profiler=LocalProfilerFactory.getProfiler()
+      data=profiler.profile([res])        
+  except Exception as e:
+    logger.error('Non sono riuscito a trovare lo stato del computer con profiler: %s.' % e)
+    raise sysmonitorexception.FAILPROF
+  except RisorsaException as e:
+    logger.error ("Problema nel tentativo di istanziare la risorsa: %s" % e)
+    raise sysmonitorexception.FAILPROF
+  except LocalProfilerException as e:
+    logger.error ("Problema nel tentativo di istanziare il profiler: %s" % e)
+    raise sysmonitorexception.FAILPROF
+  wtf= res + '/' + tag
+  return data.findall(wtf)
+
+  
 def getMac():
   '''
   restituisce indirizzo MAC del computer
@@ -46,25 +67,12 @@ def getMac():
   count = 0
   for devs in values:
     if devs.text.lower() == 'true':
-      print values2[count].text
       return values2[count].text
     else:
       count=count+1
   return None
-#  string = ''
-#
-#  try:
-#    string = systemProfiler('test', {'macAddr':''})
-#  except Exception as e:
-#    logger.error('Non sono riuscito a trovare lo stato del computer con SystemProfiler: %s.' % e)
-#    #raise Exception('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
-#    raise sysmonitorexception.FAILPROF
-#
-#  values = getXMLvalues(string, 'SystemProfilerResults')
-#
-#  return values['macAddr']
 
-
+  
 def display_mac(value):
     return string.join(["%02X" % ord(b) for b in value], ':')
 
@@ -166,5 +174,5 @@ def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1):
 
 if __name__ == '__main__':
   
-  do_arping('192.168.88.8', 24, True, 1)
+  do_arping('192.168.79.129', 24, True, 1)
 
