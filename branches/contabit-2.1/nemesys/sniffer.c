@@ -24,6 +24,7 @@ int err_flag=0;
 char err_str[88]="No Error";
 
 PyGILState_STATE gil_state;
+PyObject *py_pcap_hdr, *py_pcap_data;
 
 int no_stop=0, ind_dev=0, num_dev=0;
 
@@ -521,8 +522,6 @@ static PyObject *sniffer_setfilter(PyObject *self, PyObject *args)
 
 static PyObject *sniffer_start(PyObject *self, PyObject *args)
 {
-    PyObject *py_pcap_hdr, *py_pcap_data;
-
     struct pcap_pkthdr *pcap_hdr;
     const u_char *pcap_data;
 
@@ -625,7 +624,7 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
         PyGILState_Release(gil_state);
         Py_END_ALLOW_THREADS;
 
-        return Py_BuildValue("{s:i,s:s,s:i,s:O,s:O}","err_flag",err_flag,"err_str",err_str,"datalink",data_link,"py_pcap_hdr",py_pcap_hdr,"py_pcap_data",py_pcap_data);
+        return Py_BuildValue("{s:i,s:s,s:i,s:S,s:S}","err_flag",err_flag,"err_str",err_str,"datalink",data_link,"py_pcap_hdr",py_pcap_hdr,"py_pcap_data",py_pcap_data);
     }
     else
     {
@@ -641,6 +640,18 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
         return Py_BuildValue("{s:i,s:s,s:i,s:s}","err_flag",err_flag,"err_str",err_str,"datalink",data_link,"dumpfile","dumpfile.pcap");
     }
+}
+
+static PyObject *sniffer_clear(PyObject *self)
+{
+    err_flag=0; strcpy(err_str,"No Error");
+
+    if (py_pcap_hdr != Py_None)
+    {Py_DECREF(py_pcap_hdr);}
+    if (py_pcap_data != Py_None)
+    {Py_DECREF(py_pcap_data);}
+
+    return Py_BuildValue("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);
 }
 
 static PyObject *sniffer_stop(PyObject *self)
@@ -669,7 +680,7 @@ static PyObject *sniffer_stop(PyObject *self)
 
 static PyObject *sniffer_getstat(PyObject *self)
 {
-    char build_string[44], request_time[44];
+    char *request_time;
     struct tm *rt;
     time_t req_time;
 
@@ -686,9 +697,7 @@ static PyObject *sniffer_getstat(PyObject *self)
     rt=localtime(&req_time);
     strftime(request_time, sizeof request_time, "%a %Y/%m/%d %H:%M:%S", (const struct tm *) rt);
 
-    strcpy(build_string,"{s:s,s:l,s:l,s:l,s:l}");
-
-    return Py_BuildValue(build_string,
+    return Py_BuildValue("{s:s,s:l,s:l,s:l,s:l}",
                          "stat_time",request_time,"pkt_pcap_proc",mystat.pkt_pcap_proc,
                          "pkt_pcap_tot",mystat.pkt_pcap_tot,"pkt_pcap_drop",mystat.pkt_pcap_drop,"pkt_pcap_dropif",mystat.pkt_pcap_dropif);
 }
@@ -700,6 +709,7 @@ static PyMethodDef sniffer_methods[] =
     { "initialize", (PyCFunction)sniffer_initialize, METH_VARARGS, NULL},
     { "setfilter", (PyCFunction)sniffer_setfilter, METH_VARARGS, NULL},
     { "start", (PyCFunction)sniffer_start, METH_VARARGS, NULL},
+    { "clear", (PyCFunction)sniffer_clear, METH_NOARGS, NULL},
     { "stop", (PyCFunction)sniffer_stop, METH_NOARGS, NULL},
     { "getstat", (PyCFunction)sniffer_getstat, METH_NOARGS, NULL},
     { NULL, NULL, 0, NULL }

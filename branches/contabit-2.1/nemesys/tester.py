@@ -61,7 +61,7 @@ class Tester:
     self._timeout = timeout
     socket.setdefaulttimeout(self._timeout)
     try:
-      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,180,1,1)
+      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,150,1,1)
       self._test_sniffer.start()
     except: 
       logger.error('Errore di inizializzazione dello sniffer')
@@ -208,7 +208,7 @@ class Tester:
         
   def teststartsniffer(self):
     try:
-      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,180,1,1,self._debug)
+      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,150,1,1,self._debug)
       self._test_sniffer.start()
     except: 
       logger.error('Errore di inizializzazione dello sniffer')
@@ -257,9 +257,9 @@ def main():
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
-    for k in range(1,11):
-      t1 = Tester('192.168.208.53', Host(ip='193.104.137.133'), 'nemesys', '4gc0m244')
-      #t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
+    for k in range(1,5):
+      #t1 = Tester('192.168.208.53', Host(ip='193.104.137.133'), 'nemesys', '4gc0m244')
+      t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
     
       print "[-------- TEST 20-20-10 numero:%d --------]" % k
       for i in range(1,21):
@@ -270,11 +270,11 @@ if __name__ == '__main__':
         print("\n")
       for i in range(1,21):
         print 'Test Upload %d.%d:' % (k,i)
-        test = t1.testftpup(1024000, '/upload/r.raw')
+        test = t1.testftpup(2048000, '/upload/r.raw')
         #logger.debug("Statistiche Sniffer:\n%s\n" % t1._test_sniffer.getstat())
         print test
         print("\n")
-      for i in range(1,11):
+      for i in range(1,5):
         print 'Test Ping %d.%d:' % (k,i)
         test = t1.testping()
         print test

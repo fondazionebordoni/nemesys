@@ -49,7 +49,6 @@ class Sniffer(Thread):
   def __init__(self, dev, buff=22 * 1024000, snaplen=8192, timeout=1, promisc=1):
     Thread.__init__(self)
     self._run_sniffer = 1
-    self._sniffer_data = {}
     sniffer.debugmode(0)
     self._init = sniffer.initialize(dev, buff, snaplen, timeout, promisc)
     if (self._init['err_flag'] != 0):
@@ -60,30 +59,29 @@ class Sniffer(Thread):
     global buffer_shared
     global analyzer_flag
     global condition
+    sniffer_data = {'err_flag':0,'err_str':None,'datalink':0,'py_pcap_hdr':None,'py_pcap_data':None}
     sniff_mode = 0
     loop = 0
     while (self._run_sniffer == 1):
       if (analyzer_flag.isSet()):
         sniff_mode = 1
         stat = sniffer.getstat()
-        if (('pkt_pcap_tot' in stat) and ('pkt_pcap_proc' in stat)):
-          loop = stat['pkt_pcap_tot'] - stat['pkt_pcap_proc']
+        loop = stat['pkt_pcap_tot'] - stat['pkt_pcap_proc']
         if (loop <= 0):
-          loop=1         
-        if (len(buffer_shared) < 20000):  
+          loop=1
+        if (len(buffer_shared) < 20000):
           while (loop > 0):
             try:
-              self._sniffer_data = sniffer.start(sniff_mode)          
-              if ('err_flag' in self._sniffer_data):
-                if (self._sniffer_data['err_flag'] < 0):
-                  logger.error(self._sniffer_data['err_str'])
-                  raise Exception (self._sniffer_data['err_str'])      
-              if ('py_pcap_hdr' in self._sniffer_data):
-                if (self._sniffer_data['py_pcap_hdr'] != None):
-                  condition.acquire()      
-                  buffer_shared.append(self._sniffer_data)
-                  condition.notify()
-                  condition.release()
+              sniffer_data = sniffer.start(sniff_mode)
+              sniffer.clear()
+              if (sniffer_data['err_flag'] < 0):
+                logger.error(sniffer_data['err_str'])
+                raise Exception (sniffer_data['err_str'])
+              if (sniffer_data['py_pcap_hdr'] != None):
+                condition.acquire()
+                buffer_shared.append(sniffer_data)
+                condition.notify()
+                condition.release()
             except:
               logger.error("Errore nello Sniffer: %s" % str(sys.exc_info()[0]))
             loop -= 1
@@ -91,11 +89,11 @@ class Sniffer(Thread):
           condition.acquire()
           logger.debug("WAIT: Buffer Pieno!!")
           condition.wait(2.0)
-          condition.release()    
+          condition.release()
       else:
         sniff_mode = 0
         sniffer.start(sniff_mode)
-        
+
   def stop(self):
     self._run_sniffer = 0
     while (self.isAlive()):
@@ -116,7 +114,6 @@ class Contabyte(Thread):
   def __init__(self, dev, nem):
     Thread.__init__(self)
     self._run_contabyte = 1
-    self._contabyte_data = {}
     self._stat = {}
     self._dev = dev
     self._nem = nem
@@ -126,24 +123,43 @@ class Contabyte(Thread):
     global analyzer_flag
     global condition
     contabyte.reset()
+    self._stat.clear()
     buffer_shared.clear()
     analyzer_flag.set()
     while (self._run_contabyte == 1):
-      condition.acquire()
+      contabyte_data = {'err_flag':0,'err_str':None,'datalink':0,'py_pcap_hdr':None,'py_pcap_data':None} 
       if (len(buffer_shared) > 0):
         try:
-          self._contabyte_data = buffer_shared.popleft()
-          if ('py_pcap_hdr' in self._contabyte_data):
-            if (self._contabyte_data['py_pcap_hdr'] != None):            
-              self._stat = contabyte.analyze(self._dev, self._nem, self._contabyte_data['py_pcap_hdr'], self._contabyte_data['py_pcap_data'])
-              condition.notify()
+          condition.acquire()
+          contabyte_data = buffer_shared.popleft()
+          condition.notify()
+          condition.release()
+          if (contabyte_data['py_pcap_hdr'] != None):
+            self._stat = contabyte.analyze(self._dev, self._nem, contabyte_data['py_pcap_hdr'], contabyte_data['py_pcap_data'])
         except:
           logger.error("Errore nel Contabyte: %s" % str(sys.exc_info()[0]))
           raise
       elif (analyzer_flag.isSet()):
+        condition.acquire()
+        #logger.debug("WAIT: Buffer Vuoto!!")
         condition.wait(2.0)
-      condition.release()
-  
+        condition.release()
+
+  def stop(self):
+    global buffer_shared
+    global analyzer_flag
+    stat = sniffer.getstat()
+    stop_pkt = stat['pkt_pcap_tot']
+    #logger.debug(stop_pkt)
+    while (stat['pkt_pcap_proc'] < stop_pkt):
+      time.sleep(0.2)
+      stat = sniffer.getstat()
+    #logger.debug(stat['pkt_pcap_proc'])
+    analyzer_flag.clear()
+    #logger.debug(len(buffer_shared))
+    while (len(buffer_shared) > 0):
+      None
+    self._run_contabyte = 0
 #    if (self._stat != None):
 #      keys = self._stat.keys()
 #      keys.sort()
@@ -151,15 +167,6 @@ class Contabyte(Thread):
 #        print "Key: %s \t Value: %s" % (key, self._stat[key])
 #    else:
 #      print "No Statistics"
-
-  def stop(self):
-    global buffer_shared
-    global analyzer_flag
-    time.sleep(2.0)
-    analyzer_flag.clear()
-    while (len(buffer_shared) != 0):
-      None
-    self._run_contabyte = 0
     while (self.isAlive()):
       None
 
