@@ -31,8 +31,12 @@ import time
 logger = logging.getLogger()
 
 buffer_shared = deque([],maxlen=20000)
-analyzer_flag = Event()
 condition = Condition()
+
+analyzer_memory = Event()
+analyzer_flag = Event()
+switch_flag = Event()
+
 
 
 class Device:
@@ -46,9 +50,10 @@ class Device:
 
 class Sniffer(Thread):
 
-  def __init__(self, dev, buff=22 * 1024000, snaplen=8192, timeout=1, promisc=1):
+  def __init__(self, dev, buff=22*1024000, snaplen=8192, timeout=1, promisc=1):
     Thread.__init__(self)
     self._run_sniffer = 1
+    self._stop_pkt = 0
     sniffer.debugmode(0)
     self._init = sniffer.initialize(dev, buff, snaplen, timeout, promisc)
     if (self._init['err_flag'] != 0):
@@ -57,13 +62,14 @@ class Sniffer(Thread):
 
   def run(self):
     global buffer_shared
-    global analyzer_flag
     global condition
+    global switch_flag
     sniffer_data = {'err_flag':0,'err_str':None,'datalink':0,'py_pcap_hdr':None,'py_pcap_data':None}
     sniff_mode = 0
     loop = 0
     while (self._run_sniffer == 1):
-      if (analyzer_flag.isSet()):
+      self.switch()
+      if (switch_flag.isSet()):
         sniff_mode = 1
         stat = sniffer.getstat()
         loop = stat['pkt_pcap_tot'] - stat['pkt_pcap_proc']
@@ -94,6 +100,28 @@ class Sniffer(Thread):
         sniff_mode = 0
         sniffer.start(sniff_mode)
 
+  def switch(self):
+    global analyzer_memory
+    global analyzer_flag
+    global switch_flag
+    if (analyzer_memory.isSet() or analyzer_flag.isSet()):
+      if(analyzer_flag.isSet()):
+        analyzer_memory.set()
+        switch_flag.set()
+      else:
+        stat = sniffer.getstat()
+        if (self._stop_pkt == 0):
+          self._stop_pkt = stat['pkt_pcap_tot']
+          logger.debug(self._stop_pkt)
+        if (stat['pkt_pcap_proc'] >= self._stop_pkt):
+          analyzer_memory.clear()
+          switch_flag.clear()
+          self._stop_pkt = 0
+          logger.debug(stat['pkt_pcap_proc'])
+    else:
+      analyzer_memory.clear()
+      switch_flag.clear()
+      
   def stop(self):
     self._run_sniffer = 0
     while (self.isAlive()):
@@ -120,8 +148,8 @@ class Contabyte(Thread):
 
   def run(self):
     global buffer_shared
-    global analyzer_flag
     global condition
+    global analyzer_flag
     contabyte.reset()
     self._stat.clear()
     buffer_shared.clear()
@@ -148,14 +176,9 @@ class Contabyte(Thread):
   def stop(self):
     global buffer_shared
     global analyzer_flag
-    stat = sniffer.getstat()
-    stop_pkt = stat['pkt_pcap_tot']
-    #logger.debug(stop_pkt)
-    while (stat['pkt_pcap_proc'] < stop_pkt):
-      time.sleep(0.2)
-      stat = sniffer.getstat()
-    #logger.debug(stat['pkt_pcap_proc'])
     analyzer_flag.clear()
+    while (switch_flag.isSet()):
+      time.sleep(0.2)
     #logger.debug(len(buffer_shared))
     while (len(buffer_shared) > 0):
       None

@@ -40,7 +40,12 @@ ftp = None
 file = None
 filepath = None
 size = 0
-BUFFER_CONTABIT_MB = 44
+
+#Parametri Sniffer:
+BUFF     = 44*1024000  #MegaByte
+SNAPLEN  = 150         #Byte
+TIMEOUT  = 1           #MilliSecondsù
+PROMISC  = 1           #Promisc Mode ON/OFF
 
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
@@ -60,12 +65,24 @@ class Tester:
     self._password = password
     self._timeout = timeout
     socket.setdefaulttimeout(self._timeout)
+    self._sniffer = self.sniffer_start()
+    
+  def sniffer_start(self):
     try:
-      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,150,1,1)
-      self._test_sniffer.start()
+      sniffer = Sniffer(self._if_ip,BUFF,SNAPLEN,TIMEOUT,PROMISC)
+      sniffer.start()
     except: 
       logger.error('Errore di inizializzazione dello sniffer')
       raise Exception('Errore di inizializzazione dello sniffer')
+    return sniffer
+    
+  def sniffer_stop(self):
+    try:
+      sniff_stop = self._sniffer.stop()
+      self._sniffer.join()
+    except:
+      logger.error('Errore nello stop dello sniffer: %s' %checkstopsniffer['err_str'])
+    return sniff_stop
     
   def testftpup(self, bytes, path):
     global ftp, file, size, filepath
@@ -198,21 +215,6 @@ class Tester:
 
     return Proof('ping', start=start, value=elapsed, bytes=0)
 
-  def teststopsniffer(self):
-    #funzione per terminare l'attività dello sniffer avviata con l'inizializzazione del tester o tramite teststartsniffer
-    try:
-      checkstopsniffer = self._test_sniffer.stop()
-      self._test_sniffer.join()
-    except:
-      logger.error('Errore nello stop dello sniffer: %s' %checkstopsniffer['err_str'])
-        
-  def teststartsniffer(self):
-    try:
-      self._test_sniffer = Sniffer(self._if_ip,BUFFER_CONTABIT_MB*1024000,150,1,1,self._debug)
-      self._test_sniffer.start()
-    except: 
-      logger.error('Errore di inizializzazione dello sniffer')
-      raise Exception('Errore di inizializzazione dello sniffer')
 
 def main():
   #Aggancio opzioni da linea di comando
@@ -258,30 +260,32 @@ def main():
 if __name__ == '__main__':
   if len(sys.argv) < 2:
     for k in range(1,5):
-      #t1 = Tester('192.168.208.53', Host(ip='193.104.137.133'), 'nemesys', '4gc0m244')
-      t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
+      t1 = Tester('192.168.208.53', Host(ip='193.104.137.133'), 'nemesys', '4gc0m244')
+      #t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
     
       print "[-------- TEST 20-20-10 numero:%d --------]" % k
       for i in range(1,21):
         print 'Test Download %d.%d:' % (k,i)
         test = t1.testftpdown('/download/40000.rnd')
-        #logger.debug("Statistiche Sniffer:\n%s\n" % t1._test_sniffer.getstat())
+        #logger.debug("Statistiche Sniffer:\n%s\n" % t1._sniffer.getstat())
         print test
         print("\n")
       for i in range(1,21):
         print 'Test Upload %d.%d:' % (k,i)
         test = t1.testftpup(2048000, '/upload/r.raw')
-        #logger.debug("Statistiche Sniffer:\n%s\n" % t1._test_sniffer.getstat())
+        #logger.debug("Statistiche Sniffer:\n%s\n" % t1._sniffer.getstat())
         print test
         print("\n")
-      for i in range(1,5):
+        
+      t1.sniffer_stop()
+              
+      for i in range(1,11):
         print 'Test Ping %d.%d:' % (k,i)
         test = t1.testping()
         print test
         print("\n")
   
-      t1.teststopsniffer()
-
+  
   else:
     main()
 

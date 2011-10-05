@@ -562,7 +562,7 @@ class Executer:
             self._updatestatus(status.Status(status.PLAY, 'Proseguo la misura. Misura in esecuzione'))
             
       # Stop lo sniffer
-      t.teststopsniffer()
+      t.sniffer_stop()
             
       # Testa i ping
       i = 1
