@@ -21,7 +21,9 @@ class Risorsa(object):
             for key in self._params:
                 tag=key
                 cmd = getattr(self,tag)            
-                root.append(self.xmlFormat(tag, cmd()))
+#                root.append(self.xmlFormat(tag, cmd()))
+                xmlres=cmd()
+                root.append(xmlres)
         except AttributeError as e:
             raise RisorsaException("errore get status info")
         return root
