@@ -23,6 +23,7 @@ import socket
 import string
 import struct
 import time
+import copy
 
 logger = logging.getLogger()
 
@@ -420,6 +421,8 @@ UDP_HDR =                       \
 ############
 #STATISTICS#
 ############
+PKT_TABLE = {}
+
 STATISTICS =              \
 {                         \
 'packet_up_nem'     : 0,  \
@@ -449,7 +452,10 @@ STATISTICS =              \
 'payload_tot_nem'   : 0,  \
 'payload_tot_oth'   : 0,  \
 'payload_tot_all'   : 0,  \
+'packet_retx_all'   : 0,  \
+'payload_retx_all'  : 0,  \
 }                         \
+
 
 def _pcap_hdr_unpack(pcapHdrPkt):
   
@@ -657,6 +663,9 @@ def _udp_unpack(udpPkt):
 def reset():
   
   global STATISTICS
+  global PKT_TABLE
+  
+  PKT_TABLE.clear()
   
   STATISTICS =              \
   {                         \
@@ -687,19 +696,16 @@ def reset():
   'payload_tot_nem'   : 0,  \
   'payload_tot_oth'   : 0,  \
   'payload_tot_all'   : 0,  \
+  'packet_retx_all'   : 0,  \
+  'payload_retx_all'  : 0,  \
   }                         \
-  
-#  if (STATISTICS != None):
-#    keys = STATISTICS.keys()
-#    keys.sort()
-#    for key in keys:
-#      STATISTICS[key] = 0
-  
+    
   return None
 
 def analyze(ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
   
   global STATISTICS
+  global PKT_TABLE
   
   statistics = STATISTICS
   
@@ -796,11 +802,37 @@ def analyze(ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
 #        ########  
           
         if ('tcpHdrLen' in l4_hdr):
-          tcpHdrLen = l4_hdr['tcpHdrLen']
+          tcpHdrLen  = l4_hdr['tcpHdrLen']
+          tcpDstPort = l4_hdr['tcpDstPort']
+          tcpSeqNum  = l4_hdr['tcpSeqNum']
           
-#          if(l4_hdr['tcpSyn'] == 1):
-#            logger.debug("|SYN| SEQ:%i\tACK:%i" % (l4_hdr['tcpSeqNum'],l4_hdr['tcpAckNum']))
-          
+          if ((ipPayLen-tcpHdrLen) > 0):
+            if (ipDst not in PKT_TABLE):
+              PKT_TABLE[ipDst] = {}
+              PKT_TABLE[ipDst][tcpDstPort] = {}
+              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = []
+              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum].append(copy.deepcopy(l4_hdr))
+            elif (tcpDstPort not in PKT_TABLE[ipDst]):
+              PKT_TABLE[ipDst][tcpDstPort] = {}
+              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = []
+              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum].append(copy.deepcopy(l4_hdr))
+            elif (tcpSeqNum not in PKT_TABLE[ipDst][tcpDstPort]):
+              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = []
+              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum].append(copy.deepcopy(l4_hdr))
+            else:
+              #print (PKT_TABLE)
+              retx = False
+              for oth_hdr in PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum]:
+                if (l4_hdr == oth_hdr):
+                  retx = True
+              if (retx == True):
+                statistics['packet_retx_all'] += 1
+                statistics['payload_retx_all'] += ipPayLen - tcpHdrLen
+                ipPayLen = 0
+                tcpHdrLen = 0
+              else:
+                PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum].append(copy.deepcopy(l4_hdr))
+              
         elif ('udpTotLen' in l4_hdr):
           udpHdrLen = UDP_HDR_LEN
                 

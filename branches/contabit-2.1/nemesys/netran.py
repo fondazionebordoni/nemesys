@@ -111,13 +111,16 @@ class Sniffer(Thread):
       else:
         stat = sniffer.getstat()
         if (self._stop_pkt == 0):
+          stat = sniffer.getstat()
+          logger.debug(stat)
           self._stop_pkt = stat['pkt_pcap_tot']
-          logger.debug(self._stop_pkt)
+          logger.debug("PKT STOP: %d" % self._stop_pkt)
+          logger.debug("PKT PROC: %d" % stat['pkt_pcap_proc'])
         if (stat['pkt_pcap_proc'] >= self._stop_pkt):
           analyzer_memory.clear()
           switch_flag.clear()
           self._stop_pkt = 0
-          logger.debug(stat['pkt_pcap_proc'])
+          logger.debug("PKT PROC: %d" % stat['pkt_pcap_proc'])
     else:
       analyzer_memory.clear()
       switch_flag.clear()
@@ -195,6 +198,8 @@ class Contabyte(Thread):
 
   def getstat(self):
     contabyte_stat = self._stat
+    logger.debug("PKT RETX: %d" %contabyte_stat['packet_retx_all'])
+    logger.debug("PAY RETX: %d" %contabyte_stat['payload_retx_all'])
     return contabyte_stat
 
   def join(self, timeout=None):
