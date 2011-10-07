@@ -707,6 +707,8 @@ def analyze(ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
   global STATISTICS
   global PKT_TABLE
   
+  retx_mode = False
+  
   statistics = STATISTICS
   
   tcpHdrLen = 0
@@ -803,72 +805,93 @@ def analyze(ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
           
         if ('tcpHdrLen' in l4_hdr):
           tcpHdrLen  = l4_hdr['tcpHdrLen']
-          tcpDstPort = l4_hdr['tcpDstPort']
-          tcpSeqNum  = l4_hdr['tcpSeqNum']
+          PayloadLen = ipPayLen - tcpHdrLen
           
-          if ((ipPayLen-tcpHdrLen) > 0):
+          if ((retx_mode == True) and (PayloadLen > 0)):
+            
+            retx = False
+            
+            tcpDstPort = l4_hdr['tcpDstPort']
+            tcpSeqNum  = l4_hdr['tcpSeqNum']
+            tcpAckNum  = l4_hdr['tcpAckNum']
+            
             if (ipDst not in PKT_TABLE):
               PKT_TABLE[ipDst] = {}
               PKT_TABLE[ipDst][tcpDstPort] = {}
-              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = []
-              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum].append(copy.deepcopy(l4_hdr))
+              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
             elif (tcpDstPort not in PKT_TABLE[ipDst]):
               PKT_TABLE[ipDst][tcpDstPort] = {}
-              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = []
-              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum].append(copy.deepcopy(l4_hdr))
+              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
             elif (tcpSeqNum not in PKT_TABLE[ipDst][tcpDstPort]):
-              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = []
-              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum].append(copy.deepcopy(l4_hdr))
-            else:
-              #print (PKT_TABLE)
-              retx = False
-              for oth_hdr in PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum]:
-                if (l4_hdr == oth_hdr):
-                  retx = True
-              if (retx == True):
-                statistics['packet_retx_all'] += 1
-                statistics['payload_retx_all'] += ipPayLen - tcpHdrLen
-                ipPayLen = 0
+              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
+            elif (PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] == tcpAckNum):
+              retx = True
+            
+            if ((ipSrc != ipDev) and (retx == True)):
+              statistics['packet_retx_all']  += 1
+              statistics['payload_retx_all'] += PayloadLen
+              PayloadLen = 0
+                
+            ## TODO: Da perfezionare ##
+            if (ipSrc == ipDev):
+              keys = PKT_TABLE[ipDst][tcpDstPort].keys()
+              keys.sort()
+              tcpSeqNumOne = keys[0]
+              keys.reverse()
+              tcpSeqNumBig = keys[0]
+              tcpSeqNumDif = tcpSeqNumBig - tcpSeqNum
+                
+              if (tcpSeqNumDif > 0 and retx == True):
+                PKT_TABLE[ipDst][tcpDstPort].clear()
+                PKT_TABLE[ipDst][tcpDstPort][tcpSeqNumOne] = tcpAckNum
+                PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
+                statistics['packet_retx_all']  += 1
+                statistics['payload_retx_all'] += tcpSeqNumDif                
+                ipPayLen = 0 - tcpSeqNumDif
                 tcpHdrLen = 0
-              else:
-                PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum].append(copy.deepcopy(l4_hdr))
+              
+              #logger.debug("%s\t%d\t%d\t%d\t%d\t%d" % (ipDst,tcpDstPort,tcpAckNum,tcpSeqNum,(ipPayLen-tcpHdrLen),(tcpSeqNum-tcpSeqNumOne)))
+              
+            ####TODO####  
               
         elif ('udpTotLen' in l4_hdr):
           udpHdrLen = UDP_HDR_LEN
-                
-        PayloadLen = ipPayLen - tcpHdrLen - udpHdrLen
-        
+          PayloadLen = ipPayLen - udpHdrLen
+
+#        if ((ipSrc == ipDev) and (ipDst == ipNem)):
+#          up_nem = statistics['payload_up_nem']
+#          logger.debug("%d + %d = %d" % (up_nem,PayloadLen,(up_nem+PayloadLen)))
   
   if (ipSrc != ipDev):
     
     statistics['packet_down_all']   += 1
     statistics['packet_tot_all']    += 1
-
+    
     statistics['byte_down_all']     += (pcapHdr['pktLen'] + ETH_CRC_LEN)
     statistics['byte_tot_all']      += (pcapHdr['pktLen'] + ETH_CRC_LEN)
-
+    
     statistics['payload_down_all']  += PayloadLen
     statistics['payload_tot_all']   += PayloadLen
-
+    
     if ((ipSrc == ipNem) and (ipDst == ipDev)):
         
       statistics['packet_down_nem']   += 1
       statistics['packet_tot_nem']    += 1
-  
+      
       statistics['byte_down_nem']     += (pcapHdr['pktLen'] + ETH_CRC_LEN)
       statistics['byte_tot_nem']      += (pcapHdr['pktLen'] + ETH_CRC_LEN)
-  
+      
       statistics['payload_down_nem']  += PayloadLen
       statistics['payload_tot_nem']   += PayloadLen
-
+      
     else:
       
       statistics['packet_down_oth']   += 1
       statistics['packet_tot_oth']    += 1
-  
+      
       statistics['byte_down_oth']     += (pcapHdr['pktLen'] + ETH_CRC_LEN)
       statistics['byte_tot_oth']      += (pcapHdr['pktLen'] + ETH_CRC_LEN)
-  
+      
       statistics['payload_down_oth']  += PayloadLen
       statistics['payload_tot_oth']   += PayloadLen
 
@@ -892,21 +915,21 @@ def analyze(ipDev, ipNem, pcapHdrPkt, pcapDataPkt):
         
       statistics['packet_up_nem']    += 1
       statistics['packet_tot_nem']   += 1
-  
+      
       statistics['byte_up_nem']      += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
       statistics['byte_tot_nem']     += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-  
+      
       statistics['payload_up_nem']   += PayloadLen
       statistics['payload_tot_nem']  += PayloadLen
-
+      
     else:
       
       statistics['packet_up_oth']    += 1
       statistics['packet_tot_oth']   += 1
-  
+      
       statistics['byte_up_oth']      += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
       statistics['byte_tot_oth']     += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-  
+      
       statistics['payload_up_oth']   += PayloadLen
       statistics['payload_tot_oth']  += PayloadLen
   

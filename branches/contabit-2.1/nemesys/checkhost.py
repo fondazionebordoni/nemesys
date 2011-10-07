@@ -114,7 +114,7 @@ def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4, arping=0):
       if(nHosts > threshold):
         break
         
-  return nHosts		
+  return nHosts
 
 
 if __name__ == '__main__':

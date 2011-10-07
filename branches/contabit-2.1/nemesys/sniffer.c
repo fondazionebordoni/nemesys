@@ -680,7 +680,7 @@ static PyObject *sniffer_stop(PyObject *self)
 
 static PyObject *sniffer_getstat(PyObject *self)
 {
-    char *request_time;
+    char request_time[44];
     struct tm *rt;
     time_t req_time;
 

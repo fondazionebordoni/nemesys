@@ -39,8 +39,6 @@ ETH_P_IP = 0x0800
 ETH_P_ARP = 0x0806
 ARP_REPLY = 0x0002
 
-tag_mac = 'rete.NetworkDevice/MACAddress'
-tag_activeNic= 'rete.NetworkDevice/isActive'
 
 def getMac():
   '''
@@ -58,8 +56,8 @@ def getMac():
   
   data=ET.ElementTree()
   try:
-      profiler=LocalProfilerFactory.getProfiler()
-      data=profiler.profile([res])        
+    profiler=LocalProfilerFactory.getProfiler()
+    data=profiler.profile([res])        
   except Exception as e:
     logger.error('Non sono riuscito a trovare lo stato del computer con profiler: %s.' % e)
     raise sysmonitorexception.FAILPROF
@@ -69,6 +67,7 @@ def getMac():
   except LocalProfilerException as e:
     logger.error ("Problema nel tentativo di istanziare il profiler: %s" % e)
     raise sysmonitorexception.FAILPROF
+  
   tree=ET.ElementTree(data)
   whattolook= res+ '/' + tagdev
   listdev=data.findall(whattolook)
@@ -79,7 +78,9 @@ def getMac():
     if val.text == 'True':
       macelem=devxml.find(tagmac)
       return macelem.text
+    
   return None 
+
   
 def display_mac(value):
     return string.join(["%02X" % ord(b) for b in value], ':')
