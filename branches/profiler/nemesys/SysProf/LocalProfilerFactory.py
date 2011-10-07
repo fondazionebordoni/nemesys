@@ -35,11 +35,18 @@ class LocalProfiler(object):
         try:
             for r in self._resources:
                 singleresxml=ET.Element(str(r))
+                tree=ET.ElementTree(singleresxml)
                 ris = RisorsaFactory.getRisorsa(package_home(".",path,r), r)
                 singleresxml=ris.getStatusInfo(singleresxml)
-                result.append(singleresxml)
+                testrepetition=singleresxml.find(str(r))
+                if testrepetition == None:
+                    result.append(singleresxml)
+                else:
+                    tree._setroot(testrepetition)
+                    result.append(tree.getroot())                  
                 del ris
                 del singleresxml
+                del tree
         except RisorsaException as e:
             raise RisorsaException(e) 
         return result

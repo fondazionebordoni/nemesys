@@ -3,7 +3,7 @@ Created on 20/ott/2010
 
 @author: Albenzio Cirillo
 
-Le parti commentate sono relative precedenti all'integrazione nell'unico metodo in LocalProfiler
+Profiler per Piattaforme LINUX
 
 N.B.: funziona con psutil 0.3.0 o superiore
 
@@ -14,7 +14,7 @@ from ..NemesysException import RisorsaException
 import xml.etree.ElementTree as ET
 import psutil, os, time
 import dmidecode
-import socket
+import socket, fcntl, struct
 
 class CPU(Risorsa):
       
@@ -76,6 +76,7 @@ class rete(Risorsa):
     
     def __init__(self):
         Risorsa.__init__(self)
+        self.ipaddr = ""
         self._params=['profileDevice']
         
     def getipaddr(self):
@@ -91,26 +92,42 @@ class rete(Risorsa):
             pass
         return self.ipaddr
     
+    def get_if_ipaddress(self, ifname):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        return socket.inet_ntoa(fcntl.ioctl(s.fileno(),
+            0x8915,  # SIOCGIFADDR
+            struct.pack('256s', ifname[:15])
+            )[20:24])
+    
     def profileDevice(self):
         features = {'Name':' ','AdapterType':' ','MACAddress':' ','Availability':' '}
         devpath='/sys/class/net/'
         descriptors = ['address','type','operstate']
         val ={'address': ' ', 'type': ' ', 'operstate': ' '}
+        ipaddr = self.getipaddr()       
         devlist=os.listdir(devpath)
+        maindevxml=ET.Element('rete')
         if len(devlist) > 0:
             for dev in devlist:
-                devxml=ET.Element('NetworkDevice')
+                devIsAct='False' # by def
+                ipdev=self.get_if_ipaddress(dev)
+                if (ipdev == self.ipaddr):
+                    devIsAct='True'
                 for des in descriptors:
                     fname= devpath + str(dev) + '/' + str(des)
                     f=open(fname)
                     val[des]=f.readline()
-                devxml.append(self.xmlFormat('Name',dev))
-                devxml.append(self.xmlFormat('Type',val['type']))
-                devxml.append(self.xmlFormat('MACAddress',val['address']))
-                devxml.append(self.xmlFormat('isActive','True'))
-                devxml.append(self.xmlFormat('Status',val['operstate']))
-        
-        return devxml
+                if val['operstate'].rstrip() == "up":
+                    devxml=ET.Element('NetworkDevice')
+                    devxml.append(self.xmlFormat('Status','Enabled'))
+                    devxml.append(self.xmlFormat('Name',dev))
+                    devxml.append(self.xmlFormat('Type',val['type']))
+                    devxml.append(self.xmlFormat('MACAddress',val['address']))
+                    devxml.append(self.xmlFormat('isActive',devIsAct))
+                    maindevxml.append(devxml)
+                    del devxml
+
+        return maindevxml
 
         
     def profileDevice_backup(self):

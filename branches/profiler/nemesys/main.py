@@ -26,11 +26,12 @@ def main():
     result=ET.ElementTree()
     try:
         profiler=LocalProfilerFactory.getProfiler()
-        result=profiler.profile()        
+        result=profiler.profile() 
+
         print mytostring(result)
-        alldevtype=result.findall('rete/NetworkDevice/Type')
-        for elem in alldevtype:
-          print elem.text
+#        alldevtype=result.findall('rete/NetworkDevice/Type')
+#        for elem in alldevtype:
+#          print elem.text
         print "Finito"
     except NotImplementedError as e:
         print e
