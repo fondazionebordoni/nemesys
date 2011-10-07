@@ -39,8 +39,23 @@ ETH_P_IP = 0x0800
 ETH_P_ARP = 0x0806
 ARP_REPLY = 0x0002
 
+tag_mac = 'rete.NetworkDevice/MACAddress'
+tag_activeNic= 'rete.NetworkDevice/isActive'
 
-def getResProperty(tag,res):
+def getMac():
+  '''
+  restituisce indirizzo MAC del computer
+  '''
+  tag=tag_activeNic.split('.');
+  res=tag[0]
+  nestedtag=tag[1].split('/')
+  tagdev=nestedtag[0]
+  tagprop=nestedtag[1]
+  
+  tag=tag_mac.split('.');
+  nestedtag=tag[1].split('/')
+  tagmac=nestedtag[1]
+  
   data=ET.ElementTree()
   try:
       profiler=LocalProfilerFactory.getProfiler()
@@ -54,24 +69,17 @@ def getResProperty(tag,res):
   except LocalProfilerException as e:
     logger.error ("Problema nel tentativo di istanziare il profiler: %s" % e)
     raise sysmonitorexception.FAILPROF
-  wtf= res + '/' + tag
-  return data.findall(wtf)
-
-  
-def getMac():
-  '''
-  restituisce indirizzo MAC del computer
-  '''
-  values = getResProperty(tag_activeNic.split('.')[1],tag_activeNic.split('.')[0])
-  values2 = getResProperty(tag_mac.split('.')[1],tag_mac.split('.')[0])
-  count = 0
-  for devs in values:
-    if devs.text.lower() == 'true':
-      return values2[count].text
-    else:
-      count=count+1
-  return None
-
+  tree=ET.ElementTree(data)
+  whattolook= res+ '/' + tagdev
+  listdev=data.findall(whattolook)
+  for dev in listdev:
+    tree._setroot(dev)
+    devxml=tree.getroot()
+    val=devxml.find(tagprop)
+    if val.text == 'True':
+      macelem=devxml.find(tagmac)
+      return macelem.text
+  return None 
   
 def display_mac(value):
     return string.join(["%02X" % ord(b) for b in value], ':')

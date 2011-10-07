@@ -52,7 +52,7 @@ tag_task = 'taskList' # deprecated
 # Soglie di sistema
 # ------------------------------------------------------------------------------
 # Massima quantità di host in rete
-th_host = 2
+th_host = 1
 # Minima memoria disponibile
 th_avMem = 134217728
 # Massimo carico percentuale sulla memoria
@@ -322,16 +322,42 @@ def getMac():
   '''
   restituisce indirizzo MAC del computer
   '''
-  values = getResProperty(tag_activeNic.split('.')[1],tag_activeNic.split('.')[0])
-  values2 = getResProperty(tag_mac.split('.')[1],tag_mac.split('.')[0])
-  count = 0
-  for devs in values:
-    if devs.text.lower() == 'true':
-      return values2[count].text
-    else:
-      count=count+1
-  return None
-
+  tag=tag_activeNic.split('.');
+  res=tag[0]
+  nestedtag=tag[1].split('/')
+  tagdev=nestedtag[0]
+  tagprop=nestedtag[1]
+  
+  tag=tag_mac.split('.');
+  nestedtag=tag[1].split('/')
+  tagmac=nestedtag[1]
+  
+  data=ET.ElementTree()
+  try:
+      profiler=LocalProfilerFactory.getProfiler()
+      data=profiler.profile([res])        
+  except Exception as e:
+    logger.error('Non sono riuscito a trovare lo stato del computer con profiler: %s.' % e)
+    raise sysmonitorexception.FAILPROF
+  except RisorsaException as e:
+    logger.error ("Problema nel tentativo di istanziare la risorsa: %s" % e)
+    raise sysmonitorexception.FAILPROF
+  except LocalProfilerException as e:
+    logger.error ("Problema nel tentativo di istanziare il profiler: %s" % e)
+    raise sysmonitorexception.FAILPROF
+  tree=ET.ElementTree(data)
+  whattolook= res+ '/' + tagdev
+  listdev=data.findall(whattolook)
+  for dev in listdev:
+    tree._setroot(dev)
+    devxml=tree.getroot()
+    val=devxml.find(tagprop)
+    if val.text == 'True':
+      macelem=devxml.find(tagmac)
+      return macelem.text
+  return None 
+  
+  
 def checkipsyntax(ip):
 
   try:
@@ -477,7 +503,7 @@ if __name__ == '__main__':
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-  
+
   '''   
    
   try:
