@@ -179,10 +179,16 @@ def checkmem():
   return True
 
 def checkwireless():
-  values = getResProperty(tag_wireless.split('.')[1], tag_wireless.split('.')[0])
-  for devs in values:
-    if devs.text == 'Wireless':
-      raise sysmonitorexception.WARNWLAN
+  profiler = LocalProfilerFactory.getProfiler()
+  data = profiler.profile({'rete'})
+  for device in data.findall('rete/NetworkDevice'):
+    print ET.tostring(device)
+    type = device.find('Type').text
+    if (type == 'Wireless'):
+      active = device.find('isActive').text
+      if (active == 'True'):
+        raise sysmonitorexception.WARNWLAN
+
   return True
 
 def checkhosts(up, down, ispid, arping=1):
@@ -243,8 +249,8 @@ def mediumcheck():
 
 def checkall(up, down, ispid, arping=1):
 
-  checkhosts(up, down, ispid, arping)
   mediumcheck()
+  checkhosts(up, down, ispid, arping)
   # TODO Reinserire questo check quanto corretto il problema di determinazione del dato
   #checkdisk()
   return True
@@ -409,8 +415,6 @@ def _getvalues(xmlresult, tag, tagrisorsa):
   '''
   values = {}
   try:
-#    for subelement in ET.XML(string):
-#    for subelement in xmlresult:
     for subelement in xmlresult.find(tagrisorsa):
       values.update({subelement.tag:subelement.text})
   except Exception as e:
@@ -422,7 +426,7 @@ def _getvalues(xmlresult, tag, tagrisorsa):
 if __name__ == '__main__':
   from errorcoder import Errorcoder
   errors = Errorcoder(paths.CONF_ERRORS)
-
+  '''
   try:
     print '\ngetMac'
     print 'Test sysmonitor getMac: %s' % getMac()
@@ -435,7 +439,7 @@ if __name__ == '__main__':
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-  '''
+  
   try:
     print '\ncheckhosts (arping)'
     print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', 1)  #ARPING
@@ -449,7 +453,7 @@ if __name__ == '__main__':
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-  '''
+  
   try:
     print '\ncheckcpu'      
     print 'Test sysmonitor checkcpu: %s' % checkcpu()
@@ -465,14 +469,14 @@ if __name__ == '__main__':
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-  
+  '''
   try:
     print '\ncheckwireless'   
     print 'Test sysmonitor checkwireless: %s' % checkwireless()
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-  
+  '''
   try:
     print '\ngetIP'      
     print 'Test sysmonitor getIP: %s' % getIp()
@@ -493,3 +497,4 @@ if __name__ == '__main__':
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
+  '''
