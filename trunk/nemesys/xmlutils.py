@@ -24,8 +24,10 @@ from string import join
 from task import Task
 from xml.dom import Node
 from xml.dom.minidom import parseString
+from xml.etree import ElementTree as ET
 from xml.parsers.expat import ExpatError
 from timeNtp import timestampNtp
+import sysmonitorexception
 import re
 
 tag_task = 'task'
@@ -306,6 +308,21 @@ def getfinishedtime(filename):
     time=datetime.fromtimestamp(timestampNtp())    
   return time
 
+def getXMLvalues(string, tag):
+  '''
+  Estrae informazioni dal SystemProfiler 
+  '''
+  values = {}
+  try:
+    for subelement in ET.XML(string):
+      values.update({subelement.tag:subelement.text})
+      logger.debug('Recupero valori dal file XML. %s -> %s' % (subelement.tag, subelement.text))
+  except Exception as e:
+    logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
+    #raise Exception('Errore durante il recupero dello stato del computer.')
+    raise sysmonitorexception.FAILSTATUS 
+
+  return values
 
 if __name__ == '__main__':
   
