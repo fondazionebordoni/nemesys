@@ -66,7 +66,6 @@ bad_conn = [80, 8080, 25, 110, 465, 993, 995, 143, 6881, 4662, 4672, 443]
 # Processi che richiedono troppe risorse 
 bad_proc = ['amule', 'emule', 'skype', 'dropbox', 'torrent', 'azureus', 'transmission']
 
-
 logger = logging.getLogger()
 
 
@@ -159,55 +158,78 @@ def checkconnections():
   '''
   Effettua il controllo sulle connessioni attive
   '''
-
-  #TODO Se la connessione è verso un nostro server non dobbiamo farne il controllo
-  d = {tag_conn:''}
-  values = getstatus(d)
-  connActive = values[tag_conn]
+  myip = getIp()
+  connActive = getstringtag(tag_conn, '90.147.120.2:443')
 
   if connActive == None or len(connActive) <= 0:
+    # Non ho connessioni attive
+    logger.debug('Nessuna connessione di rete attiva.')
     return True
 
   c = []
-  for j in connActive.split(';'):
-    try:
-      c.append(int(j.split(':')[1]))
-    except Exception as e:
-      logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
-      if STRICT_CHECK:
-        raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
+  try:
+    for j in connActive.split(';'):
+      # Ignora le connessioni ipv6
+      # TODO Gestire le connessioni ipv6
+      if bool(re.search('^\[', j)):
+        logger.warning('Connessione IPv6 attiva: %s' % j)
+        continue
+      ip = j.split(':')[0]
+      if not checkipsyntax(ip):
+        #raise Exception('Lista delle connessioni attive non conforme.')
+        raise sysmonitorexception.BADCONN
+      if ip == myip:
+        logger.warning('Ricevuto ip %s nella lista delle connessioni attive' % ip)
+        continue
+      port = int(j.split(':')[1])
+      # TODO Occorre chiamare un resolver per la risoluzione dei nostri ip
+      if not bool(re.search('^90\.147\.120\.|^193\.104\.137\.', ip)):
+        c.append(port)
+
+  except Exception as e:
+    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
+    if STRICT_CHECK:
+      #raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
+      raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
 
   for i in bad_conn:
     if i in c:
-      raise Exception('Porta %d aperta ed utilizzata.' % i)
-
+      logger.error('Porta %d aperta ed utilizzata.' % i)
+      #raise Exception('Accesso ad Internet da programmi non legati alla misura. Se possibile, chiuderli.')
+      raise sysmonitorexception.WARNCONN
+  
+  for i in c:
+    if i >= 1024:
+      logger.error('Porta %d aperta ed utilizzata.' % i)
+      #raise Exception('Accesso ad Internet da programmi non legati alla misura. Se possibile, chiuderli.')
+      raise sysmonitorexception.WARNCONN
   return True
 
 def checktasks():
   '''
   Ettettua il controllo sui processi
   '''
-  d = {tag_task:''}
-  values = getstatus(d)
-  taskActive = values[tag_task]
+  taskActive = getstringtag(tag_task, 'executer')
 
   if taskActive == None or len(taskActive) <= 0:
-    return True
+    #raise Exception('Errore nella determinazione dei processi attivi.')
+    raise sysmonitorexception.BADPROC
+  # WARNING Non ho modo di sapere se il valore che recupero è non plausibile (not available)
 
   t = []
-  for j in taskActive.split(';'):
-    try:
+  try:
+    for j in taskActive.split(';'):
       t.append(str(j))
-    except Exception as e:
-      logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_proc, e))
-      if STRICT_CHECK:
-        raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_proc)
+  except Exception as e:
+    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_task, e))
+    #raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_task)
+    raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_task)
 
   for i in bad_proc:
     for k in t:
       if (bool(re.search(i, k, re.IGNORECASE))):
-        raise Exception('Sono attivi processi non desiderati: chiudere il programma "%s" per proseguire le misure.' % i)
-
+        #raise Exception('Sono attivi processi non desiderati.', 'Chiudere il programma "%s" per proseguire le misure.' % i)
+        raise sysmonitorexception.WARNPROC
   return True
 
 def checkcpu():
@@ -238,8 +260,8 @@ def checkmem():
   if memLoad > th_memLoad:
     #raise Exception('Memoria occupata.')
     raise sysmonitorexception.OVERMEM
+    
   return True
-
 
 def checkwireless():
   values = getResProperty(tag_wireless.split('.')[1],tag_wireless.split('.')[0])
@@ -276,15 +298,16 @@ def checkhosts(up, down, ispid, arping=1):
     #raise Exception ('Impossibile recuperare il valore della maschera dell\'IP: %s' % ip)
     raise SysmonitorException(sysmonitorexception.BADMASK, 'Impossibile recuperare il valore della maschera dell\'IP: %s' % ip)
     
-
 def checkdisk():
 
   value = getfloattag(tag_disk.split('.')[1], th_wdisk - 1,tag_disk.split('.')[0])
   if value < 0:
     #raise Exception('Impossibile detereminare il carico in lettura del disco.')
     raise sysmonitorexception.UNKDISKLOAD
+
   if value > th_wdisk:
     raise sysmonitorexception.DISKOVERLOAD
+
   return True
 
 def fastcheck():
@@ -293,12 +316,11 @@ def fastcheck():
   Ritorna True se le condizioni per effettuare le misure sono corrette,
   altrimenti solleva un'eccezione
   '''
-  
+
   checkcpu()
   checkmem()
-  checkdisk()
-#  checktasks()
-#  checkconnections()
+  #checktasks()
+  #checkconnections()
 
   return True
 
@@ -464,7 +486,6 @@ def getMask(ip):
       pass
   return ris
 
-
 def getSys():
   '''
   Restituisce array con informazioni sul sistema utilizzato per il test
@@ -476,6 +497,7 @@ def getSys():
   for keys in d:
     r.append(getstringtag(keys.split('.',1)[1], 1,keys.split('.',1)[0]))
   r.append(getMac())
+
   return r
 
 def getvalues(xmlresult, tag,tagrisorsa):
@@ -574,7 +596,7 @@ if __name__ == '__main__':
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
- 
+
   try:
     print 'Test sysmonitor getSys: %s' % getSys()
   except Exception as e:

@@ -1,4 +1,4 @@
-# fakefile.py
+# sysmonitor.py
 # -*- coding: utf8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
@@ -16,18 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import random
+from os import path as Path
+import paths
 
-class Fakefile:
-
-  def __init__(self, bytes):
-    self._bytes = int(bytes)
+def systemProfiler(file, d):
+  data = ''
+   
+  if Path.isfile(paths.RESULTS):
+     data = open(paths.RESULTS).read()
   
-  def read(self, bufsize):
-  
-    if self._bytes <= 0:
-      return None    
-  
-    data = '%s' % random.getrandbits(min(bufsize, self._bytes))
-    self._bytes -= len(data)
-    return data
+  return data
