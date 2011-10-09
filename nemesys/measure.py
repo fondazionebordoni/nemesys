@@ -24,7 +24,6 @@ from profile import Profile
 from server import Server
 from proof import Proof
 from xml.dom.minidom import parseString
-from timeNtp import timestampNtp
 import platform
 
 logger = logging.getLogger()
@@ -37,10 +36,11 @@ def getos():
   except Exception as e:
     logger.error('Impossibile determinare il tipo di sistema operativo: %s' % e)
     
-  return os
+  return os  
 
 class Measure:
-  def __init__(self, id, server, client, version=None, start=datetime.fromtimestamp(timestampNtp()).isoformat()):  
+
+  def __init__(self, id, server, client, version=None):
     '''
     Costruisce un oggetto Measure utilizzando i parametri ricevuti nella
     chiamata.
@@ -52,7 +52,6 @@ class Measure:
     self._server = server
     self._client = client
     self._version = version
-    self._start = start
     self._xml = self.getxml()
 
   def getxml(self):
@@ -60,7 +59,6 @@ class Measure:
     xml = parseString(start)
     measure = xml.getElementsByTagName('measure')[0]
     measure.setAttribute('id', str(self._client.id) + str(self._id))
-    measure.setAttribute('start', str(self._start))
 
     # TODO Aggiungere l'invio del mac address
 
@@ -137,7 +135,7 @@ class Measure:
     time.appendChild(start)
 
     end = xml.createElement('end')
-    end.appendChild(xml.createTextNode(str(datetime.fromtimestamp(timestampNtp()).isoformat())))
+    end.appendChild(xml.createTextNode(str(datetime.now().isoformat())))
     time.appendChild(end)
 
     t.appendChild(time)

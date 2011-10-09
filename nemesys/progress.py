@@ -23,32 +23,18 @@ import paths
 from xml.dom.minidom import parse
 from xml.dom.minidom import parseString
 from logger import logging
-from timeNtp import timestampNtp
-from urlparse import urlparse
-import httputils
 
 logger = logging.getLogger()
 
 MAX_DAYS = 3
 
-# TODO Il file di progresso deve poter avere start nullo
-
 class Progress:
-  def __init__(self, clientid, progressurl=None):
-    if not path.exists(paths.MEASURE_STATUS):
-      logger.debug('Non trovato nessun file di progresso delle misure in %s' % paths.MEASURE_STATUS)
-      if progressurl:
-        self._progressurl = progressurl
-        self._clientid = clientid
-        try:
-          self._xml = self._downloadprogress()
-        except Exception:
-          self._xml = self._newxml()
-      else:
-        self._xml = self._newxml()
+
+  def __init__(self, create=False):
+    if not path.exists(paths.MEASURE_STATUS) and create:
+      self._xml = self._newxml()
       self._saveonfile()
     else:
-      logger.debug('Trovato file con il progresso delle misure')
       self._xml = parse(paths.MEASURE_STATUS)
 
     logger.debug('XML con lo stato delle misure:\n%s' % self._xml.toxml())
@@ -96,7 +82,7 @@ class Progress:
     Restituisce true se non sono trascorsi ancora MAX_DAYS dallo start delle misure
     '''
     start = self.start()
-    delta = datetime.fromtimestamp(timestampNtp()) - start
+    delta = datetime.now() - start
     if (delta.days > MAX_DAYS):
       return False
 
@@ -117,7 +103,7 @@ class Progress:
     measure = xml.getElementsByTagName('measure')[0]
 
     start = xml.createElement('start')
-    start.appendChild(xml.createTextNode(datetime.fromtimestamp(timestampNtp()).isoformat()))
+    start.appendChild(xml.createTextNode(datetime.now().isoformat()))
     measure.appendChild(start)
 
     content = xml.createElement('content')
@@ -140,25 +126,10 @@ class Progress:
     content.appendChild(slot)
     self._saveonfile()
 
-  def _downloadprogress(self):
-    url = urlparse(self._progressurl)
-    connection = httputils.getverifiedconnection(url=url, timeout=5)
-
-    try:
-      connection.request('GET', '%s?clientid=%s' % (url.path, self._clientid))
-      data = connection.getresponse().read()
-      logger.debug('Dati di progress ricevuti: %s' % data)
-      xml = parseString(data)
-    except Exception as e:
-      logger.error('Impossibile scaricare il progress xml. Errore: %s.' % e)
-      raise Exception('Impossibile scaricare il progress xml. Errore: %s.' % e)
-    
-    return xml
-
   def __str__(self):
     return self._xml.toxml('UTF-8')
 
 if __name__ == '__main__':
-  t = Progress('cli00000001', 'https://finaluser.agcom244.fub.it/ProgressXML')
+  t = Progress('cli00000001')
   print t
 

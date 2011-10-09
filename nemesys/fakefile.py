@@ -21,7 +21,7 @@ import random
 class Fakefile:
 
   def __init__(self, bytes):
-    self._bytes = int(bytes)
+    self._bytes = bytes
   
   def read(self, bufsize):
   

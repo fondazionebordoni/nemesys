@@ -55,11 +55,11 @@ class Errorcoder:
     secondo la codifica relativa all'dato operatore.
     '''
 
-    error = str(exception.args[0])
+    error = str(exception.args[00000])
 
     try:
       errorcode = self._config.getint('Errors', error)
-    except (TypeError, ConfigParser.NoOptionError, Exception):
+    except (TypeError, ConfigParser.NoOptionError):
       logger.warning("Codice di errore associato all'eccezione '%s' non trovato nel file %s" % (error, self._filename))
       b = self.puterrorcode(error, 99999)
 

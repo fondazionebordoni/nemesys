@@ -16,21 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-# TODO Estendere Proof per la memorizzazione dei dati di contabit
-
 from datetime import datetime
 
 class Proof:
 
-  def __init__(self, type, start, value, bytes, counter_total_pay=0, counter_ftp_pay=0, errorcode=0):
+  def __init__(self, type, start, value, bytes, errorcode=0):
     self._type = type
     self._start = start
     self._value = value
     self._bytes = bytes
-    self._counter_total_pay = counter_total_pay
-    self._counter_ftp_pay = counter_ftp_pay
     self._errorcode = errorcode
-
+   
   @property
   def type(self):
     return self._type
@@ -45,34 +41,20 @@ class Proof:
     Values must be saved in milliseconds.
     '''
     return self._value
-
+   
   @property
   def bytes(self):
     return self._bytes
-
-  @property
-  def counter_total_pay(self):
-      return self._counter_total_pay
-
-  @property
-  def counter_ftp_pay(self):
-      return self._counter_ftp_pay
-
+   
   @property
   def errorcode(self):
     return self._errorcode
 
-  def seterrorcode(self, errorcode):
-    if errorcode > 99999 or errorcode < 0:
-      # Faccio rimanere nelle ultime 4 cifre l'errore del test
-      errorcode = (errorcode - 90000) % 99999
-    self._errorcode = errorcode
-
   def __str__(self):
-    return 'type: %s; start: %s; value: %1.3f; bytes: %d; counter_total_pay: %d; counter_ftp_pay: %d; errorcode: %d' % (self.type, self.start.isoformat(), self.value * 1000, self.bytes, self.counter_total_pay, self.counter_ftp_pay, self.errorcode)
+    return 'type: %s; start: %s; value: %1.3f; bytes: %d; errorcode: %d' % (self.type, self.start.isoformat(), self.value*1000, self.bytes, self.errorcode)
 
 if __name__ == '__main__':
-  t = Proof('download', datetime.now(), 20, 100000, 140000, 100000, 101)
+  t = Proof('download', datetime.now(), 20, 100000, 101)
   print t
   t = Proof('ping', datetime.now(), 10000, 999)
   print t

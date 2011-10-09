@@ -17,23 +17,29 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from logger import logging
+import paths
 from xml.dom.minidom import parseString
 
 logger = logging.getLogger()
 
 class Status:
 
-  def __init__(self, color, message):
-    if isinstance (color, Status):
-      self._color = color.color
+  def __init__(self, icon, message):
+    if isinstance (icon, Status):
+      self._trayicon = icon.baseicon
     else:
-      self._color = color.decode('utf-8')
+      self._trayicon = icon.decode('utf-8')
 
     self._message = message.decode('utf-8')
 
   @property
-  def color(self):
-    return self._color.encode('ascii', 'xmlcharrefreplace')
+  def baseicon(self):
+    return self._trayicon.encode('ascii', 'xmlcharrefreplace')
+
+  @property
+  def icon(self):
+    path = paths.ICONS + paths.DIR_SEP + self.baseicon
+    return path
 
   @property
   def message(self):
@@ -49,9 +55,9 @@ class Status:
     xml = parseString('<status />')
     status = xml.getElementsByTagName('status')[0]
 
-    color = xml.createElement('color')
-    color.appendChild(xml.createTextNode(self.color))
-    status.appendChild(color)
+    icon = xml.createElement('icon')
+    icon.appendChild(xml.createTextNode(self.baseicon))
+    status.appendChild(icon)
 
     message = xml.createElement('message')
     message.appendChild(xml.createTextNode(self.message))
@@ -59,13 +65,11 @@ class Status:
 
     return xml.toxml()
 
-ERROR = Status('red', 'Impossibile contattare il sistema che effettua le misure.')
-PAUSE = Status('dark grey', 'Nemesys non deve effettuare misure nell\'ora corrente.')
-PLAY = Status('orange', 'Nemesys sta effettuando una misura.')
-FINISHED = Status('blue', 'Nemesys ha terminato di fare i test sulla linea ADSL. Controllare lo stato complessivo della misura.')
-READY = Status('dark grey', 'Nemesys pronto e in attesa di eseguire una misura.')
-OK = Status('dark green', 'Misura terminata con successo.')
-MESSAGE = Status('blue', 'Avviso dal server centrale.')
-LOGO = Status('purple', 'Nemesys (Network Measurement System). Sistema collegato e funzionante.')
-LOGOSTATOMISURA2 = Status('logo_nemesys.png', 'Nemesys (Network Measurement System).')
-LOGOSTATOMISURA1 = Status('logo_misurainternet.png', 'Misura Internet.')
+ERROR = Status('nemesys_red.png', 'Impossibile contattare il sistema che effettua le misure.\nRitento tra qualche secondo...')
+PAUSE = Status('nemesys_white.png', 'Ne.Me.Sys. non deve effettuare misure nell\'ora corrente.')
+PLAY = Status('nemesys_green.png', 'Ne.Me.Sys. sta effettuando una misura.')
+FINISHED = Status('nemesys_cyan.png', 'Ne.Me.Sys. ha terminato le misurazioni. Controllare lo stato complessivo della misura.')
+READY = Status('nemesys_amber.png', 'Ne.Me.Sys. pronto e in attesa di eseguire una misura.')
+LOGO = Status('nemesys_logo.png', 'Ne.Me.Sys. (Network Measurement System). Sistema collegato e funzionante.')
+LOGOSTATOMISURA2 = Status('logo_nemesys_stato_misura.png', 'Ne.Me.Sys. (Network Measurement System).')
+LOGOSTATOMISURA1 = Status('misintw_stato_misura.jpg', 'Misura Internet.')

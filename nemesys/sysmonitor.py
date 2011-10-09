@@ -16,18 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-# TODO Sysmonitor deve sollevare eccezioni di tipo SysmonitorExecption
-
-from SystemProfiler import systemProfiler
 from logger import logging
-from sysmonitorexception import SysmonitorException
-from xmlutils import getXMLvalues
-import checkhost
-import netifaces
+from xml.etree import ElementTree as ET
+from os import path as Path
 import paths
 import re
-import socket
-import sysmonitorexception
 
 # TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
 STRICT_CHECK = True
@@ -56,7 +49,7 @@ tag_task = 'taskList'
 # Soglie di sistema
 # ------------------------------------------------------------------------------
 # Massima quantità di host in rete
-th_host = 1
+th_host = 2
 # Minima memoria disponibile
 th_avMem = 134217728
 # Massimo carico percentuale sulla memoria
@@ -67,40 +60,64 @@ th_cpu = 85
 th_wdisk = 104857600
 th_rdisk = 104857600
 # Porte con connessioni attive da evitare
-bad_conn = [80, 8080, 25, 110, 465, 993, 995, 143, 6881, 4662, 4672, 443]
-# Processi che richiedono troppe risorse 
-bad_proc = ['amule', 'emule', 'skype', 'dropbox', 'torrent', 'azureus', 'transmission']
+bad_conn = [80, 8080, 110, 25, 465, 993, 995, 143, 6881, 4662, 4672]
+# Processi che richiedono risorse da evitare 
+bad_proc = ['amule', 'emule', 'bittorrent', 'skype', 'dropbox', ]
+good_fqdn = ['finaluser.agcom244.fub.it']
+
 
 logger = logging.getLogger()
 
+# TODO Caricare da threshold SOLO se è una sonda
+if Path.isfile(paths.THRESHOLD):
+
+  th_values = {}
+  try:
+    for subelement in ET.XML(open(paths.THRESHOLD).read()):
+      th_values.update({subelement.tag:subelement.text})
+  except Exception as e:
+    logger.warning('Errore durante il recupero delle soglie da file: %s' % e)
+    raise Exception('Errore durante il recupero delle soglie da file.')
+
+  try:
+    th_host = int(th_values[tag_hosts])
+    th_avMem = float(th_values[tag_avMem])
+    th_memLoad = float(th_values[tag_memLoad])
+    th_wdisk = float(th_values[tag_wdisk])
+    th_cpu = float(th_values[tag_cpu])
+    th_rdisk = float(th_values[tag_rdisk])
+    bad_conn = []
+    for j in th_values[tag_conn].split(';'):
+      bad_conn.append(int(j))
+    bad_proc = []
+    for j in th_values[tag_task].split(';'):
+      bad_proc.append(str(j))
+  except Exception as e:
+      logger.error('Errore in lettura dei paramentri di threshold.')
+      raise Exception('Errore in lettura dei paramentri di threshold.')
+
+else:
+  pass
+
+try:
+  from SystemProfiler import systemProfiler
+except Exception as e:
+  logger.warning('Impossibile importare SystemProfiler')
+  pass
+
 def getstatus(d):
+
   data = ''
 
-  try:
-    data = systemProfiler('test', d)
-  except Exception as e:
-    logger.error('Non sono riuscito a trovare lo stato del computer con SystemProfiler: %s.' % e)
-    #raise Exception('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
-    raise sysmonitorexception.FAILPROF
+  if Path.isfile(paths.RESULTS):
+    data = open(paths.RESULTS).read()
+  else:
+    try:
+      data = systemProfiler('test', d)
+    except Exception as e:
+      logger.warning('Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
 
-  return getXMLvalues(data, tag_results)
-
-def getstringtag(tag, value):
-  d = {tag:''}
-  values = getstatus(d)
-
-  try:
-    value = str(values[tag])
-  except Exception as e:
-    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
-    if STRICT_CHECK:
-      #raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
-      raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
-
-  if value == 'None':
-    return None
-
-  return value
+  return getvalues(data, tag_results)
 
 def getfloattag(tag, value):
   d = {tag:''}
@@ -111,8 +128,7 @@ def getfloattag(tag, value):
   except Exception as e:
     logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
     if STRICT_CHECK:
-      #raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
-      raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
+      raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
 
   return value
 
@@ -125,185 +141,129 @@ def getbooltag(tag, value):
   except Exception as e:
     logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
     if STRICT_CHECK:
-      #raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
-      raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
+      raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
+
   if STRICT_CHECK:
     if value != 'false' and value != 'true':
       logger.warning('Impossibile determinare il parametro "%s".' % tag)
-      #raise Exception('Impossibile determinare il parametro "%s".' % tag)
-      raise SysmonitorException(sysmonitorexception.FAILVALUEPARAM, 'Impossibile determinare il parametro "%s".' % tag)
-    if value == 'false':
-      return False
-    else:
-      return True
-  else:
-    return value
+      raise Exception('Impossibile determinare il parametro "%s".' % tag)
+
+  if value == 'true':
+    return True
+
+  if value == 'false':
+    return False
+
+  return value
 
 def checkconnections():
   '''
   Effettua il controllo sulle connessioni attive
   '''
-  myip = getIp()
-  connActive = getstringtag(tag_conn, '90.147.120.2:443')
+
+  #TODO Se la connessione è verso un nostro server non dobbiamo farne il controllo
+  d = {tag_conn:''}
+  values = getstatus(d)
+  connActive = values[tag_conn]
 
   if connActive == None or len(connActive) <= 0:
-    # Non ho connessioni attive
-    logger.debug('Nessuna connessione di rete attiva.')
     return True
 
   c = []
-  try:
-    for j in connActive.split(';'):
-      # Ignora le connessioni ipv6
-      # TODO Gestire le connessioni ipv6
-      if bool(re.search('^\[', j)):
-        logger.warning('Connessione IPv6 attiva: %s' % j)
-        continue
-      ip = j.split(':')[0]
-      if not checkipsyntax(ip):
-        #raise Exception('Lista delle connessioni attive non conforme.')
-        raise sysmonitorexception.BADCONN
-      if ip == myip:
-        logger.warning('Ricevuto ip %s nella lista delle connessioni attive' % ip)
-        continue
-      port = int(j.split(':')[1])
-      # TODO Occorre chiamare un resolver per la risoluzione dei nostri ip
-      if not bool(re.search('^90\.147\.120\.|^193\.104\.137\.', ip)):
-        c.append(port)
-
-  except Exception as e:
-    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
-    if STRICT_CHECK:
-      #raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
-      raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
+  for j in connActive.split(';'):
+    try:
+      c.append(int(j.split(':')[1]))
+    except Exception as e:
+      logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_conn, e))
+      if STRICT_CHECK:
+        raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_conn)
 
   for i in bad_conn:
     if i in c:
-      logger.error('Porta %d aperta ed utilizzata.' % i)
-      #raise Exception('Accesso ad Internet da programmi non legati alla misura. Se possibile, chiuderli.')
-      raise sysmonitorexception.WARNCONN
-  
-  for i in c:
-    if i >= 1024:
-      logger.error('Porta %d aperta ed utilizzata.' % i)
-      #raise Exception('Accesso ad Internet da programmi non legati alla misura. Se possibile, chiuderli.')
-      raise sysmonitorexception.WARNCONN
+      raise Exception('Porta %d aperta ed utilizzata.' % i)
+
   return True
 
 def checktasks():
   '''
   Ettettua il controllo sui processi
   '''
-  taskActive = getstringtag(tag_task, 'executer')
+  d = {tag_task:''}
+  values = getstatus(d)
+  taskActive = values[tag_task]
 
   if taskActive == None or len(taskActive) <= 0:
-    #raise Exception('Errore nella determinazione dei processi attivi.')
-    raise sysmonitorexception.BADPROC
-  # WARNING Non ho modo di sapere se il valore che recupero è non plausibile (not available)
+    return True
 
   t = []
-  try:
-    for j in taskActive.split(';'):
+  for j in taskActive.split(';'):
+    try:
       t.append(str(j))
-  except Exception as e:
-    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_task, e))
-    #raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_task)
-    raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_task)
+    except Exception as e:
+      logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag_proc, e))
+      if STRICT_CHECK:
+        raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag_proc)
 
   for i in bad_proc:
     for k in t:
       if (bool(re.search(i, k, re.IGNORECASE))):
-        #raise Exception('Sono attivi processi non desiderati.', 'Chiudere il programma "%s" per proseguire le misure.' % i)
-        raise sysmonitorexception.WARNPROC
+        raise Exception('Sono attivi processi non desiderati: chiudere il programma "%s" per proseguire le misure.' % i)
+
   return True
 
 def checkcpu():
 
   value = getfloattag(tag_cpu, th_cpu - 1)
-  if value < 0 or value > 100:
-    #raise Exception('Valore di occupazione della CPU non conforme.')
-    raise sysmonitorexception.BADCPU
-
   if value > th_cpu:
-    #raise Exception('CPU occupata.')
-    raise sysmonitorexception.WARNCPU
-    
+    raise Exception('CPU occupata.')
+
   return True
 
 def checkmem():
 
-  value = getfloattag(tag_avMem, th_avMem + 1)
-  if value < 0:
-    #raise Exception('Valore di memoria disponibile non conforme.')
-    raise sysmonitorexception.BADMEM
-  if value < th_avMem:
-    #raise Exception('Memoria disponibile non sufficiente.')
-    raise sysmonitorexception.LOWMEM
-  value = getfloattag(tag_memLoad, th_memLoad - 1)
-  if value < 0 or value > 100:
-    #raise Exception('Valore di occupazione della memoria non conforme.')
-    raise sysmonitorexception.INVALIDMEM
-  if value > th_memLoad:
-    #raise Exception('Memoria occupata.')
-    raise sysmonitorexception.OVERMEM
-    
+  avMem = getfloattag(tag_avMem, th_avMem + 1)
+  if avMem < th_avMem:
+    raise Exception('Memoria non sufficiente.')
+
+  memLoad = getfloattag(tag_memLoad, th_memLoad - 1)
+  if memLoad > th_memLoad:
+    raise Exception('Memoria non sufficiente.')
+
   return True
 
 def checkfw():
 
   value = getbooltag(tag_fw, 'False')
   if value:
-    #raise Exception('Firewall attivo.')
-    raise sysmonitorexception.WARNFW
+    raise Exception('Firewall attivo.')
+
   return True
 
 def checkwireless():
 
   value = getbooltag(tag_wireless, 'False')
   if value:
-    #raise Exception('Wireless LAN attiva.')
-    raise sysmonitorexception.WARNWLAN
+    raise Exception('Wireless LAN attiva.')
 
   return True
 
-def checkhosts(up, down, ispid, arping=1):
-  
-  ip = getIp();
-  mask = getNetworkMask(ip)
-  logger.info("Indirizzo ip/mask: %s/%d" % (ip, mask))
-  
-  if (arping == 0):
-    thres = th_host + 1
-  else:
-    thres = th_host
-  
-  if (mask != 0):  
-    value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping)
-    #value=1
-    logger.info('Trovati %d host in rete.' % value)
-          
-    if value <= 0:
-      #raise Exception('Impossibile determinare il numero di host in rete.')
-      raise sysmonitorexception.BADHOST
-    if value > thres:
-      #raise Exception('Presenza altri host in rete.')
-      raise sysmonitorexception.TOOHOST
-      
-    return True
-  else:
-    #raise Exception ('Impossibile recuperare il valore della maschera dell\'IP: %s' % ip)
-    raise SysmonitorException(sysmonitorexception.BADMASK, 'Impossibile recuperare il valore della maschera dell\'IP: %s' % ip)
-    
+def checkhosts():
+
+  value = getfloattag(tag_hosts, th_host - 1)
+  if value > th_host:
+    raise Exception('Presenza altri host in rete.')
+
+  return True
+
 def checkdisk():
 
   value = getfloattag(tag_wdisk, th_wdisk - 1)
-  if value < 0:
-    #raise Exception('Impossibile detereminare il carico in lettura del disco.')
-    raise sysmonitorexception.UNKDISKLOAD
-
   if value > th_wdisk:
-    #raise Exception('Eccessivo carico in scrittura del disco.')
-    raise sysmonitorexception.DISKOVERLOAD
+    raise Exception('Eccessivo carico in scrittura del disco.')
+
+  value = getfloattag(tag_wdisk, th_rdisk - 1)
+  if value > th_rdisk:
+    raise Exception('Eccessivo carico in lettura del disco.')
 
   return True
 
@@ -323,17 +283,21 @@ def fastcheck():
 
 def mediumcheck():
 
-  checkwireless()
-  #checkfw()
   fastcheck()
+  #checkfw()
+  checkwireless()
 
   return True
 
-def checkall(up, down, ispid, arping=1):
+def checkall():
 
-  checkhosts(up, down, ispid, arping)
-  #checkdisk()
   mediumcheck()
+  # TODO Reinserire questo check quanto corretto il problema di determinazione del dato
+  #checkdisk()
+
+  ip = getIp()
+  if bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
+    checkhosts()
 
   return True
 
@@ -341,217 +305,52 @@ def getMac():
   '''
   restituisce indirizzo MAC del computer
   '''
-  # TODO Recuperare il valore usando un controllo del dato es. getstringtag
   d = {tag_mac:''}
   values = getstatus(d)
 
-  # TODO Implementare un controllo sulla conformità del dato MAC
   return values[tag_mac]
-
-def checkipsyntax(ip):
-
-  try:
-    socket.inet_aton(ip)
-    parts = ip.split('.')
-    if len(parts) != 4:
-      return False
-  except Exception:
-    return False
-
-  return True
 
 def getIp():
   '''
   restituisce indirizzo IP del computer
   '''
-  s = socket.socket(socket.AF_INET)
-  s.connect(('www.google.com', 80))
-  value = s.getsockname()[0]
+  d = {tag_ip:''}
+  values = getstatus(d)
 
-  #value = getstringtag(tag_ip, '90.147.120.2')
-
-  if not checkipsyntax(value):
-    #raise Exception('Impossibile ottenere il dettaglio dell\'indirizzo IP')
-    raise sysmonitorexception.UNKIP
-  return value
-
-def getNetworkMask(ip):
-  '''
-  Restituisce un intero rappresentante la maschera di rete, in formato CIDR, 
-	dell'indirizzo IP in uso
-  '''
-  inames = netifaces.interfaces()
-  netmask = 0
-  for i in inames:
-    addrs = netifaces.ifaddresses(i)
-    try:
-      ipinfo = addrs[socket.AF_INET][0]
-      address = ipinfo['addr'] 
-      if (address == ip):
-        netmask = ipinfo['netmask']
-        return maskConversion(netmask)
-      else:
-        pass
-    except Exception:
-      pass
-
-  return maskConversion(netmask)
-
-def maskConversion(netmask):
-  nip = netmask.split(".")
-  if(len(nip) == 4):
-    i = 0
-    bini = range(0, len(nip))
-    while i < len(nip):
-      bini[i] = int(nip[i])
-      i += 1
-    bins = convertDecToBin(bini)
-    lastChar = 1
-    maskcidr = 0
-    i = 0
-    while i < 4:
-      j = 0
-      while j < 8:
-        if (bins[i][j] == 1):
-          if (lastChar == 0):
-            return 0
-          maskcidr = maskcidr + 1
-        lastChar = bins[i][j]
-        j = j + 1
-      i = i + 1
-  else:
-    return 0
-  return maskcidr
-
-
-def convertDecToBin(dec):
-  i = 0  
-  bin = range(0, 4)
-  for x in range(0, 4):
-    bin[x] = range(0, 8)
-  
-  for i in range(0, 4):
-    j = 7
-    while j >= 0:
-           
-      bin[i][j] = (dec[i] & 1) + 0
-      dec[i] /= 2
-      j = j - 1
-  return bin
-
-#valido per windows
-def getMask(ip):
-  ris = None
-  objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
-  objSWbemServices = objWMIService.ConnectServer(".", "root\cimv2")
-  colItems = objSWbemServices.ExecQuery("SELECT * FROM Win32_NetworkAdapterConfiguration")
-  for obj in colItems:
-    ipaddrlist = obj.__getattr__('IPAddress')
-    if (ipaddrlist != None) and (ip in ipaddrlist):
-      ris = obj.__getattr__('IPSubnet')
-      break
-    else:
-      pass
-  return ris
+  return values[tag_ip]
 
 def getSys():
   '''
   Restituisce array con informazioni sul sistema utilizzato per il test
   '''
-  # TODO Recuperare i valori usando un controllo del dato es. getstringtag
-  # TODO Valutare se separare le chiamate
   d = {tag_vers:'', tag_sys:'', tag_mac:'', tag_release:'', tag_cores:'', tag_arch:'', tag_proc:''}
   values = getstatus(d)
 
   r = []
 
-  # TODO Implementare un controllo sulla conformità di ciascu valore ottenuto
   for i in values:
     r.append(values[i])
 
   return r
 
+def getvalues(string, tag):
+  '''
+  Estrae informazioni dal SystemProfiler 
+  '''
+  values = {}
+  try:
+    for subelement in ET.XML(string):
+      values.update({subelement.tag:subelement.text})
+  except Exception as e:
+    logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
+    raise Exception('Errore durante il recupero dello stato del computer.')
+
+  return values
 
 if __name__ == '__main__':
-  from errorcoder import Errorcoder
-  errors = Errorcoder(paths.CONF_ERRORS)
-
-  try:
-    print 'Test sysmonitor checkall: %s' % checkall(1000, 2000, 'fst001')
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001',1)  #ARPING
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001',0)  #PING
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor checkconnections: %s' % checkconnections()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor checkcpu: %s' % checkcpu()
-  except SysmonitorException as e:
-    print 'Errore [%d]: (%s) %s' % (errorcode, e.alert_type, e)
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor checkdisk: %s' % checkdisk()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor checkfw: %s' % checkfw()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor checkmem: %s' % checkmem()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor checktasks: %s' % checktasks()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor checkwireless: %s' % checkwireless()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor getMac: %s' % getMac()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor getIP: %s' % getIp()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print 'Test sysmonitor getSys: %s' % getSys()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
+  print 'Test sysmonitor fastcheck: %s' % fastcheck()
+  print 'Test sysmonitor mediumcheck: %s' % mediumcheck()
+  print 'Test sysmonitor checkall: %s' % checkall()
+  print 'Test sysmonitor getMac: %s' % getMac()
+  print 'Test sysmonitor getIP: %s' % getIp()
+  print 'Test sysmonitor getSys: %s' % getSys()

@@ -16,32 +16,43 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from os import mkdir, path, sep
 import sys
+
+from os import mkdir
+from os import name
+from os import path
+from os import sep
+
+# TODO Assicurarsi di effettuare l'escaping dei caratteri particolari!
+
+DIR_SEP = sep
 
 if hasattr(sys, 'frozen'):
   # Dovrebbe darmi il percorso in cui sta eseguendo l'applicazione
-  _APP_PATH = path.dirname(sys.executable) + sep + '..'
+  _APP_PATH = path.dirname(sys.executable) + DIR_SEP + '..'
 else:
-  _APP_PATH = path.abspath(path.dirname(__file__)) + sep + '..'
+  _APP_PATH = path.abspath(path.dirname(__file__)) + DIR_SEP + '..'
 
-_APP_PATH = path.normpath(_APP_PATH)
+if name != 'nt':
+  HOME_DIR = path.expanduser('~')
+else:
+  HOME_DIR = path.expanduser('~').decode(sys.getfilesystemencoding())
 
 # Resources path
-ICONS = path.join(_APP_PATH, 'icons')
-OUTBOX = path.join(_APP_PATH, 'outbox')
-SENT = path.join(_APP_PATH, 'sent')
+ICONS = _APP_PATH + DIR_SEP + 'icons'
+OUTBOX = _APP_PATH + DIR_SEP + 'outbox'
+SENT = _APP_PATH + DIR_SEP + 'sent'
 
 # Configuration dirs and files
-_CONF_DIR = path.join(_APP_PATH, 'config')
-LOG_DIR = path.join(_APP_PATH, 'logs')
-FILE_LOG = path.join(LOG_DIR, 'nemesys.log')
-CONF_LOG = path.join(_CONF_DIR, 'log.conf')
-CONF_MAIN = path.join(_CONF_DIR, 'client.conf')
-CONF_ERRORS = path.join(_CONF_DIR, 'errorcodes.conf')
-THRESHOLD = path.join(_CONF_DIR, 'threshold.xml')
-RESULTS = path.join(_CONF_DIR, 'result.xml')
-MEASURE_STATUS = path.join(_CONF_DIR, 'progress.xml')
+_CONF_DIR = _APP_PATH + DIR_SEP + 'config'
+LOG_DIR = _APP_PATH + DIR_SEP + 'logs'
+FILE_LOG = LOG_DIR + DIR_SEP + 'Nemesys.log'
+CONF_LOG = _CONF_DIR + DIR_SEP + 'log.conf'
+CONF_MAIN = _CONF_DIR + DIR_SEP + 'client.conf'
+CONF_ERRORS = _CONF_DIR + DIR_SEP + 'errorcodes.conf'
+THRESHOLD = _CONF_DIR + DIR_SEP + 'threshold.xml'
+RESULTS = _CONF_DIR + DIR_SEP + 'result.xml'
+MEASURE_STATUS = _CONF_DIR + DIR_SEP + 'progress.xml'
 
 from logger import logging
 def check_paths():

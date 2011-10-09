@@ -22,11 +22,11 @@
 #   -> http://www.g-loaded.eu/2009/10/30/python-ping/
 
 from exceptions import Exception
-import random
-import select
+import os
+import sys
 import socket
 import struct
-import sys
+import select
 import time
 
 ICMP_ECHO_REQUEST = 8  # Seems to be the same on Solaris.
@@ -66,7 +66,7 @@ def checksum(source_string):
   return answer
 
 
-def receive_one_ping(my_socket, ID, timeout, dest_addr):
+def receive_one_ping(my_socket, ID, timeout):
   """
   Receive the ping from the socket.
   """
@@ -90,30 +90,36 @@ def receive_one_ping(my_socket, ID, timeout, dest_addr):
     (type, code, checksum, packetID, sequence) = \
       struct.unpack('bbHHh', icmpHeader)
 
-    if addr[0] == dest_addr and packetID == ID:
-      if type == 0:
-        bytesInDouble = struct.calcsize('d')
-        timeSent = struct.unpack('d', recPacket[28:28 + bytesInDouble])[0]
-        return timeReceived - timeSent
-      elif type == 3:
-        codes = {
-          0: 'Net Unreachable',
-          1: 'Host Unreachable',
-          2: 'Protocol Unreachable',
-          3: 'Port Unreachable',
-          }
-        raise Exception(codes[code])
-        break
-    
+    # TODO Inserire tutti i codes con i relativi errori (?)
+
+    if type == 3:
+      codes = {
+        0: 'Net Unreachable',
+        1: 'Host Unreachable',
+        2: 'Protocol Unreachable',
+        3: 'Port Unreachable',
+        }
+
+      raise Exception(codes[code])
+      break
+
+    if packetID == ID and type == 0:
+      bytesInDouble = struct.calcsize('d')
+      timeSent = struct.unpack('d', recPacket[28:28 + bytesInDouble])[0]
+      return timeReceived - timeSent
+
     timeLeft = timeLeft - howLongInSelect
     if timeLeft <= 0:
       raise RuntimeWarning('Timeout during ICMP packet receive (timeout = %f)'
                   % timeout)
 
+
 def send_one_ping(my_socket, dest_addr, ID):
   """
   Send one ping to the given >dest_addr<.
   """
+
+  dest_addr = socket.gethostbyname(dest_addr)
 
   # global OS
   # Header is type (8bit), code (8bit), checksum (16bit), id (16bit), sequence (16bit)
@@ -151,7 +157,6 @@ def do_one(dest_addr, timeout):
   """
 
   global IS_WIN
-  dest_addr = socket.gethostbyname(dest_addr)
   icmp = socket.getprotobyname('icmp')
   try:
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
@@ -165,7 +170,7 @@ def do_one(dest_addr, timeout):
       raise socket.error(msg)
     raise   # raise the original error
 
-  my_ID = random.randint(1, 65535) & 65535
+  my_ID = os.getpid() & 65535
 
   if sys.platform[0:-2] == 'win':
     IS_WIN = True
@@ -174,7 +179,7 @@ def do_one(dest_addr, timeout):
     IS_WIN = False
 
   send_one_ping(my_socket, dest_addr, my_ID)
-  delay = receive_one_ping(my_socket, my_ID, timeout, dest_addr)
+  delay = receive_one_ping(my_socket, my_ID, timeout)
 
   my_socket.close()
   return delay
@@ -203,13 +208,9 @@ def verbose_ping(dest_addr, timeout=20, count=4):
 
 
 if __name__ == '__main__':
-  for i in range(1,255):
-    try:
-      verbose_ping("192.168.208.%d" %i, 1, 1)
-    except Exception as e:
-      print 
-  verbose_ping('repubblica.it', 5)
-  verbose_ping('google.com', 5)
-  verbose_ping('a-test-url-taht-is-not-available.com', 5)
-  verbose_ping('127.0.0.1', 5)
+  verbose_ping('repubblica.it')
+  verbose_ping('google.com')
+  verbose_ping('192.168.208.88')
+  verbose_ping('a-test-url-taht-is-not-available.com')
+  verbose_ping('127.0.0.1')
 
