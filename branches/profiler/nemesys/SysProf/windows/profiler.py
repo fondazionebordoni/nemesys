@@ -16,10 +16,10 @@ from ctypes.wintypes import DWORD, ULONG
 import struct
 
 
-def executeQuery(wmi_class,whereCondition=""):   
+def executeQuery(wmi_class, whereCondition=""):   
     try: 
         objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
-        objSWbemServices = objWMIService.ConnectServer(".","root\cimv2")
+        objSWbemServices = objWMIService.ConnectServer(".", "root\cimv2")
         colItems = objSWbemServices.ExecQuery("SELECT * FROM " + wmi_class + whereCondition)
     except:
         raise RisorsaException("Errore nella query al server root\cimv2")
@@ -29,10 +29,10 @@ def executeQuery(wmi_class,whereCondition=""):
 class RisorsaWin(Risorsa):
     def __init__(self):
         Risorsa.__init__(self)
-        self.whereCondition=""
+        self.whereCondition = ""
         
-    def getSingleInfo(self,obj,attr):
-        val= obj.__getattr__(attr)
+    def getSingleInfo(self, obj, attr):
+        val = obj.__getattr__(attr)
         if val != None:
             return val
         else:
@@ -40,18 +40,18 @@ class RisorsaWin(Risorsa):
 #            print ("non riesco a recuperare il parametro %s" %attr) 
 #            raise AttributeError("Parametro %s non trovato" %attr)
     
-    def getStatusInfo(self,root):
+    def getStatusInfo(self, root):
         try:
             for wmi_class in self._params:
-                items = executeQuery(wmi_class,self.whereCondition)
-                if len(items)==0:
+                items = executeQuery(wmi_class, self.whereCondition)
+                if len(items) == 0:
                     raise RisorsaException("La risorsa con le caratteristiche richieste non e' presente nel server")
                 else:
                     for obj in items:
                         for val in self._params[wmi_class]:
                             tag = val
-                            cmd = getattr(self,tag)
-                            xmlres=cmd(obj)
+                            cmd = getattr(self, tag)
+                            xmlres = cmd(obj)
                             if (xmlres is not None):
                               root.append(xmlres)
         except AttributeError as e:
@@ -66,29 +66,29 @@ class CPU(RisorsaWin):
    
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params={'Win32_Processor':['processor','cores','cpuLoad']}
+        self._params = {'Win32_Processor':['processor', 'cores', 'cpuLoad']}
         
         
-    def processor(self,obj):
-        infos = ['Name','Description','Manufacturer']
-        proc=[]
+    def processor(self, obj):
+        infos = ['Name', 'Description', 'Manufacturer']
+        proc = []
         try:
             for i in infos:
-                val = self.getSingleInfo(obj,i)
+                val = self.getSingleInfo(obj, i)
                 proc.append(val)
         except AttributeError as e:
             raise AttributeError(e)
         ris = ", ".join(proc)
         return self.xmlFormat("processor", ris)    
     
-    def cpuLoad(self,obj):
+    def cpuLoad(self, obj):
         try:
             val = self.getSingleInfo(obj, 'LoadPercentage')
         except AttributeError as e:
             raise AttributeError(e)
         return self.xmlFormat("cpuLoad", val)
 
-    def cores(self,obj):
+    def cores(self, obj):
         try:
             val = self.getSingleInfo(obj, 'NumberOfCores')
         except AttributeError as e:
@@ -98,21 +98,21 @@ class CPU(RisorsaWin):
 class RAM(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params={'Win32_ComputerSystem':['total_memory'],'Win32_OperatingSystem':['percentage_ram_usage']}
+        self._params = {'Win32_ComputerSystem':['total_memory'], 'Win32_OperatingSystem':['percentage_ram_usage']}
         
-    def total_memory(self,obj):
+    def total_memory(self, obj):
         try:
             val = self.getSingleInfo(obj, 'TotalPhysicalMemory')
         except AttributeError as e:
             raise AttributeError(e)
         return self.xmlFormat("totalPhysicalMemory", val)
         
-    def percentage_ram_usage(self,obj):
+    def percentage_ram_usage(self, obj):
         try:
-            free= self.getSingleInfo(obj,'FreePhysicalMemory')
-            total=self.getSingleInfo(obj,'TotalVisibleMemorySize')        
-            if total !=0:
-                load = int((1.0 - (float(free)/float(total)))*100.0)
+            free = self.getSingleInfo(obj, 'FreePhysicalMemory')
+            total = self.getSingleInfo(obj, 'TotalVisibleMemorySize')        
+            if total != 0:
+                load = int((1.0 - (float(free) / float(total))) * 100.0)
                 return self.xmlFormat("RAMUsage", load)
             else:
                 raise AttributeError("Impossibile calcolare la percentuale di ram utilizzata")
@@ -122,11 +122,11 @@ class RAM(RisorsaWin):
 class sistemaOperativo(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params={'Win32_OperatingSystem':['version']}
+        self._params = {'Win32_OperatingSystem':['version']}
         
-    def version (self,obj):
-        var = ['Caption','Version'] # ci sarebbe anche 'OSArchitecture' ma su windows xp non e' definita
-        versione=[]
+    def version (self, obj):
+        var = ['Caption', 'Version'] # ci sarebbe anche 'OSArchitecture' ma su windows xp non e' definita
+        versione = []
         try:
             for v in var:
                 val = self.getSingleInfo(obj, v)
@@ -134,20 +134,20 @@ class sistemaOperativo(RisorsaWin):
         except AttributeError as e:
             raise AttributeError(e)
         ris = ", ".join(versione)
-        return self.xmlFormat("OperatingSystem",ris)
+        return self.xmlFormat("OperatingSystem", ris)
     
 class disco(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params={'Win32_PerfFormattedData_PerfDisk_PhysicalDisk':['byte_transfer']}
-        self.whereCondition=" WHERE Name= \"_Total\"" #problema, conta tutti i byte trasferiti, anche tra memorie esterne che non coinvolgono il disco del pc
+        self._params = {'Win32_PerfFormattedData_PerfDisk_PhysicalDisk':['byte_transfer']}
+        self.whereCondition = " WHERE Name= \"_Total\"" #problema, conta tutti i byte trasferiti, anche tra memorie esterne che non coinvolgono il disco del pc
     
-    def byte_transfer(self,obj):
+    def byte_transfer(self, obj):
         var = 'DiskBytesPersec'
         total = 0;
         try:
             for i in range(5):
-                bd = self.getSingleInfo(obj,var)
+                bd = self.getSingleInfo(obj, var)
                 total += int(bd)
                 time.sleep(1)
         except AttributeError as e:
@@ -158,18 +158,18 @@ class rete(RisorsaWin):
     
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params={'Win32_NetworkAdapter':['profileDevice']}
-        self.ipaddr=""
-        self.whereCondition= " WHERE Manufacturer != 'Microsoft' "# AND NOT PNPDeviceID LIKE 'ROOT\\*' "
+        self._params = {'Win32_NetworkAdapter':['profileDevice']}
+        self.ipaddr = ""
+        self.whereCondition = " WHERE Manufacturer != 'Microsoft' "# AND NOT PNPDeviceID LIKE 'ROOT\\*' "
         self._activeMAC = None
         self._checked = False
            
     def getipaddr(self):
-        if self.ipaddr =="":
+        if self.ipaddr == "":
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                s.connect(("www.fub.it",80))
-                self.ipaddr= s.getsockname()[0]
+                s.connect(("www.fub.it", 80))
+                self.ipaddr = s.getsockname()[0]
             except socket.gaierror:
                 pass
                 #raise RisorsaException("Connessione Assente")
@@ -178,16 +178,16 @@ class rete(RisorsaWin):
         return self.ipaddr
     
     def findActiveInterface(self):
-        items = executeQuery('Win32_NetworkAdapterConfiguration',"")
+        items = executeQuery('Win32_NetworkAdapterConfiguration', "")
         ipaddr = self.getipaddr()
         if (items):
             try:
                 for obj in items:
-                    ipaddrlist=self.getSingleInfo(obj, 'IPAddress')
+                    ipaddrlist = self.getSingleInfo(obj, 'IPAddress')
                     if ipaddrlist:
                         if ipaddr in ipaddrlist:
-                            ris = self.getSingleInfo(obj,'MACAddress')
-                            self._activeMAC=ris
+                            ris = self.getSingleInfo(obj, 'MACAddress')
+                            self._activeMAC = ris
             except:
                 raise RisorsaException("Impossibile specificare l'interfaccia attiva") 
             finally:
@@ -195,11 +195,11 @@ class rete(RisorsaWin):
         else:
             raise RisorsaException("E' impossibile interrogare le risorse di rete")
             
-    def profileDevice(self,obj):
+    def profileDevice(self, obj):
         running = 0X3 #running Net Interface CODE
-        features = {'Name':'','AdapterType':'','MACAddress':'','Availability':''}
-        devName= 'unknown'
-        devType= 'unknown'
+        features = {'Name':'', 'AdapterType':'', 'MACAddress':'', 'Availability':''}
+        devName = 'unknown'
+        devType = 'unknown'
         devMac = 'unknown'
         devIsActive = 'False'
         devStatus = 'unknown'
@@ -211,25 +211,25 @@ class rete(RisorsaWin):
         try:
             keys = features.keys()
             for key in keys:
-                features[key]=self.getSingleInfo(obj, key)
+                features[key] = self.getSingleInfo(obj, key)
         finally:
             if (features['Name']):
-                devName=features['Name']
+                devName = features['Name']
             if (features['AdapterType']):
-                devType=features['AdapterType']
+                devType = features['AdapterType']
             if (features['MACAddress']):
-                devMac=features['MACAddress']
-                if devMac==self._activeMAC:
+                devMac = features['MACAddress']
+                if devMac == self._activeMAC:
                     devIsActive = 'True'
-            if (features['Availability']==running):
-                devStatus= 'Enabled'
+            if (features['Availability'] == running):
+                devStatus = 'Enabled'
             if devStatus == 'Enabled':      
               devxml = ET.Element('NetworkDevice')
-              devxml.append(self.xmlFormat('Name',devName))
-              devxml.append(self.xmlFormat('Type',devType))
-              devxml.append(self.xmlFormat('MACAddress',devMac))
-              devxml.append(self.xmlFormat('isActive',devIsActive))
-              devxml.append(self.xmlFormat('Status',devStatus))
+              devxml.append(self.xmlFormat('Name', devName))
+              devxml.append(self.xmlFormat('Type', devType))
+              devxml.append(self.xmlFormat('MACAddress', devMac))
+              devxml.append(self.xmlFormat('isActive', devIsActive))
+              devxml.append(self.xmlFormat('Status', devStatus))
               return devxml
             else:
               return None
@@ -237,9 +237,9 @@ class rete(RisorsaWin):
 class processi(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params={'Win32_Process':['process']}
+        self._params = {'Win32_Process':['process']}
         
-    def process(self,obj):
+    def process(self, obj):
         var = 'Name'
         try:
             ris = self.getSingleInfo(obj, var)
@@ -316,7 +316,7 @@ class connection(RisorsaWin):
         tcpTable.dwNumEntries = 0 # define as 0 for our loops sake
     
         # now make the call to GetTcpTable to get the data
-        if (windll.iphlpapi.GetTcpTable(byref(tcpTable), 
+        if (windll.iphlpapi.GetTcpTable(byref(tcpTable),
             byref(dwSize), bOrder) == NO_ERROR):
           
             for i in range(tcpTable.dwNumEntries):
@@ -334,7 +334,7 @@ class connection(RisorsaWin):
                         
                 # only record TCP ports where we're listening on our external 
                 #    (or all) connections
-                if str(lAddr) != "127.0.0.1" and str(rAddr)!="127.0.0.1" and portState == MIB_TCP_STATE_ESTAB:
+                if str(lAddr) != "127.0.0.1" and str(rAddr) != "127.0.0.1" and portState == MIB_TCP_STATE_ESTAB:
                     localConn = ET.Element("Local")
                     localAdd = self.xmlFormat("LocalAddress", str(lAddr))
                     localPort = self.xmlFormat("LocalPort", str(lPort))
@@ -354,7 +354,7 @@ class connection(RisorsaWin):
         
         return connectionList
     
-    def getStatusInfo(self,root):
+    def getStatusInfo(self, root):
         try:
             connection = self.getOpenConnections()
             root.append(connection)
@@ -365,17 +365,9 @@ class connection(RisorsaWin):
 class Profiler(LocalProfiler):
     
     def __init__(self):
-        LocalProfiler.__init__(self)
-        self._resources =['CPU','RAM','sistemaOperativo','disco', 'rete']#, 'processi','connection']
-#        self._resources =['rete']
+        available_resources = {'CPU', 'RAM', 'sistemaOperativo', 'rete', 'disco'}
+        LocalProfiler.__init__(self, available_resources)
+
+    def profile(self, resource={}):
+        return super(Profiler, self).profile(__name__, resource)
         
-    '''
-    necessario racchiudere anche la chiamata al profile della superclasse in un try/except?
-    '''
-    def _setResource(self,res):
-        self._resources=res
-        
-    def profile(self,resource = ""):
-        if (resource != ""):
-            self._setResource(resource)
-        return super(Profiler,self).profile(__name__)

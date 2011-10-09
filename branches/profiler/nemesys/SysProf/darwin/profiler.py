@@ -19,9 +19,8 @@ class CPU(Risorsa):
     
     def __init__(self):
         Risorsa.__init__(self)
-        self._chisono="sono una CPU"
-        self._params=['num_cpu','num_core']
-        
+        self._chisono = "sono una CPU"
+        self._params = ['num_cpu', 'num_core']
         
     def num_cpu(self):
         ncpu = subprocess.Popen(["sysctl", "-n", "hw.ncpu"], stdout=subprocess.PIPE)
@@ -36,11 +35,10 @@ class CPU(Risorsa):
 class Profiler(LocalProfiler):
     
     def __init__(self):
-        LocalProfiler.__init__(self)
-        self._resources =['CPU']
+        available_resources = {'CPU'}
+        LocalProfiler.__init__(self, available_resources)
+
+    def profile(self, resource={}):
+        return super(Profiler, self).profile(__name__, resource)
+
     
-    '''
-    necessario racchiudere anche la chiamata al profile della superclasse in un try/except?
-    '''
-    def profile(self):
-        return super(Profiler,self).profile(__name__)
