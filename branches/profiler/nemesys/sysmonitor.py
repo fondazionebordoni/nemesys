@@ -306,7 +306,7 @@ def getIp():
   restituisce indirizzo IP del computer
   '''
   s = socket.socket(socket.AF_INET)
-  s.connect(('www.google.com', 80))
+  s.connect(('finaluser.agcom244.fub.it', 443))
   value = s.getsockname()[0]
 
   #value = getstringtag(tag_ip, '90.147.120.2')
@@ -429,14 +429,13 @@ if __name__ == '__main__':
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-  '''
   try:
     print '\ncheckall'
     print 'Test sysmonitor checkall: %s' % checkall(1000, 2000, 'fst001')
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-
+  '''
   try:
     print '\ncheckhosts (arping)'
     print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', 1)  #ARPING
