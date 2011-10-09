@@ -182,7 +182,7 @@ def checkwireless():
   profiler = LocalProfilerFactory.getProfiler()
   data = profiler.profile({'rete'})
   for device in data.findall('rete/NetworkDevice'):
-    print ET.tostring(device)
+    logger.debug(ET.tostring(device))
     type = device.find('Type').text
     if (type == 'Wireless'):
       active = device.find('isActive').text
