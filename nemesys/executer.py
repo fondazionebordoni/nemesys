@@ -47,6 +47,8 @@ import shutil
 import socket
 import status
 import sysmonitor
+from sysmonitorexception import SysmonitorException
+import sysmonitorexception
 
 
 bandwidth_sem = Semaphore()
@@ -54,10 +56,14 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-__version__ = '1.7.1'
+__version__ = '2.1'
 
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
+# Soglia per il rapporto tra traffico 'spurio' e traffico totale
+TH_OUTERTRAFFIC = 0.1
+# Tempo di attesa tra una misura e la successiva in caso di misura fallita
+TIME_LAG = 5
 
 class _Communicator(Thread):
 
@@ -354,6 +360,30 @@ class Executer:
 
     return xml2task(data)
 
+  def _evaluate_exception(self, e):
+    if isinstance (e, SysmonitorException):
+      # Inserire nel test tutte le eccezioni da bypassare
+      if e.alert_type == sysmonitorexception.WARNCONN.alert_type or e.alert_type == sysmonitorexception.WARNPROC.alert_type:
+        logger.warning('Misura in esecuzione con warning: %s' % e)
+      else:
+        raise e
+    else:                  
+      raise e
+
+  def _test_gating(self, test):
+    '''
+    Funzione per l'analisi del contabit ed eventuale gating dei risultati del test
+    '''
+    if test.counter_total_pay > 0:
+      traffic_ratio = (test.counter_total_pay - test.counter_ftp_pay) / (test.counter_total_pay * 1.0)
+      logger.debug('Valori di test: traffico FTP %d (%d), traffico totale %d, ratio: %f' % (test.counter_ftp_pay, test.bytes, test.counter_total_pay, traffic_ratio * 100))
+      if traffic_ratio < 0:
+        raise Exception('Errore durante la verifica del traffico di misura: impossibile salvare i dati.')
+      if traffic_ratio < TH_OUTERTRAFFIC:
+        test.bytes = test.counter_ftp_pay
+      else:
+        raise Exception('Eccessiva presenza di traffico internet non legato alla misura: percentuale del %d%%.' % round(traffic_ratio * 100))
+
   def _dotask(self, task):
     '''
     Esegue il complesso di test prescritti dal task entro il tempo messo a
@@ -371,7 +401,7 @@ class Executer:
 
     logger.info('Inizio task di misura verso il server %s' % task.server)
 
-    # Area riservata per l'esecuzione dei test
+    # Area riservata per l'esecuzione della misura
     # --------------------------------------------------------------------------
 
     # TODO Inserire il timeout complessivo di task (da posticipare)
@@ -379,6 +409,8 @@ class Executer:
 
       self._updatestatus(status.PLAY)
 
+      # Profilazione del sistema
+      # ------------------------
       base_error = 0
       if not self._isprobe:
         try:
@@ -388,12 +420,13 @@ class Executer:
         except Exception as e:
           logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
           if self._killonerror:
-            raise e
+            self._evaluate_exception(e)
           else:
             self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
             base_error = 50000
 
-      t = Tester(host=task.server, timeout=self._testtimeout,
+      # DONE::TODO Prendere l'IP tramite sysmonitor e passarlo nel costruttore di Tester che lo userà per il contabit interno 
+      t = Tester(if_ip=sysmonitor.getIp(), host=task.server, timeout=self._testtimeout,
                  username=self._client.username, password=self._client.password)
 
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
@@ -405,6 +438,7 @@ class Executer:
       # signal.alarm(self._tasktimeout)
 
       # Testa gli ftp down
+      # ------------------------
       i = 1;
       while (i <= task.download):
 
@@ -412,30 +446,42 @@ class Executer:
           error = 0
           if not self._isprobe:
             
+            # Profilazione del sistema
+            # ------------------------
             try:
               if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
                 raise Exception('Condizioni per effettuare la misura non verificate.')
     
             except Exception as e:
               logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
+
               if self._killonerror:
-                raise e
+                self._evaluate_exception(e)
               else:
                 self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
                 error = errors.geterrorcode(e)
-  
+                
+          # Esecuzione del test
+          # ------------------------
           logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
           test = t.testftpdown(task.ftpdownpath)
   
           if error > 0 or base_error > 0:
             test.seterrorcode(error + base_error)
-  
+            
+          # Analisi da contabit
+          #--------------------------
+          self._test_gating(test)
+                  
+          # Salvataggio della misura
+          # ------------------------
           logger.debug('Download result: %.3f' % test.value)
           logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
           m.savetest(test)
           i = i + 1
   
-          # Controlla i risultati del test e aggiorna il path di download
+          # Prequalifica della linea
+          # ------------------------
           if (test.value > 0):
             bandwidth = int(round(test.bytes * 8 / test.value))
             logger.debug('Banda ipotizzata in download: %d' % bandwidth)
@@ -443,13 +489,14 @@ class Executer:
             
           sleep(1)
           
+        # Cattura delle eccezioni durante la misura
         except Exception as e:
           if not datetime.fromtimestamp(timestampNtp()).hour == start.hour:
             raise e
           else:
             logger.warning('Misura sospesa per eccezione %s' % e)
-            self._updatestatus(status.Status(status.ERROR, 'Misura sospesa per errore: %s Aspetto 30 secondi prima di proseguire la misura.' % e))
-            sleep(30)
+            self._updatestatus(status.Status(status.ERROR, 'Misura sospesa per errore: %s Aspetto %d secondi prima di proseguire la misura.' % (e, TIME_LAG)))
+            sleep(TIME_LAG)
             logger.info('Misura in ripresa dopo sospensione. Test download %d di %d' % (i, task.download))
             self._updatestatus(status.Status(status.PLAY, 'Proseguo la misura. Misura in esecuzione'))
 
@@ -460,6 +507,9 @@ class Executer:
         try:
           error = 0
           if not self._isprobe:
+            
+            # Profilazione del sistema
+            # ------------------------
             try:
               if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
                 raise Exception('Condizioni per effettuare la misura non verificate.')
@@ -467,23 +517,32 @@ class Executer:
             except Exception as e:
               logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
               if self._killonerror:
-                raise e
+                self._evaluate_exception(e)
               else:
                 self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
                 error = errors.geterrorcode(e)
   
+          # Esecuzione del test
+          # ------------------------
           logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
           test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
   
           if error > 0 or base_error > 0:
             test.seterrorcode(error + base_error)
+            
+          # Analisi da contabit
+          #--------------------------
+          self._test_gating(test)
   
+          # Salvataggio del test nella misura
+          # ------------------------
           logger.debug('Upload result: %.3f' % test.value)
           logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
           m.savetest(test)
           i = i + 1
   
-          # Controlla i risultati del test e aggiorna il profilo di upload
+          # Prequalifica della linea
+          # ------------------------
           if (test.value > 0):
             bandwidth = int(round(test.bytes * 8 / test.value))
             logger.debug('Banda ipotizzata in upload: %d' % bandwidth)
@@ -491,16 +550,20 @@ class Executer:
             
           sleep(1)
 
+        # Cattura delle eccezioni durante la misura
         except Exception as e:
           if not datetime.fromtimestamp(timestampNtp()).hour == start.hour:
             raise e
           else:
             logger.warning('Misura sospesa per eccezione %s' % e)
-            self._updatestatus(status.Status(status.ERROR, 'Misura sospesa per errore: %s Aspetto 30 secondi prima di proseguire la misura.' % e))
-            sleep(30)
+            self._updatestatus(status.Status(status.ERROR, 'Misura sospesa per errore: %s Aspetto %d secondi prima di proseguire la misura.' % (e, TIME_LAG)))
+            sleep(TIME_LAG)
             logger.info('Misura in ripresa dopo sospensione. Test upload %d di %d' % (i, task.upload))
             self._updatestatus(status.Status(status.PLAY, 'Proseguo la misura. Misura in esecuzione'))
-
+            
+      # Stop lo sniffer
+      t.sniffer_stop()
+            
       # Testa i ping
       i = 1
       while (i <= task.ping):
@@ -508,6 +571,9 @@ class Executer:
         try:
           error = 0
           if not self._isprobe:
+            
+            # Profilazione del sistema
+            # ------------------------
             try:
               if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
                 raise Exception('Condizioni per effettuare la misura non verificate.')
@@ -515,17 +581,21 @@ class Executer:
             except Exception as e:
               logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
               if self._killonerror:
-                raise e
+                self._evaluate_exception(e)
               else:
                 self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
                 error = errors.geterrorcode(e)
   
+          # Esecuzione del test
+          # ------------------------
           logger.debug('Starting ping test [%d]' % i)
           test = t.testping()
   
           if error > 0 or base_error > 0:
             test.seterrorcode(error + base_error)
   
+          # Salvataggio del test nella misura
+          # ------------------------
           logger.debug('Ping result: %.3f' % test.value)
           logger.debug('Ping error: %d, %d, %d' % (base_error, error, test.errorcode))
           m.savetest(test)
@@ -534,6 +604,7 @@ class Executer:
           if ((i - 1) % task.nicmp == 0):
             sleep(task.delay)
 
+        # Cattura delle eccezioni durante la misura
         except Exception as e:
           if not datetime.fromtimestamp(timestampNtp()).hour == start.hour:
             raise e
@@ -961,7 +1032,6 @@ def parse():
     md5 = hashlib.md5(file.read()).hexdigest()
 
   return (options, args, md5)
-
 
 def runtimewarning(signum, frame):
   raise RuntimeWarning()
