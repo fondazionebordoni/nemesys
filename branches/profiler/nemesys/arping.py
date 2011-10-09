@@ -22,7 +22,6 @@ from SysProf import LocalProfilerFactory
 from xml.etree import ElementTree as ET
 from SysProf.NemesysException import LocalProfilerException, RisorsaException
 
-
 import arpinger
 import ipcalc
 import socket
@@ -32,59 +31,15 @@ import time
 
 logger = logging.getLogger()
 
-tag_activeNic= 'rete.NetworkDevice/isActive'
+tag_activeNic = 'rete.NetworkDevice/isActive'
 tag_mac = 'rete.NetworkDevice/MACAddress'
 
 ETH_P_IP = 0x0800
 ETH_P_ARP = 0x0806
 ARP_REPLY = 0x0002
 
-
-def getMac():
-  '''
-  restituisce indirizzo MAC del computer
-  '''
-  tag=tag_activeNic.split('.');
-  res=tag[0]
-  nestedtag=tag[1].split('/')
-  tagdev=nestedtag[0]
-  tagprop=nestedtag[1]
-  
-  tag=tag_mac.split('.');
-  nestedtag=tag[1].split('/')
-  tagmac=nestedtag[1]
-  
-  data=ET.ElementTree()
-  try:
-    profiler=LocalProfilerFactory.getProfiler()
-    data=profiler.profile([res])        
-  except Exception as e:
-    logger.error('Non sono riuscito a trovare lo stato del computer con profiler: %s.' % e)
-    raise sysmonitorexception.FAILPROF
-  except RisorsaException as e:
-    logger.error ("Problema nel tentativo di istanziare la risorsa: %s" % e)
-    raise sysmonitorexception.FAILPROF
-  except LocalProfilerException as e:
-    logger.error ("Problema nel tentativo di istanziare il profiler: %s" % e)
-    raise sysmonitorexception.FAILPROF
-  
-  tree=ET.ElementTree(data)
-  whattolook= res+ '/' + tagdev
-  listdev=data.findall(whattolook)
-  for dev in listdev:
-    tree._setroot(dev)
-    devxml=tree.getroot()
-    val=devxml.find(tagprop)
-    if val.text == 'True':
-      macelem=devxml.find(tagmac)
-      return macelem.text
-    
-  return None 
-
-  
 def display_mac(value):
     return string.join(["%02X" % ord(b) for b in value], ':')
-
 
 def send_arping(IPsrc, IPdst, MACsrc, MACdst):
   
@@ -98,11 +53,11 @@ def send_arping(IPsrc, IPdst, MACsrc, MACdst):
   
   ethPkt = struct.pack("!6s6sh", hwdst, hwsrc, 0x0806) + arpPkt
 
-  netPkt = ethPkt + (60-len(ethPkt)) * '\x00'  
+  netPkt = ethPkt + (60 - len(ethPkt)) * '\x00'  
     
   sended = arpinger.send(netPkt)
   if (sended['err_flag'] != 0):
-    logger.debug("%s" %sended['err_str'])
+    logger.debug("%s" % sended['err_str'])
     
 
 def receive_arping(MACsrc):
@@ -116,7 +71,7 @@ def receive_arping(MACsrc):
     received = arpinger.receive()
     
     if (received['err_flag'] < 1):
-      logger.debug("%s - Numero di Host trovati: %d" % (received['err_str'],len(IPtable)))
+      logger.debug("%s - Numero di Host trovati: %d" % (received['err_str'], len(IPtable)))
       break
         
     elif (len(received['py_pcap_hdr']) >= 16 and len(received['py_pcap_data']) >= 42):
@@ -125,7 +80,7 @@ def receive_arping(MACsrc):
       
       pktSec, pktUsec, pktCaplen, pktLen = struct.unpack("LLII", pktHdr)
       
-      pktTimeStamp = float(pktSec) + (float(pktUsec)/1000000)
+      pktTimeStamp = float(pktSec) + (float(pktUsec) / 1000000)
       
       #logger.debug(time.localtime(pktTimeStamp))
       
@@ -142,16 +97,19 @@ def receive_arping(MACsrc):
           IPdst_arp = socket.inet_ntoa(pdst_arp)
           if (IPsrc_arp not in IPtable):
             IPtable[IPsrc_arp] = display_mac(hwsrc_arp)
-            logger.debug('Trovato Host %s con indirizzo fisico %s' % (IPsrc_arp,display_mac(hwsrc_arp)))
+            logger.debug('Trovato Host %s con indirizzo fisico %s' % (IPsrc_arp, display_mac(hwsrc_arp)))
   
   return len(IPtable)
 
   
-def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1):  
+def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1, mac=None):  
   
   nHosts = 0
   
-  MACsrc = "".join(chr(int(macEL,16)) for macEL in getMac().split(':'))
+  if (mac):
+    MACsrc = "".join(chr(int(macEL, 16)) for macEL in mac.split(':'))
+  else:
+    MACsrc = "\x00"*6
   MACdst = "\xFF"*6
   
   IPsrc = socket.gethostbyname(IPsrc)
@@ -161,7 +119,7 @@ def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1):
     
   filter = "rarp or arp dst host " + IPsrc
 
-  rec_init = arpinger.initialize(IPsrc,filter,timeout*1000)
+  rec_init = arpinger.initialize(IPsrc, filter, timeout * 1000)
   if (rec_init['err_flag'] != 0):
     raise Exception (rec_init['err_str'])
   else:
