@@ -223,12 +223,13 @@ class rete(RisorsaWin):
             
     def profileDevice(self, obj):
         running = 0X3 #running Net Interface CODE
-        features = {'Name':'', 'AdapterType':'', 'MACAddress':'', 'Availability':''}
+        features = {'Name':'', 'AdapterType':'', 'MACAddress':'', 'Availability':'','NetConnectionID':''}
         devName = 'unknown'
         devType = 'unknown'
         devMac = 'unknown'
         devIsActive = 'False'
         devStatus = 'unknown'
+        devNetConnID = 'unknown'
         if (not self._checked):
             try:
                 self._checked = self.findActiveInterface()
@@ -243,6 +244,8 @@ class rete(RisorsaWin):
                 devName = features['Name']
             if (features['AdapterType']):
                 devType = features['AdapterType']
+            if (features['NetConnectionID']):
+                devNetConnID = features['NetConnectionID']
             if (features['MACAddress']):
                 devMac = features['MACAddress']
                 if devMac == self._activeMAC:
@@ -256,6 +259,7 @@ class rete(RisorsaWin):
               devxml.append(self.xmlFormat('MACAddress', devMac))
               devxml.append(self.xmlFormat('isActive', devIsActive))
               devxml.append(self.xmlFormat('Status', devStatus))
+              devxml.append(self.xmlFormat('NetConnectionID',devNetConnID))
               return devxml
             else:
               return None
