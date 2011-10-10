@@ -180,22 +180,27 @@ def checkmem():
   return True
 
 def checkwireless():
-    value = getstringtag(tag_wireless.split('.', 1)[1], 1, tag_wireless.split('.', 1)[0])
-    if value != 'none':
-      raise sysmonitorexception.WARNWLAN
-    return True
-  
-#  data = profiler.profile({'rete'})
-#  for device in data.findall('rete/NetworkDevice'):
-#    logger.debug(ET.tostring(device))
-#    type = device.find('Type').text
-#    if (type == 'Wireless'):
-#      active = device.find('isActive').text
-#      if (active == 'True'):
-#        raise sysmonitorexception.WARNWLAN
+#    value = getstringtag(tag_wireless.split('.', 1)[1], 1, tag_wireless.split('.', 1)[0])
+#    if value != 'none':
+#      raise sysmonitorexception.WARNWLAN
+#    return True
+  profiler = LocalProfilerFactory.getProfiler() 
+  data = profiler.profile({'rete'})
+  for device in data.findall('rete/NetworkDevice'):
+    logger.debug(ET.tostring(device))
+    active = device.find('isActive').text
+    if (active == 'True'):
+        type = device.find('Type').text
+        connection_id = device.find('NetConnectionID').text
+        if (type == 'Wireless') or _is_wireless_text(connection_id):
+            raise sysmonitorexception.WARNWLAN
+        
 
-#  return True
+  return True
 
+def _is_wireless_text(text):
+   return False
+ 
 def checkhosts(up, down, ispid, arping=1):
   
   ip = getIp();
