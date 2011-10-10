@@ -15,7 +15,6 @@ from ctypes import *
 from ctypes.wintypes import DWORD, ULONG
 import struct
 
-
 def executeQuery(wmi_class, whereCondition=""):   
     try: 
         objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
@@ -44,6 +43,7 @@ class RisorsaWin(Risorsa):
         try:
             for wmi_class in self._params:
                 items = executeQuery(wmi_class, self.whereCondition)
+                print "OK"
                 if len(items) == 0:
                     raise RisorsaException("La risorsa con le caratteristiche richieste non e' presente nel server")
                 else:
@@ -59,7 +59,11 @@ class RisorsaWin(Risorsa):
         except RisorsaException as e:
             raise RisorsaException(e)
         except:
-            raise RisorsaException("errore query")
+            if wmi_class == 'MSNdis_80211_ReceivedSignalStrength':
+              root.append(self.xmlFormat('ActiveWLAN','none'))
+              return root
+            else:
+              raise RisorsaException("errore query")
         return root
     
 class CPU(RisorsaWin):
@@ -99,6 +103,7 @@ class RAM(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
         self._params = {'Win32_ComputerSystem':['total_memory'], 'Win32_OperatingSystem':['percentage_ram_usage']}
+        
         
     def total_memory(self, obj):
         try:
@@ -153,7 +158,28 @@ class disco(RisorsaWin):
         except AttributeError as e:
             raise AttributeError(e)
         return self.xmlFormat("ByteTransfer", total)
-            
+
+class wireless(RisorsaWin):
+    def __init__(self):
+        self.CountWlan = 0
+        self.wcounted = False
+        RisorsaWin.__init__(self)
+        self._params = {'MSNdis_80211_ReceivedSignalStrength':['checkWlanPow','CountWLDev']}
+        self.whereCondition = " WHERE active = true"
+        
+    def checkWLanPow(self,obj):
+        if (obj == None):
+            return self.xmlFormat("ActiveWLAN","none")
+        else:
+            CountWlan = CountWlan +1
+    
+    def CountWLDev(self,obj):
+        if not self.wcounted:
+            self.wcounted = True
+            return self.xmlFormat("ActiveWLAN",CountWlan)
+          
+        
+         
 class rete(RisorsaWin):
     
     def __init__(self):
@@ -365,7 +391,7 @@ class connection(RisorsaWin):
 class Profiler(LocalProfiler):
     
     def __init__(self):
-        available_resources = {'CPU', 'RAM', 'sistemaOperativo', 'rete', 'disco'}
+        available_resources = {'CPU', 'RAM', 'sistemaOperativo', 'rete', 'wireless', 'disco'}
         LocalProfiler.__init__(self, available_resources)
 
     def profile(self, resource={}):

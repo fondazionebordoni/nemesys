@@ -36,7 +36,8 @@ tag_results = 'SystemProfilerResults'
 tag_threshold = 'SystemProfilerThreshold'
 tag_avMem = 'RAM.totalPhysicalMemory'
 tag_memLoad = 'RAM.RAMUsage'
-tag_wireless = 'rete.NetworkDevice/Type'
+#tag_wireless = 'rete.NetworkDevice/Type'
+tag_wireless = 'wireless.ActiveWLAN'
 tag_ip = 'ipAddr' #to check
 tag_sys = 'sistemaOperativo.OperatingSystem'
 tag_cpu = 'CPU.cpuLoad'
@@ -179,17 +180,21 @@ def checkmem():
   return True
 
 def checkwireless():
-  profiler = LocalProfilerFactory.getProfiler()
-  data = profiler.profile({'rete'})
-  for device in data.findall('rete/NetworkDevice'):
-    logger.debug(ET.tostring(device))
-    type = device.find('Type').text
-    if (type == 'Wireless'):
-      active = device.find('isActive').text
-      if (active == 'True'):
-        raise sysmonitorexception.WARNWLAN
+    value = getstringtag(tag_wireless.split('.', 1)[1], 1, tag_wireless.split('.', 1)[0])
+    if value != 'none':
+      raise sysmonitorexception.WARNWLAN
+    return True
+  
+#  data = profiler.profile({'rete'})
+#  for device in data.findall('rete/NetworkDevice'):
+#    logger.debug(ET.tostring(device))
+#    type = device.find('Type').text
+#    if (type == 'Wireless'):
+#      active = device.find('isActive').text
+#      if (active == 'True'):
+#        raise sysmonitorexception.WARNWLAN
 
-  return True
+#  return True
 
 def checkhosts(up, down, ispid, arping=1):
   
