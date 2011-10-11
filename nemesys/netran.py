@@ -30,7 +30,7 @@ import time
 
 logger = logging.getLogger()
 
-buffer_shared = deque([],maxlen=20000)
+buffer_shared = deque([], maxlen = 20000)
 condition = Condition()
 
 analyzer_memory = Event()
@@ -43,14 +43,14 @@ class Device:
 
   def __init__(self): None
 
-  def getdev(self, req=None):
+  def getdev(self, req = None):
     device = sniffer.getdev(req)
     return device
 
 
 class Sniffer(Thread):
 
-  def __init__(self, dev, buff=22*1024000, snaplen=8192, timeout=1, promisc=1):
+  def __init__(self, dev, buff = 22 * 1024000, snaplen = 8192, timeout = 1, promisc = 1):
     Thread.__init__(self)
     self._run_sniffer = 1
     self._stop_pkt = 0
@@ -64,7 +64,7 @@ class Sniffer(Thread):
     global buffer_shared
     global condition
     global switch_flag
-    sniffer_data = {'err_flag':0,'err_str':None,'datalink':0,'py_pcap_hdr':None,'py_pcap_data':None}
+    sniffer_data = {'err_flag':0, 'err_str':None, 'datalink':0, 'py_pcap_hdr':None, 'py_pcap_data':None}
     sniff_mode = 0
     loop = 0
     while (self._run_sniffer == 1):
@@ -74,7 +74,7 @@ class Sniffer(Thread):
         stat = sniffer.getstat()
         loop = stat['pkt_pcap_tot'] - stat['pkt_pcap_proc']
         if (loop <= 0):
-          loop=1
+          loop = 1
         if (len(buffer_shared) < 20000):
           while (loop > 0):
             try:
@@ -93,7 +93,6 @@ class Sniffer(Thread):
             loop -= 1
         else:
           condition.acquire()
-          #logger.debug("WAIT: Buffer Pieno!!")
           condition.wait(2.0)
           condition.release()
       else:
@@ -112,19 +111,15 @@ class Sniffer(Thread):
         stat = sniffer.getstat()
         if (self._stop_pkt == 0):
           stat = sniffer.getstat()
-          #logger.debug(stat)
           self._stop_pkt = stat['pkt_pcap_tot']
-          #logger.debug("PKT STOP: %d" % self._stop_pkt)
-          #logger.debug("PKT PROC: %d" % stat['pkt_pcap_proc'])
         if (stat['pkt_pcap_proc'] >= self._stop_pkt):
           analyzer_memory.clear()
           switch_flag.clear()
           self._stop_pkt = 0
-          #logger.debug("PKT PROC: %d" % stat['pkt_pcap_proc'])
     else:
       analyzer_memory.clear()
       switch_flag.clear()
-      
+
   def stop(self):
     self._run_sniffer = 0
     while (self.isAlive()):
@@ -136,7 +131,7 @@ class Sniffer(Thread):
     sniffer_stat = sniffer.getstat()
     return sniffer_stat
 
-  def join(self, timeout=None):
+  def join(self, timeout = None):
     Thread.join(self, timeout)
 
 
@@ -158,7 +153,7 @@ class Contabyte(Thread):
     buffer_shared.clear()
     analyzer_flag.set()
     while (self._run_contabyte == 1):
-      contabyte_data = {'err_flag':0,'err_str':None,'datalink':0,'py_pcap_hdr':None,'py_pcap_data':None} 
+      contabyte_data = {'err_flag':0, 'err_str':None, 'datalink':0, 'py_pcap_hdr':None, 'py_pcap_data':None}
       if (len(buffer_shared) > 0):
         try:
           condition.acquire()
@@ -172,7 +167,6 @@ class Contabyte(Thread):
           raise
       elif (analyzer_flag.isSet()):
         condition.acquire()
-        #logger.debug("WAIT: Buffer Vuoto!!")
         condition.wait(2.0)
         condition.release()
 
@@ -182,31 +176,18 @@ class Contabyte(Thread):
     analyzer_flag.clear()
     while (switch_flag.isSet()):
       time.sleep(0.2)
-    #logger.debug(len(buffer_shared))
     while (len(buffer_shared) > 0):
       None
     self._run_contabyte = 0
-#    if (self._stat != None):
-#      keys = self._stat.keys()
-#      keys.sort()
-#      for key in keys:
-#        print "Key: %s \t Value: %s" % (key, self._stat[key])
-#    else:
-#      print "No Statistics"
     while (self.isAlive()):
       None
 
   def getstat(self):
     contabyte_stat = self._stat
-    #logger.debug("PKT RETX: %d" %contabyte_stat['packet_retx_all'])
-    #logger.debug("PAY RETX: %d" %contabyte_stat['payload_retx_all'])
     return contabyte_stat
 
-  def join(self, timeout=None):
+  def join(self, timeout = None):
     Thread.join(self, timeout)
-
-
-
 
 if __name__ == '__main__':
 
@@ -270,7 +251,6 @@ if __name__ == '__main__':
   print "Sniffing And Analyzing...."
 
   raw_input("Enter When Finished!!")
-  #time.sleep(30)
 
   mycontabyte.stop()
 
@@ -304,8 +284,6 @@ if __name__ == '__main__':
     print "No Statistics"
 
   print "\nSniffer And Contabyte Join...."
-
-  #print("Sniffer Flag:"+str(sniffer_flag)+" Analyzer Flag:"+str(analyzer_flag))
 
   mycontabyte.join()
   print "Success Contabyte"
