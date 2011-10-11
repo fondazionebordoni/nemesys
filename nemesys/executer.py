@@ -385,7 +385,6 @@ class Executer:
       byte_all = stats.byte_up_all
       byte_nem = stats.byte_up_nem
 
-    # TODO Completare
     if byte_all > 0:
       traffic_ratio = (byte_all - byte_nem) / (byte_all * 1.0)
       logger.debug('Valori di test: ratio: %f%%; %s' % (traffic_ratio * 100, stats))
@@ -438,7 +437,6 @@ class Executer:
             self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
             base_error = 50000
 
-      # DONE::TODO Prendere l'IP tramite sysmonitor e passarlo nel costruttore di Tester che lo userà per il contabit interno 
       t = Tester(if_ip = sysmonitor.getIp(), host = task.server, timeout = self._testtimeout,
                  username = self._client.username, password = self._client.password)
 
