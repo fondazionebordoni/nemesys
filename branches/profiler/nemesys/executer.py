@@ -18,9 +18,9 @@
 
 from ConfigParser import ConfigParser, NoOptionError
 from client import Client
-from timeNtp import timestampNtp
 from datetime import datetime
 from deliverer import Deliverer
+from errorcoder import Errorcoder
 from isp import Isp
 from logger import logging
 from measure import Measure
@@ -30,12 +30,13 @@ from profile import Profile
 from progress import Progress
 from random import randint
 from status import Status
+from sysmonitorexception import SysmonitorException
 from tester import Tester
 from threading import Semaphore, Thread, Timer
 from time import sleep
+from timeNtp import timestampNtp
 from urlparse import urlparse
 from xmlutils import getvalues, getstarttime, getxml, xml2task
-from errorcoder import Errorcoder
 import asyncore
 import glob
 import hashlib
@@ -47,7 +48,6 @@ import shutil
 import socket
 import status
 import sysmonitor
-from sysmonitorexception import SysmonitorException
 import sysmonitorexception
 
 
@@ -64,6 +64,9 @@ MAX_MEASURES_PER_HOUR = 1
 TH_OUTERTRAFFIC = 0.1
 # Tempo di attesa tra una misura e la successiva in caso di misura fallita
 TIME_LAG = 5
+# Enumeration
+DOWN = 'down'
+UP = 'up'
 
 class _Communicator(Thread):
 
@@ -78,7 +81,7 @@ class _Communicator(Thread):
     asyncore.loop(5)
     logger.debug('Nemesys asyncore loop terminated.')
 
-  def join(self, timeout=None):
+  def join(self, timeout = None):
     self._channel.quit()
     Thread.join(self, timeout)
 
@@ -94,7 +97,7 @@ class _Channel(asyncore.dispatcher):
     self.bind(self._url)
     self.listen(1)
 
-  def sendstatus(self, status=None):
+  def sendstatus(self, status = None):
     if self._sender:
       self._sender.write(current_status)
     else:
@@ -160,8 +163,8 @@ class OptionParser(OptionParser):
 
 class Executer:
 
-  def __init__(self, client, scheduler, repository, progressurl, polling=300.0, tasktimeout=60,
-               testtimeout=30, httptimeout=60, local=False, isprobe=True, md5conf=None, killonerror=True):
+  def __init__(self, client, scheduler, repository, progressurl, polling = 300.0, tasktimeout = 60,
+               testtimeout = 30, httptimeout = 60, local = False, isprobe = True, md5conf = None, killonerror = True):
 
     self._client = client
     self._scheduler = scheduler
@@ -188,7 +191,7 @@ class Executer:
     else:
       logger.info('Inizializzato software per misure d\'utente')
 
-  def test(self, taskfile=None):
+  def test(self, taskfile = None):
 
     task = None
 
@@ -211,7 +214,7 @@ class Executer:
     # Se non è una sonda, ma un client d'utente
     if not self._isprobe:
       # Se ho fatto 2 misure in questa ora, aspetto la prossima ora
-      now = datetime.fromtimestamp(timestampNtp())   
+      now = datetime.fromtimestamp(timestampNtp())
       hour = now.hour
       made = self._progress.howmany(hour)
       if made >= MAX_MEASURES_PER_HOUR:
@@ -219,7 +222,7 @@ class Executer:
         # Quanti secondi perché scatti la prossima ora?
         wait_hour = self._polling
         try:
-          delta_hour = now.replace(hour=(hour + 1) % 24, minute=0, second=0) - now
+          delta_hour = now.replace(hour = (hour + 1) % 24, minute = 0, second = 0) - now
           if delta_hour.days < 0:
             logger.info('Nuovo giorno: delta_hour %s' % delta_hour)
           # Aggiungo un random di 5 minuti per evitare chiamate sincrone
@@ -250,7 +253,7 @@ class Executer:
 
   def _hourisdone(self):
     if not self._isprobe:
-      now = datetime.fromtimestamp(timestampNtp())         
+      now = datetime.fromtimestamp(timestampNtp())
       hour = now.hour
       made = self._progress.howmany(hour)
       if made >= MAX_MEASURES_PER_HOUR:
@@ -272,7 +275,7 @@ class Executer:
     # Prepare Progress file
     progressurl = self._progressurl
     clientid = self._client.id
-    self._progress = Progress(clientid=clientid, progressurl=progressurl)
+    self._progress = Progress(clientid = clientid, progressurl = progressurl)
 
     # Controllo se 
     # - non sono trascorsi 3 giorni dall'inizio delle misure
@@ -310,14 +313,14 @@ class Executer:
             # Task immediato
             alarm = 5.00
           else:
-            delta = task.start - datetime.fromtimestamp(timestampNtp())            
+            delta = task.start - datetime.fromtimestamp(timestampNtp())
             alarm = delta.days * 86400 + delta.seconds
 
           if alarm > 0 and (task.download > 0 or task.upload > 0 or task.ping > 0):
             logger.debug('Impostazione di un nuovo task tra: %s secondi' % alarm)
             self._updatestatus(Status(status.READY, 'Inizio misura tra pochi secondi...'))
             # Imposta l'allarme che eseguirà i test quando richiesto dal task
-            
+
             # Prima cancella il vecchio allarme
             try:
               if (t != None):
@@ -326,7 +329,7 @@ class Executer:
               pass
             except AttributeError:
               pass
-            
+
             # Imposta il nuovo allarme
             t = Timer(alarm, self._dotask, [task])
             t.start()
@@ -348,7 +351,7 @@ class Executer:
 
     url = urlparse(self._scheduler)
     certificate = self._client.isp.certificate
-    connection = httputils.getverifiedconnection(url=url, certificate=certificate, timeout=self._httptimeout)
+    connection = httputils.getverifiedconnection(url = url, certificate = certificate, timeout = self._httptimeout)
 
     try:
       connection.request('GET', '%s?clientid=%s&version=%s&confid=%s' % (url.path, self._client.id, __version__, self._md5conf))
@@ -367,20 +370,29 @@ class Executer:
         logger.warning('Misura in esecuzione con warning: %s' % e)
       else:
         raise e
-    else:                  
+    else:
       raise e
 
-  def _test_gating(self, test):
+  def _test_gating(self, test, testtype):
     '''
     Funzione per l'analisi del contabit ed eventuale gating dei risultati del test
     '''
-    if test.counter_total_pay > 0:
-      traffic_ratio = (test.counter_total_pay - test.counter_ftp_pay) / (test.counter_total_pay * 1.0)
-      logger.debug('Valori di test: traffico FTP %d (%d), traffico totale %d, ratio: %f' % (test.counter_ftp_pay, test.bytes, test.counter_total_pay, traffic_ratio * 100))
+    stats = test.counter_stats
+    if (testtype == DOWN):
+      byte_all = stats.byte_down_all
+      byte_nem = stats.byte_down_nem
+    else:
+      byte_all = stats.byte_up_all
+      byte_nem = stats.byte_up_nem
+
+    if byte_all > 0:
+      traffic_ratio = (byte_all - byte_nem) / (byte_all * 1.0)
+      logger.debug('Valori di test: ratio: %f%%; %s' % (traffic_ratio * 100, stats))
       if traffic_ratio < 0:
         raise Exception('Errore durante la verifica del traffico di misura: impossibile salvare i dati.')
       if traffic_ratio < TH_OUTERTRAFFIC:
-        test.bytes = test.counter_ftp_pay
+        # Dato da salvare sulla misura
+        test.bytes = byte_all
       else:
         raise Exception('Eccessiva presenza di traffico internet non legato alla misura: percentuale del %d%%.' % round(traffic_ratio * 100))
 
@@ -416,7 +428,7 @@ class Executer:
         try:
           if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
             raise Exception('Condizioni per effettuare la misura non verificate.')
-  
+
         except Exception as e:
           logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
           if self._killonerror:
@@ -425,13 +437,12 @@ class Executer:
             self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
             base_error = 50000
 
-      # DONE::TODO Prendere l'IP tramite sysmonitor e passarlo nel costruttore di Tester che lo userà per il contabit interno 
-      t = Tester(if_ip=sysmonitor.getIp(), host=task.server, timeout=self._testtimeout,
-                 username=self._client.username, password=self._client.password)
+      t = Tester(if_ip = sysmonitor.getIp(), host = task.server, timeout = self._testtimeout,
+                 username = self._client.username, password = self._client.password)
 
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
       start = datetime.fromtimestamp(timestampNtp())
-      id = start.strftime('%y%m%d%H%M')      
+      id = start.strftime('%y%m%d%H%M')
       m = Measure(id, task.server, self._client, __version__, start.isoformat())
 
       # Set task timeout alarm
@@ -445,13 +456,13 @@ class Executer:
         try:
           error = 0
           if not self._isprobe:
-            
+
             # Profilazione del sistema
             # ------------------------
             try:
               if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
                 raise Exception('Condizioni per effettuare la misura non verificate.')
-    
+
             except Exception as e:
               logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
 
@@ -460,35 +471,35 @@ class Executer:
               else:
                 self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
                 error = errors.geterrorcode(e)
-                
+
           # Esecuzione del test
           # ------------------------
           logger.debug('Starting ftp download test (%s) [%d]' % (task.ftpdownpath, i))
           test = t.testftpdown(task.ftpdownpath)
-  
+
           if error > 0 or base_error > 0:
             test.seterrorcode(error + base_error)
-            
+
           # Analisi da contabit
           #--------------------------
-          self._test_gating(test)
-                  
+          self._test_gating(test, DOWN)
+
           # Salvataggio della misura
           # ------------------------
           logger.debug('Download result: %.3f' % test.value)
           logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
           m.savetest(test)
           i = i + 1
-  
+
           # Prequalifica della linea
           # ------------------------
           if (test.value > 0):
             bandwidth = int(round(test.bytes * 8 / test.value))
             logger.debug('Banda ipotizzata in download: %d' % bandwidth)
             task.update_ftpdownpath(bandwidth)
-            
+
           sleep(1)
-          
+
         # Cattura delle eccezioni durante la misura
         except Exception as e:
           if not datetime.fromtimestamp(timestampNtp()).hour == start.hour:
@@ -507,13 +518,13 @@ class Executer:
         try:
           error = 0
           if not self._isprobe:
-            
+
             # Profilazione del sistema
             # ------------------------
             try:
               if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
                 raise Exception('Condizioni per effettuare la misura non verificate.')
-    
+
             except Exception as e:
               logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
               if self._killonerror:
@@ -521,33 +532,33 @@ class Executer:
               else:
                 self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
                 error = errors.geterrorcode(e)
-  
+
           # Esecuzione del test
           # ------------------------
           logger.debug('Starting ftp upload test (%s) [%d]' % (task.ftpuppath, i))
           test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
-  
+
           if error > 0 or base_error > 0:
             test.seterrorcode(error + base_error)
-            
+
           # Analisi da contabit
           #--------------------------
-          self._test_gating(test)
-  
+          self._test_gating(test, UP)
+
           # Salvataggio del test nella misura
           # ------------------------
           logger.debug('Upload result: %.3f' % test.value)
           logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
           m.savetest(test)
           i = i + 1
-  
+
           # Prequalifica della linea
           # ------------------------
           if (test.value > 0):
             bandwidth = int(round(test.bytes * 8 / test.value))
             logger.debug('Banda ipotizzata in upload: %d' % bandwidth)
             self._client.profile.upload = bandwidth
-            
+
           sleep(1)
 
         # Cattura delle eccezioni durante la misura
@@ -560,10 +571,10 @@ class Executer:
             sleep(TIME_LAG)
             logger.info('Misura in ripresa dopo sospensione. Test upload %d di %d' % (i, task.upload))
             self._updatestatus(status.Status(status.PLAY, 'Proseguo la misura. Misura in esecuzione'))
-            
+
       # Stop lo sniffer
       t.sniffer_stop()
-            
+
       # Testa i ping
       i = 1
       while (i <= task.ping):
@@ -571,13 +582,13 @@ class Executer:
         try:
           error = 0
           if not self._isprobe:
-            
+
             # Profilazione del sistema
             # ------------------------
             try:
               if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
                 raise Exception('Condizioni per effettuare la misura non verificate.')
-    
+
             except Exception as e:
               logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
               if self._killonerror:
@@ -585,15 +596,15 @@ class Executer:
               else:
                 self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
                 error = errors.geterrorcode(e)
-  
+
           # Esecuzione del test
           # ------------------------
           logger.debug('Starting ping test [%d]' % i)
           test = t.testping()
-  
+
           if error > 0 or base_error > 0:
             test.seterrorcode(error + base_error)
-  
+
           # Salvataggio del test nella misura
           # ------------------------
           logger.debug('Ping result: %.3f' % test.value)
@@ -680,8 +691,8 @@ class Executer:
           time = getstarttime(filename)
           os.remove(filename)
           self._movefiles(zipname)
-          self._progress.putstamp(time)         
-          
+          self._progress.putstamp(time)
+
           result = True
 
     except Exception as e:
@@ -754,11 +765,11 @@ def main():
 
   client = getclient(options)
   isprobe = (client.isp.certificate != None)
-  e = Executer(client=client, scheduler=options.scheduler,
-               repository=options.repository, progressurl=options.progressurl, polling=options.polling,
-               tasktimeout=options.tasktimeout, testtimeout=options.testtimeout,
-               httptimeout=options.httptimeout, local=options.local,
-               isprobe=isprobe, md5conf=md5conf, killonerror=options.killonerror)
+  e = Executer(client = client, scheduler = options.scheduler,
+               repository = options.repository, progressurl = options.progressurl, polling = options.polling,
+               tasktimeout = options.tasktimeout, testtimeout = options.testtimeout,
+               httptimeout = options.httptimeout, local = options.local,
+               isprobe = isprobe, md5conf = md5conf, killonerror = options.killonerror)
   #logger.debug("%s, %s, %s" % (client, client.isp, client.profile))
 
   if (options.test):
@@ -771,12 +782,12 @@ def main():
 
 def getclient(options):
 
-  profile = Profile(id=options.profileid, upload=options.bandwidthup,
-                    download=options.bandwidthdown)
-  isp = Isp(id=options.ispid, certificate=options.certificate)
-  return Client(id=options.clientid, profile=profile, isp=isp,
-                geocode=options.geocode, username=options.username,
-                password=options.password)
+  profile = Profile(id = options.profileid, upload = options.bandwidthup,
+                    download = options.bandwidthdown)
+  isp = Isp(id = options.ispid, certificate = options.certificate)
+  return Client(id = options.clientid, profile = profile, isp = isp,
+                geocode = options.geocode, username = options.username,
+                password = options.password)
 
 def parse():
   '''
@@ -789,11 +800,11 @@ def parse():
     config.read(paths.CONF_MAIN)
     logger.info('Caricata configurazione da %s' % paths.CONF_MAIN)
 
-  parser = OptionParser(version=__version__, description='')
-  parser.add_option('-T', '--test', dest='test', action='store_true',
-                    help='test client functionality by executing a single task')
-  parser.add_option('--task', dest='task',
-                    help='path of an xml file with a task to execute (valid only if -T option is enabled)')
+  parser = OptionParser(version = __version__, description = '')
+  parser.add_option('-T', '--test', dest = 'test', action = 'store_true',
+                    help = 'test client functionality by executing a single task')
+  parser.add_option('--task', dest = 'task',
+                    help = 'path of an xml file with a task to execute (valid only if -T option is enabled)')
 
   # System options
   # --------------------------------------------------------------------------
@@ -807,8 +818,8 @@ def parse():
     value = config.getboolean(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('-L', '--local', dest=option, action='store_true', default=value,
-                    help='perform tests without sending measure files to repository')
+  parser.add_option('-L', '--local', dest = option, action = 'store_true', default = value,
+                    help = 'perform tests without sending measure files to repository')
 
   option = 'killonerror'
   value = True
@@ -816,8 +827,8 @@ def parse():
     value = config.getboolean(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('-K', '--killonerror', dest=option, action='store_true', default=value,
-                    help='kill tests if an exception is raised during check')
+  parser.add_option('-K', '--killonerror', dest = option, action = 'store_true', default = value,
+                    help = 'kill tests if an exception is raised during check')
 
   # System options
   # --------------------------------------------------------------------------
@@ -837,8 +848,8 @@ def parse():
     value = config.getint(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--task-timeout', dest=option, type='int', default=value,
-                    help='global timeout (in seconds) for each task [%s]' % value)
+  parser.add_option('--task-timeout', dest = option, type = 'int', default = value,
+                    help = 'global timeout (in seconds) for each task [%s]' % value)
 
   option = 'testtimeout'
   value = '60'
@@ -846,8 +857,8 @@ def parse():
     value = config.getint(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--test-timeout', dest=option, type='float', default=value,
-                    help='timeout (in seconds as float number) for each test in a task [%s]' % value)
+  parser.add_option('--test-timeout', dest = option, type = 'float', default = value,
+                    help = 'timeout (in seconds as float number) for each test in a task [%s]' % value)
 
   option = 'repository'
   value = 'https://finaluser.agcom244.fub.it/Upload'
@@ -855,17 +866,17 @@ def parse():
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('-r', '--repository', dest=option, default=value,
-                    help='upload URL for deliver measures\' files [%s]' % value)
-  
+  parser.add_option('-r', '--repository', dest = option, default = value,
+                    help = 'upload URL for deliver measures\' files [%s]' % value)
+
   option = 'progressurl'
   value = 'https://finaluser.agcom244.fub.it/ProgressXML'
   try:
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--progress-url', dest=option, default=value,
-                    help='complete URL for progress request [%s]' % value)
+  parser.add_option('--progress-url', dest = option, default = value,
+                    help = 'complete URL for progress request [%s]' % value)
 
   option = 'scheduler'
   value = 'https://finaluser.agcom244.fub.it/Scheduler'
@@ -873,8 +884,8 @@ def parse():
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('-s', '--scheduler', dest=option, default=value,
-                    help='complete url for schedule download [%s]' % value)
+  parser.add_option('-s', '--scheduler', dest = option, default = value,
+                    help = 'complete url for schedule download [%s]' % value)
 
   option = 'httptimeout'
   value = '60'
@@ -882,8 +893,8 @@ def parse():
     value = config.getint(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--http-timeout', dest=option, type='int', default=value,
-                    help='timeout (in seconds) for http operations [%s]' % value)
+  parser.add_option('--http-timeout', dest = option, type = 'int', default = value,
+                    help = 'timeout (in seconds) for http operations [%s]' % value)
 
   option = 'polling'
   value = '300'
@@ -891,8 +902,8 @@ def parse():
     value = config.getint(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--polling-time', dest=option, type='int', default=value,
-                    help='polling time in seconds between two scheduling requests [%s]' % value)
+  parser.add_option('--polling-time', dest = option, type = 'int', default = value,
+                    help = 'polling time in seconds between two scheduling requests [%s]' % value)
 
   # Client options
   # --------------------------------------------------------------------------
@@ -906,8 +917,8 @@ def parse():
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     pass
-  parser.add_option('-c', '--clientid', dest=option, default=value,
-                    help='client identification string [%s]' % value)
+  parser.add_option('-c', '--clientid', dest = option, default = value,
+                    help = 'client identification string [%s]' % value)
 
   option = 'geocode'
   value = None
@@ -916,8 +927,8 @@ def parse():
   except (ValueError, NoOptionError):
     logger.warning('Nessuna specifica geocode inserita.')
     pass
-  parser.add_option('-g', '--geocode', dest=option, default=value,
-                    help='geocode identification string [%s]' % value)
+  parser.add_option('-g', '--geocode', dest = option, default = value,
+                    help = 'geocode identification string [%s]' % value)
 
   option = 'username'
   value = 'anonymous'
@@ -925,8 +936,8 @@ def parse():
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--username', dest=option, default=value,
-                    help='username for FTP login [%s]' % value)
+  parser.add_option('--username', dest = option, default = value,
+                    help = 'username for FTP login [%s]' % value)
 
   option = 'password'
   value = '@anonymous'
@@ -934,8 +945,8 @@ def parse():
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--password', dest=option, default=value,
-                    help='password for FTP login [%s]' % value)
+  parser.add_option('--password', dest = option, default = value,
+                    help = 'password for FTP login [%s]' % value)
 
   # Profile options
   # --------------------------------------------------------------------------
@@ -949,8 +960,8 @@ def parse():
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     pass
-  parser.add_option('-p', '--profileid', dest=option, default=value,
-                    help='profile identification string [%s]' % value)
+  parser.add_option('-p', '--profileid', dest = option, default = value,
+                    help = 'profile identification string [%s]' % value)
 
   option = 'bandwidthup'
   value = None
@@ -958,8 +969,8 @@ def parse():
     value = config.getint(section, option)
   except (ValueError, NoOptionError):
     pass
-  parser.add_option('--up', dest=option, default=value, type='int',
-                    help='upload bandwidth [%s]' % value)
+  parser.add_option('--up', dest = option, default = value, type = 'int',
+                    help = 'upload bandwidth [%s]' % value)
 
   option = 'bandwidthdown'
   value = None
@@ -967,8 +978,8 @@ def parse():
     value = config.getint(section, option)
   except (ValueError, NoOptionError):
     pass
-  parser.add_option('--down', dest=option, default=value, type='int',
-                    help='download bandwidth [%s]' % value)
+  parser.add_option('--down', dest = option, default = value, type = 'int',
+                    help = 'download bandwidth [%s]' % value)
 
   # Isp options
   # --------------------------------------------------------------------------
@@ -982,8 +993,8 @@ def parse():
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     pass
-  parser.add_option('--ispid', dest=option, default=value,
-                    help='isp identification string [%s]' % value)
+  parser.add_option('--ispid', dest = option, default = value,
+                    help = 'isp identification string [%s]' % value)
 
   option = 'certificate'
   value = None
@@ -996,8 +1007,8 @@ def parse():
   except (ValueError, NoOptionError):
     logger.warning('Nessun certificato client specificato.')
     pass
-  parser.add_option('--certificate', dest=option, default=value,
-                    help='client certificate for schedule downloading and measure file signing [%s]' % value)
+  parser.add_option('--certificate', dest = option, default = value,
+                    help = 'client certificate for schedule downloading and measure file signing [%s]' % value)
 
   with open(paths.CONF_MAIN, 'w') as file:
     config.write(file)
