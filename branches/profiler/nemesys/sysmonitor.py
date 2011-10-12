@@ -22,8 +22,8 @@ from logger import logging
 from os import path as Path
 from sysmonitorexception import SysmonitorException
 from xml.etree import ElementTree as ET
-#import checkhost
-#import netifaces
+import checkhost
+import netifaces
 import paths
 import re
 import socket
