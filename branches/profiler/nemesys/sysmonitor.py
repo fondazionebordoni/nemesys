@@ -22,8 +22,8 @@ from logger import logging
 from os import path as Path
 from sysmonitorexception import SysmonitorException
 from xml.etree import ElementTree as ET
-import checkhost
-import netifaces
+#import checkhost
+#import netifaces
 import paths
 import re
 import socket
@@ -180,10 +180,6 @@ def checkmem():
   return True
 
 def checkwireless():
-#    value = getstringtag(tag_wireless.split('.', 1)[1], 1, tag_wireless.split('.', 1)[0])
-#    if value != 'none':
-#      raise sysmonitorexception.WARNWLAN
-#    return True
   profiler = LocalProfilerFactory.getProfiler() 
   data = profiler.profile({'rete'})
   for device in data.findall('rete/NetworkDevice'):

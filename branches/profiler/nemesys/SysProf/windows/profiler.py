@@ -241,7 +241,6 @@ class rete(RisorsaWin):
                 devType = features['AdapterType']
             if (features['NetConnectionID']):
                 devNetConnID = features['NetConnectionID']
-                print "ok"
                 if self._is_wireless_text(devNetConnID):
                     devType = 'Wireless' #type is forced according to the NetConnectionID
             if (features['MACAddress']):
@@ -249,18 +248,14 @@ class rete(RisorsaWin):
                 if devMac == self._activeMAC:
                     devIsActive = 'True'
             if (features['NetEnabled'] == True):
-                devStatus = 'Enabled'
-#            if devStatus == 'Enabled':      
+                devStatus = 'Enabled'   
             devxml = ET.Element('NetworkDevice')
             devxml.append(self.xmlFormat('Name', devName))
             devxml.append(self.xmlFormat('Type', devType))
             devxml.append(self.xmlFormat('MACAddress', devMac))
             devxml.append(self.xmlFormat('isActive', devIsActive))
             devxml.append(self.xmlFormat('Status', devStatus))
-            #              devxml.append(self.xmlFormat('NetConnectionID',devNetConnID))
             return devxml
-#            else:
-#              return None
           
     def _is_wireless_text(self,text):
       keywords = ['wireless', 'wlan', 'wifi', 'wi-fi']
