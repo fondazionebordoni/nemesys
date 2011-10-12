@@ -188,23 +188,14 @@ def checkwireless():
   data = profiler.profile({'rete'})
   for device in data.findall('rete/NetworkDevice'):
     logger.debug(ET.tostring(device))
-    active = device.find('isActive').text
-    if (active == 'True'):
+    status = device.find('Status').text
+    if (status == 'Enabled'):
         type = device.find('Type').text
-        connection_id = device.find('NetConnectionID').text
-        if (type == 'Wireless') or _is_wireless_text(connection_id):
+        if (type == 'Wireless'):
             raise sysmonitorexception.WARNWLAN  
   return True
 
-def _is_wireless_text(text):
-  keywords = ['wireless', 'wlan', 'wifi', 'wi-fi']
-  ltext=text.lower()
-  words=ltext.split(' ')
-  for w in words:
-    for key in keywords:
-      if w==key:
-        return True
-  return False
+
  
 def checkhosts(up, down, ispid, arping=1):
   

@@ -43,7 +43,6 @@ class RisorsaWin(Risorsa):
         try:
             for wmi_class in self._params:
                 items = executeQuery(wmi_class, self.whereCondition)
-                print "OK"
                 if len(items) == 0:
                     raise RisorsaException("La risorsa con le caratteristiche richieste non e' presente nel server")
                 else:
@@ -59,11 +58,7 @@ class RisorsaWin(Risorsa):
         except RisorsaException as e:
             raise RisorsaException(e)
         except:
-            if wmi_class == 'MSNdis_80211_ReceivedSignalStrength':
-              root.append(self.xmlFormat('ActiveWLAN','none'))
-              return root
-            else:
-              raise RisorsaException("errore query")
+            raise RisorsaException("errore query")
         return root
     
 class CPU(RisorsaWin):
@@ -223,12 +218,12 @@ class rete(RisorsaWin):
             
     def profileDevice(self, obj):
         running = 0X3 #running Net Interface CODE
-        features = {'Name':'', 'AdapterType':'', 'MACAddress':'', 'Availability':'','NetConnectionID':''}
+        features = {'Name':'', 'AdapterType':'', 'MACAddress':'', 'NetEnabled':'','NetConnectionID':''}
         devName = 'unknown'
         devType = 'unknown'
         devMac = 'unknown'
         devIsActive = 'False'
-        devStatus = 'unknown'
+        devStatus = 'Disabled'
         devNetConnID = 'unknown'
         if (not self._checked):
             try:
@@ -246,24 +241,37 @@ class rete(RisorsaWin):
                 devType = features['AdapterType']
             if (features['NetConnectionID']):
                 devNetConnID = features['NetConnectionID']
+                print "ok"
+                if self._is_wireless_text(devNetConnID):
+                    devType = 'Wireless' #type is forced according to the NetConnectionID
             if (features['MACAddress']):
                 devMac = features['MACAddress']
                 if devMac == self._activeMAC:
                     devIsActive = 'True'
-            if (features['Availability'] == running):
+            if (features['NetEnabled'] == True):
                 devStatus = 'Enabled'
-            if devStatus == 'Enabled':      
-              devxml = ET.Element('NetworkDevice')
-              devxml.append(self.xmlFormat('Name', devName))
-              devxml.append(self.xmlFormat('Type', devType))
-              devxml.append(self.xmlFormat('MACAddress', devMac))
-              devxml.append(self.xmlFormat('isActive', devIsActive))
-              devxml.append(self.xmlFormat('Status', devStatus))
-              devxml.append(self.xmlFormat('NetConnectionID',devNetConnID))
-              return devxml
-            else:
-              return None
-                    
+#            if devStatus == 'Enabled':      
+            devxml = ET.Element('NetworkDevice')
+            devxml.append(self.xmlFormat('Name', devName))
+            devxml.append(self.xmlFormat('Type', devType))
+            devxml.append(self.xmlFormat('MACAddress', devMac))
+            devxml.append(self.xmlFormat('isActive', devIsActive))
+            devxml.append(self.xmlFormat('Status', devStatus))
+            #              devxml.append(self.xmlFormat('NetConnectionID',devNetConnID))
+            return devxml
+#            else:
+#              return None
+          
+    def _is_wireless_text(self,text):
+      keywords = ['wireless', 'wlan', 'wifi', 'wi-fi']
+      ltext=text.lower()
+      words=ltext.split(' ')
+      for w in words:
+        for key in keywords:
+          if w==key:
+            return True
+      return False
+                   
 class processi(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
