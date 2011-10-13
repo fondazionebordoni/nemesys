@@ -476,9 +476,9 @@ def _arp_unpack(arpPkt):
     arpHdr['arpPrAL'] = arp04
     arpHdr['arpOpCode'] = arp05
     arpHdr['arpHwSrc'] = _display_mac(arp06)
-    arpHdr['arpPrSrc'] = socket.inet_ntop(socket.AF_INET, arp07)
+    arpHdr['arpPrSrc'] = socket.inet_ntoa(arp07)
     arpHdr['arpHwDst'] = _display_mac(arp08)
-    arpHdr['arpPrDst'] = socket.inet_ntop(socket.AF_INET, arp09)
+    arpHdr['arpPrDst'] = socket.inet_ntoa(arp09)
 
     arpData = arpPkt[ARP_HDR_LEN:]
 
@@ -509,8 +509,10 @@ def _ipv4_unpack(ipv4Pkt):
     ipv4Hdr['ipTtl'] = ip06
     ipv4Hdr['ipPayType'] = ip07
     ipv4Hdr['ipCheckSum'] = ip08
-    ipv4Hdr['ipSrc'] = socket.inet_ntop(socket.AF_INET, ip09)
-    ipv4Hdr['ipDst'] = socket.inet_ntop(socket.AF_INET, ip10)
+    #ipv4Hdr['ipSrc'] = socket.inet_ntop(socket.AF_INET, ip09)
+    #ipv4Hdr['ipDst'] = socket.inet_ntop(socket.AF_INET, ip10)
+    ipv4Hdr['ipSrc'] = socket.inet_ntoa(ip09)
+    ipv4Hdr['ipDst'] = socket.inet_ntoa(ip10)
 
     ipv4Data = ipv4Pkt[ipHdrLen:]
 
@@ -535,8 +537,8 @@ def _ipv6_unpack(ipv6Pkt):
     ipv6Hdr['ipPayLen'] = ip02
     ipv6Hdr['ipPayType'] = ip03
     ipv6Hdr['ipTtl'] = ip04
-    ipv6Hdr['ipSrc'] = socket.inet_ntop(socket.AF_INET6, ip05)
-    ipv6Hdr['ipDst'] = socket.inet_ntop(socket.AF_INET6, ip06)
+    ipv6Hdr['ipSrc'] = ip05 #socket.inet_ntop(socket.AF_INET6, ip05)
+    ipv6Hdr['ipDst'] = ip06 #socket.inet_ntop(socket.AF_INET6, ip06)
 
     ipv6Data = ipv6Pkt[IPv6_HDR_LEN:]
 

@@ -247,7 +247,7 @@ def main():
 if __name__ == '__main__':
   if len(sys.argv) < 2:
     for k in range(1, 5):
-      t1 = Tester('192.168.208.53', Host(ip = '193.104.137.133'), 'nemesys', '4gc0m244')
+      t1 = Tester('172.16.166.131', Host(ip = '193.104.137.133'), 'nemesys', '4gc0m244')
       #t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
 
       print "[-------- TEST 20-20-10 numero:%d --------]" % k
