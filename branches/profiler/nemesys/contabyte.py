@@ -509,8 +509,6 @@ def _ipv4_unpack(ipv4Pkt):
     ipv4Hdr['ipTtl'] = ip06
     ipv4Hdr['ipPayType'] = ip07
     ipv4Hdr['ipCheckSum'] = ip08
-    #ipv4Hdr['ipSrc'] = socket.inet_ntop(socket.AF_INET, ip09)
-    #ipv4Hdr['ipDst'] = socket.inet_ntop(socket.AF_INET, ip10)
     ipv4Hdr['ipSrc'] = socket.inet_ntoa(ip09)
     ipv4Hdr['ipDst'] = socket.inet_ntoa(ip10)
 
@@ -530,6 +528,9 @@ def _ipv6_unpack(ipv6Pkt):
   if (len(ipv6Pkt) >= IPv6_HDR_LEN):
 
     ip01, ip02, ip03, ip04, ip05, ip06 = struct.unpack(ipv6Hdr['hdrStruct'], ipv6Pkt[:IPv6_HDR_LEN])
+    
+    ipSrc = string.join(["%02X" % ord(el) for el in ip05], ':')
+    ipDst = string.join(["%02X" % ord(el) for el in ip06], ':')
 
     ipv6Hdr['ipVer'] = ((ip01 & 0xf0000000) >> 28)
     ipv6Hdr['ipTrClass'] = ((ip01 & 0x0ff00000) >> 20)
@@ -537,8 +538,10 @@ def _ipv6_unpack(ipv6Pkt):
     ipv6Hdr['ipPayLen'] = ip02
     ipv6Hdr['ipPayType'] = ip03
     ipv6Hdr['ipTtl'] = ip04
-    ipv6Hdr['ipSrc'] = ip05 #socket.inet_ntop(socket.AF_INET6, ip05)
-    ipv6Hdr['ipDst'] = ip06 #socket.inet_ntop(socket.AF_INET6, ip06)
+    ipv6Hdr['ipSrc'] = ipSrc
+    ipv6Hdr['ipDst'] = ipDst
+    
+    logger.debug(ipSrc,ipDst)
 
     ipv6Data = ipv6Pkt[IPv6_HDR_LEN:]
 

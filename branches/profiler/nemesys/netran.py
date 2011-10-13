@@ -264,13 +264,7 @@ if __name__ == '__main__':
   print "Sniffer And Contabyte Statistics:\n"
 
   contabyte_stat = mycontabyte.getstat()
-  if (contabyte_stat != None):
-    keys = contabyte_stat.keys()
-    keys.sort()
-    for key in keys:
-      print "Key: %s \t Value: %s" % (key, contabyte_stat[key])
-  else:
-    print "No Statistics"
+  print(contabyte_stat)
 
   print
 
