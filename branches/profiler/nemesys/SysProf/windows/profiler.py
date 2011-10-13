@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 from ctypes import *
 from ctypes.wintypes import DWORD, ULONG
 import struct
+import pythoncom
 
 def executeQuery(wmi_class, whereCondition=""):   
     try: 
@@ -402,5 +403,7 @@ class Profiler(LocalProfiler):
         LocalProfiler.__init__(self, available_resources)
 
     def profile(self, resource={}):
-        return super(Profiler, self).profile(__name__, resource)
-        
+        pythoncom.CoInitialize()
+        data = super(Profiler, self).profile(__name__, resource)
+        pythoncom.CoUninitialize()
+        return data
