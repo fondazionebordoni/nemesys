@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from SysProf.windows import profiler
+
 from SysProf import LocalProfilerFactory
 from SysProf.NemesysException import LocalProfilerException, RisorsaException, FactoryException
 from logger import logging
