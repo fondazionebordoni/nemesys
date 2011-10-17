@@ -12,7 +12,7 @@ from ..LocalProfilerFactory import LocalProfiler
 from ..RisorsaFactory import Risorsa
 from ..NemesysException import RisorsaException
 import xml.etree.ElementTree as ET
-import psutil, os, time
+import psutil, os
 import dmidecode
 import socket, fcntl, struct
 
@@ -100,11 +100,11 @@ class rete(Risorsa):
             )[20:24])
     
     def profileDevice(self):
-        features = {'Name':' ', 'AdapterType':' ', 'MACAddress':' ', 'Availability':' '}
+        vocab= ['wireless','wifi','wi-fi','senzafili','wlan']
         devpath = '/sys/class/net/'
         descriptors = ['address', 'type', 'operstate']
         val = {'address': ' ', 'type': ' ', 'operstate': ' '}
-        ipaddr = self.getipaddr()       
+        self.ipaddr = self.getipaddr()       
         devlist = os.listdir(devpath)
         maindevxml = ET.Element('rete')
         if len(devlist) > 0:
@@ -117,56 +117,73 @@ class rete(Risorsa):
                     fname = devpath + str(dev) + '/' + str(des)
                     f = open(fname)
                     val[des] = f.readline()
+                    
+                wifipath = devpath + str(dev)
+                inner_folder = os.listdir(wifipath)
+                print inner_folder
+                devxml = ET.Element('NetworkDevice')
+
+                devxml.append(self.xmlFormat('Name', dev))
+                
                 if val['operstate'].rstrip() == "up":
-                    devxml = ET.Element('NetworkDevice')
                     devxml.append(self.xmlFormat('Status', 'Enabled'))
-                    devxml.append(self.xmlFormat('Name', dev))
-                    devxml.append(self.xmlFormat('Type', val['type']))
-                    devxml.append(self.xmlFormat('MACAddress', val['address']))
-                    devxml.append(self.xmlFormat('isActive', devIsAct))
-                    maindevxml.append(devxml)
-                    del devxml
+                else:
+                    devxml.append(self.xmlFormat('Status', 'Disabled'))
+                print val['type']
+                if val['type'].split('\n')[0] == '1':
+                    print 'Oh Yeah'
+                    val['type']='Ethernet 802.3'
+                for folds in inner_folder:
+                    for mot in vocab:
+                        if str(folds).lower() == mot:
+                            val['type']='Wireless'
+                devxml.append(self.xmlFormat('Type', val['type']))
+                devxml.append(self.xmlFormat('MACAddress', val['address']))
+                
+                devxml.append(self.xmlFormat('isActive', devIsAct))
+                maindevxml.append(devxml)
+                del devxml
 
         return maindevxml
 
         
-    def profileDevice_backup(self):
-        features = {'Name':'', 'AdapterType':'', 'MACAddress':'', 'Availability':''}
-        descriptors = {'description':'AdapterType', 'product':'Name', 'serial':'MACAddress'} 
-        devName = 'unknown'
-        devType = 'unknown'
-        devMac = 'unknown'
-        devIsActive = 'False'
-        devStatus = 'unknown'
-        command_line = "lshw -class network"
-        f = os.popen(command_line)
-        for line in f:
-            val = line.split(':', 1)            
-            if (len(val) > 1):
-                for keys in descriptors:
-                    if val[0].lstrip() == keys:
-                        features[descriptors[keys]] = val[1]
-        devIsActive = 'True'
-        devStatus = 'Enabled'
-        if (features['Name']):
-                devName = features['Name']
-        if (features['AdapterType']):
-            devType = features['AdapterType']
-        if (features['MACAddress']):
-            devMac = features['MACAddress']
-        devxml = ET.Element('NetworkDevice')
-        devxml.append(self.xmlFormat('Name', devName))
-        devxml.append(self.xmlFormat('Type', devType))
-        devxml.append(self.xmlFormat('MACAddress', devMac))
-        devxml.append(self.xmlFormat('isActive', devIsActive))
-        devxml.append(self.xmlFormat('Status', devStatus))
-        return devxml
-         
+#    def profileDevice_backup(self):
+#        features = {'Name':'', 'AdapterType':'', 'MACAddress':'', 'Availability':''}
+#        descriptors = {'description':'AdapterType', 'product':'Name', 'serial':'MACAddress'} 
+#        devName = 'unknown'
+#        devType = 'unknown'
+#        devMac = 'unknown'
+#        devIsActive = 'False'
+#        devStatus = 'unknown'
+#        command_line = "lshw -class network"
+#        f = os.popen(command_line)
+#        for line in f:
+#            val = line.split(':', 1)            
+#            if (len(val) > 1):
+#                for keys in descriptors:
+#                    if val[0].lstrip() == keys:
+#                        features[descriptors[keys]] = val[1]
+#        devIsActive = 'True'
+#        devStatus = 'Enabled'
+#        if (features['Name']):
+#                devName = features['Name']
+#        if (features['AdapterType']):
+#            devType = features['AdapterType']
+#        if (features['MACAddress']):
+#            devMac = features['MACAddress']
+#        devxml = ET.Element('NetworkDevice')
+#        devxml.append(self.xmlFormat('Name', devName))
+#        devxml.append(self.xmlFormat('Type', devType))
+#        devxml.append(self.xmlFormat('MACAddress', devMac))
+#        devxml.append(self.xmlFormat('isActive', devIsActive))
+#        devxml.append(self.xmlFormat('Status', devStatus))
+#        return devxml
+#         
    
 class Profiler(LocalProfiler):
     
     def __init__(self):
-        available_resources = {'CPU', 'RAM', 'sistemaOperativo'}
+        available_resources = {'CPU', 'RAM', 'sistemaOperativo','rete'}
         LocalProfiler.__init__(self, available_resources)
 
     def profile(self, resource={}):
