@@ -12,6 +12,7 @@ from ..LocalProfilerFactory import LocalProfiler
 from ..RisorsaFactory import Risorsa
 import subprocess
 from ..NemesysException import RisorsaException
+import xml.etree.ElementTree as ET
 
 import psutil
 import platform
@@ -60,6 +61,50 @@ class sistemaOperativo(Risorsa):
         val = os.uname()
         valret = val[3] + ' with ' + val[0] + ' ' + val[2]
         return self.xmlFormat('OperatingSystem', valret)
+    
+class rete(Risorsa):
+    def __init__(self):
+        Risorsa.__init__(self)
+        self.ipaddr = ""
+        self._params = ['profileDevice']
+        
+    def getipaddr(self):
+        if self.ipaddr == "":
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(("www.fub.it", 80))
+                self.ipaddr = s.getsockname()[0]
+            except socket.gaierror:
+                pass
+                #raise RisorsaException("Connessione Assente")
+        else:
+            pass
+        return self.ipaddr
+    
+    def get_if_ipaddress(self, ifname):
+        neti_names = netifaces.interfaces()
+        ipval = '127.0.0.1'
+        for nn in neti_names:
+            if ifname == nn:
+                try:
+                    ipval = netifaces.ifaddresses(ifname)[netifaces.AF_INET][0]['addr']
+                except:
+                    ipval = '127.0.0.1'
+        return ipval
+    
+    def profileDevice(self):
+        descriptors = ['Ethernet/MAC Address', 'type', 'operstate']
+        self.ipaddr = self.getipaddr()
+        cmdline = 'system_profiler SPNetworkDataType -xml'
+        try:
+            spxml = ET.parse(os.popen(cmdline))
+            devices = spxml.findall('array/dict/array/dict')
+        except:
+            raise Error('errore in darwin system_profiler')
+        for dev in devices:
+            s=0 # manca il parsing dei valori di ciascun device
+        return 0
+        
        
 class Profiler(LocalProfiler):
     
