@@ -3,7 +3,8 @@ Created on 20/ott/2010
 
 @author: Albenzio Cirillo
 
-Profiler per Piattaforme Darwin
+Profiler per Piattaforme Darwinexit
+
 
 N.B.: funziona con psutil 0.3.0 o superiore
 '''

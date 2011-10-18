@@ -14,7 +14,8 @@ from ..NemesysException import RisorsaException
 import xml.etree.ElementTree as ET
 import psutil, os
 import dmidecode
-import socket, fcntl, struct
+import netifaces
+import socket
 
 class CPU(Risorsa):
       
@@ -35,6 +36,7 @@ class CPU(Risorsa):
     def cpuLoad(self):
         # WARN interval parameter available from v.0.2
         val = psutil.cpu_percent()
+        print "ok"
         return self.xmlFormat('cpuLoad', val)
     
 class RAM(Risorsa):
@@ -93,11 +95,15 @@ class rete(Risorsa):
         return self.ipaddr
     
     def get_if_ipaddress(self, ifname):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        return socket.inet_ntoa(fcntl.ioctl(s.fileno(),
-            0x8915, # SIOCGIFADDR
-            struct.pack('256s', ifname[:15])
-            )[20:24])
+        neti_names = netifaces.interfaces()
+        ipval = '127.0.0.1'
+        for nn in neti_names:
+            if ifname == nn:
+                try:
+                    ipval = netifaces.ifaddresses(ifname)[netifaces.AF_INET][0]['addr']
+                except:
+                    ipval = '127.0.0.1'
+        return ipval
     
     def profileDevice(self):
         vocab= ['wireless','wifi','wi-fi','senzafili','wlan']
@@ -120,7 +126,6 @@ class rete(Risorsa):
                     
                 wifipath = devpath + str(dev)
                 inner_folder = os.listdir(wifipath)
-                print inner_folder
                 devxml = ET.Element('NetworkDevice')
 
                 devxml.append(self.xmlFormat('Name', dev))
@@ -129,9 +134,7 @@ class rete(Risorsa):
                     devxml.append(self.xmlFormat('Status', 'Enabled'))
                 else:
                     devxml.append(self.xmlFormat('Status', 'Disabled'))
-                print val['type']
                 if val['type'].split('\n')[0] == '1':
-                    print 'Oh Yeah'
                     val['type']='Ethernet 802.3'
                 for folds in inner_folder:
                     for mot in vocab:
