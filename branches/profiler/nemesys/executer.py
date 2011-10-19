@@ -67,6 +67,8 @@ TIME_LAG = 5
 # Enumeration
 DOWN = 'down'
 UP = 'up'
+# Put 1 to enable arping
+ARPING = 1
 
 class _Communicator(Thread):
 
@@ -426,7 +428,7 @@ class Executer:
       base_error = 0
       if not self._isprobe:
         try:
-          if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
+          if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id, ARPING):
             raise Exception('Condizioni per effettuare la misura non verificate.')
 
         except Exception as e:
@@ -460,7 +462,7 @@ class Executer:
             # Profilazione del sistema
             # ------------------------
             try:
-              if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
+              if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id, ARPING):
                 raise Exception('Condizioni per effettuare la misura non verificate.')
 
             except Exception as e:
@@ -522,7 +524,7 @@ class Executer:
             # Profilazione del sistema
             # ------------------------
             try:
-              if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
+              if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id, ARPING):
                 raise Exception('Condizioni per effettuare la misura non verificate.')
 
             except Exception as e:
@@ -586,7 +588,7 @@ class Executer:
             # Profilazione del sistema
             # ------------------------
             try:
-              if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id):
+              if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id, ARPING):
                 raise Exception('Condizioni per effettuare la misura non verificate.')
 
             except Exception as e:
