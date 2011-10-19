@@ -139,5 +139,5 @@ def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1, mac=None):
 
 if __name__ == '__main__':
   
-  print("Trovati: %d host" % do_arping('192.168.112.10', 24, True, 1, '00:1E:33:7F:D5:44'))
+  print("Trovati: %d host" % do_arping('192.168.1.197', 24, True, 1, '00:1E:33:7F:D5:44'))
 
