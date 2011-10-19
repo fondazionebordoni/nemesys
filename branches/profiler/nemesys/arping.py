@@ -18,9 +18,6 @@
 
 from exceptions import Exception
 from logger import logging
-from SysProf import LocalProfilerFactory
-from xml.etree import ElementTree as ET
-from SysProf.NemesysException import LocalProfilerException, RisorsaException
 
 import arpinger
 import ipcalc
@@ -30,9 +27,6 @@ import struct
 import time
 
 logger = logging.getLogger()
-
-tag_activeNic = 'rete.NetworkDevice/isActive'
-tag_mac = 'rete.NetworkDevice/MACAddress'
 
 ETH_P_IP = 0x0800
 ETH_P_ARP = 0x0806
@@ -145,5 +139,5 @@ def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1, mac=None):
 
 if __name__ == '__main__':
   
-  print("Trovati: %d host" % do_arping('192.168.1.197', 24, True, 1, '00:1E:33:7F:D5:44'))
+  print("Trovati: %d host" % do_arping('192.168.112.10', 24, True, 1, '00:1E:33:7F:D5:44'))
 
