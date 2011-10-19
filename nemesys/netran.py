@@ -104,7 +104,6 @@ class Sniffer(Thread):
     global analyzer_memory
     global analyzer_flag
     global switch_flag
-    logger.debug('Richiesta di switch')
     if (analyzer_memory.isSet() or analyzer_flag.isSet()):
       if(analyzer_flag.isSet()):
         analyzer_memory.set()
