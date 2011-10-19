@@ -1,10 +1,13 @@
 from distutils.core import setup
 import py2exe
 import sys,os
-import netifaces
+from SysProf.windows import profiler
+from xml.etree import ElementTree as ET
 import modulefinder
-#sys.path.append(os.path.dirname(netifaces.__file__))
-#modulefinder.AddPackagePath("logger", "nemesys")
+
+profiler = profiler.Profiler()
+data = profiler.profile({'CPU'})
+print ET.tostring(data)
 
 class Target:
     def __init__(self, **kw):
@@ -36,7 +39,6 @@ setup(
 	service = [myservice],
 	windows = [
 		{"script": "gui.py", 'uac_info': "requireAdministrator", "icon_resources": [(1,"..\\nemesys.ico")]},
-		{"script": "SystemProfiler.py", 'uac_info': "requireAdministrator", "icon_resources": [(1,"..\\hp.ico")]}
 	],
 	#packages = ['nemesys'],
 )

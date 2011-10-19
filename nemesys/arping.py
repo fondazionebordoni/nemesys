@@ -88,7 +88,7 @@ def receive_arping(MACsrc):
     received = arpinger.receive()
 
     if (received['err_flag'] < 1):
-      logger.debug("%s - Numero di Host trovati: %d" % (received['err_str'], len(IPtable)))
+      logger.debug("(%s) Numero di Host trovati: %d" % (received['err_str'], len(IPtable)))
       break
 
     elif (len(received['py_pcap_hdr']) >= 16 and len(received['py_pcap_data']) >= 42):
@@ -134,17 +134,21 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1):
   filter = "rarp or arp dst host " + IPsrc
 
   rec_init = arpinger.initialize(IPsrc, filter, timeout * 1000)
+  logger.debug("Inizializzato arpinger (%s, %s)" % (IPsrc, filter))
   if (rec_init['err_flag'] != 0):
     raise Exception (rec_init['err_str'])
   else:
     for IPdst in IPnet:
       if ((IPdst.hex() == net.hex() or IPdst.hex() == bcast.hex()) and realSubnet):
         logger.debug("Saltato ip %s" % IPdst)
+      elif(IPdst.dq == IPsrc):
+        logger.debug("Salto il mio ip %s" % IPdst)
       else:
-        #logger.debug('Arping host %s' % IPdst)
+        logger.debug('Arping host %s' % IPdst)
         send_arping(IPsrc, IPdst, MACsrc, MACdst)
 
     nHosts = receive_arping(MACsrc)
+	logger.debug("Totale host: %d" % nHosts)
 
     arpinger.close()
 
@@ -155,5 +159,5 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1):
 
 if __name__ == '__main__':
 
-  do_arping('192.168.88.8', 24, True, 1)
+  print("Trovati: %d host" % do_arping('192.168.208.53', 24, True, 1, '00:1E:33:7F:D5:44'))
 
