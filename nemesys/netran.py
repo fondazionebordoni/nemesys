@@ -52,6 +52,7 @@ class Sniffer(Thread):
 
   def __init__(self, dev, buff = 22 * 1024000, snaplen = 8192, timeout = 1, promisc = 1):
     Thread.__init__(self)
+    logger.debug('Inizializzazione dello sniffer')
     self._run_sniffer = 1
     self._stop_pkt = 0
     sniffer.debugmode(0)
@@ -103,6 +104,7 @@ class Sniffer(Thread):
     global analyzer_memory
     global analyzer_flag
     global switch_flag
+    logger.debug('Richiesta di switch')
     if (analyzer_memory.isSet() or analyzer_flag.isSet()):
       if(analyzer_flag.isSet()):
         analyzer_memory.set()
@@ -122,23 +124,22 @@ class Sniffer(Thread):
 
   def stop(self):
     self._run_sniffer = 0
-    while (self.isAlive()):
-      None
+    #while (self.isAlive()):
+    #  None
+    logger.debug('Richiesta di stop dello sniffer')
     sniffer_stop = sniffer.stop()
     return sniffer_stop
 
   def getstat(self):
+    logger.debug('Recupero delle statistiche dallo sniffer')
     sniffer_stat = sniffer.getstat()
     return sniffer_stat
-
-  def join(self, timeout = None):
-    Thread.join(self, timeout)
-
 
 class Contabyte(Thread):
 
   def __init__(self, dev, nem):
     Thread.__init__(self)
+    logger.debug('Inizializzazione del contabyte')
     self._run_contabyte = 1
     self._stat = {}
     self._dev = dev
@@ -173,21 +174,21 @@ class Contabyte(Thread):
   def stop(self):
     global buffer_shared
     global analyzer_flag
+    logger.debug('Richiesta di stop del contabyte')
     analyzer_flag.clear()
     while (switch_flag.isSet()):
       time.sleep(0.2)
     while (len(buffer_shared) > 0):
       None
     self._run_contabyte = 0
-    while (self.isAlive()):
-      None
+    #while (self.isAlive()):
+    #  None
 
   def getstat(self):
+    logger.debug('Recupero delle statistiche')
     contabyte_stat = self._stat
     return contabyte_stat
 
-  def join(self, timeout = None):
-    Thread.join(self, timeout)
 
 if __name__ == '__main__':
 
