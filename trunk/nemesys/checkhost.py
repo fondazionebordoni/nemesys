@@ -82,7 +82,7 @@ def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4, arping=0):
     try:
       nHosts = do_arping(ipAddress, netMask, realSubnet, 1)
     except Exception as e:
-      logger.debug('Errore durante l\'Arping: %s' % e)  
+      logger.debug('Errore durante l\'arping: %s' % e)  
       status = 0
       pass
       
