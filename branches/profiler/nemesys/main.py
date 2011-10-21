@@ -26,7 +26,7 @@ def main():
     result=ET.ElementTree()
     try:
         profiler=LocalProfilerFactory.getProfiler()
-        result=profiler.profile({'wireless'}) 
+        result=profiler.profile() 
 
         print mytostring(result)
 #        alldevtype=result.findall('rete/NetworkDevice/Type')
