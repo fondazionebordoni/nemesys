@@ -69,7 +69,7 @@ class CPU(Risorsa):
 
     def cpuLoad(self):
         # WARN interval parameter available from v.0.2
-        val = psutil.cpu_percent()
+        val = psutil.cpu_percent(interval = 0.5)
         print "ok"
         return self.xmlFormat('cpuLoad', val)    
 #    def num_cpu(self):
