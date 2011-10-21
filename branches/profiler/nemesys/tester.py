@@ -22,7 +22,7 @@ from fakefile import Fakefile
 from ftplib import FTP
 from host import Host
 from logger import logging
-from netran import Sniffer, Contabyte
+from pcapper import Sniffer, Contabyte
 from optparse import OptionParser
 from proof import Proof
 from statistics import Statistics
@@ -88,8 +88,6 @@ class Tester:
     filepath = path
     size = 0
     elapsed = 0
-    counter_total_pay = 0
-    counter_ftp_pay = 0
     try:
       counter = Contabyte(self._if_ip, self._host.ip)
     except:
@@ -105,7 +103,7 @@ class Tester:
     except ftplib.all_errors as e:
       logger.error('Impossibile aprire la connessione FTP: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof('upload', start, elapsed, size, counter_total_pay, counter_ftp_pay, errorcode)	# inserire codifica codici errore
+      return Proof('upload', start, elapsed, size, Statistics(), errorcode)	# inserire codifica codici errore
 
     # TODO Se la connessione FTP viene invocata con timeout, il socket è non-blocking e il sistema può terminare i buffer di rete: http://bugs.python.org/issue8493
     function = '''ftp.storbinary('STOR %s' % filepath, file, callback=totalsize)'''
@@ -119,10 +117,8 @@ class Tester:
       elapsed = timer.timeit(1) * 1000
 
       counter.stop()
-
-      counter_stats = counter.getstat()
-
       counter.join()
+      counter_stats = counter.getstat()
 
     except ftplib.all_errors as e:
       logger.error("Impossibile effettuare l'upload: %s" % e)
@@ -137,8 +133,6 @@ class Tester:
     global ftp, file, size
     size = 0
     elapsed = 0
-    counter_total_pay = 0
-    counter_ftp_pay = 0
     try:
       counter = Contabyte(self._if_ip, self._host.ip)
     except:
@@ -156,7 +150,7 @@ class Tester:
     except ftplib.all_errors as e:
       logger.error('Impossibile aprire la connessione FTP: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof('download', start, elapsed, size, counter_total_pay, counter_ftp_pay, errorcode)	# inserire codifica codici errore
+      return Proof('download', start, elapsed, size, Statistics(), errorcode)	# inserire codifica codici errore
 
     function = '''ftp.retrbinary('RETR %s' % file, totalsize)'''
     setup = 'from %s import ftp, file, totalsize' % __name__
@@ -169,10 +163,8 @@ class Tester:
       elapsed = timer.timeit(1) * 1000
 
       counter.stop()
-
-      counter_stats = counter.getstat()
-
       counter.join()
+      counter_stats = counter.getstat()
 
     except ftplib.all_errors as e:
       logger.error("Impossibile effettuare il download: %s" % e)
@@ -246,31 +238,27 @@ def main():
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
-    for k in range(1, 5):
-      t1 = Tester('172.16.166.131', Host(ip = '193.104.137.133'), 'nemesys', '4gc0m244')
-      #t1 = Tester('192.168.208.53', Host(ip='192.168.208.183'), 'QoS_lab', '')
+    TOT = 5
 
-      print "[-------- TEST 20-20-10 numero:%d --------]" % k
-      for i in range(1, 21):
-        print 'Test Download %d.%d:' % (k, i)
-        test = t1.testftpdown('/download/40000.rnd')
-        #logger.debug("Statistiche Sniffer:\n%s\n" % t1._sniffer.getstat())
-        print test
-        print("\n")
-      for i in range(1, 21):
-        print 'Test Upload %d.%d:' % (k, i)
-        test = t1.testftpup(2048000, '/upload/r.raw')
-        #logger.debug("Statistiche Sniffer:\n%s\n" % t1._sniffer.getstat())
-        print test
-        print("\n")
+    t1 = Tester('192.168.112.10', Host(ip = '193.104.137.133'), 'nemesys', '4gc0m244')
+    #t1 = Tester('192.168.112.10', Host(ip = '192.168.208.183'), 'QoS_lab', '')
 
-      t1.sniffer_stop()
+    for i in range(1, TOT + 1):
+      print 'Test Download %d/%d' % (i, TOT)
+      test = t1.testftpdown('/download/40000.rnd')
+      print test
 
-      for i in range(1, 11):
-        print 'Test Ping %d.%d:' % (k, i)
-        test = t1.testping()
-        print test
-        print("\n")
+    for i in range(1, TOT + 1):
+      print 'Test Upload %d/%d' % (i, TOT)
+      test = t1.testftpup(2048000, '/upload/r.raw')
+      print test
+
+    t1.sniffer_stop()
+
+    for i in range(1, TOT + 1):
+      print 'Test Ping %d/%d' % (i, TOT)
+      test = t1.testping()
+      print test
 
 
   else:

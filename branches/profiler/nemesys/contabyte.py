@@ -528,7 +528,7 @@ def _ipv6_unpack(ipv6Pkt):
   if (len(ipv6Pkt) >= IPv6_HDR_LEN):
 
     ip01, ip02, ip03, ip04, ip05, ip06 = struct.unpack(ipv6Hdr['hdrStruct'], ipv6Pkt[:IPv6_HDR_LEN])
-    
+
     ipSrc = string.join(["%02X" % ord(el) for el in ip05], ':')
     ipDst = string.join(["%02X" % ord(el) for el in ip06], ':')
 
@@ -540,8 +540,8 @@ def _ipv6_unpack(ipv6Pkt):
     ipv6Hdr['ipTtl'] = ip04
     ipv6Hdr['ipSrc'] = ipSrc
     ipv6Hdr['ipDst'] = ipDst
-    
-    logger.debug(ipSrc,ipDst)
+
+    logger.debug(ipSrc, ipDst)
 
     ipv6Data = ipv6Pkt[IPv6_HDR_LEN:]
 
@@ -648,7 +648,7 @@ def analyze(ipDev, ipNem, pcapHdrPkt, pcapDataPkt, etsimode = True):
   { \
    ETH_PR_ARP : _arp_unpack, \
    ETH_PR_IP  : _ipv4_unpack, \
-   ETH_PR_IP6 : _ipv6_unpack, \
+   #ETH_PR_IP6 : _ipv6_unpack, \
   } \
 
   ip_switch = \
