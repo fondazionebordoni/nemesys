@@ -26,7 +26,7 @@ import sys
 import time
 from random import randint
 
-MAX_BUFFER_LENGTH = 1000
+MAX_BUFFER_LENGTH = 500
 buffer = deque(maxlen = MAX_BUFFER_LENGTH)
 prelevato = Semaphore(MAX_BUFFER_LENGTH)
 depositato = Semaphore(0)
@@ -117,7 +117,7 @@ class Sniffer(Thread):
     if (data != None):
       prelevato.acquire()
       buffer.append(data)
-      self._tot = self._tot + 1
+      self._tot += 1
       depositato.release()
      
   def _loop(self):
@@ -144,8 +144,7 @@ class Sniffer(Thread):
     else:
       self._status = _switch_status[EAT]
       eat.clear()
-      logger.debug('Stop eating!')
-      logger.debug('Sniffing stats [tot: %d; stats: %s]' % (self._tot, sniffer.getstat()))
+      logger.debug('Stop eating! [tot: %d]' % self._tot)
       self._tot = 0
   
   def _produce(self):
@@ -176,7 +175,7 @@ class Contabyte(Thread):
     sniff.set()
     eat.set()
     self._running = True
-    while sniff.is_set() or eat.is_set() or self._running:
+    while self._running:
       self._consume()
     logger.debug('Exit (run) contabyte! [tot: %d]' % self._tot)
 
@@ -200,10 +199,10 @@ class Contabyte(Thread):
     if depositato.acquire(False):
       data = buffer.popleft()
       self._eat(data)
-      self._tot = self._tot + 1
+      self._tot += 1
       prelevato.release()
     else:
-      self._running = sniff.is_set() or eat.is_set()
+      self._running = sniff.is_set() or eat.is_set() or (len(buffer) > 0)
 
   def getstat(self):
     logger.debug('Recupero delle statistiche')
