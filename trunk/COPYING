@@ -2,7 +2,7 @@ NeMeSys License Information
 ===========================
 
 NeMeSys (Network Measurement System)
-Copyright (c) 2010 Fondazione Ugo Bordoni <info@fub.it>
+Copyright (c) 2010, 2011 Fondazione Ugo Bordoni <info@fub.it>
 
 NeMeSys is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,8 +28,8 @@ License Information regarding bundled third-party software
 The following third party software is distributed with NeMeSys and is provided
 under other licenses and/or has source available from other locations.
 
-- System Profiler
-  License:
-
 - IP subnet calculator
   License: BSD
+
+- Python NTP library
+  License: GPL v.2
