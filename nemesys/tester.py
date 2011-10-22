@@ -34,6 +34,7 @@ import socket
 import sys
 import sysmonitor
 import timeit
+import time
 
 ftp = None
 file = None
@@ -238,28 +239,29 @@ def main():
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
-    TOT = 5
+    TOT = 3
 
-    t1 = Tester('192.168.112.10', Host(ip = '193.104.137.133'), 'nemesys', '4gc0m244')
-    #t1 = Tester('192.168.112.10', Host(ip = '192.168.208.183'), 'QoS_lab', '')
+    t1 = Tester('192.168.1.133', Host(ip = '193.104.137.133'), 'nemesys', '4gc0m244')
+  
+    time.sleep(5)
+    
+    for i in range(1, TOT + 1):
+      logger.info('Test Download %d/%d' % (i, TOT))
+      test = t1.testftpdown('/download/1000.rnd')
+      logger.info(test)      
 
     for i in range(1, TOT + 1):
-      print 'Test Download %d/%d' % (i, TOT)
-      test = t1.testftpdown('/download/40000.rnd')
-      print test
-
-    for i in range(1, TOT + 1):
-      print 'Test Upload %d/%d' % (i, TOT)
-      test = t1.testftpup(2048000, '/upload/r.raw')
-      print test
+      logger.info('Test Upload %d/%d' % (i, TOT))
+      test = t1.testftpup(2048, '/upload/r.raw')
+      logger.info(test)
 
     t1.sniffer_stop()
-
+    '''
     for i in range(1, TOT + 1):
-      print 'Test Ping %d/%d' % (i, TOT)
+      logger.info('\nTest Ping %d/%d' % (i, TOT))
       test = t1.testping()
-      print test
-
+      logger.info(test)
+    '''
 
   else:
     main()
