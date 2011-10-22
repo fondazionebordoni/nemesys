@@ -1,3 +1,21 @@
+# statistics.py
+# -*- coding: utf8 -*-
+
+# Copyright (c) 2011 Fondazione Ugo Bordoni.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 class Statistics:
 
   def __init__(self, packet_up_nem = 0, packet_up_oth = 0, packet_up_all = 0, packet_down_nem = 0, packet_down_oth = 0, packet_down_all = 0, packet_tot_nem = 0, packet_tot_oth = 0, packet_tot_all = 0, byte_up_nem = 0, byte_up_oth = 0, byte_up_all = 0, byte_down_nem = 0, byte_down_oth = 0, byte_down_all = 0, byte_tot_nem = 0, byte_tot_oth = 0, byte_tot_all = 0, payload_up_nem = 0, payload_up_oth = 0, payload_up_all = 0, payload_down_nem = 0, payload_down_oth = 0, payload_down_all = 0, payload_tot_nem = 0, payload_tot_oth = 0, payload_tot_all = 0, packet_up_nem_net = 0, packet_up_oth_net = 0, packet_up_all_net = 0, packet_down_nem_net = 0, packet_down_oth_net = 0, packet_down_all_net = 0, packet_tot_nem_net = 0, packet_tot_oth_net = 0, packet_tot_all_net = 0, byte_up_nem_net = 0, byte_up_oth_net = 0, byte_up_all_net = 0, byte_down_nem_net = 0, byte_down_oth_net = 0, byte_down_all_net = 0, byte_tot_nem_net = 0, byte_tot_oth_net = 0, byte_tot_all_net = 0, payload_up_nem_net = 0, payload_up_oth_net = 0, payload_up_all_net = 0, payload_down_nem_net = 0, payload_down_oth_net = 0, payload_down_all_net = 0, payload_tot_nem_net = 0, payload_tot_oth_net = 0, payload_tot_all_net = 0):
