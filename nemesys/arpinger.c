@@ -13,7 +13,7 @@ int DEBUG_MODE=0;
 FILE *debug_log;
 
 int err_flag=0;
-char err_str[88]="No Error";
+char err_str[160]="No Error";
 
 int ind_dev=0, num_dev=0;
 

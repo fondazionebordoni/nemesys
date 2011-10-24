@@ -51,7 +51,7 @@ logger = logging.getLogger()
 
 class Sniffer(Thread):
 
-  
+
   def __init__(self, dev, buff = 22 * 1024000, snaplen = 8192, timeout = 1, promisc = 1):
     Thread.__init__(self)
     buffer.clear()
@@ -87,7 +87,7 @@ class Sniffer(Thread):
   def _get_remaining(self):
     stats = sniffer.getstat()
     return stats['pkt_pcap_tot'] - stats['pkt_pcap_proc']
-    
+
   def _get_data(self, mode):
     try:
       if mode != 0:
@@ -119,13 +119,13 @@ class Sniffer(Thread):
       buffer.append(data)
       self._tot += 1
       depositato.release()
-     
+
   def _loop(self):
     if not sniff.is_set():
       self._cook(0)
     else:
       self._status = _switch_status[LOOP]
-    
+
   def _sniff(self):
     if sniff.is_set():
       self._cook(1)
@@ -136,7 +136,7 @@ class Sniffer(Thread):
   def _count(self):
     self._status = _switch_status[COUNT]
     self._remaining = self._get_remaining()
-    
+
   def _eat(self):
     if self._remaining > 0:
       self._cook(1)
@@ -146,7 +146,7 @@ class Sniffer(Thread):
       eat.clear()
       logger.debug('Stop eating! [tot: %d]' % self._tot)
       self._tot = 0
-  
+
   def _produce(self):
     try:
         method = getattr(self, self._status)
