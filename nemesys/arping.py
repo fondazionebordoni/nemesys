@@ -36,54 +36,54 @@ def display_mac(value):
     return string.join(["%02X" % ord(b) for b in value], ':')
 
 def send_arping(IPsrc, IPdst, MACsrc, MACdst):
-  
+
   hwsrc = MACsrc
   hwdst = MACdst
-  
+
   psrc = socket.inet_aton(IPsrc)
   pdst = socket.inet_aton(str(IPdst))
-  
+
   arpPkt = struct.pack('!HHbbH6s4s6s4s', 0x0001, 0x0800, 6, 4, 0x0001, hwsrc, psrc, '\x00', pdst)
-  
+
   ethPkt = struct.pack("!6s6sh", hwdst, hwsrc, 0x0806) + arpPkt
 
-  netPkt = ethPkt + (60 - len(ethPkt)) * '\x00'  
-    
+  netPkt = ethPkt + (60 - len(ethPkt)) * '\x00'
+
   sended = arpinger.send(netPkt)
   if (sended['err_flag'] != 0):
     logger.debug("%s" % sended['err_str'])
-    
+
 
 def receive_arping(MACsrc):
-  
+
   hwsrc = MACsrc
-  
+
   IPtable = {}
-  
+
   while True:
-    
+
     received = arpinger.receive()
-    
+
     if (received['err_flag'] < 1):
       logger.debug("(%s) Numero di Host trovati: %d" % (received['err_str'], len(IPtable)))
       break
-        
+
     elif (len(received['py_pcap_hdr']) >= 16 and len(received['py_pcap_data']) >= 42):
-      
+
       pktHdr = received['py_pcap_hdr']
-      
+
       pktSec, pktUsec, pktCaplen, pktLen = struct.unpack("LLII", pktHdr)
-      
+
       pktTimeStamp = float(pktSec) + (float(pktUsec) / 1000000)
-      
+
       #logger.debug(time.localtime(pktTimeStamp))
-      
+
       pktData = received['py_pcap_data']
-      
+
       hwdst_eth, hwsrc_eth, proto = struct.unpack("!6s6sh", pktData[:14])
-      
+
       if (hwdst_eth == hwsrc):
-      
+
         arpPkt = pktData[14:]
         if struct.unpack('!H', arpPkt[6:8])[0] == ARP_REPLY:
           hwsrc_arp, psrc_arp, hwdst_arp, pdst_arp = struct.unpack('!6s4s6s4s', arpPkt[8:28])
@@ -92,25 +92,25 @@ def receive_arping(MACsrc):
           if (IPsrc_arp not in IPtable):
             IPtable[IPsrc_arp] = display_mac(hwsrc_arp)
             logger.debug('Trovato Host %s con indirizzo fisico %s' % (IPsrc_arp, display_mac(hwsrc_arp)))
-  
+
   return len(IPtable)
 
-  
-def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1, mac=None):  
-  
+
+def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None):
+
   nHosts = 0
-  
+
   if (mac):
     MACsrc = "".join(chr(int(macEL, 16)) for macEL in mac.split(':'))
   else:
-    MACsrc = "\x00"*6
+    MACsrc = "\x0A"*6
   MACdst = "\xFF"*6
-  
+
   IPsrc = socket.gethostbyname(IPsrc)
   IPnet = ipcalc.Network('%s/%d' % (IPsrc, NETmask))
   net = IPnet.network()
   bcast = IPnet.broadcast()
-    
+
   filter = "rarp or arp dst host " + IPsrc
 
   rec_init = arpinger.initialize(IPsrc, filter, timeout * 1000)
@@ -122,22 +122,25 @@ def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1, mac=None):
       if ((IPdst.hex() == net.hex() or IPdst.hex() == bcast.hex()) and realSubnet):
         logger.debug("Saltato ip %s" % IPdst)
       elif(IPdst.dq == IPsrc):
-        logger.debug("Salto il mio ip %s" % IPdst)        
+        logger.debug("Salto il mio ip %s" % IPdst)
       else:
-        logger.debug('Arping host %s' % IPdst)
+        #logger.debug('Arping host %s' % IPdst)
         send_arping(IPsrc, IPdst, MACsrc, MACdst)
-        
-    nHosts = receive_arping(MACsrc)
-    logger.debug("Totale host: %d" % nHosts)
-    
+
+    try:
+      nHosts = receive_arping(MACsrc)
+      logger.debug("Totale host: %d" % nHosts)
+    except Exception as e:
+      logger.warning("Errore durante la ricezione degli arping: %s" % e)
+
     arpinger.close()
-    
+
   return nHosts
 
 
 
 
 if __name__ == '__main__':
-  
-  print("Trovati: %d host" % do_arping('192.168.1.197', 24, True, 1, '00:1E:33:7F:D5:44'))
+
+  print("Trovati: %d host" % do_arping('192.168.112.10', 24, True, 1, None))
 
