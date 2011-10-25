@@ -17,6 +17,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from collections import deque
+from executer import OptionParser
+from random import randint
 from statistics import Statistics
 from threading import Semaphore, Thread, Event
 import contabyte
@@ -24,7 +26,6 @@ import logging
 import sniffer
 import sys
 import time
-from random import randint
 
 MAX_BUFFER_LENGTH = 500
 buffer = deque(maxlen = MAX_BUFFER_LENGTH)
@@ -209,25 +210,37 @@ class Contabyte(Thread):
     return self._stat
 
 if __name__ == '__main__':
-  p = Sniffer('192.168.1.133')
-  p.start()
 
-  TOT = 5
-  if TEST:
-    TOT = 1
-  for i in range(1, TOT + 1):
-    c = Contabyte('192.168.1.133', '193.104.137.133')
+  parser = OptionParser()
+  parser.add_option("-i", "--ip", dest = "ip")
+  parser.add_option("-t", "--tot", dest = "tot", default = 5, type = 'int', help = "Numero di cicli di test da effettuare")
+  parser.add_option("-n", "--nap", dest = "nap", default = '193.104.137.133')
+  (options, args) = parser.parse_args()
 
-    print("Start! [%d/%d]" % (i, TOT))
+  ip = options.ip
+  nap = options.nap
+  tot = options.tot
+  parser.check_required('--ip')
 
-    c.start()
-    time.sleep(2)
-    c.stop()
-    c.join()
-    print c.getstat()
+  if ip != None:
 
-    print("Stop! [%d/%d]" % (i, TOT))
-    #time.sleep(2)
+    p = Sniffer(ip)
+    p.start()
 
-  p.stop()
-  p.join()
+    if TEST:
+      tot = 1
+    for i in range(1, tot + 1):
+      c = Contabyte(ip, nap)
+
+      print("Start! [%d/%d]" % (i, tot))
+
+      c.start()
+      time.sleep(2)
+      c.stop()
+      c.join()
+      print c.getstat()
+
+      print("Stop! [%d/%d]" % (i, tot))
+
+    p.stop()
+    p.join()
