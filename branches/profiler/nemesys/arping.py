@@ -140,6 +140,7 @@ if __name__ == '__main__':
   s = socket.socket(socket.AF_INET)
   s.connect(('www.fub.it', 80))
   ip = s.getsockname()[0]
+  s.close()
 
   if ip != None:
     print("Trovati: %d host" % do_arping(ip, 24, True, 1, None))
