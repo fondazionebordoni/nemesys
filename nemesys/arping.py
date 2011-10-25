@@ -74,8 +74,6 @@ def receive_arping(MACsrc):
 
       pktTimeStamp = float(pktSec) + (float(pktUsec) / 1000000)
 
-      #logger.debug(time.localtime(pktTimeStamp))
-
       pktData = received['py_pcap_data']
 
       hwdst_eth, hwsrc_eth, proto = struct.unpack("!6s6sh", pktData[:14])
