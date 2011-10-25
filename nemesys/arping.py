@@ -17,14 +17,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from exceptions import Exception
-from executer import OptionParser
 from logger import logging
 import arpinger
 import ipcalc
 import socket
 import string
 import struct
-import time
 
 logger = logging.getLogger()
 
@@ -137,19 +135,12 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None):
 
   return nHosts
 
-
-
-
 if __name__ == '__main__':
 
-  parser = OptionParser()
-  parser.add_option("-i", "--ip", dest = "ip")
-  parser.add_option("-m", "--mask", dest = "mask", default = 24, type = 'int')
-  (options, args) = parser.parse_args()
+  s = socket.socket(socket.AF_INET)
+  s.connect(('www.fub.it', 80))
+  ip = s.getsockname()[0]
 
-  ip = options.ip
-  mask = options.mask
-  parser.check_required('--ip')
   if ip != None:
-    print("Trovati: %d host" % do_arping(ip, mask, True, 1, None))
+    print("Trovati: %d host" % do_arping(ip, 24, True, 1, None))
 
