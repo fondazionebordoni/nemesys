@@ -136,8 +136,8 @@ class MyFrame (wx.Frame):
     setlocale(LC_ALL, '')
     self._status = Status(status.ERROR, "error")
     xmldoc = Progress(True)
-
-    wx.Frame.__init__ (self, None, id=wx.ID_ANY, title='Nemesys', pos=wx.DefaultPosition, size=wx.Size(750, 350), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX))
+    #da qui modifico la dimensione della finestra FRAME
+    wx.Frame.__init__ (self, None, id=wx.ID_ANY, title='Nemesys', pos=wx.DefaultPosition, size=wx.Size(750, 500), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX))
     self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
 
     self.SetSizeHintsSz(wx.DefaultSize, wx.DefaultSize)
@@ -194,7 +194,25 @@ class MyFrame (wx.Frame):
       self._grid.Add(self.m_bitmap17, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
     
     bSizer2.Add(self._grid, 0, wx.ALIGN_CENTER_HORIZONTAL, 2)
+    ##############
+    #INSERIRE QUI LA PROGRESS BAR
+    self.label_teststatus = wx.StaticText(self, wx.ID_ANY, "Avanzamento della misura in corso", wx.DefaultPosition, wx.DefaultSize, 0)
+    self.label_teststatus.Wrap(-1)
+    bSizer2.Add(self.label_teststatus, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
     
+    bSizer5 = wx.BoxSizer(wx.HORIZONTAL)
+    self.fillspace1 = wx.StaticText(self, wx.ID_ANY, " ", wx.DefaultPosition, wx.DefaultSize, 0)
+    self.fillspace1.Wrap(-1)
+    bSizer5.Add(self.fillspace1, 0, wx.ALL | wx.ALIGN_LEFT, 15)
+    self.gauge = wx.Gauge(self, -1, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL)
+    bSizer5.Add(self.gauge, 1, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND, 10)
+    self.fillspace2 = wx.StaticText(self, wx.ID_ANY, " ", wx.DefaultPosition, wx.DefaultSize, 0)
+    self.fillspace2.Wrap(-1)
+    bSizer5.Add(self.fillspace2, 0, wx.ALL | wx.ALIGN_RIGHT, 15)
+    
+    bSizer2.Add(bSizer5, 0 , wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND, 5)
+    self.gauge.SetValue(0)
+    ##############
     sbSizer1 = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, u"Dettaglio di stato di Nemesys"), wx.VERTICAL)
     
     date = '%s' % getdate().strftime('%c')
@@ -275,12 +293,24 @@ class MyFrame (wx.Frame):
         self.PaintHour(hour, "red")
       elif (bool(re.search('Misura terminata|Misura interrotta', currentstatus.message))):
         self.PaintInit(None)
+        self.gauge.SetValue(0)
       elif (bool(re.search('Avviso', currentstatus.message))):
         self.label_helper.SetForegroundColour(currentstatus.color)
         self.label_helper.SetLabel("Hai ricevuto un avviso dal server centrale!\nLeggi il messaggio nella finestra del dettaglio di stato di Nemesys")
       elif (bool(re.search(status.FINISHED.message, currentstatus.message))):
         self.label_helper.SetForegroundColour(currentstatus.color)
         self.label_helper.SetLabel("Misura completa! Visita la tua area personale sul sito\nwww.misurainternet.it per scaricare il certificato di misura.")
+      #aggiornamento del GAUGE
+      elif (bool(re.search('Esecuzione Test',currentstatus.message))):
+          elem=currentstatus.message.split(' ')
+          try:
+              now=int(elem[2])
+              ntot=int(elem[4])
+              perc = round((now*100)/ntot)
+              self.gauge.SetValue(perc)
+              self.label_teststatus.SetLabel("Avanzamento della misura in corso: %d%%" % perc)
+          except Exception as e:
+              logger.error('Errore nello status corrente di aggiornamento Gauge: %s' %  e) 
         
       message = self.getformattedmessage(currentstatus.message)
       date = '\n%s' % getdate().strftime('%c')
