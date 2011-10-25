@@ -17,8 +17,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from collections import deque
-from executer import OptionParser
 from random import randint
+from socket import socket
 from statistics import Statistics
 from threading import Semaphore, Thread, Event
 import contabyte
@@ -211,16 +211,11 @@ class Contabyte(Thread):
 
 if __name__ == '__main__':
 
-  parser = OptionParser()
-  parser.add_option("-i", "--ip", dest = "ip")
-  parser.add_option("-t", "--tot", dest = "tot", default = 5, type = 'int', help = "Numero di cicli di test da effettuare")
-  parser.add_option("-n", "--nap", dest = "nap", default = '193.104.137.133')
-  (options, args) = parser.parse_args()
-
-  ip = options.ip
-  nap = options.nap
-  tot = options.tot
-  parser.check_required('--ip')
+  s = socket.socket(socket.AF_INET)
+  s.connect(('www.fub.it', 80))
+  ip = s.getsockname()[0]
+  nap = '193.104.137.133'
+  tot = 5
 
   if ip != None:
 
