@@ -302,8 +302,9 @@ class MyFrame (wx.Frame):
         self.label_helper.SetLabel("Misura completa! Visita la tua area personale sul sito\nwww.misurainternet.it per scaricare il certificato di misura.")
       #aggiornamento del GAUGE
       elif (bool(re.search('Esecuzione Test',currentstatus.message))):
-          elem=currentstatus.message.split(' ')
           try:
+              msg=str(currentstatus.message)
+              elem=msg.split()
               now=int(elem[2])
               ntot=int(elem[4])
               perc = round((now*100)/ntot)

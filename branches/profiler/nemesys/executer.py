@@ -454,7 +454,7 @@ class Executer:
       # ------------------------
       i = 1;
       while (i <= task.download):
-        self_updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i,task.download+task.upload+task.ping)))
+        self._updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i,task.download+task.upload+task.ping)))
         try:
           error = 0
           if not self._isprobe:
@@ -516,7 +516,7 @@ class Executer:
       # Testa gli ftp up
       i = 1;
       while (i <= task.upload):
-        self_updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i+task.download,task.download+task.upload+task.ping)))
+        self._updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i+task.download,task.download+task.upload+task.ping)))
         try:
           error = 0
           if not self._isprobe:
@@ -580,7 +580,7 @@ class Executer:
       # Testa i ping
       i = 1
       while (i <= task.ping):
-        self_updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i+task.download+task.upload,task.download+task.upload+task.ping)))
+        self._updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i+task.download+task.upload,task.download+task.upload+task.ping)))
         try:
           error = 0
           if not self._isprobe:
