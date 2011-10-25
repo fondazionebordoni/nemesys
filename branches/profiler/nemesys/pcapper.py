@@ -18,12 +18,12 @@
 
 from collections import deque
 from random import randint
-from socket import socket
 from statistics import Statistics
 from threading import Semaphore, Thread, Event
 import contabyte
 import logging
 import sniffer
+import socket
 import sys
 import time
 
