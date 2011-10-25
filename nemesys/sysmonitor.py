@@ -182,7 +182,7 @@ def checkconnections():
       logger.error('Porta %d aperta ed utilizzata.' % i)
       #raise Exception('Accesso ad Internet da programmi non legati alla misura. Se possibile, chiuderli.')
       raise sysmonitorexception.WARNCONN
-  
+
   for i in c:
     if i >= 1024:
       logger.error('Porta %d aperta ed utilizzata.' % i)
@@ -227,7 +227,7 @@ def checkcpu():
   if value > th_cpu:
     #raise Exception('CPU occupata.')
     raise sysmonitorexception.WARNCPU
-    
+
   return True
 
 def checkmem():
@@ -246,7 +246,7 @@ def checkmem():
   if value > th_memLoad:
     #raise Exception('Memoria occupata.')
     raise sysmonitorexception.OVERMEM
-    
+
   return True
 
 def checkfw():
@@ -266,34 +266,34 @@ def checkwireless():
 
   return True
 
-def checkhosts(up, down, ispid, arping=1):
-  
+def checkhosts(up, down, ispid, arping = 1):
+
   ip = getIp();
   mask = getNetworkMask(ip)
   logger.info("Indirizzo ip/mask: %s/%d" % (ip, mask))
-  
+
   if (arping == 0):
     thres = th_host + 1
   else:
     thres = th_host
-  
-  if (mask != 0):  
+
+  if (mask != 0):
     value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping)
     #value=1
     logger.info('Trovati %d host in rete.' % value)
-          
+
     if value <= 0:
       #raise Exception('Impossibile determinare il numero di host in rete.')
       raise sysmonitorexception.BADHOST
     if value > thres:
       #raise Exception('Presenza altri host in rete.')
       raise sysmonitorexception.TOOHOST
-      
+
     return True
   else:
     #raise Exception ('Impossibile recuperare il valore della maschera dell\'IP: %s' % ip)
     raise SysmonitorException(sysmonitorexception.BADMASK, 'Impossibile recuperare il valore della maschera dell\'IP: %s' % ip)
-    
+
 def checkdisk():
 
   value = getfloattag(tag_wdisk, th_wdisk - 1)
@@ -329,7 +329,7 @@ def mediumcheck():
 
   return True
 
-def checkall(up, down, ispid, arping=1):
+def checkall(up, down, ispid, arping = 1):
 
   checkhosts(up, down, ispid, arping)
   #checkdisk()
@@ -367,8 +367,7 @@ def getIp():
   s = socket.socket(socket.AF_INET)
   s.connect(('www.google.com', 80))
   value = s.getsockname()[0]
-
-  #value = getstringtag(tag_ip, '90.147.120.2')
+  s.close()
 
   if not checkipsyntax(value):
     #raise Exception('Impossibile ottenere il dettaglio dell\'indirizzo IP')
@@ -386,7 +385,7 @@ def getNetworkMask(ip):
     addrs = netifaces.ifaddresses(i)
     try:
       ipinfo = addrs[socket.AF_INET][0]
-      address = ipinfo['addr'] 
+      address = ipinfo['addr']
       if (address == ip):
         netmask = ipinfo['netmask']
         return maskConversion(netmask)
@@ -425,15 +424,15 @@ def maskConversion(netmask):
 
 
 def convertDecToBin(dec):
-  i = 0  
+  i = 0
   bin = range(0, 4)
   for x in range(0, 4):
     bin[x] = range(0, 8)
-  
+
   for i in range(0, 4):
     j = 7
     while j >= 0:
-           
+
       bin[i][j] = (dec[i] & 1) + 0
       dec[i] /= 2
       j = j - 1
@@ -483,13 +482,13 @@ if __name__ == '__main__':
     print 'Errore [%d]: %s' % (errorcode, e)
 
   try:
-    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001',1)  #ARPING
+    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001', 1)  #ARPING
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
 
   try:
-    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001',0)  #PING
+    print 'Test sysmonitor fastcheck: %s' % checkhosts(2000, 2000, 'fst001', 0)  #PING
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
