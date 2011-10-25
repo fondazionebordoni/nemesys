@@ -214,6 +214,7 @@ if __name__ == '__main__':
   s = socket.socket(socket.AF_INET)
   s.connect(('www.fub.it', 80))
   ip = s.getsockname()[0]
+  s.close()
   nap = '193.104.137.133'
   tot = 5
 
