@@ -30,6 +30,8 @@ ETH_P_IP = 0x0800
 ETH_P_ARP = 0x0806
 ARP_REPLY = 0x0002
 
+MAX = 64
+
 def display_mac(value):
     return string.join(["%02X" % ord(b) for b in value], ':')
 
@@ -92,7 +94,7 @@ def receive_arping(MACsrc):
   return len(IPtable)
 
 
-def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None):
+def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 2):
 
   nHosts = 0
 
@@ -107,28 +109,41 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None):
   net = IPnet.network()
   bcast = IPnet.broadcast()
 
-  filter = "rarp or arp dst host " + IPsrc
+  pcap_filter = "rarp or arp dst host " + IPsrc
 
-  rec_init = arpinger.initialize(IPsrc, filter, timeout * 1000)
-  logger.debug("Inizializzato arpinger (%s, %s)" % (IPsrc, filter))
+  rec_init = arpinger.initialize(IPsrc, pcap_filter, timeout * 1000)
+  logger.debug("Inizializzato arpinger (%s, %s)" % (IPsrc, pcap_filter))
   if (rec_init['err_flag'] != 0):
     raise Exception (rec_init['err_str'])
   else:
+
+    lasting = 2 ** (32 - NETmask)
+    i = 0
+
     for IPdst in IPnet:
       if ((IPdst.hex() == net.hex() or IPdst.hex() == bcast.hex()) and realSubnet):
         logger.debug("Saltato ip %s" % IPdst)
       elif(IPdst.dq == IPsrc):
         logger.debug("Salto il mio ip %s" % IPdst)
       else:
-        #logger.debug('Arping host %s' % IPdst)
+        logger.debug('Arping host %s' % IPdst)
         send_arping(IPsrc, IPdst, MACsrc, MACdst)
+        i += 1
 
-    try:
-      nHosts = receive_arping(MACsrc)
-      logger.debug("Totale host: %d" % nHosts)
-    except Exception as e:
-      logger.warning("Errore durante la ricezione degli arping: %s" % e)
+      lasting -= 1
 
+      if (i >= MAX or lasting <= 0):
+        i = 0
+
+        try:
+          nHosts += receive_arping(MACsrc)
+        except Exception as e:
+          logger.warning("Errore durante la ricezione degli arping: %s" % e)
+
+      if(nHosts > threshold):
+        break
+
+    logger.debug("Totale host: %d" % nHosts)
     arpinger.close()
 
   return nHosts
@@ -141,5 +156,5 @@ if __name__ == '__main__':
   s.close()
 
   if ip != None:
-    print("Trovati: %d host" % do_arping(ip, 24, True, 1, None))
+    print("Trovati: %d host" % do_arping(ip, 24, True, 1, None, 15))
 
