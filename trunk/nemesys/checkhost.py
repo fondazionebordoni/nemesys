@@ -39,12 +39,12 @@ class sendit(Thread):
       if (self.elapsed > 0):
         self.status = 1
     except Exception as e:
-      logger.debug('Errore durante il ping dell\'host %s: %s' % (self.ip, e))  
+      logger.debug('Errore durante il ping dell\'host %s: %s' % (self.ip, e))
       self.status = 0
       pass
-    
 
-def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, threshold=4, arping=0):
+
+def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, threshold = 4, arping = 0):
   realSubnet = True
   if(provider == "fst001" and not bool(re.search('^192\.168\.', ipAddress))):
     realSubnet = False
@@ -66,13 +66,13 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, th
   n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold, arping)
   return n_host
 
-def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4, arping=0):
+def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping = 0):
   '''
   Ritorna il numero di host che rispondono al ping nella sottorete ipAddress/net_mask.
   Di default effettua i ping dei soli host appartenenti alla sottorete indicata (escludendo il 
   primo e ultimo ip).
   '''
-  nHosts = 0  
+  nHosts = 0
   ips = ipcalc.Network('%s/%d' % (ipAddress, netMask))
   net = ips.network()
   bcast = ips.broadcast()
@@ -80,12 +80,12 @@ def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4, arping=0):
 
   if (arping == 1):
     try:
-      nHosts = do_arping(ipAddress, netMask, realSubnet, 1)
+      nHosts = do_arping(ipAddress, netMask, realSubnet, 1, threshold)
     except Exception as e:
-      logger.debug('Errore durante l\'arping: %s' % e)  
+      logger.debug('Errore durante l\'arping: %s' % e)
       status = 0
       pass
-      
+
   else:
     i = 0
     lasting = 2 ** (32 - netMask)
@@ -99,21 +99,21 @@ def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4, arping=0):
         pinglist.append(current)
         current.start()
         i += 1
-  
+
       if (i > MAX or lasting <= 0):
         i = 0
         for pingle in pinglist:
           pingle.join()
-        
+
           if(pingle.status):
             logger.debug("Trovato host: %s (in %.2f ms)" % (pingle.ip, pingle.elapsed * 1000))
             nHosts = nHosts + 1
-  
+
         pinglist = []
-          
+
       if(nHosts > threshold):
         break
-        
+
   return nHosts
 
 
@@ -124,9 +124,9 @@ if __name__ == '__main__':
 #  n = countHosts("192.168.1.1", 24, 2000, 2000, "fst001")
 #  print '%d (%d)' % (n, 0)
 
-  n = countHosts("192.168.208.53", 24, 200, 2000, "fst001",4,1)
+  n = countHosts("192.168.208.53", 24, 200, 2000, "fst001", 4, 1)
   print '%d (%d)' % (n, 0)
-  
+
   n = countHosts("192.168.208.53", 24, 200, 2000, "fst001")
   print '%d (%d)' % (n, 0)
-  
+
