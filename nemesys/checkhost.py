@@ -43,8 +43,7 @@ class sendit(Thread):
       self.status = 0
       pass
 
-
-def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, threshold = 4, arping = 0):
+def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, threshold = 4, arping = 0, mac = None):
   realSubnet = True
   if(provider == "fst001" and not bool(re.search('^192\.168\.', ipAddress))):
     realSubnet = False
@@ -63,10 +62,10 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, 
 
   logger.info("Indirizzo: %s/%d; Realsubnet: %s; Threshold: %d" % (ipAddress, netMask, realSubnet, threshold))
 
-  n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold, arping)
+  n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold, arping, mac)
   return n_host
 
-def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping = 0):
+def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping = 0, mac = None):
   '''
   Ritorna il numero di host che rispondono al ping nella sottorete ipAddress/net_mask.
   Di default effettua i ping dei soli host appartenenti alla sottorete indicata (escludendo il 
@@ -80,7 +79,7 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
 
   if (arping == 1):
     try:
-      nHosts = do_arping(ipAddress, netMask, realSubnet, 1, threshold)
+      nHosts = do_arping(ipAddress, netMask, realSubnet, 1, mac, threshold)
     except Exception as e:
       logger.debug('Errore durante l\'arping: %s' % e)
       status = 0
@@ -118,13 +117,8 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
 
 
 if __name__ == '__main__':
-#  n = countHosts("10.10.0.100", 24, 2000, 2000, 'fst001', 255)
-#  print '%d (%d)' % (n, 0)
-#
-#  n = countHosts("192.168.1.1", 24, 2000, 2000, "fst001")
-#  print '%d (%d)' % (n, 0)
 
-  n = countHosts("192.168.208.53", 24, 200, 2000, "fst001", 4, 1)
+  n = countHosts("192.168.208.53", 24, 200, 2000, "fst001", 4, 1, None)
   print '%d (%d)' % (n, 0)
 
   n = countHosts("192.168.208.53", 24, 200, 2000, "fst001")

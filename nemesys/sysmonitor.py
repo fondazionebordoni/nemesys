@@ -278,20 +278,22 @@ def checkhosts(up, down, ispid, arping = 1):
     thres = th_host
 
   if (mask != 0):
-    value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping)
-    #value=1
+    mac = None
+    try:
+        mac = getMac()
+    except:
+        pass
+
+    value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac)
     logger.info('Trovati %d host in rete.' % value)
 
     if value <= 0:
-      #raise Exception('Impossibile determinare il numero di host in rete.')
       raise sysmonitorexception.BADHOST
     if value > thres:
-      #raise Exception('Presenza altri host in rete.')
       raise sysmonitorexception.TOOHOST
 
     return True
   else:
-    #raise Exception ('Impossibile recuperare il valore della maschera dell\'IP: %s' % ip)
     raise SysmonitorException(sysmonitorexception.BADMASK, 'Impossibile recuperare il valore della maschera dell\'IP: %s' % ip)
 
 def checkdisk():
@@ -316,24 +318,24 @@ def fastcheck():
 
   checkcpu()
   checkmem()
-  checktasks()
-  checkconnections()
+  #checktasks()
+  #checkconnections()
 
   return True
 
 def mediumcheck():
 
-  checkwireless()
-  #checkfw()
   fastcheck()
+  #checkfw()
+  checkwireless()
 
   return True
 
 def checkall(up, down, ispid, arping = 1):
 
-  checkhosts(up, down, ispid, arping)
-  #checkdisk()
   mediumcheck()
+  #checkdisk()
+  checkhosts(up, down, ispid, arping)
 
   return True
 
