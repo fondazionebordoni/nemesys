@@ -13,7 +13,10 @@ int DEBUG_MODE=0;
 FILE *debug_log;
 
 int err_flag=0;
-char err_str[160]="No Error";
+char err_str[88]="No Error";
+
+PyGILState_STATE gil_state;
+PyObject *py_pcap_hdr, *py_pcap_data;
 
 int ind_dev=0, num_dev=0;
 
@@ -171,19 +174,19 @@ void initialize(u_char *dev, int promisc, int timeout, int snaplen, int buffer)
     {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;return;}
 
     if (pcap_set_promisc(handle,promisc) != 0)
-    {sprintf(err_str,"PromiscuousMode error: %s",errbuf);err_flag=-1;return;}
+    {sprintf(err_str,"PromiscuousMode error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
     if (pcap_set_timeout(handle,timeout) != 0)
-    {sprintf(err_str,"Timeout error: %s",errbuf);err_flag=-1;return;}
+    {sprintf(err_str,"Timeout error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
     if (pcap_set_snaplen(handle,snaplen) != 0)
-    {sprintf(err_str,"Snapshot error: %s",errbuf);err_flag=-1;return;}
+    {sprintf(err_str,"Snapshot error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
     if (pcap_set_buffer_size(handle,buffer) !=0)
-    {sprintf(err_str,"SetBuffer error: %s",errbuf);err_flag=-1;return;}
+    {sprintf(err_str,"SetBuffer error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
     if (pcap_activate(handle) !=0)
-    {sprintf(err_str,"Activate error: %s",errbuf);err_flag=-1;return;}
+    {sprintf(err_str,"Activate error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
     //DEBUG-BEGIN
     if(DEBUG_MODE)
@@ -283,7 +286,7 @@ static PyObject *arpinger_send(PyObject *self, PyObject *args)
 
 static PyObject *arpinger_receive(PyObject *self)
 {
-    PyObject *py_pcap_hdr, *py_pcap_data;
+    //PyObject *py_pcap_hdr, *py_pcap_data;
 
     struct pcap_pkthdr *pcap_hdr;
     const u_char *pcap_data;
@@ -293,6 +296,7 @@ static PyObject *arpinger_receive(PyObject *self)
     err_flag=0; strcpy(err_str,"No Error");
 
     Py_BEGIN_ALLOW_THREADS;
+    gil_state = PyGILState_Ensure();
 
     if (handle != NULL)
     {
@@ -317,8 +321,16 @@ static PyObject *arpinger_receive(PyObject *self)
                         break;
             default :   err_flag=pkt_received;
                         sprintf(err_str,"ARP packet received");
-                        py_pcap_hdr=PyString_FromStringAndSize((u_char *)pcap_hdr,sizeof(struct pcap_pkthdr));
-                        py_pcap_data=PyString_FromStringAndSize(pcap_data,(pcap_hdr->caplen));
+                        if ((pcap_hdr!=NULL) && (pcap_data!=NULL))
+                        {
+                          py_pcap_hdr = PyString_FromStringAndSize((const char *)pcap_hdr,sizeof(struct pcap_pkthdr));
+                          py_pcap_data = PyString_FromStringAndSize((const char *)pcap_data,(pcap_hdr->caplen));
+                        }
+                        else
+                        {
+                          py_pcap_hdr = Py_None;
+                          py_pcap_data = Py_None;
+                        }
                         break;
         }
     }
@@ -330,9 +342,22 @@ static PyObject *arpinger_receive(PyObject *self)
         py_pcap_data = Py_None;
     }
 
+    PyGILState_Release(gil_state);
     Py_END_ALLOW_THREADS;
 
-    return Py_BuildValue("{s:i,s:s,s:O,s:O}","err_flag",err_flag,"err_str",err_str,"py_pcap_hdr",py_pcap_hdr,"py_pcap_data",py_pcap_data);
+    return Py_BuildValue("{s:i,s:s,s:S,s:S}","err_flag",err_flag,"err_str",err_str,"py_pcap_hdr",py_pcap_hdr,"py_pcap_data",py_pcap_data);
+}
+
+static PyObject *arpinger_clear(PyObject *self)
+{
+    err_flag=0; strcpy(err_str,"No Error");
+
+    if (py_pcap_hdr != Py_None)
+    {Py_DECREF(py_pcap_hdr);}
+    if (py_pcap_data != Py_None)
+    {Py_DECREF(py_pcap_data);}
+
+    return Py_BuildValue("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);
 }
 
 static PyObject *arpinger_close(PyObject *self)
@@ -347,6 +372,7 @@ static PyMethodDef arpinger_methods[] =
     { "initialize", (PyCFunction)arpinger_initialize, METH_VARARGS, NULL},
     { "send", (PyCFunction)arpinger_send, METH_VARARGS, NULL},
     { "receive", (PyCFunction)arpinger_receive, METH_NOARGS, NULL},
+    { "clear", (PyCFunction)arpinger_clear, METH_NOARGS, NULL},
     { "close", (PyCFunction)arpinger_close, METH_NOARGS, NULL},
     { NULL, NULL, 0, NULL }
 };
