@@ -17,17 +17,25 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from SysProf import LocalProfilerFactory
-from SysProf.NemesysException import LocalProfilerException, RisorsaException, FactoryException
+from SysProf.NemesysException import LocalProfilerException, RisorsaException, \
+  FactoryException
 from logger import logging
-from os import path as Path
 from sysmonitorexception import SysmonitorException
 from xml.etree import ElementTree as ET
 import checkhost
 import netifaces
 import paths
-import re
+import platform
 import socket
 import sysmonitorexception
+
+platform_name = platform.system().lower()
+if platform_name == 'windows':
+  from SysProf.windows import profiler
+elif platform_name == 'darwin':
+  from SysProf.darwin import profiler
+else:
+  from SysProf.linux import profiler
 
 # TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
 STRICT_CHECK = True
