@@ -1,6 +1,6 @@
 from distutils.core import setup
 import py2exe
-import sys,os
+import sys, os
 from SysProf.windows import profiler
 from xml.etree import ElementTree as ET
 import modulefinder
@@ -25,20 +25,21 @@ myservice = Target(
     # filename) must be specified!
     modules = ['Nemesys'],
     icon_resources = [(1, "..\\nemesys.ico")],
-    cmdline_style='pywin32',
+    cmdline_style = 'pywin32',
     )
 
 setup(
 	options = {
 		'py2exe': {
 			'packages': 'encodings',
+      'optimize': 2,
 		}
 	},
 	name = 'Nemesys',
 	version = '2.1',
 	service = [myservice],
 	windows = [
-		{"script": "gui.py", 'uac_info': "requireAdministrator", "icon_resources": [(1,"..\\nemesys.ico")]},
+		{"script": "gui.py", 'uac_info': "requireAdministrator", "icon_resources": [(1, "..\\nemesys.ico")]},
 	],
 	#packages = ['nemesys'],
 )
