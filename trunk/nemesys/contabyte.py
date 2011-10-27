@@ -657,77 +657,80 @@ def analyze(ipDev, ipNem, pcapHdrPkt, pcapDataPkt, etsimode = True):
    IP_PR_UDP : _udp_unpack, \
   } \
 
-  pcapHdr = _pcap_hdr_unpack(pcapHdrPkt)
+  try:
+    pcapHdr = _pcap_hdr_unpack(pcapHdrPkt)
+    (l2_hdr, l2_data) = _eth_unpack(pcapDataPkt)
 
-  (l2_hdr, l2_data) = _eth_unpack(pcapDataPkt)
+    if (l2_hdr['ethPayType'] in eth_switch):
 
-  if (l2_hdr['ethPayType'] in eth_switch):
+      (l3_hdr, l3_data) = eth_switch[l2_hdr['ethPayType']](l2_data)
 
-    (l3_hdr, l3_data) = eth_switch[l2_hdr['ethPayType']](l2_data)
+      if (l2_hdr['ethPayType'] == ETH_PR_ARP):
 
-    if (l2_hdr['ethPayType'] == ETH_PR_ARP):
+        ipSrc = l3_hdr['arpPrSrc']
+        ipDst = l3_hdr['arpPrDst']
 
-      ipSrc = l3_hdr['arpPrSrc']
-      ipDst = l3_hdr['arpPrDst']
+      elif (l2_hdr['ethPayType'] == ETH_PR_IP or l2_hdr['ethPayType'] == ETH_PR_IP6):
 
-    elif (l2_hdr['ethPayType'] == ETH_PR_IP or l2_hdr['ethPayType'] == ETH_PR_IP6):
+        if ('ipPayLen' in l3_hdr):
 
-      if ('ipPayLen' in l3_hdr):
+          ipPayLen = l3_hdr['ipPayLen']
 
-        ipPayLen = l3_hdr['ipPayLen']
+        else:
 
-      else:
+          ipPayLen = (l3_hdr['ipTotLen']) - (l3_hdr['ipHdrLen'])
 
-        ipPayLen = (l3_hdr['ipTotLen']) - (l3_hdr['ipHdrLen'])
+          ipSrc = l3_hdr['ipSrc']
+          ipDst = l3_hdr['ipDst']
 
-        ipSrc = l3_hdr['ipSrc']
-        ipDst = l3_hdr['ipDst']
+        if (l3_hdr['ipPayType'] in ip_switch):
 
-      if (l3_hdr['ipPayType'] in ip_switch):
+          (l4_hdr, l4_data) = ip_switch[l3_hdr['ipPayType']](l3_data)
 
-        (l4_hdr, l4_data) = ip_switch[l3_hdr['ipPayType']](l3_data)
+          if ('tcpHdrLen' in l4_hdr):
+            tcpHdrLen = l4_hdr['tcpHdrLen']
+            PayloadLen = ipPayLen - tcpHdrLen
 
-        if ('tcpHdrLen' in l4_hdr):
-          tcpHdrLen = l4_hdr['tcpHdrLen']
-          PayloadLen = ipPayLen - tcpHdrLen
+            if ((etsimode == True) and (PayloadLen > 0)):
 
-          if ((etsimode == True) and (PayloadLen > 0)):
+              tcpSrcPort = l4_hdr['tcpSrcPort']
+              tcpDstPort = l4_hdr['tcpDstPort']
+              tcpSeqNum = l4_hdr['tcpSeqNum']
+              tcpAckNum = l4_hdr['tcpAckNum']
 
-            tcpSrcPort = l4_hdr['tcpSrcPort']
-            tcpDstPort = l4_hdr['tcpDstPort']
-            tcpSeqNum = l4_hdr['tcpSeqNum']
-            tcpAckNum = l4_hdr['tcpAckNum']
+              # 200 byte per Download e 30 byte per Upload (di comando)
+              #if (((ipDst == ipDev) and (tcpSrcPort == 21)) or ((ipSrc == ipDev) and (tcpDstPort == 21))):
+                #PayloadLen = 0
 
-            # 200 byte per Download e 30 byte per Upload (di comando)
-            #if (((ipDst == ipDev) and (tcpSrcPort == 21)) or ((ipSrc == ipDev) and (tcpDstPort == 21))):
-              #PayloadLen = 0
-
-            if (ipDst not in PKT_TABLE):
-              PKT_TABLE[ipDst] = {}
-              PKT_TABLE[ipDst][tcpDstPort] = {}
-              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
-            elif (tcpDstPort not in PKT_TABLE[ipDst]):
-              PKT_TABLE[ipDst][tcpDstPort] = {}
-              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
-            elif (tcpSeqNum not in PKT_TABLE[ipDst][tcpDstPort]):
-              PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
-            elif (PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] == tcpAckNum):
-              is_retransmission = True
-
-            if (ipSrc == ipDev):
-              keys = PKT_TABLE[ipDst][tcpDstPort].keys()
-              keys.sort()
-              tcpSeqNumOne = keys[0]
-              keys.reverse()
-              tcpSeqNumBig = keys[0]
-
-              if (tcpSeqNum < tcpSeqNumBig):
+              if (ipDst not in PKT_TABLE):
+                PKT_TABLE[ipDst] = {}
+                PKT_TABLE[ipDst][tcpDstPort] = {}
+                PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
+              elif (tcpDstPort not in PKT_TABLE[ipDst]):
+                PKT_TABLE[ipDst][tcpDstPort] = {}
+                PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
+              elif (tcpSeqNum not in PKT_TABLE[ipDst][tcpDstPort]):
+                PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
+              elif (PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] == tcpAckNum):
                 is_retransmission = True
 
-        elif ('udpTotLen' in l4_hdr):
-          udpHdrLen = UDP_HDR_LEN
-          PayloadLen = ipPayLen - udpHdrLen
+              if (ipSrc == ipDev):
+                keys = PKT_TABLE[ipDst][tcpDstPort].keys()
+                keys.sort()
+                tcpSeqNumOne = keys[0]
+                keys.reverse()
+                tcpSeqNumBig = keys[0]
 
+                if (tcpSeqNum < tcpSeqNumBig):
+                  is_retransmission = True
+
+          elif ('udpTotLen' in l4_hdr):
+            udpHdrLen = UDP_HDR_LEN
+            PayloadLen = ipPayLen - udpHdrLen
+
+  except Exception as e:
+    logger.warning("Errore durante lo spacchettamento del pacchetto per l'analisi: %s" % e)
+    return STATISTICS
 
   if (ipSrc != ipDev):
 
