@@ -26,8 +26,6 @@ import socket
 import sys
 import time
 
-MAX_BUFFER_LENGTH = 500
-
 TEST = False
 
 LOOP = '_loop'
@@ -65,7 +63,7 @@ class Pcapper(Thread):
   def run(self):
     while self._running:
       self._produce()
-    logger.debug('Exit sniffer. Stats: %s' % sniffer.getstat())
+    logger.debug('Exit sniffer! Stats: %s' % sniffer.getstat())
     sniffer.stop()
 
   def sniff(self, analyzer):
@@ -172,7 +170,9 @@ if __name__ == '__main__':
       tot = 1
     for i in range(1, tot + 1):
 
-      p = Pcapper(ip)
+      size = 16 * 1024 * 1024
+      print size
+      p = Pcapper(ip, size, 150, 1, 1)
       p.start()
 
       print("Start! [%d/%d]" % (i, tot))
