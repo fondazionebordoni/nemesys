@@ -265,7 +265,7 @@ class rete(RisorsaWin):
             return devxml
           
     def _is_wireless_text(self,text):
-      keywords = ['wireless', 'wlan', 'wifi', 'wi-fi']
+      keywords = ['wireless', 'wlan', 'wifi', 'wi-fi','fili']
       ltext=text.lower()
       words=ltext.split(' ')
       for w in words:
