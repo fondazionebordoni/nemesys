@@ -585,7 +585,7 @@ class Executer:
             # Profilazione del sistema
             # ------------------------
             try:
-              if not sysmonitor.mediumcheck(self._client.profile.upload, self._client.profile.download, self._client.isp.id, ARPING):
+              if not sysmonitor.mediumcheck():
                 raise Exception('Condizioni per effettuare la misura non verificate.')
 
             except Exception as e:
