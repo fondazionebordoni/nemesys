@@ -252,8 +252,10 @@ class rete(RisorsaWin):
                     devIsActive = 'True'
             if devMac in self.ipenabdic.keys():
                 statnet=str(self.ipenabdic[devMac])
-                if ((features['NetEnabled'] == True) or ( statnet.lower() == 'true')):
-                    devStatus = 'Enabled'   
+            else:
+                statnet = 'false'
+            if ((features['NetEnabled'] == True) or ( statnet.lower() == 'true')):
+                devStatus = 'Enabled'   
             devxml = ET.Element('NetworkDevice')
             devxml.append(self.xmlFormat('Name', devName))
             devxml.append(self.xmlFormat('Type', devType))
