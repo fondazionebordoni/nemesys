@@ -43,10 +43,10 @@ filepath = None
 size = 0
 
 #Parametri Sniffer:
-BUFF = 44 * 1024000   # MegaByte
-SNAPLEN = 150         # Byte
-TIMEOUT = 1           # MilliSeconds
-PROMISC = 1           # Promisc Mode ON/OFF
+BUFF = 16 * 1024 * 1024 # MegaByte
+SNAPLEN = 150           # Byte
+TIMEOUT = 1             # MilliSeconds
+PROMISC = 1             # Promisc Mode ON/OFF
 
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
@@ -55,7 +55,7 @@ errors = Errorcoder(paths.CONF_ERRORS)
 def totalsize(data):
   global size
   size += len(data)
-  
+
 
 class Tester:
 
@@ -73,7 +73,7 @@ class Tester:
     test_type = 'upload'
     size = 0
     elapsed = 0
-      
+
     file = Fakefile(bytes)
     timeout = max(self._timeout, 1)
     start = datetime.fromtimestamp(timestampNtp())
@@ -93,7 +93,7 @@ class Tester:
     timer = timeit.Timer(function, setup)
 
     try:
-    
+
       logger.debug('Test initializing...')
       pcapper = Pcapper(self._if_ip, BUFF, SNAPLEN, TIMEOUT, PROMISC)
       pcapper.start()
@@ -106,11 +106,11 @@ class Tester:
 
       pcapper.stop_sniff()
       counter_stats = pcapper.get_stats()
-      
+
       logger.debug('Test stopping... ')
       pcapper.stop()
       pcapper.join()
-      
+
       logger.debug('Test done!')
 
     except ftplib.all_errors as e:
@@ -164,11 +164,11 @@ class Tester:
 
       pcapper.stop_sniff()
       counter_stats = pcapper.get_stats()
-      
+
       logger.debug('Test stopping... ')
       pcapper.stop()
       pcapper.join()
-      
+
       logger.debug('Test done!')
 
     except ftplib.all_errors as e:
@@ -272,7 +272,7 @@ if __name__ == '__main__':
     for i in range(1, TOT + 1):
       logger.info('\nTest Ping %d/%d' % (i, TOT))
       test = t1.testping()
-      logger.info(test) 
+      logger.info(test)
 
   else:
     main()
