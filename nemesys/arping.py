@@ -103,7 +103,7 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, thresh
   if (mac):
     MACsrc = "".join(chr(int(macEL, 16)) for macEL in mac.split(':'))
   else:
-    MACsrc = "\x0A"*6
+    MACsrc = "\x0F"*6
   MACdst = "\xFF"*6
 
   IPsrc = socket.gethostbyname(IPsrc)
@@ -128,7 +128,7 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, thresh
       elif(IPdst.dq == IPsrc):
         logger.debug("Salto il mio ip %s" % IPdst)
       else:
-        logger.debug('Arping host %s' % IPdst)
+        #logger.debug('Arping host %s' % IPdst)
         send_arping(IPsrc, IPdst, MACsrc, MACdst)
         i += 1
 
@@ -158,5 +158,6 @@ if __name__ == '__main__':
   s.close()
 
   if ip != None:
-    print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
+    #print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
+    print("Trovati: %d host" % do_arping(ip, 24, True, 1, None, 15))
 
