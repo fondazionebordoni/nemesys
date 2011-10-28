@@ -231,6 +231,7 @@ void find_devices()
     WSADATA wsa_Data;
     char HostName[255];
     struct hostent *host_entry;
+	int addr_num = 0;
     #endif
 
     ind_dev=0;
@@ -274,6 +275,8 @@ void find_devices()
             addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
             ip = inet_ntoa(addr);
 
+			//printf("\nProvo: %s",ip);
+
             IpInNet = ip_in_net(ip,device[ind_dev].net,device[ind_dev].mask);
 
             if(IpInNet != 1)
@@ -282,7 +285,14 @@ void find_devices()
                 WSAStartup(0x101,&wsa_Data);
                 gethostname(HostName, 255);
                 host_entry = gethostbyname(HostName);
-                ip = inet_ntoa (*(struct in_addr *)*host_entry->h_addr_list);
+				addr_num = 0;
+				while((IpInNet != 1) && (host_entry->h_addr_list[addr_num] != NULL))
+                {
+					ip = inet_ntoa (*(struct in_addr *)(host_entry->h_addr_list)[addr_num]);
+					//printf("\nProvo: %s",ip);
+					IpInNet = ip_in_net(ip,device[ind_dev].net,device[ind_dev].mask);
+					addr_num++;
+				}
                 WSACleanup();
                 #else
                 while((IpInNet != 1) && (dl->addresses->next))
@@ -290,13 +300,22 @@ void find_devices()
                     dl->addresses=dl->addresses->next;
                     addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
                     ip = inet_ntoa(addr);
+					//printf("\nProvo: %s",ip);
                     IpInNet = ip_in_net(ip,device[ind_dev].net,device[ind_dev].mask);
                 }
                 #endif
             }
 
-            device[ind_dev].ip=PyMem_New(char,strlen(ip)+1);
-            memcpy(device[ind_dev].ip,ip,strlen(ip)+1);
+			if(IpInNet == 1)
+            {
+				device[ind_dev].ip=PyMem_New(char,strlen(ip)+1);
+				memcpy(device[ind_dev].ip,ip,strlen(ip)+1);
+			}
+			else
+			{
+				device[ind_dev].ip="0.0.0.0";
+			}
+
 
         }
         else
