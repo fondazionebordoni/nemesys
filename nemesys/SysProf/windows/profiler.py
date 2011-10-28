@@ -221,7 +221,7 @@ class rete(RisorsaWin):
             
     def profileDevice(self, obj):
         running = 0X3 #running Net Interface CODE
-        features = {'Name':'', 'AdapterType':'', 'MACAddress':'', 'NetEnabled':'','NetConnectionID':''}
+        features = {'Name':'', 'AdapterType':'', 'MACAddress':'','NetConnectionID':''}
         devName = 'unknown'
         devType = 'unknown'
         devMac = 'unknown'
@@ -254,7 +254,7 @@ class rete(RisorsaWin):
                 statnet=str(self.ipenabdic[devMac])
             else:
                 statnet = 'false'
-            if ((features['NetEnabled'] == True) or ( statnet.lower() == 'true')):
+            if ( statnet.lower() == 'true' ):
                 devStatus = 'Enabled'   
             devxml = ET.Element('NetworkDevice')
             devxml.append(self.xmlFormat('Name', devName))
