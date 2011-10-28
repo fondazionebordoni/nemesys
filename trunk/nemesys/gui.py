@@ -62,7 +62,7 @@ class _Controller(Thread):
     loop(1)
     logger.debug('GUI asyncore loop terminated.')
 
-  def join(self, timeout=None):
+  def join(self, timeout = None):
     logger.debug('Richiesta di close')
     self._running = False
     self._channel.quit()
@@ -129,77 +129,77 @@ class _Channel(dispatcher):
       logger.error('Errore durante l\'aggiornamento dello stato %s' % e)
 
 class MyFrame (wx.Frame):
-  
+
   def __init__(self):
-  
+
     # Base e gestione stato
     setlocale(LC_ALL, '')
     self._status = Status(status.ERROR, "error")
     xmldoc = Progress(True)
     #da qui modifico la dimensione della finestra FRAME
-    wx.Frame.__init__ (self, None, id=wx.ID_ANY, title='Nemesys', pos=wx.DefaultPosition, size=wx.Size(750, 500), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX))
+    wx.Frame.__init__ (self, None, id = wx.ID_ANY, title = 'Nemesys', pos = wx.DefaultPosition, size = wx.Size(750, 500), style = wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX))
     self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
 
     self.SetSizeHintsSz(wx.DefaultSize, wx.DefaultSize)
-    
+
     bSizer2 = wx.BoxSizer(wx.VERTICAL)
-    
+
     bSizer3 = wx.BoxSizer(wx.HORIZONTAL)
-    
+
     self.m_bitmap1 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, u"logo_misurainternet.png"), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0)
     bSizer3.Add(self.m_bitmap1, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
-    
+
     bSizer4 = wx.BoxSizer(wx.VERTICAL)
-    
+
     self.label_nemesys = wx.StaticText(self, wx.ID_ANY, u"Nemesys", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
     self.label_nemesys.Wrap(-1)
     self.label_nemesys.SetFont(wx.Font(16, 74, 90, 92, False, "Sans"))
     bSizer4.Add(self.label_nemesys, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
-        
+
     self.label_startmeasures = wx.StaticText(self, wx.ID_ANY, u"Inizio test di misura: %s" % xmldoc.start().strftime('%c'), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
     self.label_startmeasures.Wrap(-1)
     bSizer4.Add(self.label_startmeasures, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
-    
+
     label = u"La misurazione va completata entro tre giorni dal suo inizio\n"
     if platform == 'darwin':
       label = "%s\n" % label
     self.label_helper = wx.StaticText(self, wx.ID_ANY, label, wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
     self.label_helper.Wrap(-1)
     bSizer4.Add(self.label_helper, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
-    
+
     self.label_avanzamento = wx.StaticText(self, wx.ID_ANY, u"Stato di avanzamento: 0 test su 24", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
     self.label_avanzamento.Wrap(-1)
     bSizer4.Add(self.label_avanzamento, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
-    
+
     self.label_fasce = wx.StaticText(self, wx.ID_ANY, u"Dettaglio misure per fasce orarie:", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
     self.label_fasce.Wrap(-1)
     bSizer4.Add(self.label_fasce, 0, wx.TOP | wx.ALIGN_CENTER_HORIZONTAL, 2)
 
     bSizer3.Add(bSizer4, 1, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 5)
-    
+
     self.m_bitmap2 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, u"logo_nemesys.png"), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
     bSizer3.Add(self.m_bitmap2, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
-    
+
     bSizer2.Add(bSizer3, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND, 5)
-    
+
     self._grid = wx.GridSizer(2, 24, 0, 0)
-    
+
     for i in range(0, 24):
       self.m_staticText5 = wx.StaticText(self, wx.ID_ANY, u"%s" % i, wx.DefaultPosition, wx.DefaultSize, 0)
       self.m_staticText5.Wrap(-1)
       self._grid.Add(self.m_staticText5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
-        
+
     for i in range (0, 24):
       self.m_bitmap17 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap(path.join(paths.ICONS, "grey.png"), wx.BITMAP_TYPE_ANY), wx.DefaultPosition, wx.DefaultSize, 0)
       self._grid.Add(self.m_bitmap17, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
-    
+
     bSizer2.Add(self._grid, 0, wx.ALIGN_CENTER_HORIZONTAL, 2)
     ##############
     #INSERIRE QUI LA PROGRESS BAR
     self.label_teststatus = wx.StaticText(self, wx.ID_ANY, "Avanzamento della misura in corso", wx.DefaultPosition, wx.DefaultSize, 0)
     self.label_teststatus.Wrap(-1)
     bSizer2.Add(self.label_teststatus, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
-    
+
     #bSizer5 = wx.BoxSizer(wx.HORIZONTAL)
     #self.fillspace1 = wx.StaticText(self, wx.ID_ANY, " ", wx.DefaultPosition, wx.DefaultSize, 0)
     #self.fillspace1.Wrap(-1)
@@ -211,33 +211,33 @@ class MyFrame (wx.Frame):
     self.fillspace2 = wx.StaticText(self, wx.ID_ANY, " ", wx.DefaultPosition, wx.DefaultSize, 0)
     self.fillspace2.Wrap(-1)
     bSizer2.Add(self.fillspace2, 0, wx.EXPAND, 5)
-    
+
     #bSizer2.Add(bSizer5, 0 , wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND, 5)
     self.gauge.SetValue(0)
     ##############
     sbSizer1 = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, u"Dettaglio di stato di Nemesys"), wx.VERTICAL)
-    
+
     date = '%s' % getdate().strftime('%c')
     self.messages_area = wx.TextCtrl(self, wx.ID_ANY, "%s Sto contattando il servizio di misura attendere qualche secondo." % date, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP | wx.NO_BORDER | wx.VSCROLL)
     sbSizer1.Add(self.messages_area, 1, wx.ALL | wx.EXPAND, 5)
     self.messages_area.SetStyle(0, len(date), wx.TextAttr(status.PAUSE.color))
-    
+
     bSizer2.Add(sbSizer1, 1, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND, 5)
-    
+
     self.SetSizer(bSizer2)
     self.m_menubar1 = wx.MenuBar()
     self.menu = wx.Menu()
-    
+
     menu_info = wx.MenuItem(self.menu, wx.ID_ABOUT, u"&Info", u"Informazioni sul programma", wx.ITEM_NORMAL)
     self.menu.AppendItem(menu_info)
-    
+
     menu_exit = wx.MenuItem(self.menu, wx.ID_EXIT, u"&Exit", u"Chiudi il programma", wx.ITEM_NORMAL)
     self.menu.AppendItem(menu_exit)
-    
-    self.m_menubar1.Append(self.menu, u"Menu") 
-    
+
+    self.m_menubar1.Append(self.menu, u"Menu")
+
     self.SetMenuBar(self.m_menubar1)
-    
+
     self.Centre(wx.BOTH)
     self.Layout()
 
@@ -245,7 +245,7 @@ class MyFrame (wx.Frame):
     self.Bind(wx.EVT_MENU, self.menu_info, menu_info)
     self.Bind(wx.EVT_MENU, self.menu_exit, menu_exit)
     self.PaintInit(None)
-    
+
     self._controller = _Controller(LISTENING_URL, self)
     self._controller.start()
 
@@ -253,14 +253,14 @@ class MyFrame (wx.Frame):
   def menu_exit(self, event):
     self._controller.join()
     self.Close(True)
-  
+
   def menu_info(self, event):
     dlg = wx.MessageDialog(self, "Nemesys (Network Measurement System)\nHomepage del progetto: www.misurainternet.it\nCopyright (c) 2010-2011 Fondazione Ugo Bordoni \nEmail: info@fub.it", "Info", wx.OK)
     dlg.ShowModal()
     dlg.Destroy()
 
   def PaintInit(self, event):
-    
+
     xmldoc = Progress(True)
 
     n = 0
@@ -285,10 +285,10 @@ class MyFrame (wx.Frame):
     '''
     logger.debug('Inizio aggiornamento stato')
     if (self._status.message != currentstatus.message):
-      
+
       hour = getdate().hour
       logger.debug('Ora attuale: %d' % hour)
-      
+
       if (bool(re.search(status.PLAY.color, currentstatus.color)) or bool(re.search('Misura in esecuzione', currentstatus.message))):
         self.PaintHour(hour, "yellow")
       if (bool(re.search('Misura sospesa', currentstatus.message))):
@@ -296,6 +296,7 @@ class MyFrame (wx.Frame):
       elif (bool(re.search('Misura terminata|Misura interrotta', currentstatus.message))):
         self.PaintInit(None)
         self.gauge.SetValue(0)
+        self.label_teststatus.SetLabel("Avanzamento della misura in corso")
       elif (bool(re.search('Avviso', currentstatus.message))):
         self.label_helper.SetForegroundColour(currentstatus.color)
         self.label_helper.SetLabel("Hai ricevuto un avviso dal server centrale!\nLeggi il messaggio nella finestra del dettaglio di stato di Nemesys")
@@ -303,32 +304,32 @@ class MyFrame (wx.Frame):
         self.label_helper.SetForegroundColour(currentstatus.color)
         self.label_helper.SetLabel("Misura completa! Visita la tua area personale sul sito\nwww.misurainternet.it per scaricare il certificato di misura.")
       #aggiornamento del GAUGE
-      elif (bool(re.search('Esecuzione Test',currentstatus.message))):
+      elif (bool(re.search('Esecuzione Test', currentstatus.message))):
           try:
-              msg=str(currentstatus.message)
-              elem=msg.split()
-              now=int(elem[2])
-              ntot=int(elem[4])
-              perc = round((now*100)/ntot)
+              msg = str(currentstatus.message)
+              elem = msg.split()
+              now = int(elem[2])
+              ntot = int(elem[4])
+              perc = round((now * 100) / ntot)
               self.gauge.SetValue(perc)
               self.label_teststatus.SetLabel("Avanzamento della misura in corso: %d%%" % perc)
           except Exception as e:
-              logger.error('Errore nello status corrente di aggiornamento Gauge: %s' %  e) 
-        
+              logger.error('Errore nello status corrente di aggiornamento Gauge: %s' % e)
+
       message = self.getformattedmessage(currentstatus.message)
       date = '\n%s' % getdate().strftime('%c')
       self.messages_area.AppendText("%s %s" % (date, message))
       end = self.messages_area.GetLastPosition() - len(message)
       start = end - len(date)
       self.messages_area.SetStyle(start, end, wx.TextAttr(currentstatus.color))
-        
+
       self._status = currentstatus
       self.Layout()
-      
+
   def getformattedmessage(self, message):
     logger.debug('Instanzio HTMLParser')
     htmlmessage = HTMLParser.HTMLParser()
-  
+
     logger.debug('Messaggio prima di unescape: %s' % message)
     message = htmlmessage.unescape(message)
     logger.debug('Messaggio dopo unescape: %s' % message)
@@ -336,10 +337,10 @@ class MyFrame (wx.Frame):
     message = message.replace('\')', '')
     message = message.replace('\n', ' ')
     message = message.replace('\', \'', '')
-    
+
     logger.debug('Messaggio da stampare a video: %s' % message)
-    return message      
-    
+    return message
+
   def PaintHour(self, hour, color):
     '''
     Aggiorna la casella allora specificata con il colore specificatio
@@ -350,7 +351,7 @@ class MyFrame (wx.Frame):
     self._grid.Replace(old, bmp)
     old.Destroy()
     self.Layout()
-  
+
 def getdate():
   return datetime.fromtimestamp(timestampNtp())
 
