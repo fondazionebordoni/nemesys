@@ -454,7 +454,7 @@ class Executer:
       # ------------------------
       i = 1;
       while (i <= task.download):
-        self._updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i,task.download+task.upload+task.ping)))
+        self._updatestatus(status.Status(status.PLAY, "Esecuzione Test %d su %d" % (i, task.download + task.upload + task.ping)))
         try:
           error = 0
           if not self._isprobe:
@@ -516,7 +516,7 @@ class Executer:
       # Testa gli ftp up
       i = 1;
       while (i <= task.upload):
-        self._updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i+task.download,task.download+task.upload+task.ping)))
+        self._updatestatus(status.Status(status.PLAY, "Esecuzione Test %d su %d" % (i + task.download, task.download + task.upload + task.ping)))
         try:
           error = 0
           if not self._isprobe:
@@ -574,13 +574,10 @@ class Executer:
             logger.info('Misura in ripresa dopo sospensione. Test upload %d di %d' % (i, task.upload))
             self._updatestatus(status.Status(status.PLAY, 'Proseguo la misura. Misura in esecuzione'))
 
-      # Stop lo sniffer
-      t.sniffer_stop()
-
       # Testa i ping
       i = 1
       while (i <= task.ping):
-        self._updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i+task.download+task.upload,task.download+task.upload+task.ping)))
+        self._updatestatus(status.Status(status.PLAY, "Esecuzione Test %d su %d" % (i + task.download + task.upload, task.download + task.upload + task.ping)))
         try:
           error = 0
           if not self._isprobe:
@@ -588,7 +585,7 @@ class Executer:
             # Profilazione del sistema
             # ------------------------
             try:
-              if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id, ARPING):
+              if not sysmonitor.mediumcheck(self._client.profile.upload, self._client.profile.download, self._client.isp.id, ARPING):
                 raise Exception('Condizioni per effettuare la misura non verificate.')
 
             except Exception as e:
