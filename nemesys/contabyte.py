@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from analyzer import Analyzer
 from exceptions import Exception
 from logger import logging
 from statistics import Statistics
@@ -415,9 +416,8 @@ UDP_HDR = \
 # Statistics
 #===============================================================================
 
-PKT_TABLE = {}
-STATISTICS = None
-
+#PKT_TABLE = {}
+#STATISTICS = None
 
 def _pcap_hdr_unpack(pcapHdrPkt):
 
@@ -616,249 +616,228 @@ def _udp_unpack(udpPkt):
 
   return (udpHdr, udpData)
 
-def reset():
+class Contabyte(Analyzer):
 
-  global STATISTICS
-  global PKT_TABLE
+  def __init__(self, ip, nap, etsimode = True):
+    Analyzer.__init__(self, ip, nap)
+    self._etsimode = etsimode
 
-  PKT_TABLE.clear()
-  STATISTICS = Statistics()
+  def analyze(self, pcapHdrPkt, pcapDataPkt):
 
-  return None
+    is_retransmission = False
 
-def analyze(ipDev, ipNem, pcapHdrPkt, pcapDataPkt, etsimode = True):
+    tcpHdrLen = 0
+    udpHdrLen = 0
+    PayloadLen = 0
 
-  global STATISTICS
-  global PKT_TABLE
+    ipSrc = None
+    ipDst = None
 
-  if (not STATISTICS):
-    STATISTICS = Statistics()
+    eth_switch = \
+    { \
+     ETH_PR_ARP : _arp_unpack, \
+     ETH_PR_IP  : _ipv4_unpack, \
+     #ETH_PR_IP6 : _ipv6_unpack, \
+    } \
 
-  statistics = STATISTICS
-  is_retransmission = False
+    ip_switch = \
+    { \
+     IP_PR_TCP : _tcp_unpack, \
+     IP_PR_UDP : _udp_unpack, \
+    } \
 
-  tcpHdrLen = 0
-  udpHdrLen = 0
-  PayloadLen = 0
+    try:
+      pcapHdr = _pcap_hdr_unpack(pcapHdrPkt)
+      (l2_hdr, l2_data) = _eth_unpack(pcapDataPkt)
 
-  ipSrc = None
-  ipDst = None
+      if (l2_hdr['ethPayType'] in eth_switch):
 
-  eth_switch = \
-  { \
-   ETH_PR_ARP : _arp_unpack, \
-   ETH_PR_IP  : _ipv4_unpack, \
-   #ETH_PR_IP6 : _ipv6_unpack, \
-  } \
+        (l3_hdr, l3_data) = eth_switch[l2_hdr['ethPayType']](l2_data)
 
-  ip_switch = \
-  { \
-   IP_PR_TCP : _tcp_unpack, \
-   IP_PR_UDP : _udp_unpack, \
-  } \
+        if (l2_hdr['ethPayType'] == ETH_PR_ARP):
 
-  try:
-    pcapHdr = _pcap_hdr_unpack(pcapHdrPkt)
-    (l2_hdr, l2_data) = _eth_unpack(pcapDataPkt)
+          ipSrc = l3_hdr['arpPrSrc']
+          ipDst = l3_hdr['arpPrDst']
 
-    if (l2_hdr['ethPayType'] in eth_switch):
+        elif (l2_hdr['ethPayType'] == ETH_PR_IP or l2_hdr['ethPayType'] == ETH_PR_IP6):
 
-      (l3_hdr, l3_data) = eth_switch[l2_hdr['ethPayType']](l2_data)
+          if ('ipPayLen' in l3_hdr):
 
-      if (l2_hdr['ethPayType'] == ETH_PR_ARP):
+            ipPayLen = l3_hdr['ipPayLen']
 
-        ipSrc = l3_hdr['arpPrSrc']
-        ipDst = l3_hdr['arpPrDst']
+          else:
 
-      elif (l2_hdr['ethPayType'] == ETH_PR_IP or l2_hdr['ethPayType'] == ETH_PR_IP6):
+            ipPayLen = (l3_hdr['ipTotLen']) - (l3_hdr['ipHdrLen'])
 
-        if ('ipPayLen' in l3_hdr):
+            ipSrc = l3_hdr['ipSrc']
+            ipDst = l3_hdr['ipDst']
 
-          ipPayLen = l3_hdr['ipPayLen']
+          if (l3_hdr['ipPayType'] in ip_switch):
 
-        else:
+            (l4_hdr, l4_data) = ip_switch[l3_hdr['ipPayType']](l3_data)
 
-          ipPayLen = (l3_hdr['ipTotLen']) - (l3_hdr['ipHdrLen'])
+            if ('tcpHdrLen' in l4_hdr):
+              tcpHdrLen = l4_hdr['tcpHdrLen']
+              PayloadLen = ipPayLen - tcpHdrLen
 
-          ipSrc = l3_hdr['ipSrc']
-          ipDst = l3_hdr['ipDst']
+              if ((self._etsimode == True) and (PayloadLen > 0)):
 
-        if (l3_hdr['ipPayType'] in ip_switch):
+                tcpSrcPort = l4_hdr['tcpSrcPort']
+                tcpDstPort = l4_hdr['tcpDstPort']
+                tcpSeqNum = l4_hdr['tcpSeqNum']
+                tcpAckNum = l4_hdr['tcpAckNum']
 
-          (l4_hdr, l4_data) = ip_switch[l3_hdr['ipPayType']](l3_data)
-
-          if ('tcpHdrLen' in l4_hdr):
-            tcpHdrLen = l4_hdr['tcpHdrLen']
-            PayloadLen = ipPayLen - tcpHdrLen
-
-            if ((etsimode == True) and (PayloadLen > 0)):
-
-              tcpSrcPort = l4_hdr['tcpSrcPort']
-              tcpDstPort = l4_hdr['tcpDstPort']
-              tcpSeqNum = l4_hdr['tcpSeqNum']
-              tcpAckNum = l4_hdr['tcpAckNum']
-
-              # 200 byte per Download e 30 byte per Upload (di comando)
-              #if (((ipDst == ipDev) and (tcpSrcPort == 21)) or ((ipSrc == ipDev) and (tcpDstPort == 21))):
-                #PayloadLen = 0
-
-              if (ipDst not in PKT_TABLE):
-                PKT_TABLE[ipDst] = {}
-                PKT_TABLE[ipDst][tcpDstPort] = {}
-                PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
-              elif (tcpDstPort not in PKT_TABLE[ipDst]):
-                PKT_TABLE[ipDst][tcpDstPort] = {}
-                PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
-              elif (tcpSeqNum not in PKT_TABLE[ipDst][tcpDstPort]):
-                PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
-              elif (PKT_TABLE[ipDst][tcpDstPort][tcpSeqNum] == tcpAckNum):
-                is_retransmission = True
-
-              if (ipSrc == ipDev):
-                keys = PKT_TABLE[ipDst][tcpDstPort].keys()
-                keys.sort()
-                tcpSeqNumOne = keys[0]
-                keys.reverse()
-                tcpSeqNumBig = keys[0]
-
-                if (tcpSeqNum < tcpSeqNumBig):
+                if (ipDst not in self._packet_table):
+                  self._packet_table[ipDst] = {}
+                  self._packet_table[ipDst][tcpDstPort] = {}
+                  self._packet_table[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
+                elif (tcpDstPort not in self._packet_table[ipDst]):
+                  self._packet_table[ipDst][tcpDstPort] = {}
+                  self._packet_table[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
+                elif (tcpSeqNum not in self._packet_table[ipDst][tcpDstPort]):
+                  self._packet_table[ipDst][tcpDstPort][tcpSeqNum] = tcpAckNum
+                elif (self._packet_table[ipDst][tcpDstPort][tcpSeqNum] == tcpAckNum):
                   is_retransmission = True
 
-          elif ('udpTotLen' in l4_hdr):
-            udpHdrLen = UDP_HDR_LEN
-            PayloadLen = ipPayLen - udpHdrLen
+                if (ipSrc == self._ip):
+                  keys = self._packet_table[ipDst][tcpDstPort].keys()
+                  keys.sort()
+                  tcpSeqNumOne = keys[0]
+                  keys.reverse()
+                  tcpSeqNumBig = keys[0]
 
-  except Exception as e:
-    logger.warning("Errore durante lo spacchettamento del pacchetto per l'analisi: %s" % e)
-    return STATISTICS
+                  if (tcpSeqNum < tcpSeqNumBig):
+                    is_retransmission = True
 
-  if (ipSrc != ipDev):
+            elif ('udpTotLen' in l4_hdr):
+              udpHdrLen = UDP_HDR_LEN
+              PayloadLen = ipPayLen - udpHdrLen
 
-    statistics.packet_down_all += 1
-    statistics.packet_tot_all += 1
-    if not is_retransmission:
-      statistics.packet_down_all_net += 1
-      statistics.packet_tot_all_net += 1
+    except Exception as e:
+      logger.warning("Errore durante lo spacchettamento del pacchetto per l'analisi: %s" % e)
 
-    statistics.byte_down_all += (pcapHdr['pktLen'] + ETH_CRC_LEN)
-    statistics.byte_tot_all += (pcapHdr['pktLen'] + ETH_CRC_LEN)
-    if not is_retransmission:
-      statistics.byte_down_all_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
-      statistics.byte_tot_all_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+    if (ipSrc != self._ip):
 
-    statistics.payload_down_all += PayloadLen
-    statistics.payload_tot_all += PayloadLen
-    if not is_retransmission:
-      statistics.payload_down_all_net += PayloadLen
-      statistics.payload_tot_all_net += PayloadLen
-
-    if ((ipSrc == ipNem) and (ipDst == ipDev)):
-
-      statistics.packet_down_nem += 1
-      statistics.packet_tot_nem += 1
+      self._statistics.packet_down_all += 1
+      self._statistics.packet_tot_all += 1
       if not is_retransmission:
-        statistics.packet_down_nem_net += 1
-        statistics.packet_tot_nem_net += 1
+        self._statistics.packet_down_all_net += 1
+        self._statistics.packet_tot_all_net += 1
 
-      statistics.byte_down_nem += (pcapHdr['pktLen'] + ETH_CRC_LEN)
-      statistics.byte_tot_nem += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+      self._statistics.byte_down_all += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+      self._statistics.byte_tot_all += (pcapHdr['pktLen'] + ETH_CRC_LEN)
       if not is_retransmission:
-        statistics.byte_down_nem_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
-        statistics.byte_tot_nem_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+        self._statistics.byte_down_all_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+        self._statistics.byte_tot_all_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
 
-      statistics.payload_down_nem += PayloadLen
-      statistics.payload_tot_nem += PayloadLen
+      self._statistics.payload_down_all += PayloadLen
+      self._statistics.payload_tot_all += PayloadLen
       if not is_retransmission:
-        statistics.payload_down_nem_net += PayloadLen
-        statistics.payload_tot_nem_net += PayloadLen
+        self._statistics.payload_down_all_net += PayloadLen
+        self._statistics.payload_tot_all_net += PayloadLen
+
+      if ((ipSrc == self._nap) and (ipDst == self._ip)):
+
+        self._statistics.packet_down_nem += 1
+        self._statistics.packet_tot_nem += 1
+        if not is_retransmission:
+          self._statistics.packet_down_nem_net += 1
+          self._statistics.packet_tot_nem_net += 1
+
+        self._statistics.byte_down_nem += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+        self._statistics.byte_tot_nem += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+        if not is_retransmission:
+          self._statistics.byte_down_nem_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+          self._statistics.byte_tot_nem_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+
+        self._statistics.payload_down_nem += PayloadLen
+        self._statistics.payload_tot_nem += PayloadLen
+        if not is_retransmission:
+          self._statistics.payload_down_nem_net += PayloadLen
+          self._statistics.payload_tot_nem_net += PayloadLen
+
+      else:
+
+        self._statistics.packet_down_oth += 1
+        self._statistics.packet_tot_oth += 1
+        if not is_retransmission:
+          self._statistics.packet_down_oth_net += 1
+          self._statistics.packet_tot_oth_net += 1
+
+        self._statistics.byte_down_oth += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+        self._statistics.byte_tot_oth += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+        if not is_retransmission:
+          self._statistics.byte_down_oth_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+          self._statistics.byte_tot_oth_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+
+        self._statistics.payload_down_oth += PayloadLen
+        self._statistics.payload_tot_oth += PayloadLen
+        if not is_retransmission:
+          self._statistics.payload_down_oth_net += PayloadLen
+          self._statistics.payload_tot_oth_net += PayloadLen
 
     else:
 
-      statistics.packet_down_oth += 1
-      statistics.packet_tot_oth += 1
+      pktPad = (ETH_LEN_MIN - pcapHdr['pktLen'] - ETH_CRC_LEN)
+
+      if (pktPad < 0):
+        pktPad = 0
+
+      self._statistics.packet_up_all += 1
+      self._statistics.packet_tot_all += 1
       if not is_retransmission:
-        statistics.packet_down_oth_net += 1
-        statistics.packet_tot_oth_net += 1
+        self._statistics.packet_up_all_net += 1
+        self._statistics.packet_tot_all_net += 1
 
-      statistics.byte_down_oth += (pcapHdr['pktLen'] + ETH_CRC_LEN)
-      statistics.byte_tot_oth += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+      self._statistics.byte_up_all += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+      self._statistics.byte_tot_all += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
       if not is_retransmission:
-        statistics.byte_down_oth_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
-        statistics.byte_tot_oth_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+        self._statistics.byte_up_all_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+        self._statistics.byte_tot_all_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
 
-      statistics.payload_down_oth += PayloadLen
-      statistics.payload_tot_oth += PayloadLen
+      self._statistics.payload_up_all += PayloadLen
+      self._statistics.payload_tot_all += PayloadLen
       if not is_retransmission:
-        statistics.payload_down_oth_net += PayloadLen
-        statistics.payload_tot_oth_net += PayloadLen
+        self._statistics.payload_up_all_net += PayloadLen
+        self._statistics.payload_tot_all_net += PayloadLen
 
-  else:
+      if ((ipSrc == self._ip) and (ipDst == self._nap)):
 
-    pktPad = (ETH_LEN_MIN - pcapHdr['pktLen'] - ETH_CRC_LEN)
+        self._statistics.packet_up_nem += 1
+        self._statistics.packet_tot_nem += 1
+        if not is_retransmission:
+          self._statistics.packet_up_nem_net += 1
+          self._statistics.packet_tot_nem_net += 1
 
-    if (pktPad < 0):
-      pktPad = 0
+        self._statistics.byte_up_nem += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+        self._statistics.byte_tot_nem += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+        if not is_retransmission:
+          self._statistics.byte_up_nem_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+          self._statistics.byte_tot_nem_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
 
-    statistics.packet_up_all += 1
-    statistics.packet_tot_all += 1
-    if not is_retransmission:
-      statistics.packet_up_all_net += 1
-      statistics.packet_tot_all_net += 1
+        self._statistics.payload_up_nem += PayloadLen
+        self._statistics.payload_tot_nem += PayloadLen
+        if not is_retransmission:
+          self._statistics.payload_up_nem_net += PayloadLen
+          self._statistics.payload_tot_nem_net += PayloadLen
 
-    statistics.byte_up_all += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-    statistics.byte_tot_all += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-    if not is_retransmission:
-      statistics.byte_up_all_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-      statistics.byte_tot_all_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+      else:
 
-    statistics.payload_up_all += PayloadLen
-    statistics.payload_tot_all += PayloadLen
-    if not is_retransmission:
-      statistics.payload_up_all_net += PayloadLen
-      statistics.payload_tot_all_net += PayloadLen
+        self._statistics.packet_up_oth += 1
+        self._statistics.packet_tot_oth += 1
+        if not is_retransmission:
+          self._statistics.packet_up_oth_net += 1
+          self._statistics.packet_tot_oth_net += 1
 
-    if ((ipSrc == ipDev) and (ipDst == ipNem)):
+        self._statistics.byte_up_oth += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+        self._statistics.byte_tot_oth += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+        if not is_retransmission:
+          self._statistics.byte_up_oth_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+          self._statistics.byte_tot_oth_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
 
-      statistics.packet_up_nem += 1
-      statistics.packet_tot_nem += 1
-      if not is_retransmission:
-        statistics.packet_up_nem_net += 1
-        statistics.packet_tot_nem_net += 1
-
-      statistics.byte_up_nem += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-      statistics.byte_tot_nem += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-      if not is_retransmission:
-        statistics.byte_up_nem_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-        statistics.byte_tot_nem_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-
-      statistics.payload_up_nem += PayloadLen
-      statistics.payload_tot_nem += PayloadLen
-      if not is_retransmission:
-        statistics.payload_up_nem_net += PayloadLen
-        statistics.payload_tot_nem_net += PayloadLen
-
-    else:
-
-      statistics.packet_up_oth += 1
-      statistics.packet_tot_oth += 1
-      if not is_retransmission:
-        statistics.packet_up_oth_net += 1
-        statistics.packet_tot_oth_net += 1
-
-      statistics.byte_up_oth += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-      statistics.byte_tot_oth += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-      if not is_retransmission:
-        statistics.byte_up_oth_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-        statistics.byte_tot_oth_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-
-      statistics.payload_up_oth += PayloadLen
-      statistics.payload_tot_oth += PayloadLen
-      if not is_retransmission:
-        statistics.payload_up_oth_net += PayloadLen
-        statistics.payload_tot_oth_net += PayloadLen
-
-
-  STATISTICS = statistics
-
-  return STATISTICS
+        self._statistics.payload_up_oth += PayloadLen
+        self._statistics.payload_tot_oth += PayloadLen
+        if not is_retransmission:
+          self._statistics.payload_up_oth_net += PayloadLen
+          self._statistics.payload_tot_oth_net += PayloadLen
 
