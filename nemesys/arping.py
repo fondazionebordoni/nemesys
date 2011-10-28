@@ -30,7 +30,7 @@ ETH_P_IP = 0x0800
 ETH_P_ARP = 0x0806
 ARP_REPLY = 0x0002
 
-MAX = 64
+MAX = 128
 
 def display_mac(value):
     return string.join(["%02X" % ord(b) for b in value], ':')
@@ -90,7 +90,7 @@ def receive_arping(MACsrc):
           if (IPsrc_arp not in IPtable):
             IPtable[IPsrc_arp] = display_mac(hwsrc_arp)
             logger.debug('Trovato Host %s con indirizzo fisico %s' % (IPsrc_arp, display_mac(hwsrc_arp)))
-    
+
     arpinger.clear()
 
   return len(IPtable)
@@ -158,5 +158,5 @@ if __name__ == '__main__':
   s.close()
 
   if ip != None:
-    print("Trovati: %d host" % do_arping(ip, 24, True, 1, None, 15))
+    print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
 
