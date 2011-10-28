@@ -103,9 +103,10 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, thresh
   if (mac):
     MACsrc = "".join(chr(int(macEL, 16)) for macEL in mac.split(':'))
   else:
-    MACsrc = "\x0F"*6
+    return 0
   MACdst = "\xFF"*6
-
+  
+  logger.debug("MAC_source = %s" % mac)
   IPsrc = socket.gethostbyname(IPsrc)
   IPnet = ipcalc.Network('%s/%d' % (IPsrc, NETmask))
   net = IPnet.network()
@@ -156,8 +157,10 @@ if __name__ == '__main__':
   s.connect(('www.fub.it', 80))
   ip = s.getsockname()[0]
   s.close()
+  mymac='F0:4D:A2:53:AD:AE'
+  print mymac.split(':')
 
   if ip != None:
     #print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
-    print("Trovati: %d host" % do_arping(ip, 24, True, 1, None, 15))
+    print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
 
