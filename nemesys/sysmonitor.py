@@ -199,8 +199,6 @@ def checkwireless():
             raise sysmonitorexception.WARNWLAN
   return True
 
-
-
 def checkhosts(up, down, ispid, arping = 1):
 
   ip = getIp();
@@ -222,9 +220,15 @@ def checkhosts(up, down, ispid, arping = 1):
     value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac)
     logger.info('Trovati %d host in rete.' % value)
 
-    if value <= 0:
+    if value < 0:
       raise sysmonitorexception.BADHOST
-    if value > thres:
+    elif (value == 0):
+      if arping == 1:
+        logger.warning("Passaggio a PING per controllo host in rete")
+        return checkhosts(up, down, ispid, 0)
+      else:
+        raise sysmonitorexception.BADHOST
+    elif value > thres:
       raise sysmonitorexception.TOOHOST
 
     return True
@@ -452,14 +456,14 @@ if __name__ == '__main__':
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-
+  '''
   try:
     print '\ncheckhosts (ping)'
     print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', 0)  #PING
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-
+  '''
   try:
     print '\ncheckcpu'
     print 'Test sysmonitor checkcpu: %s' % checkcpu()
