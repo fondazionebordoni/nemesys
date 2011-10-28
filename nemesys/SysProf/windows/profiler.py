@@ -155,25 +155,25 @@ class disco(RisorsaWin):
             raise AttributeError(e)
         return self.xmlFormat("ByteTransfer", total)
 
-class wireless(RisorsaWin):
-    def __init__(self):
-        self.CountWlan = 0
-        self.wcounted = False
-        RisorsaWin.__init__(self)
-        self._params = {'MSNdis_80211_ReceivedSignalStrength':['checkWlanPow','CountWLDev']}
-        self.whereCondition = " WHERE active = true"
-        
-    def checkWLanPow(self,obj):
-        if (obj == None):
-            return self.xmlFormat("ActiveWLAN","none")
-        else:
-            CountWlan = CountWlan +1
-    
-    def CountWLDev(self,obj):
-        if not self.wcounted:
-            self.wcounted = True
-            return self.xmlFormat("ActiveWLAN",CountWlan)
-          
+#class wireless(RisorsaWin):
+#    def __init__(self):
+#        self.CountWlan = 0
+#        self.wcounted = False
+#        RisorsaWin.__init__(self)
+#        self._params = {'MSNdis_80211_ReceivedSignalStrength':['checkWlanPow','CountWLDev']}
+#        self.whereCondition = " WHERE active = true"
+#        
+#    def checkWLanPow(self,obj):
+#        if (obj == None):
+#            return self.xmlFormat("ActiveWLAN","none")
+#        else:
+#            CountWlan = CountWlan +1
+#    
+#    def CountWLDev(self,obj):
+#        if not self.wcounted:
+#            self.wcounted = True
+#            return self.xmlFormat("ActiveWLAN",CountWlan)
+#          
         
          
 class rete(RisorsaWin):
@@ -185,6 +185,7 @@ class rete(RisorsaWin):
         self.whereCondition = " WHERE Manufacturer != 'Microsoft' "# AND NOT PNPDeviceID LIKE 'ROOT\\*' "
         self._activeMAC = None
         self._checked = False
+        self.ipenabdic={}
            
     def getipaddr(self):
         if self.ipaddr == "":
@@ -207,8 +208,9 @@ class rete(RisorsaWin):
                 for obj in items:
                     ipaddrlist = self.getSingleInfo(obj, 'IPAddress')
                     if ipaddrlist:
+                        ris = self.getSingleInfo(obj, 'MACAddress')
+                        self.ipenabdic[ris]=self.getSingleInfo(obj,'IPEnabled')
                         if ipaddr in ipaddrlist:
-                            ris = self.getSingleInfo(obj, 'MACAddress')
                             self._activeMAC = ris
             except:
                 raise RisorsaException("Impossibile specificare l'interfaccia attiva") 
@@ -248,8 +250,10 @@ class rete(RisorsaWin):
                 devMac = features['MACAddress']
                 if devMac == self._activeMAC:
                     devIsActive = 'True'
-            if (features['NetEnabled'] == True):
-                devStatus = 'Enabled'   
+            if devMac in self.ipenabdic.keys():
+                statnet=str(self.ipenabdic[devMac])
+                if ((features['NetEnabled'] == True) or ( statnet.lower() == 'true')):
+                    devStatus = 'Enabled'   
             devxml = ET.Element('NetworkDevice')
             devxml.append(self.xmlFormat('Name', devName))
             devxml.append(self.xmlFormat('Type', devType))
