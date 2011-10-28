@@ -65,7 +65,7 @@ class Pcapper(Thread):
   def run(self):
     while self._running:
       self._produce()
-    logger.debug('Exit sniffer!')
+    logger.debug('Exit sniffer. Stats: %s' % sniffer.getstat())
     sniffer.stop()
 
   def sniff(self, analyzer):
@@ -131,7 +131,7 @@ class Pcapper(Thread):
       return self._get_data_test(mode)
     else:
       data = self._get_data(mode)
-      
+
     if (data != None and self._analyzer != None):
       self._analyzer.analyze(data['py_pcap_hdr'], data['py_pcap_data'])
       self._tot += 1
@@ -171,10 +171,10 @@ if __name__ == '__main__':
     if TEST:
       tot = 1
     for i in range(1, tot + 1):
-      
+
       p = Pcapper(ip)
       p.start()
-    
+
       print("Start! [%d/%d]" % (i, tot))
       p.sniff(Contabyte(ip, nap))
       time.sleep(2)
