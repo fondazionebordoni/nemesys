@@ -214,6 +214,8 @@ def checkhosts(up, down, ispid, arping = 1):
     mac = None
     try:
         mac = getMac()
+        if (mac == None):
+          mac = getMac() # try again to get a MAC from the active NIC
     except:
         pass
 
