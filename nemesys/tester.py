@@ -95,7 +95,7 @@ class Tester:
     try:
     
       logger.debug('Test initializing...')
-      pcapper = Pcapper(self._if_ip)
+      pcapper = Pcapper(self._if_ip, BUFF, SNAPLEN, TIMEOUT, PROMISC)
       pcapper.start()
 
       logger.debug('Testing... ')
@@ -153,7 +153,7 @@ class Tester:
     try:
 
       logger.debug('Test initializing...')
-      pcapper = Pcapper(self._if_ip)
+      pcapper = Pcapper(self._if_ip, BUFF, SNAPLEN, TIMEOUT, PROMISC)
       pcapper.start()
 
       logger.debug('Testing... ')
