@@ -120,7 +120,7 @@ class Pcapper(Thread):
       self._cook(1)
       self._remaining -= 1
     else:
-      logger.debug('Stop eating! [tot: %d]' % self._tot)
+      #logger.debug('Stop eating! [tot: %d]' % self._tot)
       self._stop_eating.set()
       self._status = _switch_status[EAT]
 
