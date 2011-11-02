@@ -381,11 +381,11 @@ class Executer:
     '''
     stats = test.counter_stats
     if (testtype == DOWN):
-      byte_nem = stats.payload_down_nem
-      byte_all = byte_nem + stats.byte_down_oth
+      byte_nem = stats.payload_down_nem_net
+      byte_all = byte_nem + stats.byte_down_oth_net
     else:
-      byte_nem = stats.payload_up_nem
-      byte_all = byte_nem + stats.byte_up_oth
+      byte_nem = stats.payload_up_nem_net
+      byte_all = byte_nem + stats.byte_up_oth_net
 
     if byte_all > 0:
       traffic_ratio = (byte_all - byte_nem) / (byte_all * 1.0)
