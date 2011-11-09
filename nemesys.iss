@@ -10,11 +10,11 @@
 
 
 ; Read the previuos build number. If there is none take 0 instead.
-#define BuildNum Int(ReadIni(SourcePath	+ "\\BuildInfo_2.1.ini","Info","Build","1"))
+#define BuildNum Int(ReadIni(SourcePath	+ "\\BuildInfo.ini","Info","Build","1"))
 ; Increment the build number by one.
 #expr BuildNum = BuildNum + 1
 ; Store the number in the ini file for the next build
-#expr WriteIni(SourcePath + "\\BuildInfo_2.1.ini","Info","Build", BuildNum)
+#expr WriteIni(SourcePath + "\\BuildInfo.ini","Info","Build", BuildNum)
 
 [Setup]
 ;AppId={21F1511D-B744-4DCE-AEAA-55E5C0668A35}
@@ -136,7 +136,7 @@ begin
     end;
 end;
 
-procedure WinPcapRem(); 
+procedure WinPcapRem();
 var
   ResultCode: Integer;
   uninstallPath: String;
@@ -174,8 +174,8 @@ procedure InitializeWizard;
 begin
 
   WarningPage := CreateOutputMsgPage(wpInfoBefore,
-    'Attenzione', 'Prima di procedere con l''installazione...',
-    '...controlla che tutto sia in ordine per eseguire le misure:'#13#13
+    'Attenzione', 'Prima di continuare l''installazione...',
+    '...controlla che tutto sia in ordine per l''esecuzione delle misure:'#13#13
     '1. Hai connesso il PC al modem via cavo?'#13#13 +
     '2. Hai chiuso tutte le applicazioni che accedono ad Internet? Per esempio:'#13 +
     '   * browser per la navigazione Internet'#13 +
@@ -186,8 +186,8 @@ begin
     '   * Smart-TV'#13 +
     '   * Smartphone'#13 +
     '   * IPTV'#13 +
-    '   * VoIP'#13#13#13 +
-    'Se tutto è a posto procedi pure con l''installazione.');
+    '   * VoIP'#13#13 +
+    'Controlla di aver verificato che tutte le condizioni siano rispettate, poi procedi pure con l''installazione.');
 
 end;
 
