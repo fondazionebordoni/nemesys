@@ -52,7 +52,7 @@ void mydump(u_char *dumpfile, const struct pcap_pkthdr *pcap_hdr, const u_char *
 }
 
 
-void dump_mode()
+void dump_mode(void)
 {
     pcap_dumper_t *dumpfile;
 
@@ -214,7 +214,7 @@ int ip_in_net(const char *ip, const char *net, const char *mask)
 }
 
 
-void find_devices()
+void find_devices(void)
 {
     int IpInNet=0;
 

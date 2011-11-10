@@ -52,7 +52,7 @@ int ip_in_net (const char *ip, const char *net, const char *mask)
     {return 0;}
 }
 
-void find_devices()
+void find_devices(void)
 {
     int IpInNet=0;
 
@@ -168,7 +168,7 @@ void find_devices()
 }
 
 
-void initialize(u_char *dev, int promisc, int timeout, int snaplen, int buffer)
+void initialize(char *dev, int promisc, int timeout, int snaplen, int buffer)
 {
     int i=0;
 
@@ -255,7 +255,7 @@ static PyObject *arpinger_initialize(PyObject *self, PyObject *args)
 {
     int promisc=1, timeout=1000, snaplen=BUFSIZ, buffer=22*1024000;
 
-    u_char *dev, *filter;
+    char *dev, *filter;
 
     err_flag=0; strcpy(err_str,"No Error");
 
