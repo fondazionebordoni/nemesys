@@ -439,7 +439,8 @@ class Executer:
             self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
             base_error = 50000
 
-      t = Tester(if_ip = sysmonitor.getIp(), host = task.server, timeout = self._testtimeout,
+      ip = sysmonitor.getIp(task.server, 21)
+      t = Tester(if_ip = ip, host = task.server, timeout = self._testtimeout,
                  username = self._client.username, password = self._client.password)
 
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
