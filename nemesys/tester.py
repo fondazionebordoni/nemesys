@@ -114,6 +114,8 @@ class Tester:
       logger.debug('Test done!')
 
     except ftplib.all_errors as e:
+      pcapper.stop()
+      pcapper.join()
       logger.error('Impossibile effettuare il test %s: %s' % (test_type, e))
       errorcode = errors.geterrorcode(e)
       return Proof(test_type, start, 0, 0, Statistics(), errorcode)
@@ -172,6 +174,8 @@ class Tester:
       logger.debug('Test done!')
 
     except ftplib.all_errors as e:
+      pcapper.stop()
+      pcapper.join()
       logger.error('Impossibile effettuare il test %s: %s' % (test_type, e))
       errorcode = errors.geterrorcode(e)
       return Proof(test_type, start, 0, 0, Statistics(), errorcode)
@@ -232,7 +236,7 @@ def main():
   (options, args) = parser.parse_args()
   #TODO inserire controllo host
 
-  t = Tester(sysmonitor.getIp, Host(options.host), options.username, options.password)
+  t = Tester(sysmonitor.getIp(), Host(options.host), options.username, options.password)
   test = None
   print ('Prova: %s' % options.host)
 
