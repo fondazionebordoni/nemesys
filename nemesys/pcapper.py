@@ -152,8 +152,10 @@ class Pcapper(Thread):
           sniffer.clear()
           remaining -= 1
         return None
-    except:
+    except Exception as e:
       logger.error("Errore nello Sniffer: %s" % str(sys.exc_info()[0]))
+      sniffer.stop()
+      raise e
 
 if __name__ == '__main__':
 
