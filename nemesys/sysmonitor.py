@@ -319,12 +319,12 @@ def _checkipsyntax(ip):
 
   return True
 
-def getIp():
+def getIp(host = 'finaluser.agcom244.fub.it', port = 443):
   '''
   restituisce indirizzo IP del computer
   '''
   s = socket.socket(socket.AF_INET)
-  s.connect(('finaluser.agcom244.fub.it', 443))
+  s.connect((host, port))
   value = s.getsockname()[0]
 
   #value = getstringtag(tag_ip, '90.147.120.2')
@@ -492,6 +492,13 @@ if __name__ == '__main__':
   try:
     print '\ngetIP'
     print 'Test sysmonitor getIP: %s' % getIp()
+  except Exception as e:
+    errorcode = errors.geterrorcode(e)
+    print 'Errore [%d]: %s' % (errorcode, e)
+
+  try:
+    print '\ngetIP (www.google.com)'
+    print 'Test sysmonitor getIP: %s' % getIp('www.google.com', 80)
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
