@@ -439,7 +439,7 @@ class Executer:
             self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
             base_error = 50000
 
-      ip = sysmonitor.getIp(task.server, 21)
+      ip = sysmonitor.getIp(task.server.ip, 21)
       t = Tester(if_ip = ip, host = task.server, timeout = self._testtimeout,
                  username = self._client.username, password = self._client.password)
 
