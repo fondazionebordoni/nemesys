@@ -381,11 +381,11 @@ class Executer:
     '''
     stats = test.counter_stats
     if (testtype == DOWN):
-      byte_all = stats.byte_down_all
-      byte_nem = stats.byte_down_nem
+      byte_nem = stats.payload_down_nem_net
+      byte_all = byte_nem + stats.byte_down_oth_net
     else:
-      byte_all = stats.byte_up_all
-      byte_nem = stats.byte_up_nem
+      byte_nem = stats.payload_up_nem_net
+      byte_all = byte_nem + stats.byte_up_oth_net
 
     if byte_all > 0:
       traffic_ratio = (byte_all - byte_nem) / (byte_all * 1.0)
@@ -439,7 +439,8 @@ class Executer:
             self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
             base_error = 50000
 
-      t = Tester(if_ip = sysmonitor.getIp(), host = task.server, timeout = self._testtimeout,
+      ip = sysmonitor.getIp(task.server.ip, 21)
+      t = Tester(if_ip = ip, host = task.server, timeout = self._testtimeout,
                  username = self._client.username, password = self._client.password)
 
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura
@@ -454,7 +455,7 @@ class Executer:
       # ------------------------
       i = 1;
       while (i <= task.download):
-        self._updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i,task.download+task.upload+task.ping)))
+        self._updatestatus(status.Status(status.PLAY, "Esecuzione Test %d su %d" % (i, task.download + task.upload + task.ping)))
         try:
           error = 0
           if not self._isprobe:
@@ -516,7 +517,7 @@ class Executer:
       # Testa gli ftp up
       i = 1;
       while (i <= task.upload):
-        self._updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i+task.download,task.download+task.upload+task.ping)))
+        self._updatestatus(status.Status(status.PLAY, "Esecuzione Test %d su %d" % (i + task.download, task.download + task.upload + task.ping)))
         try:
           error = 0
           if not self._isprobe:
@@ -574,13 +575,10 @@ class Executer:
             logger.info('Misura in ripresa dopo sospensione. Test upload %d di %d' % (i, task.upload))
             self._updatestatus(status.Status(status.PLAY, 'Proseguo la misura. Misura in esecuzione'))
 
-      # Stop lo sniffer
-      t.sniffer_stop()
-
       # Testa i ping
       i = 1
       while (i <= task.ping):
-        self._updatestatus(status.Status(status.PLAY,"Esecuzione Test %d su %d" % (i+task.download+task.upload,task.download+task.upload+task.ping)))
+        self._updatestatus(status.Status(status.PLAY, "Esecuzione Test %d su %d" % (i + task.download + task.upload, task.download + task.upload + task.ping)))
         try:
           error = 0
           if not self._isprobe:
@@ -588,7 +586,7 @@ class Executer:
             # Profilazione del sistema
             # ------------------------
             try:
-              if not sysmonitor.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id, ARPING):
+              if not sysmonitor.mediumcheck():
                 raise Exception('Condizioni per effettuare la misura non verificate.')
 
             except Exception as e:

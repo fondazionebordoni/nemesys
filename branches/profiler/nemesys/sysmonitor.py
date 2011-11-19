@@ -17,17 +17,25 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from SysProf import LocalProfilerFactory
-from SysProf.NemesysException import LocalProfilerException, RisorsaException, FactoryException
+from SysProf.NemesysException import LocalProfilerException, RisorsaException, \
+  FactoryException
 from logger import logging
-from os import path as Path
 from sysmonitorexception import SysmonitorException
 from xml.etree import ElementTree as ET
 import checkhost
 import netifaces
 import paths
-import re
+import platform
 import socket
 import sysmonitorexception
+
+platform_name = platform.system().lower()
+if platform_name == 'windows':
+  from SysProf.windows import profiler
+elif platform_name == 'darwin':
+  from SysProf.darwin import profiler
+else:
+  from SysProf.linux import profiler
 
 # TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
 STRICT_CHECK = True
@@ -191,8 +199,6 @@ def checkwireless():
             raise sysmonitorexception.WARNWLAN
   return True
 
-
-
 def checkhosts(up, down, ispid, arping = 1):
 
   ip = getIp();
@@ -208,15 +214,23 @@ def checkhosts(up, down, ispid, arping = 1):
     mac = None
     try:
         mac = getMac()
+        if (mac == None):
+          mac = getMac() # try again to get a MAC from the active NIC
     except:
         pass
 
     value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac)
     logger.info('Trovati %d host in rete.' % value)
 
-    if value <= 0:
+    if value < 0:
       raise sysmonitorexception.BADHOST
-    if value > thres:
+    elif (value == 0):
+      if arping == 1:
+        logger.warning("Passaggio a PING per controllo host in rete")
+        return checkhosts(up, down, ispid, 0)
+      else:
+        raise sysmonitorexception.BADHOST
+    elif value > thres:
       raise sysmonitorexception.TOOHOST
 
     return True
@@ -305,12 +319,12 @@ def _checkipsyntax(ip):
 
   return True
 
-def getIp():
+def getIp(host = 'finaluser.agcom244.fub.it', port = 443):
   '''
   restituisce indirizzo IP del computer
   '''
   s = socket.socket(socket.AF_INET)
-  s.connect(('finaluser.agcom244.fub.it', 443))
+  s.connect((host, port))
   value = s.getsockname()[0]
 
   #value = getstringtag(tag_ip, '90.147.120.2')
@@ -444,14 +458,14 @@ if __name__ == '__main__':
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-
+  '''
   try:
     print '\ncheckhosts (ping)'
     print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', 0)  #PING
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-
+  '''
   try:
     print '\ncheckcpu'
     print 'Test sysmonitor checkcpu: %s' % checkcpu()
@@ -478,6 +492,13 @@ if __name__ == '__main__':
   try:
     print '\ngetIP'
     print 'Test sysmonitor getIP: %s' % getIp()
+  except Exception as e:
+    errorcode = errors.geterrorcode(e)
+    print 'Errore [%d]: %s' % (errorcode, e)
+
+  try:
+    print '\ngetIP (www.google.com)'
+    print 'Test sysmonitor getIP: %s' % getIp('www.google.com', 80)
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)

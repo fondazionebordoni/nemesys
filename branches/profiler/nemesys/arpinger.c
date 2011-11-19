@@ -52,7 +52,7 @@ int ip_in_net (const char *ip, const char *net, const char *mask)
     {return 0;}
 }
 
-void find_devices()
+void find_devices(void)
 {
     int IpInNet=0;
 
@@ -69,6 +69,7 @@ void find_devices()
     WSADATA wsa_Data;
     char HostName[255];
     struct hostent *host_entry;
+	int addr_num = 0;
     #endif
 
     ind_dev=0;
@@ -112,6 +113,8 @@ void find_devices()
             addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
             ip = inet_ntoa(addr);
 
+			//printf("\nProvo: %s",ip);
+
             IpInNet = ip_in_net(ip,device[ind_dev].net,device[ind_dev].mask);
 
             if(IpInNet != 1)
@@ -120,7 +123,14 @@ void find_devices()
                 WSAStartup(0x101,&wsa_Data);
                 gethostname(HostName, 255);
                 host_entry = gethostbyname(HostName);
-                ip = inet_ntoa (*(struct in_addr *)*host_entry->h_addr_list);
+				addr_num = 0;
+				while((IpInNet != 1) && (host_entry->h_addr_list[addr_num] != NULL))
+                {
+					ip = inet_ntoa (*(struct in_addr *)(host_entry->h_addr_list)[addr_num]);
+					//printf("\nProvo: %s",ip);
+					IpInNet = ip_in_net(ip,device[ind_dev].net,device[ind_dev].mask);
+					addr_num++;
+				}
                 WSACleanup();
                 #else
                 while((IpInNet != 1) && (dl->addresses->next))
@@ -128,13 +138,22 @@ void find_devices()
                     dl->addresses=dl->addresses->next;
                     addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
                     ip = inet_ntoa(addr);
+					//printf("\nProvo: %s",ip);
                     IpInNet = ip_in_net(ip,device[ind_dev].net,device[ind_dev].mask);
                 }
                 #endif
             }
 
-            device[ind_dev].ip=PyMem_New(char,strlen(ip)+1);
-            memcpy(device[ind_dev].ip,ip,strlen(ip)+1);
+			if(IpInNet == 1)
+            {
+				device[ind_dev].ip=PyMem_New(char,strlen(ip)+1);
+				memcpy(device[ind_dev].ip,ip,strlen(ip)+1);
+			}
+			else
+			{
+				device[ind_dev].ip="0.0.0.0";
+			}
+
 
         }
         else
@@ -149,7 +168,7 @@ void find_devices()
 }
 
 
-void initialize(u_char *dev, int promisc, int timeout, int snaplen, int buffer)
+void initialize(char *dev, int promisc, int timeout, int snaplen, int buffer)
 {
     int i=0;
 
@@ -166,6 +185,8 @@ void initialize(u_char *dev, int promisc, int timeout, int snaplen, int buffer)
             num_dev=i;
         }
     }
+
+	//printf("Device Scelto: %i",num_dev);
 
     if (num_dev==0)
     {sprintf(err_str,"Device Not Found or Not Initialized");err_flag=-1;return;}
@@ -234,7 +255,7 @@ static PyObject *arpinger_initialize(PyObject *self, PyObject *args)
 {
     int promisc=1, timeout=1000, snaplen=BUFSIZ, buffer=22*1024000;
 
-    u_char *dev, *filter;
+    char *dev, *filter;
 
     err_flag=0; strcpy(err_str,"No Error");
 

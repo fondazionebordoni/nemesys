@@ -1,4 +1,8 @@
+
+//DISTUTILS:
+//python NAME_compile.py build
 //
+//GCC:
 //Linux: gcc NAME.c -shared -I./ -I/usr/include/python2.7 -lpython2.7 -lpcap -oNAME.so
 //
 //Win: gcc NAME.c -shared -I. -I C:\Python27\include -I C:\winpcap\Include -I C:\winpcap\Include\pcap -L C:\Programmi\CodeBlocks\MinGW\lib -L C:\Python27\libs -L C:\winpcap\Lib -o NAME.pyd -lpython27 -lwpcap -lwsock32

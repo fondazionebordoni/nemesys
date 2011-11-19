@@ -30,7 +30,7 @@ ETH_P_IP = 0x0800
 ETH_P_ARP = 0x0806
 ARP_REPLY = 0x0002
 
-MAX = 64
+MAX = 128
 
 def display_mac(value):
     return string.join(["%02X" % ord(b) for b in value], ':')
@@ -90,7 +90,7 @@ def receive_arping(MACsrc):
           if (IPsrc_arp not in IPtable):
             IPtable[IPsrc_arp] = display_mac(hwsrc_arp)
             logger.debug('Trovato Host %s con indirizzo fisico %s' % (IPsrc_arp, display_mac(hwsrc_arp)))
-    
+
     arpinger.clear()
 
   return len(IPtable)
@@ -103,9 +103,10 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, thresh
   if (mac):
     MACsrc = "".join(chr(int(macEL, 16)) for macEL in mac.split(':'))
   else:
-    MACsrc = "\x0A"*6
+    return 0
   MACdst = "\xFF"*6
-
+  
+  logger.debug("MAC_source = %s" % mac)
   IPsrc = socket.gethostbyname(IPsrc)
   IPnet = ipcalc.Network('%s/%d' % (IPsrc, NETmask))
   net = IPnet.network()
@@ -128,7 +129,7 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, thresh
       elif(IPdst.dq == IPsrc):
         logger.debug("Salto il mio ip %s" % IPdst)
       else:
-        logger.debug('Arping host %s' % IPdst)
+        #logger.debug('Arping host %s' % IPdst)
         send_arping(IPsrc, IPdst, MACsrc, MACdst)
         i += 1
 
@@ -156,7 +157,10 @@ if __name__ == '__main__':
   s.connect(('www.fub.it', 80))
   ip = s.getsockname()[0]
   s.close()
+  mymac='F0:4D:A2:53:AD:AE'
+  print mymac.split(':')
 
   if ip != None:
-    print("Trovati: %d host" % do_arping(ip, 24, True, 1, None, 15))
+    #print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
+    print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
 

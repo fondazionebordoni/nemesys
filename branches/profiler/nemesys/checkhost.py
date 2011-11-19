@@ -16,12 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from arping import do_arping
 from logger import logging
 from threading import Thread
-from arping import do_arping
 import ipcalc
 import ping
 import re
+import socket
+
 MAX = 128
 
 logger = logging.getLogger()
@@ -43,7 +45,7 @@ class sendit(Thread):
       self.status = 0
       pass
 
-def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, threshold = 4, arping = 0, mac = None):
+def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, threshold=4, arping=0, mac=None):
   realSubnet = True
   if(provider == "fst001" and not bool(re.search('^192\.168\.', ipAddress))):
     realSubnet = False
@@ -65,7 +67,7 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, 
   n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold, arping, mac)
   return n_host
 
-def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping = 0, mac = None):
+def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4, arping=0, mac=None):
   '''
   Ritorna il numero di host che rispondono al ping nella sottorete ipAddress/net_mask.
   Di default effettua i ping dei soli host appartenenti alla sottorete indicata (escludendo il 
@@ -117,10 +119,10 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
 
 
 if __name__ == '__main__':
+  s = socket.socket(socket.AF_INET)
+  s.connect(('www.fub.it', 80))
+  ip = s.getsockname()[0]
+  s.close()
 
-  n = countHosts("192.168.208.53", 24, 200, 2000, "fst001", 4, 1, None)
-  print '%d (%d)' % (n, 0)
-
-  n = countHosts("192.168.208.53", 24, 200, 2000, "fst001")
-  print '%d (%d)' % (n, 0)
-
+  print countHosts(ip, 24, 200, 2000, 'fst001', 4, 1, None)
+
