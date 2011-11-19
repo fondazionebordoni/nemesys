@@ -20,8 +20,6 @@ struct statistics
 int DEBUG_MODE=0;
 FILE *debug_log;
 
-char *dump_file;
-
 int err_flag=0;
 char err_str[88]="No Error";
 
@@ -30,9 +28,7 @@ PyObject *py_pcap_hdr, *py_pcap_data;
 
 int no_stop=0, ind_dev=0, num_dev=0;
 
-int data_link=0, sniff_mode=0, online=1;
-
-int pkt_start=0, pkt_stop=0;
+int data_link=0, sniff_mode=0;
 
 pcap_t *handle;
 
@@ -56,9 +52,11 @@ void mydump(u_char *dumpfile, const struct pcap_pkthdr *pcap_hdr, const u_char *
 }
 
 
-void dumper(void)
+void dump_mode(void)
 {
     pcap_dumper_t *dumpfile;
+
+    char filename[]="dumpfile.pcap";
 
     pcap_stats(handle,&pcapstat);
 
@@ -68,10 +66,10 @@ void dumper(void)
         pcapstat.ps_ifdrop=0;
     }
 
-    dumpfile = pcap_dump_open(handle,dump_file);
+    dumpfile = pcap_dump_open(handle,filename);
 
     if (dumpfile == NULL)
-    {sprintf(err_str,"Error opening savefile %s for writing: %s\n",dump_file, pcap_geterr(handle));err_flag=-1;return;}
+    {sprintf(err_str,"Error opening savefile %s for writing: %s\n",filename, pcap_geterr(handle));err_flag=-1;return;}
 
     //DEBUG-BEGIN
     if(DEBUG_MODE)
@@ -340,48 +338,41 @@ void initialize(char *dev_sel, int promisc, int timeout, int snaplen, int buffer
 
     memset(&mystat,0,sizeof(struct statistics));
 
-    if (online==0)
-    {
-        handle=pcap_open_offline(dump_file,errbuf);
-    }
-    else
-    {
-        find_devices();
+    find_devices();
 
-        if(err_flag != 0) {return;}
+    if(err_flag != 0) {return;}
 
-        for(i=1; i<=ind_dev; i++)
+    for(i=1; i<=ind_dev; i++)
+    {
+        if ((strcmp(dev_sel,device[i].name)==0)||(strcmp(dev_sel,device[i].ip)==0))
         {
-            if ((strcmp(dev_sel,device[i].name)==0)||(strcmp(dev_sel,device[i].ip)==0))
-            {
-                num_dev=i;
-            }
+            num_dev=i;
         }
-
-        if (num_dev==0)
-        {sprintf(err_str,"Device Not Found or Not Initialized");err_flag=-1;return;}
-
-        if ((handle=pcap_create(device[num_dev].name,errbuf)) == NULL)
-        {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;return;}
-
-        if (pcap_set_promisc(handle,promisc) != 0)
-        {sprintf(err_str,"PromiscuousMode error: %s",pcap_geterr(handle));err_flag=-1;return;}
-
-        if (pcap_set_timeout(handle,timeout) != 0)
-        {sprintf(err_str,"Timeout error: %s",pcap_geterr(handle));err_flag=-1;return;}
-
-        if (pcap_set_snaplen(handle,snaplen) != 0)
-        {sprintf(err_str,"Snapshot error: %s",pcap_geterr(handle));err_flag=-1;return;}
-
-        if (pcap_set_buffer_size(handle,buffer) !=0)
-        {sprintf(err_str,"SetBuffer error: %s",pcap_geterr(handle));err_flag=-1;return;}
-
-        if (pcap_activate(handle) !=0)
-        {sprintf(err_str,"Activate error: %s",pcap_geterr(handle));err_flag=-1;return;}
-
-        if (pcap_setnonblock(handle,0,errbuf) !=0)
-        {sprintf(err_str,"Non Block error: %s",errbuf);err_flag=-1;return;}
     }
+
+    if (num_dev==0)
+    {sprintf(err_str,"Device Not Found or Not Initialized");err_flag=-1;return;}
+
+    if ((handle=pcap_create(device[num_dev].name,errbuf)) == NULL)
+    {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;return;}
+
+    if (pcap_set_promisc(handle,promisc) != 0)
+    {sprintf(err_str,"PromiscuousMode error: %s",pcap_geterr(handle));err_flag=-1;return;}
+
+    if (pcap_set_timeout(handle,timeout) != 0)
+    {sprintf(err_str,"Timeout error: %s",pcap_geterr(handle));err_flag=-1;return;}
+
+    if (pcap_set_snaplen(handle,snaplen) != 0)
+    {sprintf(err_str,"Snapshot error: %s",pcap_geterr(handle));err_flag=-1;return;}
+
+    if (pcap_set_buffer_size(handle,buffer) !=0)
+    {sprintf(err_str,"SetBuffer error: %s",pcap_geterr(handle));err_flag=-1;return;}
+
+    if (pcap_activate(handle) !=0)
+    {sprintf(err_str,"Activate error: %s",pcap_geterr(handle));err_flag=-1;return;}
+
+    if (pcap_setnonblock(handle,0,errbuf) !=0)
+    {sprintf(err_str,"Non Block error: %s",errbuf);err_flag=-1;return;}
 
     data_link=pcap_datalink(handle);
 
@@ -511,7 +502,7 @@ static PyObject *sniffer_initialize(PyObject *self, PyObject *args)
 
     err_flag=0; strcpy(err_str,"No Error");
 
-    PyArg_ParseTuple(args, "s|iiiiisii", &dev, &buffer, &snaplen, &timeout, &promisc, &online, &dump_file, &pkt_start, &pkt_stop);
+    PyArg_ParseTuple(args, "s|iiii", &dev, &buffer, &snaplen, &timeout, &promisc);
 
     if (err_flag == 0)
     {initialize(dev, promisc, timeout, snaplen, buffer);}
@@ -553,7 +544,7 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
     struct pcap_pkthdr *pcap_hdr;
     const u_char *pcap_data;
 
-    int pkt_received=0;
+    int pkt_received = 0;
 
     err_flag=0; strcpy(err_str,"No Error");
 
@@ -610,32 +601,19 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
                           py_pcap_data = Py_None;
                       }
 
-                      if(online==1)
+                      pcap_stats(handle,&pcapstat);
+
+                      if((mystat.pkt_pcap_proc==0) && ((pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0))
                       {
-                          pcap_stats(handle,&pcapstat);
-
-                          if((mystat.pkt_pcap_proc==0) && ((pcapstat.ps_drop)>0 || (pcapstat.ps_ifdrop)>0))
-                          {
-                              pcapstat.ps_drop=0;
-                              pcapstat.ps_ifdrop=0;
-                          }
-
-                          mystat.pkt_pcap_tot=pcapstat.ps_recv;
-                          mystat.pkt_pcap_drop=pcapstat.ps_drop;
-                          mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
+                          pcapstat.ps_drop=0;
+                          pcapstat.ps_ifdrop=0;
                       }
+
+                      mystat.pkt_pcap_tot=pcapstat.ps_recv;
+                      mystat.pkt_pcap_drop=pcapstat.ps_drop;
+                      mystat.pkt_pcap_dropif=pcapstat.ps_ifdrop;
 
                       mystat.pkt_pcap_proc++;
-
-                      if (pkt_stop>pkt_start && pkt_stop>0)
-                      {
-                          if (mystat.pkt_pcap_proc<pkt_start || mystat.pkt_pcap_proc>pkt_stop)
-                          {
-                              err_flag=2;
-                              py_pcap_hdr = Py_None;
-                              py_pcap_data = Py_None;
-                          }
-                      }
 
                       // DEBUG-BEGIN
                       if(DEBUG_MODE)
@@ -674,7 +652,7 @@ static PyObject *sniffer_start(PyObject *self, PyObject *args)
 
         sniff_mode = -1;
 
-        dumper();
+        dump_mode();
 
         PyGILState_Release(gil_state);
         Py_END_ALLOW_THREADS;
@@ -725,7 +703,7 @@ static PyObject *sniffer_getstat(PyObject *self)
     struct tm *rt;
     time_t req_time;
 
-    if (handle != NULL && online==1)
+    if (handle != NULL)
     {
         pcap_stats(handle,&pcapstat);
 

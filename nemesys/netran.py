@@ -20,8 +20,8 @@
 from collections import deque
 from logger import logging
 from threading import Thread, Condition, Event
-from contabyte import Contabyte
 
+import contabyte
 import random
 import sniffer
 import sys
@@ -50,13 +50,13 @@ class Device:
 
 class Sniffer(Thread):
 
-  def __init__(self, dev, buff = 22 * 1024000, snaplen = 8192, timeout = 1, promisc = 1, online = 1, pcap_file = None):
+  def __init__(self, dev, buff = 22 * 1024000, snaplen = 8192, timeout = 1, promisc = 1):
     Thread.__init__(self)
     logger.debug('Inizializzazione dello sniffer')
     self._run_sniffer = 1
     self._stop_pkt = 0
     sniffer.debugmode(0)
-    self._init = sniffer.initialize(dev, buff, snaplen, timeout, promisc, online, pcap_file)
+    self._init = sniffer.initialize(dev, buff, snaplen, timeout, promisc)
     if (self._init['err_flag'] != 0):
       self._run_sniffer = 0
       logger.error('Errore inizializzazione dello Sniffer')
@@ -81,13 +81,10 @@ class Sniffer(Thread):
             try:
               sniffer_data = sniffer.start(sniff_mode)
               sniffer.clear()
-              if (sniffer_data['err_flag']==-2):
-                break
-              elif (sniffer_data['err_flag'] < 0):
+              if (sniffer_data['err_flag'] < 0):
                 logger.error(sniffer_data['err_str'])
                 raise Exception (sniffer_data['err_str'])
               if (sniffer_data['py_pcap_hdr'] != None):
-                #print("\nOK-01\n")
                 condition.acquire()
                 buffer_shared.append(sniffer_data)
                 condition.notify()
@@ -137,20 +134,21 @@ class Sniffer(Thread):
     sniffer_stat = sniffer.getstat()
     return sniffer_stat
 
-class ContabyteN(Thread):
+class Contabyte(Thread):
 
   def __init__(self, dev, nem):
     Thread.__init__(self)
     logger.debug('Inizializzazione del contabyte')
     self._run_contabyte = 1
     self._stat = {}
-    self._analyzer = Contabyte(dev, nem)
+    self._dev = dev
+    self._nem = nem
 
   def run(self):
     global buffer_shared
     global condition
     global analyzer_flag
-    self._analyzer.reset()
+    contabyte.reset()
     self._stat.clear()
     buffer_shared.clear()
     analyzer_flag.set()
@@ -163,8 +161,7 @@ class ContabyteN(Thread):
           condition.notify()
           condition.release()
           if (contabyte_data['py_pcap_hdr'] != None):
-            self._analyzer.analyze(contabyte_data['py_pcap_hdr'], contabyte_data['py_pcap_data'])
-            self._stat = self._analyzer.statistics
+            self._stat = contabyte.analyze(self._dev, self._nem, contabyte_data['py_pcap_hdr'], contabyte_data['py_pcap_data'])
         except:
           logger.error("Errore nel Contabyte: %s" % str(sys.exc_info()[0]))
           raise
@@ -194,8 +191,8 @@ class ContabyteN(Thread):
 
 if __name__ == '__main__':
 
-  mydev = '192.168.62.10'
-  mynem = '192.168.140.22'
+  mydev = '192.168.208.53'
+  mynem = '194.244.5.206'
 
   print "\nDevices:"
 
@@ -243,17 +240,17 @@ if __name__ == '__main__':
 
   print "\nInitialize Sniffer And Contabyte...."
 
-  mysniffer = Sniffer(mydev, 22 * 1024000, 150, 1, 1, 0, 'dump.pcap')
-  mycontabyte = ContabyteN(mydev, mynem)
+  mysniffer = Sniffer(mydev, 22 * 1024000, 150, 1, 1)
+  mycontabyte = Contabyte(mydev, mynem)
 
   print "Start Sniffer And Contabyte...."
 
-  mycontabyte.start()
   mysniffer.start()
+  mycontabyte.start()
 
   print "Sniffing And Analyzing...."
 
-  raw_input("\nPress Enter For Sniffing Result!!")
+  raw_input("Enter When Finished!!")
 
   mycontabyte.stop()
 
