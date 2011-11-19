@@ -629,7 +629,6 @@ class Contabyte(Analyzer):
     tcpHdrLen = 0
     udpHdrLen = 0
     PayloadLen = 0
-    pktPad = 0
 
     ipSrc = None
     ipDst = None
@@ -719,22 +718,17 @@ class Contabyte(Analyzer):
 
     if (ipSrc != self._ip):
 
-      pktPad = (ETH_LEN_MIN - pcapHdr['pktLen'] - ETH_CRC_LEN)
-
-      if (pktPad < 0):
-        pktPad = 0
-
       self._statistics.packet_down_all += 1
       self._statistics.packet_tot_all += 1
       if not is_retransmission:
         self._statistics.packet_down_all_net += 1
         self._statistics.packet_tot_all_net += 1
 
-      self._statistics.byte_down_all += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-      self._statistics.byte_tot_all += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+      self._statistics.byte_down_all += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+      self._statistics.byte_tot_all += (pcapHdr['pktLen'] + ETH_CRC_LEN)
       if not is_retransmission:
-        self._statistics.byte_down_all_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-        self._statistics.byte_tot_all_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+        self._statistics.byte_down_all_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+        self._statistics.byte_tot_all_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
 
       self._statistics.payload_down_all += PayloadLen
       self._statistics.payload_tot_all += PayloadLen
@@ -750,11 +744,11 @@ class Contabyte(Analyzer):
           self._statistics.packet_down_nem_net += 1
           self._statistics.packet_tot_nem_net += 1
 
-        self._statistics.byte_down_nem += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-        self._statistics.byte_tot_nem += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+        self._statistics.byte_down_nem += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+        self._statistics.byte_tot_nem += (pcapHdr['pktLen'] + ETH_CRC_LEN)
         if not is_retransmission:
-          self._statistics.byte_down_nem_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-          self._statistics.byte_tot_nem_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+          self._statistics.byte_down_nem_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+          self._statistics.byte_tot_nem_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
 
         self._statistics.payload_down_nem += PayloadLen
         self._statistics.payload_tot_nem += PayloadLen
@@ -770,11 +764,11 @@ class Contabyte(Analyzer):
           self._statistics.packet_down_oth_net += 1
           self._statistics.packet_tot_oth_net += 1
 
-        self._statistics.byte_down_oth += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-        self._statistics.byte_tot_oth += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+        self._statistics.byte_down_oth += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+        self._statistics.byte_tot_oth += (pcapHdr['pktLen'] + ETH_CRC_LEN)
         if not is_retransmission:
-          self._statistics.byte_down_oth_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
-          self._statistics.byte_tot_oth_net += (pcapHdr['pktLen'] + pktPad + ETH_CRC_LEN)
+          self._statistics.byte_down_oth_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
+          self._statistics.byte_tot_oth_net += (pcapHdr['pktLen'] + ETH_CRC_LEN)
 
         self._statistics.payload_down_oth += PayloadLen
         self._statistics.payload_tot_oth += PayloadLen
@@ -847,4 +841,3 @@ class Contabyte(Analyzer):
           self._statistics.payload_up_oth_net += PayloadLen
           self._statistics.payload_tot_oth_net += PayloadLen
 
-    #logger.debug("%i) %i + %i + %i" % (self._statistics.packet_tot_all,pcapHdr['pktLen'],ETH_CRC_LEN,pktPad))
