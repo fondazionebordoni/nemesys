@@ -10,11 +10,11 @@
 
 
 ; Read the previuos build number. If there is none take 0 instead.
-#define BuildNum Int(ReadIni(SourcePath	+ "\\BuildInfo.ini","Info","Build","1"))
+#define BuildNum Int(ReadIni(SourcePath	+ "\\buildinfo.ini","Info","Build","1"))
 ; Increment the build number by one.
 #expr BuildNum = BuildNum + 1
 ; Store the number in the ini file for the next build
-#expr WriteIni(SourcePath + "\\BuildInfo.ini","Info","Build", BuildNum)
+#expr WriteIni(SourcePath + "\\buildinfo.ini","Info","Build", BuildNum)
 
 [Setup]
 ;AppId={21F1511D-B744-4DCE-AEAA-55E5C0668A35}
