@@ -109,7 +109,8 @@ Type: dirifempty; Name: {app}
 root: HKLM; subkey: SYSTEM\CurrentControlSet\Services\Nemesys; valuetype: expandsz; valuename: ImagePath; valuedata: {app}; Flags: UninsDeleteKey DeleteKey
 root: HKLM; subkey: SYSTEM\CurrentControlSet\Services\Nemesys; valuetype: multisz; valuename: DependOnService; valuedata: EventSystem{break}Tcpip{break}Netman{break}EventLog{break}; Flags: UninsDeleteKey DeleteKey
 root: HKLM; subkey: SYSTEM\CurrentControlSet\Services\Nemesys; valuetype: binary; valuename: FailureActions; Flags: UninsDeleteKey DeleteKey; ValueData: 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 53 00 65 00 01 00 00 00 60 ea 00 00 01 00 00 00 60 ea 00 00 01 00 00 00 60 ea 00 00 
-root: HKLM; subkey: System\CurrentControlSet\Services\EventSystem; valuetype: dword; valuename: Start; valuedata: 2
+root: HKLM; subkey: SYSTEM\CurrentControlSet\Services\EventSystem; valuetype: dword; valuename: Start; valuedata: 2
+root: HKLM; subkey: SYSTEM\CurrentControlSet\Services\Tcpip\Parameters; valuetype: dword; valuename: DisableTaskOffload; valuedata: 1
 
 [Code]
 procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
