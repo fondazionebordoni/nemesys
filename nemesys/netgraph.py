@@ -77,7 +77,7 @@ class Updater(Thread):
 class Netgraph(wx.Frame):
 
   def __init__(self):
-    wx.Frame.__init__ (self, None, id=wx.ID_ANY, title='Netgraph', size=wx.Size(750, 300), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX))
+    wx.Frame.__init__ (self, None, id=wx.ID_ANY, title='Netgraph', size=wx.Size(400, 200), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX))
     self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
 
     self.figure = Figure()
@@ -88,8 +88,8 @@ class Netgraph(wx.Frame):
     self._max = 0
 
     t = numpy.arange(-SECONDS, 0, 1.0 / POINTS_PER_SECONDS)
-    self.d, = self.axes.plot(t, numpy.zeros(60 * 1.0 / POINTS_PER_SECONDS))
-    self.u, = self.axes.plot(t, numpy.zeros(60 * 1.0 / POINTS_PER_SECONDS))
+    self.d, = self.axes.plot(t, numpy.zeros(60 * 1.0 / POINTS_PER_SECONDS), linewidth=2, color='red')
+    self.u, = self.axes.plot(t, numpy.zeros(60 * 1.0 / POINTS_PER_SECONDS), linewidth=2, color='blue')
 
     self.canvas = FigCanvas(self, -1, self.figure)
 
