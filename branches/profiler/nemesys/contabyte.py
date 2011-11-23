@@ -664,11 +664,11 @@ class Contabyte(Analyzer):
 
           if ('ipPayLen' in l3_hdr):
 
-            ipPayLen = l3_hdr['ipPayLen']
+            ipPayLen = pcapHdr['pktLen'] - ETH_HDR_LEN - IPv6_HDR_LEN
 
           else:
 
-            ipPayLen = (l3_hdr['ipTotLen']) - (l3_hdr['ipHdrLen'])
+            ipPayLen = pcapHdr['pktLen'] - ETH_HDR_LEN - l3_hdr['ipHdrLen']
 
             ipSrc = l3_hdr['ipSrc']
             ipDst = l3_hdr['ipDst']
@@ -716,13 +716,13 @@ class Contabyte(Analyzer):
 
     except Exception as e:
       logger.warning("Errore durante lo spacchettamento del pacchetto per l'analisi: %s" % e)
+    
+    pktPad = (ETH_LEN_MIN - pcapHdr['pktLen'] - ETH_CRC_LEN)
 
+    if (pktPad < 0):
+      pktPad = 0
+    
     if (ipSrc != self._ip):
-
-      pktPad = (ETH_LEN_MIN - pcapHdr['pktLen'] - ETH_CRC_LEN)
-
-      if (pktPad < 0):
-        pktPad = 0
 
       self._statistics.packet_down_all += 1
       self._statistics.packet_tot_all += 1
@@ -783,11 +783,6 @@ class Contabyte(Analyzer):
           self._statistics.payload_tot_oth_net += PayloadLen
 
     else:
-
-      pktPad = (ETH_LEN_MIN - pcapHdr['pktLen'] - ETH_CRC_LEN)
-
-      if (pktPad < 0):
-        pktPad = 0
 
       self._statistics.packet_up_all += 1
       self._statistics.packet_tot_all += 1
