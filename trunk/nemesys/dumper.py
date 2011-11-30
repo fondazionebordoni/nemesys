@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
   pkt_start = int(sys.argv[2])
   pkt_stop = int(sys.argv[3])
-  print ("PACKET: %i ---> %i" % (pkt_start,pkt_stop))
+  print ("PACKET: %i ---> %i\n" % (pkt_start,pkt_stop))
 
   analyzer = Contabyte(ip, nap)
 
@@ -68,8 +68,27 @@ if __name__ == '__main__':
       if (status == 1):
         analyzer.analyze(mypkt['py_pcap_hdr'], mypkt['py_pcap_data'])
 
-  print analyzer.statistics
-  print sniffer.getstat()
+  if (pkt_stop>pkt_start):
+    stats = analyzer.statistics
+    
+    print ("\n\nDOWNLOAD")
+    print ("\n%i\n%i\n%i\n%i\n%i\n%i\n%i\n%i\n%i\n" % (stats.packet_down_all_net,stats.payload_down_all_net,stats.byte_down_all_net,stats.packet_down_nem_net,stats.payload_down_nem_net,stats.byte_down_nem_net,stats.packet_down_oth_net,stats.payload_down_oth_net,stats.byte_down_oth_net))
+    print ("\n\nUPLOAD")
+    print ("\n%i\n%i\n%i\n%i\n%i\n%i\n%i\n%i\n%i\n" % (stats.packet_up_all_net,stats.payload_up_all_net,stats.byte_up_all_net,stats.packet_up_nem_net,stats.payload_up_nem_net,stats.byte_up_nem_net,stats.packet_up_oth_net,stats.payload_up_oth_net,stats.byte_up_oth_net))
+      
+    print stats
+#    print sniffer.getstat()
+#    
+#    print ("\nDOWNLOAD\tPacket\t\tPayload\t\tWireByte")
+#    print ("Nemesys\t\t%i\t\t%i\t\t%i" % (stats.packet_down_nem_net,stats.payload_down_nem_net,stats.byte_down_nem_net))
+#    print ("Other\t\t%i\t\t%i\t\t%i" % (stats.packet_down_oth_net,stats.payload_down_oth_net,stats.byte_down_oth_net))
+#    print ("All\t\t%i\t\t%i\t\t%i" % (stats.packet_down_all_net,stats.payload_down_all_net,stats.byte_down_all_net))
+#    
+#    print ("\nUPLOAD\t\tPacket\t\tPayload\t\tWireByte")
+#    print ("Nemesys\t\t%i\t\t%i\t\t%i" % (stats.packet_up_nem_net,stats.payload_up_nem_net,stats.byte_up_nem_net))
+#    print ("Other\t\t%i\t\t%i\t\t%i" % (stats.packet_up_oth_net,stats.payload_up_oth_net,stats.byte_up_oth_net))
+#    print ("All\t\t%i\t\t%i\t\t%i" % (stats.packet_up_all_net,stats.payload_up_all_net,stats.byte_up_all_net))
+  
   sniffer.stop()
 
 
