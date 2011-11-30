@@ -292,11 +292,13 @@ class Statistics:
 
   def __str__(self):
     return '''\
-pkts: %d; \
-(byte) tot_all: %d; tot_all_net: %d; tot_nem: %d; tot_nem_net: %d; tot_oth: %d; tot_oth_net: %d; down_all: %d; down_all_net: %d; down_nem: %d; down_nem_net: %d; down_oth: %d; down_oth_net: %d; up_all: %d; up_all_net: %d; up_nem: %d; up_nem_net: %d; up_oth: %d; up_oth_net: %d; \
-(payload) tot_all: %d; tot_all_net: %d; tot_nem: %d; tot_nem_net: %d; tot_oth: %d; tot_oth_net: %d; down_all: %d; down_all_net: %d; down_nem: %d; down_nem_net: %d; down_oth: %d; down_oth_net: %d; up_all: %d; up_all_net: %d; up_nem: %d; up_nem_net: %d; up_oth: %d; up_oth_net: %d; \
+[PACKET] | tot_all: %d | tot_all_net: %d | tot_nem: %d | tot_nem_net: %d | tot_oth: %d | tot_oth_net: %d | down_all: %d | down_all_net: %d | down_nem: %d | down_nem_net: %d | down_oth: %d | down_oth_net: %d | up_all: %d | up_all_net: %d | up_nem: %d | up_nem_net: %d | up_oth: %d | up_oth_net: %d | \
+[BYTE] | tot_all: %d | tot_all_net: %d | tot_nem: %d | tot_nem_net: %d | tot_oth: %d | tot_oth_net: %d | down_all: %d | down_all_net: %d | down_nem: %d | down_nem_net: %d | down_oth: %d | down_oth_net: %d | up_all: %d | up_all_net: %d | up_nem: %d | up_nem_net: %d | up_oth: %d | up_oth_net: %d | \
+[PAYLOAD] | tot_all: %d | tot_all_net: %d | tot_nem: %d | tot_nem_net: %d | tot_oth: %d | tot_oth_net: %d | down_all: %d | down_all_net: %d | down_nem: %d | down_nem_net: %d | down_oth: %d | down_oth_net: %d | up_all: %d | up_all_net: %d | up_nem: %d | up_nem_net: %d | up_oth: %d | up_oth_net: %d | \
 ''' % (\
-      self.packet_tot_all, \
+      self.packet_tot_all, self.packet_tot_all_net, self.packet_tot_nem, self.packet_tot_nem_net, self.packet_tot_oth, self.packet_tot_oth_net, \
+      self.packet_down_all, self. packet_down_all_net, self.packet_down_nem, self.packet_down_nem_net, self.packet_down_oth, self.packet_down_oth_net, \
+      self.packet_up_all, self.packet_up_all_net, self.packet_up_nem, self.packet_up_nem_net, self.packet_up_oth, self.packet_up_oth_net, \
       self.byte_tot_all, self.byte_tot_all_net, self.byte_tot_nem, self.byte_tot_nem_net, self.byte_tot_oth, self.byte_tot_oth_net, \
       self.byte_down_all, self. byte_down_all_net, self.byte_down_nem, self.byte_down_nem_net, self.byte_down_oth, self.byte_down_oth_net, \
       self.byte_up_all, self.byte_up_all_net, self.byte_up_nem, self.byte_up_nem_net, self.byte_up_oth, self.byte_up_oth_net, \
