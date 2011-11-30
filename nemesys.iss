@@ -38,7 +38,6 @@ SetupIconFile={#MyAppDir}\nemesys.ico
 WizardSmallImageFile={#MyAppDir}\nemesys_55.bmp
 WizardImageFile={#MyAppDir}\nemesys_164.bmp
 AppCopyright=Fondazione Ugo Bordoni
-AlwaysRestart=true
 
 [Messages]
 italian.AdminPrivilegesRequired=Errore nell'installazione.%nSono necessarie le credenziali di amministratore per poter procedere.
@@ -75,10 +74,10 @@ Name: {commondesktop}\Nemesys GUI; Filename: {app}\dist\gui.exe; IconIndex: 0
 Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Nemesys GUI; Filename: {app}\dist\gui.exe; Tasks: quicklaunchicon; IconIndex: 0
 
 [Run]
-Filename: {app}\dist\Nemesys.exe; Parameters: --startup auto install; Description: Installazione del servizio Nemesys.; StatusMsg: Installazione del servizio Nemesys; Flags: runhidden RunAsCurrentUser
-Filename: {app}\dist\Nemesys.exe; Parameters: start; Description: Avvia il servizio Nemesys.; Flags: postinstall runhidden RunAsCurrentUser; StatusMsg: Avvia il servizio Nemesys
-;Filename: {app}\dist\gui.exe;Description: Avvia la GUI del servizio Nemesys.; Flags: postinstall nowait runhidden RunAsCurrentUser 
-
+Filename: {sys}\netsh.exe; Parameters: " int ip set global taskoffload=disabled"; Description: "Disable TCP Task Offload"; Flags: RunHidden RunAsCurrentUser; 
+Filename: {app}\dist\Nemesys.exe; Parameters: "--startup auto install"; Description: "Installazione del servizio Nemesys."; StatusMsg: "Installazione del servizio Nemesys"; Flags: RunHidden RunAsCurrentUser; 
+Filename: {app}\dist\Nemesys.exe; Parameters: start; Description: "Avvia il servizio Nemesys"; Flags: PostInstall RunHidden RunAsCurrentUser; StatusMsg: "Avvia il servizio Nemesys"; 
+ 
 [UninstallRun]
 Filename: taskkill; Parameters: /f /im gui.exe; WorkingDir: {sys}; Flags: runminimized RunAsCurrentUser
 Filename: {app}\dist\Nemesys.exe; Parameters: " --wait 25 stop"; Flags: runminimized RunAsCurrentUser
