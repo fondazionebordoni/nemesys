@@ -664,11 +664,14 @@ class Contabyte(Analyzer):
 
           if ('ipPayLen' in l3_hdr):
 
-            ipPayLen = pcapHdr['pktLen'] - ETH_HDR_LEN - IPv6_HDR_LEN
+            ipPayLen = l3_hdr['ipPayLen']
 
           else:
+            
+            if ((l3_hdr['ipTotLen'] <= 0) and (pcapHdr['pktLen']>ETH_HDR_LEN)):
+              l3_hdr['ipTotLen'] = pcapHdr['pktLen'] - ETH_HDR_LEN
 
-            ipPayLen = pcapHdr['pktLen'] - ETH_HDR_LEN - l3_hdr['ipHdrLen']
+            ipPayLen = (l3_hdr['ipTotLen']) - (l3_hdr['ipHdrLen'])
 
             ipSrc = l3_hdr['ipSrc']
             ipDst = l3_hdr['ipDst']
@@ -683,6 +686,7 @@ class Contabyte(Analyzer):
 
               if ((self._etsimode == True) and (PayloadLen > 0)):
 
+                #logger.debug("%i - %i - %i -%i" % (pcapHdr['pktLen'],ETH_HDR_LEN,l3_hdr['ipHdrLen'],tcpHdrLen))
                 tcpSrcPort = l4_hdr['tcpSrcPort']
                 tcpDstPort = l4_hdr['tcpDstPort']
                 tcpSeqNum = l4_hdr['tcpSeqNum']
@@ -842,4 +846,5 @@ class Contabyte(Analyzer):
           self._statistics.payload_up_oth_net += PayloadLen
           self._statistics.payload_tot_oth_net += PayloadLen
 
-    #logger.debug("%i) %i + %i + %i" % (self._statistics.packet_tot_all,pcapHdr['pktLen'],ETH_CRC_LEN,pktPad))
+#    if is_retransmission:
+#      logger.debug("\nPACCHETTO RITRASMESSO: %i" % self._statistics.packet_tot_all)
