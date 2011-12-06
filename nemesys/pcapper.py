@@ -63,6 +63,7 @@ class Pcapper(Thread):
   def run(self):
     while self._running:
       self._produce()
+      time.sleep(0.0001)
     logger.debug('Exit sniffer! Stats: %s' % sniffer.getstat())
     sniffer.stop()
 
