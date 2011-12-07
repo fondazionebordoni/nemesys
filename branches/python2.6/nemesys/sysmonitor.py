@@ -74,7 +74,7 @@ def getstatus(res):
   data = ET.ElementTree()
   try:
       profiler = LocalProfilerFactory.getProfiler()
-      data = profiler.profile({res})
+      data = profiler.profile(set([res]))
   except FactoryException as e:
     logger.error ("Problema nel tentativo di istanziare la classe: %s" % e)
     raise sysmonitorexception.FAILPROF
@@ -123,7 +123,7 @@ def getResProperty(tag, res):
   data = ET.ElementTree()
   try:
       profiler = LocalProfilerFactory.getProfiler()
-      data = profiler.profile({res})
+      data = profiler.profile(set([res]))
   except Exception as e:
     logger.error('Non sono riuscito a trovare lo stato del computer con profiler: %s.' % e)
     raise sysmonitorexception.FAILPROF
@@ -189,7 +189,7 @@ def checkmem():
 
 def checkwireless():
   profiler = LocalProfilerFactory.getProfiler()
-  data = profiler.profile({'rete'})
+  data = profiler.profile(set(['rete']))
   for device in data.findall('rete/NetworkDevice'):
     logger.debug(ET.tostring(device))
     status = device.find('Status').text
@@ -284,7 +284,7 @@ def getMac():
   data = ET.ElementTree()
   try:
       profiler = LocalProfilerFactory.getProfiler()
-      data = profiler.profile({res})
+      data = profiler.profile(set([res]))
   except Exception as e:
     logger.error('Non sono riuscito a trovare lo stato del computer con profiler: %s.' % e)
     raise sysmonitorexception.FAILPROF
