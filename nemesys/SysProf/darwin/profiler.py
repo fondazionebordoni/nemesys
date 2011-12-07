@@ -13,7 +13,8 @@ from ..RisorsaFactory import Risorsa
 import subprocess
 from ..NemesysException import RisorsaException
 import xml.etree.ElementTree as ET
-
+import socket
+import netifaces
 import psutil
 import platform
 import os
@@ -165,7 +166,7 @@ class rete(Risorsa):
                             prev_key= des
             if descriptors['ip_assigned'] == 'yes':
                 devStatus = 'Enabled'
-                ipdev = get_if_ipaddress(descriptors['InterfaceName'])
+                ipdev = self.get_if_ipaddress(descriptors['InterfaceName'])
                 if (ipdev == self.ipaddr):
                     devIsAct = 'True'
             devxml.append(self.xmlFormat('Name', descriptors['InterfaceName']))
@@ -186,8 +187,8 @@ class rete(Risorsa):
 class Profiler(LocalProfiler):
     
     def __init__(self):
-        available_resources = {'CPU', 'RAM', 'sistemaOperativo','rete'}
+        available_resources = set(['CPU', 'RAM', 'sistemaOperativo','rete'])
         LocalProfiler.__init__(self, available_resources)
 
-    def profile(self, resource={}):
+    def profile(self, resource=set()):
         return super(Profiler, self).profile(__name__, resource)

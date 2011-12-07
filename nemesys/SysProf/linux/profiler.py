@@ -186,8 +186,8 @@ class rete(Risorsa):
 class Profiler(LocalProfiler):
 
     def __init__(self):
-        available_resources = {'CPU', 'RAM', 'sistemaOperativo', 'rete'}
+        available_resources = set(['CPU', 'RAM', 'sistemaOperativo', 'rete'])
         LocalProfiler.__init__(self, available_resources)
 
-    def profile(self, resource = {}):
+    def profile(self, resource = set()):
         return super(Profiler, self).profile(__name__, resource)
