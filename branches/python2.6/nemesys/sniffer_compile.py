@@ -5,7 +5,7 @@ module = Extension('sniffer',
                                      ('MINOR_VERSION', '0')],
                     include_dirs = ['.'],
                     libraries = ['python2.6','pcap'],
-                    library_dirs = ['/usr/include/python2.6'],
+                    library_dirs = ['/System/Library/Frameworks/Python.framework/Versions/2.6/include/python2.6'],
                     sources = ['sniffer.c'])
 
 setup (name = 'nemesys',
