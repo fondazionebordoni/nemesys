@@ -63,6 +63,7 @@ def receive_arping(MACsrc):
   while True:
 
     received = arpinger.receive()
+    arpinger.clear()
 
     if (received['err_flag'] < 1):
       logger.debug("(%s) Numero di Host trovati: %d" % (received['err_str'], len(IPtable)))
@@ -90,8 +91,6 @@ def receive_arping(MACsrc):
           if (IPsrc_arp not in IPtable):
             IPtable[IPsrc_arp] = display_mac(hwsrc_arp)
             logger.debug('Trovato Host %s con indirizzo fisico %s' % (IPsrc_arp, display_mac(hwsrc_arp)))
-
-    arpinger.clear()
 
   return len(IPtable)
 
