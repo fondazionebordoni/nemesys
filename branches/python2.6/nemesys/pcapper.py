@@ -49,6 +49,7 @@ class Pcapper(Thread):
     self._dev = dev
 
     sniffer.debugmode(0)
+    pcap_file = ''
     r = sniffer.initialize(self._dev, buff, snaplen, timeout, promisc, online, pcap_file, pkt_start, pkt_stop)
     if (r['err_flag'] != 0):
       logger.error('Errore inizializzazione dello Sniffer: %s' % str(r['err_str']))
