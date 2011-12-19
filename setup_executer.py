@@ -11,7 +11,7 @@ APP = ['nemesys/executer.py']
 DATA_FILES = ['nemesys/executer.py', 'nemesys/lnemesys.py']
 OPTIONS = {'argv_emulation': True,
  'plist': 'Info_executer.plist',
- 'resources': 'nemesys/cfg',
+ 'resources': 'nemesys/cfg, config',
  'iconfile': 'nemesys.icns',
  'semi_standalone': False,
 }
