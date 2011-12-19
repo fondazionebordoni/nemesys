@@ -688,9 +688,9 @@ static PyObject *sniffer_clear(PyObject *self)
     err_flag=0; strcpy(err_str,"No Error");
 
     if (py_pcap_hdr != Py_None)
-    {Py_DECREF(py_pcap_hdr);}
+    {Py_CLEAR(py_pcap_hdr);}
     if (py_pcap_data != Py_None)
-    {Py_DECREF(py_pcap_data);}
+    {Py_CLEAR(py_pcap_data);}
 
     return Py_BuildValue("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);
 }

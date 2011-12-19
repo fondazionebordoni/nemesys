@@ -273,6 +273,7 @@ static PyObject *arpinger_initialize(PyObject *self, PyObject *args)
 static PyObject *arpinger_send(PyObject *self, PyObject *args)
 {
     Py_BEGIN_ALLOW_THREADS;
+    gil_state = PyGILState_Ensure();
 
     PyObject *py_pkt;
 
@@ -300,6 +301,10 @@ static PyObject *arpinger_send(PyObject *self, PyObject *args)
         sprintf(err_str,"Couldn't send any packet: No Hadle Active on Networks Interfaces");err_flag=-1;
     }
 
+//    if((py_pkt->ob_refcnt)>0)
+//    {Py_CLEAR(py_pkt);}
+
+    PyGILState_Release(gil_state);
     Py_END_ALLOW_THREADS;
 
     return Py_BuildValue("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);
@@ -374,9 +379,9 @@ static PyObject *arpinger_clear(PyObject *self)
     err_flag=0; strcpy(err_str,"No Error");
 
     if (py_pcap_hdr != Py_None)
-    {Py_DECREF(py_pcap_hdr);}
+    {Py_CLEAR(py_pcap_hdr);}
     if (py_pcap_data != Py_None)
-    {Py_DECREF(py_pcap_data);}
+    {Py_CLEAR(py_pcap_data);}
 
     return Py_BuildValue("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);
 }
