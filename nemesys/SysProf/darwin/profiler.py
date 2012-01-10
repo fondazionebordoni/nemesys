@@ -174,7 +174,9 @@ class rete(Risorsa):
             if descriptors['hardware'].lower() == 'ethernet':
                 devType = 'Ethernet 802.3'
             elif descriptors['hardware'].lower() == 'airport':
-                devType = 'Wireless'                              
+                devType = 'Wireless'
+            else:
+                devType = 'Other'
             devxml.append(self.xmlFormat('Type', devType))
             devxml.append(self.xmlFormat('MACAddress', descriptors['MAC Address'])) 
             devxml.append(self.xmlFormat('isActive', devIsAct)) 
