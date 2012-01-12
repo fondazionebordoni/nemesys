@@ -160,6 +160,6 @@ if __name__ == '__main__':
   print mymac.split(':')
 
   if ip != None:
-    #print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
-    print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
+    for i in range (1,1000):
+      print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
 
