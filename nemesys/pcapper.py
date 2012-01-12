@@ -44,7 +44,7 @@ logger = logging.getLogger()
 
 class Pcapper(Thread):
 
-  def __init__(self, dev, buff = 22 * 1024000, snaplen = 8192, timeout = 1, promisc = 1, online = 1, pcap_file = None, pkt_start = 0, pkt_stop = 0 ):
+  def __init__(self, dev, buff = 22 * 1024000, snaplen = 8192, timeout = 1, promisc = 1, online = 1, pcap_file = '', pkt_start = 0, pkt_stop = 0):
     Thread.__init__(self)
     self._dev = dev
 
@@ -141,7 +141,7 @@ class Pcapper(Thread):
         data = sniffer.start(mode)
         sniffer.clear()
         if (data != None):
-          if (data['err_flag']==-2):
+          if (data['err_flag'] == -2):
             self._status = LOOP
           elif (data['err_flag'] < 0):
             logger.error(data['err_str'])
