@@ -18,7 +18,7 @@
 
 class Statistics:
 
-  def __init__(self, packet_up_nem = 0, packet_up_oth = 0, packet_up_all = 0, packet_down_nem = 0, packet_down_oth = 0, packet_down_all = 0, packet_tot_nem = 0, packet_tot_oth = 0, packet_tot_all = 0, byte_up_nem = 0, byte_up_oth = 0, byte_up_all = 0, byte_down_nem = 0, byte_down_oth = 0, byte_down_all = 0, byte_tot_nem = 0, byte_tot_oth = 0, byte_tot_all = 0, payload_up_nem = 0, payload_up_oth = 0, payload_up_all = 0, payload_down_nem = 0, payload_down_oth = 0, payload_down_all = 0, payload_tot_nem = 0, payload_tot_oth = 0, payload_tot_all = 0, packet_up_nem_net = 0, packet_up_oth_net = 0, packet_up_all_net = 0, packet_down_nem_net = 0, packet_down_oth_net = 0, packet_down_all_net = 0, packet_tot_nem_net = 0, packet_tot_oth_net = 0, packet_tot_all_net = 0, byte_up_nem_net = 0, byte_up_oth_net = 0, byte_up_all_net = 0, byte_down_nem_net = 0, byte_down_oth_net = 0, byte_down_all_net = 0, byte_tot_nem_net = 0, byte_tot_oth_net = 0, byte_tot_all_net = 0, payload_up_nem_net = 0, payload_up_oth_net = 0, payload_up_all_net = 0, payload_down_nem_net = 0, payload_down_oth_net = 0, payload_down_all_net = 0, payload_tot_nem_net = 0, payload_tot_oth_net = 0, payload_tot_all_net = 0):
+  def __init__(self, packet_up_nem = 0, packet_up_oth = 0, packet_up_all = 0, packet_down_nem = 0, packet_down_oth = 0, packet_down_all = 0, packet_tot_nem = 0, packet_tot_oth = 0, packet_tot_all = 0, byte_up_nem = 0, byte_up_oth = 0, byte_up_all = 0, byte_down_nem = 0, byte_down_oth = 0, byte_down_all = 0, byte_tot_nem = 0, byte_tot_oth = 0, byte_tot_all = 0, payload_up_nem = 0, payload_up_oth = 0, payload_up_all = 0, payload_down_nem = 0, payload_down_oth = 0, payload_down_all = 0, payload_tot_nem = 0, payload_tot_oth = 0, payload_tot_all = 0, packet_up_nem_net = 0, packet_up_oth_net = 0, packet_up_all_net = 0, packet_down_nem_net = 0, packet_down_oth_net = 0, packet_down_all_net = 0, packet_tot_nem_net = 0, packet_tot_oth_net = 0, packet_tot_all_net = 0, byte_up_nem_net = 0, byte_up_oth_net = 0, byte_up_all_net = 0, byte_down_nem_net = 0, byte_down_oth_net = 0, byte_down_all_net = 0, byte_tot_nem_net = 0, byte_tot_oth_net = 0, byte_tot_all_net = 0, payload_up_nem_net = 0, payload_up_oth_net = 0, payload_up_all_net = 0, payload_down_nem_net = 0, payload_down_oth_net = 0, payload_down_all_net = 0, payload_tot_nem_net = 0, payload_tot_oth_net = 0, payload_tot_all_net = 0, packet_drop = 0):
 
     self._packet_up_nem = packet_up_nem
     self._packet_up_oth = packet_up_oth
@@ -74,6 +74,7 @@ class Statistics:
     self._payload_tot_nem_net = payload_tot_nem_net
     self._payload_tot_oth_net = payload_tot_oth_net
     self._payload_tot_all_net = payload_tot_all_net
+    self._packet_drop = packet_drop
 
   @property
   def packet_up_nem(self):
@@ -290,13 +291,17 @@ class Statistics:
   def payload_tot_all_net(self):
     return self._payload_tot_all_net
 
+  @property
+  def packet_drop(self):
+    return self._packet_drop
+
   def __str__(self):
     return '''\
-[PACKET] | tot_all: %d | tot_all_net: %d | tot_nem: %d | tot_nem_net: %d | tot_oth: %d | tot_oth_net: %d | down_all: %d | down_all_net: %d | down_nem: %d | down_nem_net: %d | down_oth: %d | down_oth_net: %d | up_all: %d | up_all_net: %d | up_nem: %d | up_nem_net: %d | up_oth: %d | up_oth_net: %d | \
+[PACKET] | packet_drop: %d | tot_all: %d | tot_all_net: %d | tot_nem: %d | tot_nem_net: %d | tot_oth: %d | tot_oth_net: %d | down_all: %d | down_all_net: %d | down_nem: %d | down_nem_net: %d | down_oth: %d | down_oth_net: %d | up_all: %d | up_all_net: %d | up_nem: %d | up_nem_net: %d | up_oth: %d | up_oth_net: %d | \
 [BYTE] | tot_all: %d | tot_all_net: %d | tot_nem: %d | tot_nem_net: %d | tot_oth: %d | tot_oth_net: %d | down_all: %d | down_all_net: %d | down_nem: %d | down_nem_net: %d | down_oth: %d | down_oth_net: %d | up_all: %d | up_all_net: %d | up_nem: %d | up_nem_net: %d | up_oth: %d | up_oth_net: %d | \
 [PAYLOAD] | tot_all: %d | tot_all_net: %d | tot_nem: %d | tot_nem_net: %d | tot_oth: %d | tot_oth_net: %d | down_all: %d | down_all_net: %d | down_nem: %d | down_nem_net: %d | down_oth: %d | down_oth_net: %d | up_all: %d | up_all_net: %d | up_nem: %d | up_nem_net: %d | up_oth: %d | up_oth_net: %d | \
 ''' % (\
-      self.packet_tot_all, self.packet_tot_all_net, self.packet_tot_nem, self.packet_tot_nem_net, self.packet_tot_oth, self.packet_tot_oth_net, \
+      self.packet_drop, self.packet_tot_all, self.packet_tot_all_net, self.packet_tot_nem, self.packet_tot_nem_net, self.packet_tot_oth, self.packet_tot_oth_net, \
       self.packet_down_all, self. packet_down_all_net, self.packet_down_nem, self.packet_down_nem_net, self.packet_down_oth, self.packet_down_oth_net, \
       self.packet_up_all, self.packet_up_all_net, self.packet_up_nem, self.packet_up_nem_net, self.packet_up_oth, self.packet_up_oth_net, \
       self.byte_tot_all, self.byte_tot_all_net, self.byte_tot_nem, self.byte_tot_nem_net, self.byte_tot_oth, self.byte_tot_oth_net, \
@@ -304,7 +309,8 @@ class Statistics:
       self.byte_up_all, self.byte_up_all_net, self.byte_up_nem, self.byte_up_nem_net, self.byte_up_oth, self.byte_up_oth_net, \
       self.payload_tot_all, self.payload_tot_all_net, self.payload_tot_nem, self.payload_tot_nem_net, self.payload_tot_oth, self.payload_tot_oth_net, \
       self.payload_down_all, self. payload_down_all_net, self.payload_down_nem, self.payload_down_nem_net, self.payload_down_oth, self.payload_down_oth_net, \
-      self.payload_up_all, self.payload_up_all_net, self.payload_up_nem, self.payload_up_nem_net, self.payload_up_oth, self.payload_up_oth_net)
+      self.payload_up_all, self.payload_up_all_net, self.payload_up_nem, self.payload_up_nem_net, self.payload_up_oth, self.payload_up_oth_net \
+      )
 
 if __name__ == '__main__':
   s = Statistics()
