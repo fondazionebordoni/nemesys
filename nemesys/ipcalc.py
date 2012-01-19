@@ -57,43 +57,43 @@ class IP(object):
             '1100000010101000'      : 'PRIVATE RFC1918', # 192.168/16
             },
         6: {
-            '00000000'              : 'RESERVED',       # ::/8
-            '00000001'              : 'UNASSIGNED',     # 100::/8
-            '0000001'               : 'NSAP',           # 200::/7
-            '0000010'               : 'IPX',            # 400::/7
-            '0000011'               : 'UNASSIGNED',     # 600::/7
-            '00001'                 : 'UNASSIGNED',     # 800::/5
-            '0001'                  : 'UNASSIGNED',     # 1000::/4
-            '0010000000000000'      : 'RESERVED',       # 2000::/16 Reserved
-            '0010000000000001'      : 'ASSIGNABLE',     # 2001::/16 Sub-TLA Assignments [RFC2450]
-            '00100000000000010000000': 'ASSIGNABLE IANA',  # 2001:0000::/29 - 2001:01F8::/29 IANA
+            '00000000'              : 'RESERVED', # ::/8
+            '00000001'              : 'UNASSIGNED', # 100::/8
+            '0000001'               : 'NSAP', # 200::/7
+            '0000010'               : 'IPX', # 400::/7
+            '0000011'               : 'UNASSIGNED', # 600::/7
+            '00001'                 : 'UNASSIGNED', # 800::/5
+            '0001'                  : 'UNASSIGNED', # 1000::/4
+            '0010000000000000'      : 'RESERVED', # 2000::/16 Reserved
+            '0010000000000001'      : 'ASSIGNABLE', # 2001::/16 Sub-TLA Assignments [RFC2450]
+            '00100000000000010000000': 'ASSIGNABLE IANA', # 2001:0000::/29 - 2001:01F8::/29 IANA
             '00100000000000010000001': 'ASSIGNABLE APNIC', # 2001:0200::/29 - 2001:03F8::/29 APNIC
-            '00100000000000010000010': 'ASSIGNABLE ARIN',  # 2001:0400::/29 - 2001:05F8::/29 ARIN
-            '00100000000000010000011': 'ASSIGNABLE RIPE',  # 2001:0600::/29 - 2001:07F8::/29 RIPE NCC
-            '0010000000000010'      : '6TO4',           # 2002::/16 "6to4" [RFC3056]
-            '0011111111111110'      : '6BONE TEST',     # 3ffe::/16 6bone Testing [RFC2471]
-            '0011111111111111'      : 'RESERVED',  # 3fff::/16 Reserved
+            '00100000000000010000010': 'ASSIGNABLE ARIN', # 2001:0400::/29 - 2001:05F8::/29 ARIN
+            '00100000000000010000011': 'ASSIGNABLE RIPE', # 2001:0600::/29 - 2001:07F8::/29 RIPE NCC
+            '0010000000000010'      : '6TO4', # 2002::/16 "6to4" [RFC3056]
+            '0011111111111110'      : '6BONE TEST', # 3ffe::/16 6bone Testing [RFC2471]
+            '0011111111111111'      : 'RESERVED', # 3fff::/16 Reserved
             '010'                   : 'GLOBAL-UNICAST', # 4000::/3
-            '011'                   : 'UNASSIGNED',     # 6000::/3
-            '100'                   : 'GEO-UNICAST',    # 8000::/3
-            '101'                   : 'UNASSIGNED',     # a000::/3
-            '110'                   : 'UNASSIGNED',     # c000::/3
-            '1110'                  : 'UNASSIGNED',     # e000::/4
-            '11110'                 : 'UNASSIGNED',     # f000::/5
-            '111110'                : 'UNASSIGNED',     # f800::/6
-            '1111110'               : 'UNASSIGNED',     # fc00::/7
-            '111111100'             : 'UNASSIGNED',     # fe00::/9
-            '1111111010'            : 'LINKLOCAL',      # fe80::/10
-            '1111111011'            : 'SITELOCAL',      # fec0::/10
-            '11111111'              : 'MULTICAST',      # ff00::/8
-            '0' * 96                : 'IPV4COMP',       # ::/96
-            '0' * 80 + '1' * 16     : 'IPV4MAP',        # ::ffff:0:0/96
-            '0' * 128               : 'UNSPECIFIED',    # ::/128
+            '011'                   : 'UNASSIGNED', # 6000::/3
+            '100'                   : 'GEO-UNICAST', # 8000::/3
+            '101'                   : 'UNASSIGNED', # a000::/3
+            '110'                   : 'UNASSIGNED', # c000::/3
+            '1110'                  : 'UNASSIGNED', # e000::/4
+            '11110'                 : 'UNASSIGNED', # f000::/5
+            '111110'                : 'UNASSIGNED', # f800::/6
+            '1111110'               : 'UNASSIGNED', # fc00::/7
+            '111111100'             : 'UNASSIGNED', # fe00::/9
+            '1111111010'            : 'LINKLOCAL', # fe80::/10
+            '1111111011'            : 'SITELOCAL', # fec0::/10
+            '11111111'              : 'MULTICAST', # ff00::/8
+            '0' * 96                : 'IPV4COMP', # ::/96
+            '0' * 80 + '1' * 16     : 'IPV4MAP', # ::ffff:0:0/96
+            '0' * 128               : 'UNSPECIFIED', # ::/128
             '0' * 127 + '1'         : 'LOOPBACK'        # ::1/128
             }
         }
 
-    def __init__(self, ip, mask=None, version=0):
+    def __init__(self, ip, mask = None, version = 0):
         self.mask = mask
         self.v = 0
         # Parse input
@@ -154,7 +154,7 @@ class IP(object):
 
     def version(self):
         return self.v
-   
+
     def info(self):
         '''
         Show IANA allocation information for the current IP address.
@@ -165,7 +165,7 @@ class IP(object):
             if self._range[self.v].has_key(b[:i]):
                 return self._range[self.v][b[:i]]
         return 'UNKNOWN'
- 
+
     def _dqtoi(self, dq):
         '''
         Convert dotquad or hextet to long.
@@ -198,8 +198,8 @@ class IP(object):
                 elif not (dq.startswith('::') or dq.endswith('::')) and len([x for x in hx if x == '']) > 1:
                     raise ValueError, "%r: IPv6 address invalid: compressed format malformed" % dq
                 ix = hx.index('')
-                px = len(hx[ix+1:])
-                for x in xrange(ix+px+1, 8):
+                px = len(hx[ix + 1:])
+                for x in xrange(ix + px + 1, 8):
                     hx.insert(ix, '0')
             elif dq.endswith('::'):
                 pass
@@ -219,7 +219,7 @@ class IP(object):
             # Assume full heximal notation
             self.v = 6
             return long(h, 16)
-        
+
         # IPv4
         if '.' in dq:
             q = dq.split('.')
@@ -229,19 +229,19 @@ class IP(object):
                 if 0 > int(x) > 255:
                     raise ValueError, "%r: IPv4 address invalid: bytes should be between 0 and 255" % dq
             self.v = 4
-            return long(q[0])<<24 | long(q[1])<<16 | long(q[2])<<8 | long(q[3])
-    
+            return long(q[0]) << 24 | long(q[1]) << 16 | long(q[2]) << 8 | long(q[3])
+
         raise ValueError, "Invalid address input"
-       
+
     def _itodq(self, n):
         '''
         Convert long to dotquad or hextet.
         '''
         if self.v == 4:
-            return '.'.join(map(str, [(n>>24) & 0xff, (n>>16) & 0xff, (n>>8) & 0xff, n & 0xff]))
+            return '.'.join(map(str, [(n >> 24) & 0xff, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff]))
         else:
             n = '%032x' % n
-            return ':'.join(n[4*x:4*x+4] for x in xrange(0, 8))
+            return ':'.join(n[4 * x:4 * x + 4] for x in xrange(0, 8))
 
     def __str__(self):
         return self.dq
@@ -270,22 +270,22 @@ class IP(object):
             return self
         else:
             if self.bin().startswith('0' * 96):
-                return IP(long(self), version=4)
+                return IP(long(self), version = 4)
             elif long(self) & 0x20020000000000000000000000000000L:
-                return IP((long(self)-0x20020000000000000000000000000000L)>>80, version=4)
+                return IP((long(self) - 0x20020000000000000000000000000000L) >> 80, version = 4)
             else:
                 return ValueError, "%r: IPv6 address is not IPv4 compatible, nor a 6-to-4 IP" % self.dq
 
-    def to_ipv6(self, type='6-to-4'):
+    def to_ipv6(self, type = '6-to-4'):
         '''
         Convert (a IPv4) IP address to an IPv6 address.
         '''
         assert type in ['6-to-4', 'compat'], 'Conversion type not supported'
         if self.v == 4:
             if type == '6-to-4':
-                return IP(0x20020000000000000000000000000000L | long(self)<<80, version=6)
+                return IP(0x20020000000000000000000000000000L | long(self) << 80, version = 6)
             elif type == 'compat':
-                return IP(long(self), version=6)
+                return IP(long(self), version = 6)
         else:
             return self
 
@@ -294,7 +294,7 @@ class IP(object):
         Used for comparisons.
         '''
         return (self.dq, self.mask)
-    
+
 class Network(IP):
     '''
     Network slice calculations.
@@ -305,16 +305,16 @@ class Network(IP):
         Network netmask derived from subnet size.
         '''
         if self.version() == 4:
-            return IP((0xffffffffL >> (32-self.mask)) << (32-self.mask), version=self.version())
+            return IP((0xffffffffL >> (32 - self.mask)) << (32 - self.mask), version = self.version())
         else:
-            return IP((0xffffffffffffffffffffffffffffffffL >> (128-self.mask)) << (128-self.mask), version=self.version())
+            return IP((0xffffffffffffffffffffffffffffffffL >> (128 - self.mask)) << (128 - self.mask), version = self.version())
 
     def network(self):
         '''
         Network address.
         '''
-        return IP(self.ip & long(self.netmask()), version=self.version())
-    
+        return IP(self.ip & long(self.netmask()), version = self.version())
+
     def broadcast(self):
         '''
         Broadcast address.
@@ -322,9 +322,9 @@ class Network(IP):
         # XXX: IPv6 doesn't have a broadcast address, but it's used for other 
         #      calculations such as <Network.host_last>.
         if self.version() == 4:
-            return IP(long(self.network()) | (0xffffffff - long(self.netmask())), version=self.version())
+            return IP(long(self.network()) | (0xffffffff - long(self.netmask())), version = self.version())
         else:
-            return IP(long(self.network()) | (0xffffffffffffffffffffffffffffffffL - long(self.netmask())), version=self.version())
+            return IP(long(self.network()) | (0xffffffffffffffffffffffffffffffffL - long(self.netmask())), version = self.version())
 
     def host_first(self):
         '''
@@ -332,7 +332,7 @@ class Network(IP):
         '''
         if (self.version() == 4 and self.mask == 32) or (self.version() == 6 and self.mask == 128):
             return self
-        return IP(long(self.network())+1, version=self.version())
+        return IP(long(self.network()) + 1, version = self.version())
 
     def host_last(self):
         '''
@@ -340,7 +340,7 @@ class Network(IP):
         '''
         if (self.version() == 4 and self.mask == 32) or (self.version() == 6 and self.mask == 128):
             return self
-        return IP(long(self.broadcast())-1, version=self.version())
+        return IP(long(self.broadcast()) - 1, version = self.version())
 
     def in_network(self, other):
         '''
@@ -384,7 +384,7 @@ class Network(IP):
         192.168.114.3
         '''
         #for ip in [IP(long(self)+x) for x in xrange(0, self.size())]:
-        for ip in [IP(long(self.network())+x) for x in xrange(0, self.size())]:
+        for ip in [IP(long(self.network()) + x) for x in xrange(0, self.size())]:
             yield ip
 
     def has_key(self, ip):
