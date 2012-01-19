@@ -405,10 +405,10 @@ class connection(RisorsaWin):
 class Profiler(LocalProfiler):
     
     def __init__(self):
-        available_resources = {'CPU', 'RAM', 'sistemaOperativo', 'rete', 'wireless', 'disco'}
+        available_resources = set(['CPU', 'RAM', 'sistemaOperativo', 'rete', 'wireless', 'disco'])
         LocalProfiler.__init__(self, available_resources)
 
-    def profile(self, resource={}):
+    def profile(self, resource=set()):
         pythoncom.CoInitialize()
         data = super(Profiler, self).profile(__name__, resource)
         pythoncom.CoUninitialize()
