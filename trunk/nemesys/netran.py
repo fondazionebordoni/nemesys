@@ -194,8 +194,8 @@ class ContabyteN(Thread):
 
 if __name__ == '__main__':
 
-  mydev = '192.168.62.10'
-  mynem = '192.168.140.22'
+  mydev = '192.168.112.53'
+  mynem = '194.244.5.206'
 
   print "\nDevices:"
 
@@ -243,7 +243,7 @@ if __name__ == '__main__':
 
   print "\nInitialize Sniffer And Contabyte...."
 
-  mysniffer = Sniffer(mydev, 22 * 1024000, 150, 1, 1, 0, 'dump.pcap')
+  mysniffer = Sniffer(mydev, 22 * 1024000, 150, 1, 1, 1, 'dump.pcap')
   mycontabyte = ContabyteN(mydev, mynem)
 
   print "Start Sniffer And Contabyte...."

@@ -43,7 +43,7 @@ if __name__ == '__main__':
   print ("\nFILE: %s" % filename)
 
   pkt_start = int(sys.argv[2])
-  pkt_stop = int(sys.argv[3])
+  pkt_stop = pkt_start+int(sys.argv[3])-1
   print ("PACKET: %i ---> %i\n" % (pkt_start,pkt_stop))
 
   analyzer = Contabyte(ip, nap)
