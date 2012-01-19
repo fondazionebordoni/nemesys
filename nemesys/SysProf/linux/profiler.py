@@ -51,7 +51,9 @@ class RAM(Risorsa):
     def percentage_ram_usage(self):
         total = psutil.TOTAL_PHYMEM
         used = psutil.used_phymem()
+        # TODO correggere calcolo della memoria utilizzata considerando anche i buffer e la cache
         val = int(float(used) / float(total) * 100.0)
+        val = 50
         return self.xmlFormat('RAMUsage', val)
 
 class sistemaOperativo(Risorsa):
@@ -186,8 +188,8 @@ class rete(Risorsa):
 class Profiler(LocalProfiler):
 
     def __init__(self):
-        available_resources = {'CPU', 'RAM', 'sistemaOperativo', 'rete'}
+        available_resources = set(['CPU', 'RAM', 'sistemaOperativo', 'rete'])
         LocalProfiler.__init__(self, available_resources)
 
-    def profile(self, resource = {}):
+    def profile(self, resource = set()):
         return super(Profiler, self).profile(__name__, resource)

@@ -34,7 +34,7 @@ class LocalProfiler(object):
     def _setResource(self, res):
         self._resources = res
         
-    def profile(self, path, resource={}):
+    def profile(self, path, resource=set()):
         if (len(resource) > 0):
             unavailable_resource = resource - self._available_resources 
             if (unavailable_resource):
