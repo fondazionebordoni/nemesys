@@ -846,5 +846,6 @@ class Contabyte(Analyzer):
           self._statistics.payload_up_oth_net += PayloadLen
           self._statistics.payload_tot_oth_net += PayloadLen
 
-#    if is_retransmission:
-#      logger.debug("\nPACCHETTO RITRASMESSO: %i" % self._statistics.packet_tot_all)
+    # if is_retransmission:
+    # logger.debug("\nPACCHETTO RITRASMESSO: %i" % self._statistics.packet_tot_all)
+    # logger.debug("%i) %i + %i + %i" % (self._statistics.packet_tot_all,pcapHdr['pktLen'],ETH_CRC_LEN,pktPad))

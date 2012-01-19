@@ -46,7 +46,7 @@ int ip_in_net (const char *ip, const char *net, const char *mask)
     ui_net = dot_to_int(net);
     ui_mask = dot_to_int(mask);
 
-    if ((ui_ip & ui_mask) == (ui_net & ui_mask))
+    if (((ui_ip & ui_mask) == (ui_net & ui_mask))&&(ui_mask!=0))
     {return 1;}
     else
     {return 0;}
@@ -170,7 +170,7 @@ void find_devices(void)
 
 void initialize(char *dev, int promisc, int timeout, int snaplen, int buffer)
 {
-    int i=0;
+    int i=0,IpInNet=0;
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
@@ -180,13 +180,17 @@ void initialize(char *dev, int promisc, int timeout, int snaplen, int buffer)
 
     for(i=1; i<=ind_dev; i++)
     {
-        if ((strcmp(dev,device[i].name)==0)||(strcmp(dev,device[i].ip)==0))
+        IpInNet = ip_in_net(dev,device[i].net,device[i].mask);
+
+        //printf("\nDEV_NEM: %s\nDEV: %s\nIP: %s\nNET: %s\nMASK: %s\nIpInNet: %i\n",dev,device[i].name,device[i].ip,device[i].net,device[i].mask,IpInNet);
+
+        if ((strcmp(dev,device[i].name)==0)||(strcmp(dev,device[i].ip)==0)||(IpInNet==1))
         {
             num_dev=i;
         }
     }
 
-	//printf("Device Scelto: %i",num_dev);
+	//printf("\nDevice Scelto: %i\n",num_dev);
 
     if (num_dev==0)
     {sprintf(err_str,"Device Not Found or Not Initialized");err_flag=-1;return;}
