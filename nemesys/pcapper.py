@@ -22,7 +22,6 @@ from statistics import Statistics
 from threading import Thread, Event
 import logging
 import sniffer
-import socket
 import sys
 import time
 
@@ -44,7 +43,7 @@ logger = logging.getLogger()
 
 class Pcapper(Thread):
 
-  def __init__(self, dev, buff = 22 * 1024000, snaplen = 8192, timeout = 1, promisc = 1, online = 1, pcap_file = '', pkt_start = 0, pkt_stop = 0):
+  def __init__(self, dev, buff = 22 * 1024000, snaplen = 8192, timeout = 1, promisc = 1, online = 1, pcap_file = None, pkt_start = 0, pkt_stop = 0):
     Thread.__init__(self)
     self._dev = dev
 
@@ -72,6 +71,7 @@ class Pcapper(Thread):
     self._status = _switch_status[LOOP]
 
   def stop_sniff(self):
+    logger.debug('Stop sniffing.')
     self._status = _switch_status[SNIFF]
 
   def get_stats(self):
@@ -79,6 +79,9 @@ class Pcapper(Thread):
       self._stop_eating.wait()
       self._stop_eating.clear()
       stats = self._analyzer.statistics
+      packet_drop = sniffer.getstat()['pkt_pcap_drop']
+      stats.packet_drop = packet_drop
+      logger.info('Pacchetti persi: %s' % packet_drop)
       self._analyzer.reset()
       return stats
     else:
@@ -166,7 +169,7 @@ if __name__ == '__main__':
   nap = '192.168.140.22'
 
   size = 16 * 1024 * 1024
-  p = Pcapper(ip, size, 150, 1, 1, 0, 'dump.pcap', 0, 0)
+  p = Pcapper(ip, size, 150, 1, 1)
   p.start()
 
   print("Start!")
