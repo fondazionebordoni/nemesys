@@ -45,7 +45,7 @@ class sendit(Thread):
       self.status = 0
       pass
 
-def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, threshold=4, arping=0, mac=None):
+def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, threshold = 4, arping = 0, mac = None):
   realSubnet = True
   if(provider == "fst001" and not bool(re.search('^192\.168\.', ipAddress))):
     realSubnet = False
@@ -60,6 +60,7 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, th
 
   # Controllo che non siano indirizzi pubblici, in quel caso ritorno 1, effettuo la misura
   elif not bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ipAddress)):
+    logger.info("IP della scheda di rete di misura pubblico. Non controllo il numero degli host. Host in rete: 1")
     return 1
 
   logger.info("Indirizzo: %s/%d; Realsubnet: %s; Threshold: %d" % (ipAddress, netMask, realSubnet, threshold))
@@ -67,7 +68,7 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, th
   n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold, arping, mac)
   return n_host
 
-def _countNetHosts(ipAddress, netMask, realSubnet=True, threshold=4, arping=0, mac=None):
+def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping = 0, mac = None):
   '''
   Ritorna il numero di host che rispondono al ping nella sottorete ipAddress/net_mask.
   Di default effettua i ping dei soli host appartenenti alla sottorete indicata (escludendo il 
