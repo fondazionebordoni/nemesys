@@ -111,7 +111,7 @@ class _Channel(dispatcher):
     data = self.recv(2048)
     logger.debug('Received: %s' % data)
 
-    # TODO Corregere dialogo su socket
+    # TODO Correggere dialogo su socket
     try:
         start = max(data.rfind('<?xml'), 0)
         current_status = xml2status(data[start:])
@@ -290,8 +290,10 @@ class MyFrame (wx.Frame):
       logger.debug('Ora attuale: %d' % hour)
 
       if (bool(re.search(status.PLAY.color, currentstatus.color)) or bool(re.search('Misura in esecuzione', currentstatus.message))):
+        self.PaintInit(None)
         self.PaintHour(hour, "yellow")
       if (bool(re.search('Misura sospesa', currentstatus.message))):
+        self.PaintInit(None)
         self.PaintHour(hour, "red")
       elif (bool(re.search('Misura terminata|Misura interrotta', currentstatus.message))):
         self.PaintInit(None)
