@@ -36,7 +36,6 @@ class CPU(Risorsa):
     def cpuLoad(self):
         # WARN interval parameter available from v.0.2
         val = psutil.cpu_percent()
-        print "ok"
         return self.xmlFormat('cpuLoad', val)
 
 class RAM(Risorsa):
@@ -151,39 +150,6 @@ class rete(Risorsa):
 
         return maindevxml
 
-
-#    def profileDevice_backup(self):
-#        features = {'Name':'', 'AdapterType':'', 'MACAddress':'', 'Availability':''}
-#        descriptors = {'description':'AdapterType', 'product':'Name', 'serial':'MACAddress'} 
-#        devName = 'unknown'
-#        devType = 'unknown'
-#        devMac = 'unknown'
-#        devIsActive = 'False'
-#        devStatus = 'unknown'
-#        command_line = "lshw -class network"
-#        f = os.popen(command_line)
-#        for line in f:
-#            val = line.split(':', 1)            
-#            if (len(val) > 1):
-#                for keys in descriptors:
-#                    if val[0].lstrip() == keys:
-#                        features[descriptors[keys]] = val[1]
-#        devIsActive = 'True'
-#        devStatus = 'Enabled'
-#        if (features['Name']):
-#                devName = features['Name']
-#        if (features['AdapterType']):
-#            devType = features['AdapterType']
-#        if (features['MACAddress']):
-#            devMac = features['MACAddress']
-#        devxml = ET.Element('NetworkDevice')
-#        devxml.append(self.xmlFormat('Name', devName))
-#        devxml.append(self.xmlFormat('Type', devType))
-#        devxml.append(self.xmlFormat('MACAddress', devMac))
-#        devxml.append(self.xmlFormat('isActive', devIsActive))
-#        devxml.append(self.xmlFormat('Status', devStatus))
-#        return devxml
-#         
 
 class Profiler(LocalProfiler):
 
