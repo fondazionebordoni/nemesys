@@ -46,7 +46,7 @@ int ip_in_net (const char *ip, const char *net, const char *mask)
     ui_net = dot_to_int(net);
     ui_mask = dot_to_int(mask);
 
-    if (((ui_ip & ui_mask) == (ui_net & ui_mask))&&(ui_mask!=0))
+    if ((((ui_ip & ui_mask) == (ui_net & ui_mask))||(ui_mask==4294967295)) && (ui_mask!=0))
     {return 1;}
     else
     {return 0;}
