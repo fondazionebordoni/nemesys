@@ -83,9 +83,10 @@ class Tester:
       #ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
       ftp = FTP(self._host.ip, self._username, self._password)
     except ftplib.all_errors as e:
-      logger.error('Impossibile aprire la connessione FTP: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof(test_type, start, elapsed, size, Statistics(), errorcode)	# inserire codifica codici errore
+      error = '[%s] Impossibile aprire la connessione FTP: %s' % (errorcode, e)
+      logger.error(error)
+      raise Exception(error)
 
     # TODO Se la connessione FTP viene invocata con timeout, il socket è non-blocking e il sistema può terminare i buffer di rete: http://bugs.python.org/issue8493
     function = '''ftp.storbinary('STOR %s' % filepath, file, callback=totalsize)'''
@@ -93,7 +94,6 @@ class Tester:
     timer = timeit.Timer(function, setup)
 
     try:
-
       logger.debug('Test initializing...')
       pcapper = Pcapper(self._if_ip, BUFF, SNAPLEN, TIMEOUT, PROMISC)
       pcapper.start()
@@ -116,14 +116,16 @@ class Tester:
     except ftplib.all_errors as e:
       pcapper.stop()
       pcapper.join()
-      logger.error('Impossibile effettuare il test %s: %s' % (test_type, e))
       errorcode = errors.geterrorcode(e)
-      return Proof(test_type, start, 0, 0, Statistics(), errorcode)
+      error = '[%s] Impossibile effettuare il test %s: %s' % (errorcode, test_type, e)
+      logger.error(error)
+      raise Exception(error)
 
     except Exception as e:
-      logger.error('Errore durante la misura: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof(test_type, start, 0, 0, Statistics(), errorcode)
+      error = '[%s] Errore durante la misura %s: %s' % (errorcode, test_type, e)
+      logger.error(error)
+      raise Exception(error)
 
     ftp.quit()
 
@@ -144,16 +146,16 @@ class Tester:
       #ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
       ftp = FTP(self._host.ip, self._username, self._password)
     except ftplib.all_errors as e:
-      logger.error('Impossibile aprire la connessione FTP: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof(test_type, start, elapsed, size, Statistics(), errorcode)	# inserire codifica codici errore
+      error = '[%s] Impossibile aprire la connessione FTP: %s' % (errorcode, e)
+      logger.error(error)
+      raise Exception(error)
 
     function = '''ftp.retrbinary('RETR %s' % file, totalsize)'''
     setup = 'from %s import ftp, file, totalsize' % __name__
     timer = timeit.Timer(function, setup)
 
     try:
-
       logger.debug('Test initializing...')
       pcapper = Pcapper(self._if_ip, BUFF, SNAPLEN, TIMEOUT, PROMISC)
       pcapper.start()
@@ -176,14 +178,16 @@ class Tester:
     except ftplib.all_errors as e:
       pcapper.stop()
       pcapper.join()
-      logger.error('Impossibile effettuare il test %s: %s' % (test_type, e))
       errorcode = errors.geterrorcode(e)
-      return Proof(test_type, start, 0, 0, Statistics(), errorcode)
+      error = '[%s] Impossibile effettuare il test %s: %s' % (errorcode, test_type, e)
+      logger.error(error)
+      raise Exception(error)
 
     except Exception as e:
-      logger.error('Errore durante la misura: %s' % e)
       errorcode = errors.geterrorcode(e)
-      return Proof(test_type, start, 0, 0, Statistics(), errorcode)
+      error = '[%s] Errore durante la misura %s: %s' % (errorcode, test_type, e)
+      logger.error(error)
+      raise Exception(error)
 
     ftp.quit()
 
@@ -201,8 +205,9 @@ class Tester:
 
     except Exception as e:
       errorcode = errors.geterrorcode(e)
-      logger.debug('Errore durante il ping: %s' % e)
-      return Proof(test_type, start = start, value = 0, bytes = 0, errorcode = errorcode)
+      error = '[%s] Errore durante la misura %s: %s' % (errorcode, test_type, e)
+      logger.error(error)
+      raise Exception(error)
 
     if (elapsed == None):
       elapsed = 0
