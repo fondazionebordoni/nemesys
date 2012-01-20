@@ -13,7 +13,7 @@ class Target:
     def __init__(self, **kw):
         self.__dict__.update(kw)
         # for the versioninfo resources
-        self.version = "2.1"
+        self.version = "2.1.1"
         self.company_name = "Fondazione Ugo Bordoni"
         self.copyright = "(c)2011 Fondazione Ugo Bordoni"
         self.name = "Nemesys"
