@@ -382,6 +382,7 @@ class Executer:
     Funzione per l'analisi del contabit ed eventuale gating dei risultati del test
     '''
     stats = test.counter_stats
+    logger.debug('Valori di test: %s' % stats)
 
     logger.debug('Analisi della percentuale dei pacchetti persi')
     packet_drop = stats.packet_drop
@@ -390,9 +391,9 @@ class Executer:
       packet_ratio = float(packet_drop) / float(packet_tot)
       logger.debug('Percentuale di pacchetti persi: %.2f%%' % (packet_ratio * 100))
       if (packet_tot > 0 and packet_ratio > TH_PACKETDROP):
-        raise Exception('Eccessiva presenza di traffico di rete, non è possibile analizzare i dati di test')
+        raise Exception('Eccessiva presenza di traffico di rete, impossibile analizzare i dati di test')
     else:
-      raise Exception('Errore durante la misura: non è possibile analizzare i dati di test')
+      raise Exception('Errore durante la misura, impossibile analizzare i dati di test')
 
     if (testtype == DOWN):
       byte_nem = stats.payload_down_nem_net
@@ -411,7 +412,6 @@ class Executer:
       packet_ratio_inv = float(packet_all_inv - packet_nem_inv) / float(packet_all_inv)
       logger.info('kbyte_nem: %.1f; kbyte_all %.1f; packet_nem_inv: %d; packet_all_inv: %d' % (byte_nem / 1024.0, byte_all / 1024.0, packet_nem_inv, packet_all_inv))
       logger.debug('Percentuale di traffico spurio: %.2f%%/%.2f%%' % (traffic_ratio * 100, packet_ratio_inv * 100))
-      logger.debug('Valori di test: %s' % stats)
       if traffic_ratio < 0:
         raise Exception('Errore durante la verifica del traffico di misura: impossibile salvare i dati.')
       if traffic_ratio < TH_TRAFFIC and packet_ratio_inv < TH_TRAFFIC_INV:
@@ -420,7 +420,7 @@ class Executer:
       else:
         raise Exception('Eccessiva presenza di traffico internet non legato alla misura: percentuali %d%%/%d%%.' % (round(traffic_ratio * 100), round(packet_ratio_inv * 100)))
     else:
-      raise Exception('Errore durante la misura: non è possibile analizzare i dati di test')
+      raise Exception('Errore durante la misura, impossibile analizzare i dati di test')
 
   def _profile_system(self, checktype = sysmonitor.CHECK_ALL):
     '''
