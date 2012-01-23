@@ -383,12 +383,16 @@ class Executer:
     '''
     stats = test.counter_stats
 
+    logger.debug('Analisi della percentuale dei pacchetti persi')
     packet_drop = stats.packet_drop
     packet_tot = stats.packet_tot_all
-    packet_ratio = float(packet_drop) / float(packet_tot)
-    logger.debug('Percentuale di pacchetti persi: %.2f%%' % (packet_ratio * 100))
-    if (packet_tot > 0 and packet_ratio > TH_PACKETDROP):
-      raise Exception('Eccessiva presenza di traffico di rete, non è possibile analizzare i dati di test')
+    if (packet_tot > 0):
+      packet_ratio = float(packet_drop) / float(packet_tot)
+      logger.debug('Percentuale di pacchetti persi: %.2f%%' % (packet_ratio * 100))
+      if (packet_tot > 0 and packet_ratio > TH_PACKETDROP):
+        raise Exception('Eccessiva presenza di traffico di rete, non è possibile analizzare i dati di test')
+    else:
+      raise Exception('Errore durante la misura: non è possibile analizzare i dati di test')
 
     if (testtype == DOWN):
       byte_nem = stats.payload_down_nem_net
@@ -401,7 +405,8 @@ class Executer:
       packet_nem_inv = stats.packet_down_nem_net
       packet_all_inv = packet_nem_inv + stats.packet_down_oth_net
 
-    if byte_all > 0:
+    logger.debug('Analisi dei rapporti di traffico')
+    if byte_all > 0 and packet_all_inv > 0:
       traffic_ratio = float(byte_all - byte_nem) / float(byte_all)
       packet_ratio_inv = float(packet_all_inv - packet_nem_inv) / float(packet_all_inv)
       logger.info('kbyte_nem: %.1f; kbyte_all %.1f; packet_nem_inv: %d; packet_all_inv: %d' % (byte_nem / 1024.0, byte_all / 1024.0, packet_nem_inv, packet_all_inv))
@@ -414,6 +419,8 @@ class Executer:
         test.bytes = byte_all
       else:
         raise Exception('Eccessiva presenza di traffico internet non legato alla misura: percentuali %d%%/%d%%.' % (round(traffic_ratio * 100), round(packet_ratio_inv * 100)))
+    else:
+      raise Exception('Errore durante la misura: non è possibile analizzare i dati di test')
 
   def _profile_system(self, checktype = sysmonitor.CHECK_ALL):
     '''
