@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Nemesys"
-#define MyAppVersion "2.1"
+#define MyAppVersion "2.1.1"
 #define MyAppPublisher "Fondazione Ugo Bordoni"
 #define MyAppURL "http://www.misurainternet.it/"
 #define MyAppExeName "Nemesys.exe"
@@ -75,11 +75,14 @@ Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Nemesys GUI; Filena
 
 [Run]
 Filename: {sys}\netsh.exe; Parameters: " int ip set global taskoffload=disabled"; Description: "Disable TCP Task Offload"; Flags: RunHidden RunAsCurrentUser; 
+Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\Nemesys.exe"" ""Nemesys"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable Nemesys traffic"; Flags: RunHidden RunAsCurrentUser; 
+;Filename: {sys}\netsh.exe; Parameters: " advfirewall firewall add rule name=""Nemesys"" dir=out action=allow program=""{app}\dist\Nemesys.exe"" enable=yes"; Description: "Enable Nemesys traffic"; Flags: RunHidden RunAsCurrentUser; MinVersion: ,6.1.7600; 
 Filename: {app}\dist\Nemesys.exe; Parameters: "--startup auto install"; Description: "Installazione del servizio Nemesys."; StatusMsg: "Installazione del servizio Nemesys"; Flags: RunHidden RunAsCurrentUser; 
 Filename: {app}\dist\Nemesys.exe; Parameters: start; Description: "Avvia il servizio Nemesys"; Flags: PostInstall RunHidden RunAsCurrentUser; StatusMsg: "Avvia il servizio Nemesys"; 
  
 [UninstallRun]
 Filename: taskkill; Parameters: /f /im gui.exe; WorkingDir: {sys}; Flags: runminimized RunAsCurrentUser
+Filename: {sys}\netsh.exe; Parameters: " firewall delete allowedprogram program=""{app}\dist\Nemesys.exe"""; Flags: RunHidden RunAsCurrentUser; 
 Filename: {app}\dist\Nemesys.exe; Parameters: " --wait 25 stop"; Flags: runminimized RunAsCurrentUser
 Filename: {app}\dist\Nemesys.exe; Parameters: " remove"; Flags: runminimized RunAsCurrentUser
 
