@@ -49,38 +49,38 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset)
 	const u_char *ch;
 
 	/* offset */
-	printf("%05d   ", offset);
+	fprintf(debug_log,"%05d   ", offset);
 
 	/* hex */
 	ch = payload;
 	for(i = 0; i < len; i++)
 	{
-		printf("%02x ", *ch);
+		fprintf(debug_log,"%02x ", *ch);
 		ch++;
 		/* print extra space after 8th byte for visual aid */
-		if (i == 7) {printf(" ");}
+		if (i == 7) {fprintf(debug_log," ");}
 	}
 	/* print space to handle line less than 8 bytes */
-	if (len < 8) {printf(" ");}
+	if (len < 8) {fprintf(debug_log," ");}
 
 	/* fill hex gap with spaces if not full line */
 	if (len < 16)
 	{
 		gap = 16 - len;
-		for (i = 0; i < gap; i++) {printf("   ");}
+		for (i = 0; i < gap; i++) {fprintf(debug_log,"   ");}
 	}
-	printf("   ");
+	fprintf(debug_log,"   ");
 
 	/* ascii (if printable) */
 	ch = payload;
 	for(i = 0; i < len; i++)
 	{
-		if (isprint(*ch)) {printf("%c", *ch);}
-		else {printf(".");}
+		if (isprint(*ch)) {fprintf(debug_log,"%c", *ch);}
+		else {fprintf(debug_log,".");}
 		ch++;
 	}
 
-	printf("\n");
+	fprintf(debug_log,"\n");
 
     return;
 }
@@ -95,7 +95,7 @@ void print_payload(const u_char *payload, int len)
 	int offset = 0;					/* zero-based offset counter */
 	const u_char *ch = payload;
 
-	printf("\n");
+	fprintf(debug_log,"\n");
 
 	if (len <= 0) {return;}
 
@@ -297,7 +297,8 @@ int sniffer(int sniff_mode)
                   // DEBUG-BEGIN
                   if(DEBUG_MODE)
                   {
-                      fprintf(debug_log,"\n%li) CapLen: %i\tLen: %i",mystat.pkt_pcap_proc,(pcap_hdr->caplen),(pcap_hdr->len));
+                      fprintf(debug_log,"\n[Packet N.%li\t\tCapLen: %i\t\tLen: %i\t\tTime: %li.%li]",mystat.pkt_pcap_proc,(pcap_hdr->caplen),(pcap_hdr->len),(pcap_hdr->ts.tv_sec),(pcap_hdr->ts.tv_usec));
+                      print_payload(pcap_data,pcap_hdr->caplen);
                   }
                   // DEBUG-END
 
@@ -490,7 +491,12 @@ void select_device(char *dev)
     {
         IpInNet = ip_in_net(dev,device[num_dev].net,device[num_dev].mask);
 
-        //printf("\nDEV_NEM: %s\nDEV: %s\nIP: %s\nNET: %s\nMASK: %s\nIpInNet: %i\n",dev,device[num_dev].name,device[num_dev].ip,device[num_dev].net,device[num_dev].mask,IpInNet);
+        // DEBUG-BEGIN
+        if(DEBUG_MODE)
+        {
+            fprintf(debug_log,"\nREQUEST: %s\nNAME: %s\nIP: %s\nNET: %s\nMASK: %s\nIpInNet: %i\n",dev,device[num_dev].name,device[num_dev].ip,device[num_dev].net,device[num_dev].mask,IpInNet);
+        }
+        // DEBUG-END//
 
         if ((strcmp(dev,device[num_dev].name)==0)||(strcmp(dev,device[num_dev].ip)==0)||(IpInNet==1))
         {
@@ -566,13 +572,14 @@ void initialize(char *dev, int promisc, int timeout, int snaplen, int buffer)
         {sprintf(err_str,"Activate error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
         data_link=pcap_datalink(handle);
-        //printf("\nData Link Type: %i - %s - %s\n",data_link,pcap_datalink_val_to_name(data_link),pcap_datalink_val_to_description(data_link));
 
         //DEBUG-BEGIN
         if(DEBUG_MODE)
         {
             if(num_dev>0)
             {
+                fprintf(debug_log,"\nInitialize Device: %s\n",dev);
+                fprintf(debug_log,"\nPromisc: %i\tTimeout: %i\tSnaplen: %i\tBuffer: %i\n",promisc,timeout,snaplen,buffer);
                 fprintf(debug_log,"\nData Link Type: %i - %s - %s\n",data_link,pcap_datalink_val_to_name(data_link),pcap_datalink_val_to_description(data_link));
             }
         }
@@ -658,14 +665,6 @@ static PyObject *pktman_initialize(PyObject *self, PyObject *args)
     if (err_flag == 0)
     {initialize(dev, promisc, timeout, snaplen, buffer);}
 
-    // DEBUG-BEGIN
-    if(DEBUG_MODE)
-    {
-        fprintf(debug_log,"\nInitialize Device: %s\n",dev);
-        fprintf(debug_log,"\nPromisc: %i\tTimeout: %i\tSnaplen: %i\tBuffer: %i\n",promisc,timeout,snaplen,buffer);
-    }
-    // DEBUG-END
-
     return Py_BuildValue("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);
 }
 
@@ -681,13 +680,6 @@ static PyObject *pktman_setfilter(PyObject *self, PyObject *args)
     {setfilter(filter);}
     else
     {sprintf(err_str,"Couldn't Set Filter: No Hadle Active on Networks Interfaces");err_flag=-1;}
-
-    //DEBUG-BEGIN
-    if(DEBUG_MODE)
-    {
-        fprintf(debug_log,"\nFILTRO: %s \n",filter);
-    }
-    //DEBUG-END
 
     return Py_BuildValue("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);
 }
