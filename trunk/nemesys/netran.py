@@ -23,7 +23,7 @@ from threading import Thread, Condition, Event
 from contabyte import Contabyte
 
 import random
-import sniffer
+import pktman
 import sys
 import time
 
@@ -44,7 +44,7 @@ class Device:
   def __init__(self): None
 
   def getdev(self, req = None):
-    device = sniffer.getdev(req)
+    device = pktman.getdev(req)
     return device
 
 
@@ -55,8 +55,8 @@ class Sniffer(Thread):
     logger.debug('Inizializzazione dello sniffer')
     self._run_sniffer = 1
     self._stop_pkt = 0
-    sniffer.debugmode(0)
-    self._init = sniffer.initialize(dev, buff, snaplen, timeout, promisc, online, pcap_file)
+    pktman.debugmode(0)
+    self._init = pktman.initialize(dev, buff, snaplen, timeout, promisc, online, pcap_file)
     if (self._init['err_flag'] != 0):
       self._run_sniffer = 0
       logger.error('Errore inizializzazione dello Sniffer')
@@ -72,15 +72,15 @@ class Sniffer(Thread):
       self.switch()
       if (switch_flag.isSet()):
         sniff_mode = 1
-        stat = sniffer.getstat()
+        stat = pktman.getstat()
         loop = stat['pkt_pcap_tot'] - stat['pkt_pcap_proc']
         if (loop <= 0):
           loop = 1
         if (len(buffer_shared) < 20000):
           while (loop > 0):
             try:
-              sniffer_data = sniffer.start(sniff_mode)
-              sniffer.clear()
+              sniffer_data = pktman.pull(sniff_mode)
+              pktman.clear()
               if (sniffer_data['err_flag']==-2):
                 break
               elif (sniffer_data['err_flag'] < 0):
@@ -101,7 +101,7 @@ class Sniffer(Thread):
           condition.release()
       else:
         sniff_mode = 0
-        sniffer.start(sniff_mode)
+        pktman.pull(sniff_mode)
 
   def switch(self):
     global analyzer_memory
@@ -112,9 +112,9 @@ class Sniffer(Thread):
         analyzer_memory.set()
         switch_flag.set()
       else:
-        stat = sniffer.getstat()
+        stat = pktman.getstat()
         if (self._stop_pkt == 0):
-          stat = sniffer.getstat()
+          stat = pktman.getstat()
           self._stop_pkt = stat['pkt_pcap_tot']
         if (stat['pkt_pcap_proc'] >= self._stop_pkt):
           analyzer_memory.clear()
@@ -129,12 +129,12 @@ class Sniffer(Thread):
     #while (self.isAlive()):
     #  None
     logger.debug('Richiesta di stop dello sniffer')
-    sniffer_stop = sniffer.stop()
+    sniffer_stop = pktman.close()
     return sniffer_stop
 
   def getstat(self):
     logger.debug('Recupero delle statistiche dallo sniffer')
-    sniffer_stat = sniffer.getstat()
+    sniffer_stat = pktman.getstat()
     return sniffer_stat
 
 class ContabyteN(Thread):

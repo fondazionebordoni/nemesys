@@ -21,7 +21,7 @@ from random import randint
 from statistics import Statistics
 from threading import Thread, Event
 import logging
-import sniffer
+import pktman
 import socket
 import sys
 import time
@@ -51,9 +51,9 @@ if __name__ == '__main__':
   status = 0
   pcap_buff = 16 * 1024 * 1024
 
-  sniffer.debugmode(0)
+  pktman.debugmode(0)
 
-  status = sniffer.initialize(ip, pcap_buff, 150, 1, 1, online, filename, pkt_start, pkt_stop)
+  status = pktman.initialize(ip, pcap_buff, 150, 1, 1, online, filename, pkt_start, pkt_stop)
 
   if (status['err_flag'] != 0):
     logger.error('Errore inizializzazione dello Sniffer: %s' % str(r['err_str']))
@@ -61,8 +61,8 @@ if __name__ == '__main__':
   status = 1
 
   while(status > 0):
-    mypkt = sniffer.start(1)
-    sniffer.clear()
+    mypkt = pktman.pull(1)
+    pktman.clear()
     if (mypkt != None):
       status = mypkt['err_flag']
       if (status == 1):
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     print ("\n%i\n%i\n%i\n%i\n%i\n%i\n%i\n%i\n%i\n" % (stats.packet_up_all_net,stats.payload_up_all_net,stats.byte_up_all_net,stats.packet_up_nem_net,stats.payload_up_nem_net,stats.byte_up_nem_net,stats.packet_up_oth_net,stats.payload_up_oth_net,stats.byte_up_oth_net))
       
     print stats
-#    print sniffer.getstat()
+#    print pktman.getstat()
 #    
 #    print ("\nDOWNLOAD\tPacket\t\tPayload\t\tWireByte")
 #    print ("Nemesys\t\t%i\t\t%i\t\t%i" % (stats.packet_down_nem_net,stats.payload_down_nem_net,stats.byte_down_nem_net))
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 #    print ("Other\t\t%i\t\t%i\t\t%i" % (stats.packet_up_oth_net,stats.payload_up_oth_net,stats.byte_up_oth_net))
 #    print ("All\t\t%i\t\t%i\t\t%i" % (stats.packet_up_all_net,stats.payload_up_all_net,stats.byte_up_all_net))
   
-  sniffer.stop()
+  pktman.close()
 
 
 

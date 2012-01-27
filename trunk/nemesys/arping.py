@@ -18,7 +18,7 @@
 
 from exceptions import Exception
 from logger import logging
-import arpinger
+import pktman
 import ipcalc
 import socket
 import string
@@ -49,7 +49,7 @@ def send_arping(IPsrc, IPdst, MACsrc, MACdst):
 
   netPkt = ethPkt + (60 - len(ethPkt)) * '\x00'
 
-  sended = arpinger.send(netPkt)
+  sended = pktman.push(netPkt)
   if (sended['err_flag'] != 0):
     logger.debug("%s" % sended['err_str'])
 
@@ -62,8 +62,8 @@ def receive_arping(MACsrc):
 
   while True:
 
-    received = arpinger.receive()
-    arpinger.clear()
+    received = pktman.pull(1)
+    pktman.clear()
 
     if (received['err_flag'] < 1):
       logger.debug("(%s) Numero di Host trovati: %d" % (received['err_str'], len(IPtable)))
@@ -113,8 +113,17 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, thresh
 
   pcap_filter = "rarp or arp dst host " + IPsrc
 
-  rec_init = arpinger.initialize(IPsrc, pcap_filter, timeout * 1000)
-  logger.debug("Inizializzato arpinger (%s, %s)" % (IPsrc, pcap_filter))
+  dev = pktman.getdev(IPsrc)
+  if (dev['err_flag'] != 0):
+    raise Exception (dev['err_str'])
+  else:
+    dev_name=dev['dev_name']
+
+  rec_init = pktman.initialize(dev_name, 1024000, 150, timeout*1000)
+  if (rec_init['err_flag'] != 0):
+    raise Exception (rec_init['err_str'])
+  rec_init = pktman.setfilter(pcap_filter)
+  logger.debug("Inizializzato sniffer (%s, %s)" % (dev_name, pcap_filter))
   if (rec_init['err_flag'] != 0):
     raise Exception (rec_init['err_str'])
   else:
@@ -146,7 +155,7 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, thresh
         break
 
     logger.debug("Totale host: %d" % nHosts)
-    arpinger.close()
+    pktman.close()
 
   return nHosts
 

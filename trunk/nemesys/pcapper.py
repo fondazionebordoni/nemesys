@@ -21,7 +21,7 @@ from random import randint
 from statistics import Statistics
 from threading import Thread, Event
 import logging
-import sniffer
+import pktman
 import sys
 import time
 
@@ -47,8 +47,8 @@ class Pcapper(Thread):
     Thread.__init__(self)
     self._dev = dev
 
-    sniffer.debugmode(0)
-    r = sniffer.initialize(self._dev, buff, snaplen, timeout, promisc, online, pcap_file, pkt_start, pkt_stop)
+    pktman.debugmode(0)
+    r = pktman.initialize(self._dev, buff, snaplen, timeout, promisc, online, pcap_file, pkt_start, pkt_stop)
     if (r['err_flag'] != 0):
       logger.error('Errore inizializzazione dello Sniffer: %s' % str(r['err_str']))
       raise Exception('Errore inizializzazione dello Sniffer')
@@ -63,8 +63,8 @@ class Pcapper(Thread):
     while self._running:
       self._produce()
       time.sleep(0.0001)
-    logger.debug('Exit sniffer! Stats: %s' % sniffer.getstat())
-    sniffer.stop()
+    logger.debug('Exit sniffer! Stats: %s' % pktman.getstat())
+    pktman.close()
 
   def sniff(self, analyzer):
     self._analyzer = analyzer
@@ -79,7 +79,7 @@ class Pcapper(Thread):
       self._stop_eating.wait()
       self._stop_eating.clear()
       stats = self._analyzer.statistics
-      packet_drop = sniffer.getstat()['pkt_pcap_drop']
+      packet_drop = pktman.getstat()['pkt_pcap_drop']
       stats.packet_drop = packet_drop
       logger.info('Pacchetti persi: %s' % packet_drop)
       self._analyzer.reset()
@@ -98,7 +98,7 @@ class Pcapper(Thread):
     return data
 
   def _get_remaining(self):
-    stats = sniffer.getstat()
+    stats = pktman.getstat()
     return stats['pkt_pcap_tot'] - stats['pkt_pcap_proc']
 
   def _produce(self):
@@ -141,8 +141,8 @@ class Pcapper(Thread):
   def _get_data(self, mode):
     try:
       if mode != 0:
-        data = sniffer.start(mode)
-        sniffer.clear()
+        data = pktman.pull(mode)
+        pktman.clear()
         if (data != None):
           if (data['err_flag'] == -2):
             self._status = LOOP
@@ -154,13 +154,13 @@ class Pcapper(Thread):
       else:
         remaining = self._get_remaining()
         while remaining > 0:
-          data = sniffer.start(mode)
-          sniffer.clear()
+          data = pktman.pull(mode)
+          pktman.clear()
           remaining -= 1
         return None
     except Exception as e:
       logger.error("Errore nello Sniffer: %s" % str(sys.exc_info()[0]))
-      sniffer.stop()
+      pktman.close()
       raise e
 
 if __name__ == '__main__':
