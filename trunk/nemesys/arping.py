@@ -113,6 +113,8 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, thresh
 
   pcap_filter = "rarp or arp dst host " + IPsrc
 
+  pktman.debugmode(0)
+
   dev = pktman.getdev(IPsrc)
   if (dev['err_flag'] != 0):
     raise Exception (dev['err_str'])
