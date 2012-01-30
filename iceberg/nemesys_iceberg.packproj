@@ -534,7 +534,7 @@
 						<key>IFPkgDescriptionTitle</key>
 						<string>Nemesys</string>
 						<key>IFPkgDescriptionVersion</key>
-						<string>2.1</string>
+						<string>2.1.2</string>
 					</dict>
 				</dict>
 				<key>Display Information</key>
@@ -550,7 +550,7 @@
 					<key>CFBundleName</key>
 					<string>Nemesys</string>
 					<key>CFBundleShortVersionString</key>
-					<string>2.1</string>
+					<string>2.1.2</string>
 				</dict>
 				<key>Options</key>
 				<dict>
