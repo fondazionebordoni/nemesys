@@ -57,6 +57,8 @@ errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
 __version__ = '2.1.2'
 
+# Non eseguire i test del profiler
+BYPASS_PROFILER = False
 # Numero massimo di misure per ora
 MAX_MEASURES_PER_HOUR = 1
 # Soglia per il rapporto tra traffico 'spurio' e traffico totale
@@ -71,6 +73,7 @@ DOWN = 'down'
 UP = 'up'
 # Put 1 to enable arping
 ARPING = 1
+
 
 class _Communicator(Thread):
 
@@ -427,7 +430,7 @@ class Executer:
     Profile system and return an exception or an errorcode whether the system is not suitable for measuring. 
     '''
     errorcode = 0
-    if not self._isprobe:
+    if not (self._isprobe or BYPASS_PROFILER):
 
       try:
         if (checktype == sysmonitor.CHECK_ALL):
