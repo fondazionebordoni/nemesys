@@ -193,8 +193,8 @@ def _check_wireless():
 def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
 
   ip = getIp();
-  mac = _get_Mac(ip)
-  mask = _get_Mask(ip)
+  mac = _get_mac(ip)
+  mask = _get_mask(ip)
   logger.info('| Mac: %s | Ip: %s | Cidr Mask: %d |' % (mac, ip, mask))
 
   if (arping == 0):
@@ -305,7 +305,7 @@ def _get_ActiveIp(host = 'finaluser.agcom244.fub.it', port = 443):
   return value
 
 
-def _get_Mac(ip = _get_ActiveIp()):
+def _get_mac(ip = _get_ActiveIp()):
   
   mac = None
   netIF = _get_NetIF()
@@ -339,7 +339,7 @@ def getIp():
   return ip
   
 
-def _get_Mask(ip = _get_ActiveIp()):
+def _get_mask(ip = _get_ActiveIp()):
 
   cidrMask = 0
   dotMask = None
@@ -358,7 +358,7 @@ def _get_Mask(ip = _get_ActiveIp()):
   return cidrMask
 
 
-def _get_Os():
+def _get_os():
   
   d = {tag_sys:''}
   r = []
@@ -386,12 +386,13 @@ def checkset(check_set=set()):
   {                                           \
    'CPU':{'prio':1,'meth':_check_cpu},        \
    'RAM':{'prio':2,'meth':_check_mem},        \
-   'rete':{'prio':3,'meth':_check_wireless},  \
+   'wifi':{'prio':3,'meth':_check_wireless},  \
    'hosts':{'prio':4,'meth':_check_hosts},    \
-   'mac':{'prio':5,'meth':_get_Mac},            \
+   'mac':{'prio':5,'meth':_get_mac},          \
    'ip':{'prio':6,'meth':getIp},              \
-   'os':{'prio':7,'meth':_get_Os},              \
-   #'sys':{'prio':8,'meth':_get_Sys}             \
+   'mask':{'prio':7,'meth':_get_mask},        \
+   'os':{'prio':8,'meth':_get_os},            \
+   #'sys':{'prio':9,'meth':_get_Sys}          \
   }
   
   system_profile = {}
@@ -409,7 +410,7 @@ def checkset(check_set=set()):
   else:
     checks = set(available_check.keys())
   
-  logger.debug('Check Order: %s' % sorted(available_check, key=lambda res: available_check[res]['prio']))
+  logger.debug('Check Order: %s' % sorted(available_check, key=lambda check: available_check[check]['prio']))
   for check in sorted(available_check, key=lambda check: available_check[check]['prio']):
     if check in checks:
       
@@ -471,6 +472,6 @@ if __name__ == '__main__':
   print '\nCheck Set All'
   print 'Test sysmonitor checkset: %s' % checkset()
   print '\nCheck Set Partial'
-  print 'Test sysmonitor checkset: %s' % checkset(set(['CPU','RAM','rete','mac','ip','pippo',8]))
+  print 'Test sysmonitor checkset: %s' % checkset(set(['CPU','RAM','wifi','mac','ip','pippo',8]))
   
   
