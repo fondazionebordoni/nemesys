@@ -350,7 +350,7 @@ def getNetworkMask(ip):
   dell'indirizzo IP in uso
   '''
   inames = netifaces.interfaces()
-  netmask = 0
+  netmask = '255.255.255.255'
   for i in inames:
     addrs = netifaces.ifaddresses(i)
     try:
@@ -367,7 +367,7 @@ def getNetworkMask(ip):
   return _maskConversion(netmask)
 
 def _maskConversion(netmask):
-  nip = netmask.split(".")
+  nip = str(netmask).split(".")
   if(len(nip) == 4):
     i = 0
     bini = range(0, len(nip))
