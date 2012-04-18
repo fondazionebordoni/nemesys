@@ -37,11 +37,13 @@ class SysmonitorException(Exception):
     return self._message.encode('ascii', 'xmlcharrefreplace')
  
 #Error while trying to recover the System Profile
-FAILPROF = SysmonitorException('FAILPROF', 'Non sono riuscito a trovare lo stato del computer con SystemProfiler.')      
+FAILPROF = SysmonitorException('FAILPROF', 'Non sono riuscito a trovare lo stato del computer con SystemProfiler.')
+#Error retrieving the Profile Status (reading params)
+FAILSTATUS = SysmonitorException('FAILSTATUS', 'Errore durante il recupero dello stato del computer.')      
 #Error on param reading
-FAILREADPARAM = SysmonitorException('FAILREADPARAM', 'Errore in SystemProfiler.')
+FAILREADPARAM = SysmonitorException('FAILREADPARAM', 'Errore di letura di un parametro in SystemProfiler.')
 #Error  on determining param's value
-FAILVALUEPARAM = SysmonitorException('FAILVALUEPARAM', 'Errore in SystemProfiler.')  
+FAILVALUEPARAM = SysmonitorException('FAILVALUEPARAM', 'Errore nel valore di un parametro in SystemProfiler.')  
 #Error on connection list
 BADCONN = SysmonitorException('BADCONN', 'Lista delle connessioni attive non conforme.')          
 #Warning on the possibility of further programs accessing to internet
@@ -73,10 +75,10 @@ TOOHOST = SysmonitorException('TOOHOST', 'Presenza altri host in rete.')
 #Error while retrieving Mask from IP
 BADMASK = SysmonitorException('BADMASK', 'Errore nella lettura della maschera.') 
 #Error while examining writing procedure on the hard disk
+BADMAC = SysmonitorException('BADMAC', 'Errore nella lettura del mac address.') 
+#Error while examining writing procedure on the hard disk
 UNKDISKLOAD = SysmonitorException('UNKDISKLOAD', 'Impossibile detereminare il carico in lettura del disco.')     
 #Warning Disk is overloaded with writing procedures
 DISKOVERLOAD = SysmonitorException('DISKOVERLOAD', 'Eccessivo carico in scrittura del disco.')   
 #Error retrieving IP address
-UNKIP = SysmonitorException('UNKIP', 'Impossibile ottenere il dettaglio dell\'indirizzo IP')         
-#Error retrieving the Profile Status (reading params)
-FAILSTATUS = SysmonitorException('FAILSTATUS', 'Errore durante il recupero dello stato del computer.')
+UNKIP = SysmonitorException('UNKIP', 'Impossibile ottenere il dettaglio dell\'indirizzo IP')
