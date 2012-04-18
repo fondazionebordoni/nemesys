@@ -41,6 +41,9 @@ else:
  
 STRICT_CHECK = True
 
+CHECK_ALL = "ALL"
+CHECK_MEDIUM = "MEDIUM"
+
 tag_results = 'SystemProfilerResults'
 tag_threshold = 'SystemProfilerThreshold'
 tag_avMem = 'RAM.totalPhysicalMemory'
