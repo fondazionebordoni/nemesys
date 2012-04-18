@@ -4,8 +4,10 @@
 
 from datetime import datetime
 from sys import platform
-from timeNtp import timestampNtp
+from sysmonitor import checkset, RES_CPU, RES_RAM, RES_WIFI, RES_TRAFFIC, \
+  RES_HOSTS
 from time import sleep
+from timeNtp import timestampNtp
 import wx
 
 # begin wxGlade: extracode
@@ -34,20 +36,28 @@ class Frame(wx.Frame):
         # begin wxGlade: Frame.__init__
         wx.Frame.__init__(self, *args, **kwds)
         self.sizer_3_staticbox = wx.StaticBox(self, -1, "Messaggi")
-        self.bitmap_button_1 = wx.BitmapButton(self, -1, wx.Bitmap("/home/gpantanetti/src/nemesys-light/gui/play.png", wx.BITMAP_TYPE_ANY))
-        self.bitmap_5 = wx.StaticBitmap(self, -1, wx.Bitmap("/home/gpantanetti/src/nemesys-light/icons/logo_nemesys.png", wx.BITMAP_TYPE_ANY))
+        self.bitmap_button_1 = wx.BitmapButton(self, -1, wx.Bitmap("../icons/play.png", wx.BITMAP_TYPE_ANY))
+        self.bitmap_5 = wx.StaticBitmap(self, -1, wx.Bitmap("../icons/logo_nemesys.png", wx.BITMAP_TYPE_ANY))
         self.label_5 = wx.StaticText(self, -1, "Ne.Me.Sys.", style = wx.ALIGN_CENTRE)
         self.label_6 = wx.StaticText(self, -1, "light", style = wx.ALIGN_CENTRE)
-        self.bitmap_1 = wx.StaticBitmap(self, -1, wx.Bitmap("/home/gpantanetti/src/nemesys-light/gui/cpu_gray.png", wx.BITMAP_TYPE_ANY))
-        self.bitmap_2 = wx.StaticBitmap(self, -1, wx.Bitmap("/home/gpantanetti/src/nemesys-light/gui/mem_gray.png", wx.BITMAP_TYPE_ANY))
-        self.bitmap_3 = wx.StaticBitmap(self, -1, wx.Bitmap("/home/gpantanetti/src/nemesys-light/gui/wifi_gray.png", wx.BITMAP_TYPE_ANY))
-        self.bitmap_4 = wx.StaticBitmap(self, -1, wx.Bitmap("/home/gpantanetti/src/nemesys-light/gui/host_gray.png", wx.BITMAP_TYPE_ANY))
-        self.label_1 = wx.StaticText(self, -1, "CPU", style = wx.ALIGN_CENTRE)
-        self.label_2 = wx.StaticText(self, -1, "Memoria", style = wx.ALIGN_CENTRE)
-        self.label_3 = wx.StaticText(self, -1, "Wi-fi", style = wx.ALIGN_CENTRE)
-        self.label_4 = wx.StaticText(self, -1, "Host", style = wx.ALIGN_CENTRE)
+        self.bitmap_cpu = wx.StaticBitmap(self, -1, wx.Bitmap("../icons/%s_gray.png" % RES_CPU.lower(), wx.BITMAP_TYPE_ANY))
+        self.bitmap_ram = wx.StaticBitmap(self, -1, wx.Bitmap("../icons/%s_gray.png" % RES_RAM.lower(), wx.BITMAP_TYPE_ANY))
+        self.bitmap_wifi = wx.StaticBitmap(self, -1, wx.Bitmap("../icons/%s_gray.png" % RES_WIFI.lower(), wx.BITMAP_TYPE_ANY))
+        self.bitmap_hosts = wx.StaticBitmap(self, -1, wx.Bitmap("../icons/%s_gray.png" % RES_HOSTS.lower(), wx.BITMAP_TYPE_ANY))
+        self.bitmap_traffic = wx.StaticBitmap(self, -1, wx.Bitmap("../icons/%s_gray.png" % RES_TRAFFIC.lower(), wx.BITMAP_TYPE_ANY))
+        self.label_cpu = wx.StaticText(self, -1, RES_CPU, style = wx.ALIGN_CENTRE)
+        self.label_ram = wx.StaticText(self, -1, RES_RAM, style = wx.ALIGN_CENTRE)
+        self.label_wifi = wx.StaticText(self, -1, RES_WIFI, style = wx.ALIGN_CENTRE)
+        self.label_hosts = wx.StaticText(self, -1, RES_HOSTS, style = wx.ALIGN_CENTRE)
+        self.label_traffic = wx.StaticText(self, -1, RES_TRAFFIC, style = wx.ALIGN_CENTRE)
         self.gauge_1 = wx.Gauge(self, -1, 10, style = wx.GA_HORIZONTAL | wx.GA_SMOOTH)
-        self.text_ctrl_1 = wx.TextCtrl(self, -1, "", style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP)
+        self.label_r_1 = wx.StaticText(self, -1, "Ping", style = wx.ALIGN_CENTRE)
+        self.label_r_2 = wx.StaticText(self, -1, "Download", style = wx.ALIGN_CENTRE)
+        self.label_r_3 = wx.StaticText(self, -1, "Upload", style = wx.ALIGN_CENTRE)
+        self.label_rr_1 = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE)
+        self.label_rr_2 = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE)
+        self.label_rr_3 = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE)
+        self.messages_area = wx.TextCtrl(self, -1, "", style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP)
 
         self.__set_properties()
         self.__do_layout()
@@ -58,17 +68,21 @@ class Frame(wx.Frame):
     def __set_properties(self):
         # begin wxGlade: Frame.__set_properties
         self.SetTitle("Ne.Me.Sys. Light")
-        self.SetSize((600, 271))
+        self.SetSize((600, 360))
         self.bitmap_button_1.SetMinSize((132, 132))
         self.bitmap_5.SetMinSize((95, 65))
         self.label_5.SetFont(wx.Font(18, wx.ROMAN, wx.NORMAL, wx.NORMAL, 0, ""))
         self.label_6.SetFont(wx.Font(14, wx.ROMAN, wx.ITALIC, wx.NORMAL, 0, ""))
-        self.bitmap_1.SetMinSize((60, 60))
-        self.bitmap_2.SetMinSize((60, 60))
-        self.bitmap_3.SetMinSize((60, 60))
-        self.bitmap_4.SetMinSize((60, 60))
+        self.bitmap_cpu.SetMinSize((60, 60))
+        self.bitmap_ram.SetMinSize((60, 60))
+        self.bitmap_wifi.SetMinSize((60, 60))
+        self.bitmap_hosts.SetMinSize((60, 60))
+        self.bitmap_traffic.SetMinSize((60, 60))
         self.gauge_1.SetMinSize((420, 24))
-        self.text_ctrl_1.SetMinSize((420, 120))
+        self.label_rr_1.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
+        self.label_rr_2.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
+        self.label_rr_3.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
+        self.messages_area.SetMinSize((420, 120))
         # end wxGlade
 
     def __do_layout(self):
@@ -76,37 +90,105 @@ class Frame(wx.Frame):
         sizer_1 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_2 = wx.BoxSizer(wx.VERTICAL)
         sizer_3 = wx.StaticBoxSizer(self.sizer_3_staticbox, wx.HORIZONTAL)
-        grid_sizer_1 = wx.GridSizer(2, 4, 0, 0)
+        grid_sizer_1 = wx.GridSizer(2, 5, 0, 0)
+        grid_sizer_2 = wx.GridSizer(2, 3, 0, 0)
         sizer_4 = wx.BoxSizer(wx.VERTICAL)
         sizer_4.Add(self.bitmap_button_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
         sizer_4.Add(self.bitmap_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
         sizer_4.Add(self.label_5, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
         sizer_4.Add(self.label_6, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
         sizer_1.Add(sizer_4, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.bitmap_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.bitmap_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.bitmap_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.bitmap_4, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.label_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.label_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.label_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.label_4, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        sizer_2.Add(grid_sizer_1, 1, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
-        sizer_2.Add(self.gauge_1, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 8)
-        sizer_3.Add(self.text_ctrl_1, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.bitmap_cpu, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.bitmap_ram, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.bitmap_wifi, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.bitmap_hosts, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.bitmap_traffic, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.label_cpu, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.label_ram, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.label_wifi, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.label_hosts, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.label_traffic, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_2.Add(self.label_r_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        grid_sizer_2.Add(self.label_r_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        grid_sizer_2.Add(self.label_r_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        grid_sizer_2.Add(self.label_rr_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        grid_sizer_2.Add(self.label_rr_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        grid_sizer_2.Add(self.label_rr_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        sizer_3.Add(self.messages_area, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+
+        sizer_2.Add(grid_sizer_1, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        sizer_2.Add(self.gauge_1, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
         sizer_2.Add(sizer_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        sizer_2.Add(grid_sizer_2, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+
         sizer_1.Add(sizer_2, 1, wx.EXPAND, 0)
         self.SetSizer(sizer_1)
         self.Layout()
         # end wxGlade
 
     def _play(self):
-      self.bitmap_button_1.SetBitmapLabel(wx.Bitmap("/home/gpantanetti/src/nemesys-light/gui/stop.png"))
-      self._update_messages("Event handler `play' not implemented")
+      self.bitmap_button_1.SetBitmapLabel(wx.Bitmap("../icons/stop.png"))
+
+      # Profilazione
+      self._update_messages("Inizio profilazione dello stato del sistema di misurazione")
+      self._check_system()
+
+      # Misura
+      self._update_messages("Inizio misurazione")
+      self._switch(None)
+
+    def _check_system(self):
+      checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])
+      profiled_set = checkset(checkable_set)
+
+      for resource in checkable_set:
+          self._set_resource_info(resource, profiled_set[resource])
+
+    def _set_resource_info(self, resource, info):
+      res_bitmap = None
+      res_label = None
+
+      # TODO Eliminare
+      info['value'] = info['info']
+
+      if info['status'] == None:
+        color = 'gray'
+      elif info['status'] == True:
+        color = 'green'
+      else:
+        color = 'red'
+
+      if resource == RES_CPU:
+        res_bitmap = self.bitmap_cpu
+        res_label = self.label_cpu
+      elif resource == RES_RAM:
+        res_bitmap = self.bitmap_ram
+        res_label = self.label_ram
+      elif resource == RES_WIFI:
+        res_bitmap = self.bitmap_wifi
+        res_label = self.label_wifi
+      elif resource == RES_HOSTS:
+        res_bitmap = self.bitmap_hosts
+        res_label = self.label_hosts
+      elif resource == RES_TRAFFIC:
+        res_bitmap = self.bitmap_traffic
+        res_label = self.label_traffic
+
+      if res_bitmap != None:
+        res_bitmap.SetBitmap(wx.Bitmap("../icons/%s_%s.png" % (resource.lower(), color)))
+        if info['status'] == False:
+          self._update_messages("%s: %s" % (resource, info['info']), color)
+        elif info['status'] == True:
+          if resource == RES_WIFI:
+            info['value'] = 'Off' # TODO Eliminare
+          if resource == RES_CPU or resource == RES_RAM or resource == RES_TRAFFIC:
+            info['value'] = "%d%%" % round(float(info['value']))
+          res_label.SetLabel("%s: %s" % (resource, info['value']))
+      self.Layout()
 
     def _stop(self):
-      self.bitmap_button_1.SetBitmapLabel(wx.Bitmap("/home/gpantanetti/src/nemesys-light/gui/play.png"))
-      self._update_messages("Event handler `stop' not implemented")
+      self.bitmap_button_1.SetBitmapLabel(wx.Bitmap("../icons/play.png"))
+      self._update_messages("Event handler `stop' not implemented", 'red')
 
     def _switch(self, event):
 
@@ -119,9 +201,13 @@ class Frame(wx.Frame):
       else:
         method()
 
-    def _update_messages(self, message):
+    def _update_messages(self, message, color = 'black'):
+
       date = '\n%s' % getdate().strftime('%c')
-      self.text_ctrl_1.AppendText("%s %s" % (date, message))
+      self.messages_area.AppendText("%s %s" % (date, message))
+      end = self.messages_area.GetLastPosition() - len(message)
+      start = end - len(date)
+      self.messages_area.SetStyle(start, end, wx.TextAttr(color))
 
 def getdate():
   return datetime.fromtimestamp(timestampNtp())
