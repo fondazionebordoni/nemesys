@@ -44,15 +44,13 @@ class RAM(Risorsa):
         self._params = ['total_memory', 'percentage_ram_usage']
 
     def total_memory(self):
-        val = psutil.TOTAL_PHYMEM
+        #Necessaria psutil 0.4.1
+        val = psutil.phymem_usage().total
         return self.xmlFormat('totalPhysicalMemory', val)
 
     def percentage_ram_usage(self):
-        total = psutil.TOTAL_PHYMEM
-        used = psutil.used_phymem()
-        # TODO correggere calcolo della memoria utilizzata considerando anche i buffer e la cache
-        val = int(float(used) / float(total) * 100.0)
-        val = 50
+        #Necessaria psutil 0.4.1
+        val = psutil.phymem_usage().percent
         return self.xmlFormat('RAMUsage', val)
 
 class sistemaOperativo(Risorsa):
