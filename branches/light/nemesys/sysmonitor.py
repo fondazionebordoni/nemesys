@@ -17,17 +17,18 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from SysProf import LocalProfilerFactory
-from SysProf.NemesysException import LocalProfilerException, RisorsaException, \
-  FactoryException
+from SysProf.NemesysException import LocalProfilerException, RisorsaException, FactoryException
 from logger import logging
-from sysmonitorexception import SysmonitorException
+from errorcoder import Errorcoder
 from xml.etree import ElementTree as ET
+
 import checkhost
 import netifaces
 import paths
 import platform
 import socket
 import sysmonitorexception
+
 
 platform_name = platform.system().lower()
 if platform_name == 'windows':
@@ -36,18 +37,14 @@ elif platform_name == 'darwin':
   from SysProf.darwin import profiler
 else:
   from SysProf.linux import profiler
-
-# TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
+ 
+ 
 STRICT_CHECK = True
-
-CHECK_ALL = "ALL"
-CHECK_MEDIUM = "MEDIUM"
 
 tag_results = 'SystemProfilerResults'
 tag_threshold = 'SystemProfilerThreshold'
 tag_avMem = 'RAM.totalPhysicalMemory'
 tag_memLoad = 'RAM.RAMUsage'
-#tag_wireless = 'rete.NetworkDevice/Type'
 tag_wireless = 'wireless.ActiveWLAN'
 tag_ip = 'ipAddr' #to check
 tag_sys = 'sistemaOperativo.OperatingSystem'
@@ -57,149 +54,131 @@ tag_activeNic = 'rete.NetworkDevice/isActive'
 tag_cores = 'CPU.cores'
 tag_proc = 'CPU.processor'
 tag_hosts = 'hostNumber'
+#tag_wireless = 'rete.NetworkDevice/Type'
 
-# Soglie di sistema
-# ------------------------------------------------------------------------------
-# Massima quantità di host in rete
-th_host = 1
-# Minima memoria disponibile
-th_avMem = 134217728
-# Massimo carico percentuale sulla memoria
-th_memLoad = 95
-# Massimo carico percentuale sulla CPU
-th_cpu = 85
+
+#' SOGLIE '#
+th_host = 1           # Massima quantità di host in rete
+th_avMem = 134217728  # Minima memoria disponibile
+th_memLoad = 95       # Massimo carico percentuale sulla memoria
+th_cpu = 85           # Massimo carico percentuale sulla CPU
+#'--------'#
+
 
 logger = logging.getLogger()
+errors = Errorcoder(paths.CONF_ERRORS)
 
-def getstatus(res):
+
+def _get_values(tagrisorsa, xmlresult, tag = tag_results):
+  #' Estrae informazioni dal SystemProfiler '#
+  values = {}
+  try:
+    for subelement in xmlresult.find(tagrisorsa):
+      values.update({subelement.tag:subelement.text})
+  except Exception as e:
+    logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
+    raise Exception('Errore durante il recupero dello stato del computer.')
+
+  return values
+
+
+def _get_status(res):
 
   logger.debug('Recupero stato della risorsa %s' % res)
   data = ET.ElementTree()
+  
   try:
       profiler = LocalProfilerFactory.getProfiler()
       data = profiler.profile(set([res]))
   except FactoryException as e:
-    logger.error ("Problema nel tentativo di istanziare la classe: %s" % e)
+    logger.error ('Problema nel tentativo di istanziare la classe: %s' % e)
     raise sysmonitorexception.FAILPROF
   except RisorsaException as e:
-    logger.error ("Problema nel tentativo di istanziare la risorsa: %s" % e)
+    logger.error ('Problema nel tentativo di istanziare la risorsa: %s' % e)
     raise sysmonitorexception.FAILPROF
   except LocalProfilerException as e:
-    logger.error ("Problema nel tentativo di istanziare il profiler: %s" % e)
+    logger.error ('Problema nel tentativo di istanziare il profiler: %s' % e)
     raise sysmonitorexception.FAILPROF
   except Exception as e:
     logger.error('Non sono riuscito a trovare lo stato del computer con SystemProfiler: %s.' % e)
     raise sysmonitorexception.FAILPROF
 
-  return _getvalues(data, tag_results, res)
+  return _get_values(res, data)
 
-def getstringtag(tag, value, res):
 
-  values = getstatus(res)
+def _get_string_tag(tag, value, res):
+
+  values = _get_status(res)
 
   try:
     value = str(values[tag])
   except Exception as e:
     logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
     if STRICT_CHECK:
-      raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
+      raise sysmonitorexception.FAILREADPARAM
 
   if value == 'None':
     return None
 
   return value
 
-def getfloattag(tag, value, res):
 
-  values = getstatus(res)
+def _get_float_tag(tag, value, res):
+
+  values = _get_status(res)
 
   if (value == None):
-    logger.error('Errore nel valore del paramentro "%s" di SystemProfiler: %s' % tag)
-    raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
+    logger.error('Errore nel valore del paramentro "%s" di SystemProfiler.' % tag)
+    raise sysmonitorexception.FAILREADPARAM
 
   try:
     value = float(values[tag])
   except Exception as e:
     logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
     if STRICT_CHECK:
-      raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
+      raise sysmonitorexception.FAILREADPARAM
 
   return value
 
-def getResProperty(tag, res):
-  data = ET.ElementTree()
-  try:
-      profiler = LocalProfilerFactory.getProfiler()
-      data = profiler.profile(set([res]))
-  except Exception as e:
-    logger.error('Non sono riuscito a trovare lo stato del computer con profiler: %s.' % e)
-    raise sysmonitorexception.FAILPROF
-  except RisorsaException as e:
-    logger.error ("Problema nel tentativo di istanziare la risorsa: %s" % e)
-    raise sysmonitorexception.FAILPROF
-  except LocalProfilerException as e:
-    logger.error ("Problema nel tentativo di istanziare il profiler: %s" % e)
-    raise sysmonitorexception.FAILPROF
-  wtf = res + '/' + tag
-  return data.findall(wtf)
 
-def getbooltag(tag, value, res):
-
-  values = getstatus(res)
-  try:
-    value = str(values[tag]).lower()
-  except Exception as e:
-    logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
-    if STRICT_CHECK:
-      #raise Exception('Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
-      raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
-  if STRICT_CHECK:
-    if value != 'false' and value != 'true':
-      logger.warning('Impossibile determinare il parametro "%s".' % tag)
-      #raise Exception('Impossibile determinare il parametro "%s".' % tag)
-      raise SysmonitorException(sysmonitorexception.FAILVALUEPARAM, 'Impossibile determinare il parametro "%s".' % tag)
-    if value == 'false':
-      return False
-    else:
-      return True
-  else:
-    return value
-
-def checkcpu():
-  value = getfloattag(tag_cpu.split('.', 1)[1], th_cpu - 1, tag_cpu.split('.', 1)[0])
+def _check_cpu():
+  
+  value = _get_float_tag(tag_cpu.split('.', 1)[1], th_cpu - 1, tag_cpu.split('.', 1)[0])
+  
   if value < 0 or value > 100:
     raise sysmonitorexception.BADCPU
 
   if value > th_cpu:
     raise sysmonitorexception.WARNCPU
 
-  return True
+  return value
 
-def checkmem():
 
-  avMem = getfloattag(tag_avMem.split('.')[1], th_avMem + 1, tag_avMem.split('.')[0])
-  logger.debug("Memoria disponibile: %2f" % avMem)
+def _check_mem():
+
+  avMem = _get_float_tag(tag_avMem.split('.')[1], th_avMem + 1, tag_avMem.split('.')[0])
   if avMem < 0:
-    #raise Exception('Valore di memoria disponibile non conforme.')
     raise sysmonitorexception.BADMEM
   if avMem < th_avMem:
-    #raise Exception('Memoria disponibile non sufficiente.')
     raise sysmonitorexception.LOWMEM
 
-  memLoad = getfloattag(tag_memLoad.split('.')[1], th_memLoad - 1, tag_memLoad.split('.')[0])
-  logger.debug("Memoria occupata: %d%%" % memLoad)
+  memLoad = _get_float_tag(tag_memLoad.split('.')[1], th_memLoad - 1, tag_memLoad.split('.')[0])
   if memLoad < 0 or memLoad > 100:
-    #raise Exception('Valore di occupazione della memoria non conforme.')
     raise sysmonitorexception.INVALIDMEM
   if memLoad > th_memLoad:
-    #raise Exception('Memoria occupata.')
     raise sysmonitorexception.OVERMEM
+  
+  memData = 'Used %s%% of %d MB' % (memLoad, avMem/1024)
 
-  return True
+  return memData
 
-def checkwireless():
+
+def _check_wireless():
+  
+  wifi = 'Wireless LAN inattiva.'
   profiler = LocalProfilerFactory.getProfiler()
   data = profiler.profile(set(['rete']))
+  
   for device in data.findall('rete/NetworkDevice'):
     logger.debug(ET.tostring(device))
     status = device.find('Status').text
@@ -207,117 +186,41 @@ def checkwireless():
         type = device.find('Type').text
         if (type == 'Wireless'):
             raise sysmonitorexception.WARNWLAN
-  return True
+          
+  return wifi
 
-def checkhosts(up, down, ispid, arping = 1):
+
+def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
 
   ip = getIp();
-  mask = getNetworkMask(ip)
-  logger.info("Indirizzo ip/mask: %s/%d" % (ip, mask))
+  mac = _get_Mac(ip)
+  mask = _get_Mask(ip)
+  logger.info('| Mac: %s | Ip: %s | Cidr Mask: %d |' % (mac, ip, mask))
 
   if (arping == 0):
     thres = th_host + 1
   else:
     thres = th_host
 
-  if (mask != 0):
-    mac = None
-    try:
-        mac = getMac()
-        if (mac == None):
-          mac = getMac() # try again to get a MAC from the active NIC
-    except:
-        pass
+  value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac)
+  logger.info('Trovati %d host in rete.' % value)
 
-    value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac)
-    logger.info('Trovati %d host in rete.' % value)
-
-    if value < 0:
+  if value < 0:
+    raise sysmonitorexception.BADHOST
+  elif (value == 0):
+    if arping == 1:
+      logger.warning('Passaggio a PING per controllo host in rete')
+      return _check_hosts(up, down, ispid, 0)
+    else:
       raise sysmonitorexception.BADHOST
-    elif (value == 0):
-      if arping == 1:
-        logger.warning("Passaggio a PING per controllo host in rete")
-        return checkhosts(up, down, ispid, 0)
-      else:
-        raise sysmonitorexception.BADHOST
-    elif value > thres:
-      raise sysmonitorexception.TOOHOST
-
-    return True
-  else:
-    raise SysmonitorException(sysmonitorexception.BADMASK, 'Impossibile recuperare il valore della maschera dell\'IP: %s' % ip)
-
-def fastcheck():
-  '''
-  Esegue un controllo veloce dello stato del pc dell'utente.
-  Ritorna True se le condizioni per effettuare le misure sono corrette,
-  altrimenti solleva un'eccezione
-  '''
-
-  checkcpu()
-  checkmem()
-  #checktasks()
-  #checkconnections()
-
-  return True
-
-def mediumcheck():
-
-  fastcheck()
-  #checkfw()
-  checkwireless()
-
-  return True
-
-def checkall(up, down, ispid, arping = 1):
-
-  mediumcheck()
-  checkhosts(up, down, ispid, arping)
-  # TODO Reinserire questo check quanto corretto il problema di determinazione del dato
-  #checkdisk()
-  return True
-
-def getMac():
-  '''
-  restituisce indirizzo MAC del computer
-  '''
-  tag = tag_activeNic.split('.');
-  res = tag[0]
-  nestedtag = tag[1].split('/')
-  tagdev = nestedtag[0]
-  tagprop = nestedtag[1]
-
-  tag = tag_mac.split('.');
-  nestedtag = tag[1].split('/')
-  tagmac = nestedtag[1]
-
-  data = ET.ElementTree()
-  try:
-      profiler = LocalProfilerFactory.getProfiler()
-      data = profiler.profile(set([res]))
-  except Exception as e:
-    logger.error('Non sono riuscito a trovare lo stato del computer con profiler: %s.' % e)
-    raise sysmonitorexception.FAILPROF
-  except RisorsaException as e:
-    logger.error ("Problema nel tentativo di istanziare la risorsa: %s" % e)
-    raise sysmonitorexception.FAILPROF
-  except LocalProfilerException as e:
-    logger.error ("Problema nel tentativo di istanziare il profiler: %s" % e)
-    raise sysmonitorexception.FAILPROF
-  tree = ET.ElementTree(data)
-  whattolook = res + '/' + tagdev
-  listdev = data.findall(whattolook)
-  for dev in listdev:
-    tree._setroot(dev)
-    devxml = tree.getroot()
-    val = devxml.find(tagprop)
-    if val.text == 'True':
-      macelem = devxml.find(tagmac)
-      return macelem.text
-  return None
+  elif value > thres:
+    logger.error('Presenza di altri %s host in rete.' % value)
+    raise sysmonitorexception.TOOHOST
+      
+  return value
 
 
-def _checkipsyntax(ip):
+def _check_ip_syntax(ip):
 
   try:
     socket.inet_aton(ip)
@@ -329,45 +232,25 @@ def _checkipsyntax(ip):
 
   return True
 
-def getIp(host = 'finaluser.agcom244.fub.it', port = 443):
-  '''
-  restituisce indirizzo IP del computer
-  '''
-  s = socket.socket(socket.AF_INET)
-  s.connect((host, port))
-  value = s.getsockname()[0]
 
-  #value = getstringtag(tag_ip, '90.147.120.2')
+def _convertDecToBin(dec):
+  i = 0
+  bin = range(0, 4)
+  for x in range(0, 4):
+    bin[x] = range(0, 8)
 
-  if not _checkipsyntax(value):
-    #raise Exception('Impossibile ottenere il dettaglio dell\'indirizzo IP')
-    raise sysmonitorexception.UNKIP
-  return value
+  for i in range(0, 4):
+    j = 7
+    while j >= 0:
 
-def getNetworkMask(ip):
-  '''
-  Restituisce un intero rappresentante la maschera di rete, in formato CIDR, 
-  dell'indirizzo IP in uso
-  '''
-  inames = netifaces.interfaces()
-  netmask = 0
-  for i in inames:
-    addrs = netifaces.ifaddresses(i)
-    try:
-      ipinfo = addrs[socket.AF_INET][0]
-      address = ipinfo['addr']
-      if (address == ip):
-        netmask = ipinfo['netmask']
-        return _maskConversion(netmask)
-      else:
-        pass
-    except Exception:
-      pass
+      bin[i][j] = (dec[i] & 1) + 0
+      dec[i] /= 2
+      j = j - 1
+  return bin
 
-  return _maskConversion(netmask)
 
-def _maskConversion(netmask):
-  nip = netmask.split(".")
+def _mask_conversion(dotMask):
+  nip = str(dotMask).split(".")
   if(len(nip) == 4):
     i = 0
     bini = range(0, len(nip))
@@ -393,137 +276,201 @@ def _maskConversion(netmask):
   return maskcidr
 
 
-def _convertDecToBin(dec):
-  i = 0
-  bin = range(0, 4)
-  for x in range(0, 4):
-    bin[x] = range(0, 8)
+def _get_NetIF():
+  
+  netIF = {}
+  
+  for ifName in netifaces.interfaces():
+    ip = [i['addr'] for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'addr':'No IP addr'}] )]
+    mask = [i['netmask'] for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'netmask':'No IP addr'}] )]
+    mac = [i['addr'] for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_LINK, [{'addr':'No IP addr'}] )]
+    netIF[ifName] = {'mac':mac,'ip':ip,'mask':mask}
+  
+  #logger.debug('Network Interfaces:\n %s' %netIF)
+    
+  return netIF
 
-  for i in range(0, 4):
-    j = 7
-    while j >= 0:
 
-      bin[i][j] = (dec[i] & 1) + 0
-      dec[i] /= 2
-      j = j - 1
-  return bin
+def _get_ActiveIp(host = 'finaluser.agcom244.fub.it', port = 443):
 
-def getOs():
+  logger.info('Determinazione dell\'IP attivo verso Internet')
+
+  s = socket.socket(socket.AF_INET)
+  s.connect((host, port))
+  value = s.getsockname()[0]
+
+  if not _check_ip_syntax(value):
+    raise sysmonitorexception.UNKIP
+  
+  return value
+
+
+def _get_Mac(ip = _get_ActiveIp()):
+  
+  mac = None
+  netIF = _get_NetIF()
+
+  for interface in netIF:
+    if (netIF[interface]['ip'][0] == ip):
+      #logger.debug('| Ip: %s | Mac: %s |' % (ip,netIF[interface]['mac'][0]))
+      mac = netIF[interface]['mac'][0]
+  
+  if (mac == None):
+    logger.error('Impossibile recuperare il valore del mac address dell\'IP %s' % ip)
+    raise sysmonitorexception.BADMAC
+  
+  return mac
+
+
+def getIp():
+  
+  ip = None
+  netIF = _get_NetIF()
+  activeIp = _get_ActiveIp()
+  
+  for interface in netIF:
+    if (netIF[interface]['ip'][0] == activeIp):
+      #logger.debug('| Active Ip: %s | Find Ip: %s |' % (activeIp,netIF[interface]['ip'][0]))
+      ip = activeIp
+  
+  if (ip==None):
+    raise sysmonitorexception.UNKIP
+    
+  return ip
+  
+
+def _get_Mask(ip = _get_ActiveIp()):
+
+  cidrMask = 0
+  dotMask = None
+  netIF = _get_NetIF()
+
+  for interface in netIF:
+    if (netIF[interface]['ip'][0] == ip):
+      #logger.debug('| Ip: %s | Mask: %s |' % (ip,netIF[interface]['mask'][0]))
+      dotMask = netIF[interface]['mask'][0]
+      cidrMask = _mask_conversion(dotMask)
+  
+  if (cidrMask <= 0):
+    logger.error('Impossibile recuperare il valore della maschera dell\'IP %s' % ip)
+    raise sysmonitorexception.BADMASK
+  
+  return cidrMask
+
+
+def _get_Os():
+  
   d = {tag_sys:''}
   r = []
 
   for keys in d:
-    r.append(getstringtag(keys.split('.', 1)[1], 1, keys.split('.', 1)[0]))
+    r.append(_get_string_tag(keys.split('.', 1)[1], 1, keys.split('.', 1)[0]))
 
   return r
 
 
-def getSys():
-  '''
-  Restituisce array con informazioni sul sistema utilizzato per il test
-  '''
+def _get_Sys():
+  
   d = {tag_sys:'', tag_cores:'', tag_proc:''}
   r = []
 
   for keys in d:
-    r.append(getstringtag(keys.split('.', 1)[1], 1, keys.split('.', 1)[0]))
-  r.append(getMac())
+    r.append(_get_string_tag(keys.split('.', 1)[1], 1, keys.split('.', 1)[0]))
 
   return r
 
-def _getvalues(xmlresult, tag, tagrisorsa):
-  '''
-  Estrae informazioni dal SystemProfiler 
-  '''
-  values = {}
-  try:
-    for subelement in xmlresult.find(tagrisorsa):
-      values.update({subelement.tag:subelement.text})
-  except Exception as e:
-    logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
-    raise Exception('Errore durante il recupero dello stato del computer.')
 
-  return values
+def checkset(check_set=set()):
+  
+  available_check =\
+  {                                           \
+   'CPU':{'prio':1,'meth':_check_cpu},        \
+   'RAM':{'prio':2,'meth':_check_mem},        \
+   'rete':{'prio':3,'meth':_check_wireless},  \
+   'hosts':{'prio':4,'meth':_check_hosts},    \
+   'mac':{'prio':5,'meth':_get_Mac},            \
+   'ip':{'prio':6,'meth':getIp},              \
+   'os':{'prio':7,'meth':_get_Os},              \
+   #'sys':{'prio':8,'meth':_get_Sys}             \
+  }
+  
+  system_profile = {}
+  
+  if (len(check_set) > 0):
+    checks = (check_set & set(available_check.keys()))
+    
+    unavailable_check = check_set - set(available_check.keys())
+    if (unavailable_check):
+      for res in list(unavailable_check):
+        system_profile[res]={}
+        system_profile[res]['status']=None
+        system_profile[res]['info']='Risorsa non disponibile'
+        
+  else:
+    checks = set(available_check.keys())
+  
+  logger.debug('Check Order: %s' % sorted(available_check, key=lambda res: available_check[res]['prio']))
+  for check in sorted(available_check, key=lambda check: available_check[check]['prio']):
+    if check in checks:
+      
+      try:
+        info = None
+        status = None
+        info = available_check[check]['meth']()
+        if (info!=None):
+          status = True
+      except Exception as e:
+        errorcode = errors.geterrorcode(e)
+        logger.error('Errore [%d]: %s' % (errorcode, e))
+        info = e
+        status = False
+      
+      system_profile[check]={}
+      system_profile[check]['status']=status
+      system_profile[check]['info']=str(info)
+      logger.info('%s: %s' % (check,system_profile[check]))
+      
+  return system_profile
+
+
+def fastcheck():
+ 
+  _check_cpu()
+  _check_mem()
+
+  return True
+
+
+def mediumcheck():
+
+  fastcheck()
+  _check_wireless()
+
+  return True
+
+
+def checkall(up, down, ispid, arping = 1):
+
+  mediumcheck()
+  _check_hosts(up, down, ispid, arping)
+  
+  return True
+
+
+
 
 if __name__ == '__main__':
-  from errorcoder import Errorcoder
-  errors = Errorcoder(paths.CONF_ERRORS)
 
   try:
-    print '\ngetMac'
-    print 'Test sysmonitor getMac: %s' % getMac()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-  try:
-    print '\ncheckall'
+    print '\nCheck All'
     print 'Test sysmonitor checkall: %s' % checkall(1000, 2000, 'fst001')
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print '\ncheckhosts (arping)'
-    print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', 1)  #ARPING
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-  '''
-  try:
-    print '\ncheckhosts (ping)'
-    print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', 0)  #PING
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-  '''
-  try:
-    print '\ncheckcpu'
-    print 'Test sysmonitor checkcpu: %s' % checkcpu()
-  except SysmonitorException as e:
-    print 'Errore [%d]: (%s) %s' % (errorcode, e.alert_type, e)
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print '\ncheckmem'
-    print 'Test sysmonitor checkmem: %s' % checkmem()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print '\ncheckwireless'
-    print 'Test sysmonitor checkwireless: %s' % checkwireless()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print '\ngetIP'
-    print 'Test sysmonitor getIP: %s' % getIp()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print '\ngetIP (www.google.com)'
-    print 'Test sysmonitor getIP: %s' % getIp('www.google.com', 80)
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print '\ngetOs'
-    print 'Test sysmonitor getOs: %s' % getOs()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
-  try:
-    print '\ngetSys'
-    print 'Test sysmonitor getSys: %s' % getSys()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-
+  
+  print '\nCheck Set All'
+  print 'Test sysmonitor checkset: %s' % checkset()
+  print '\nCheck Set Partial'
+  print 'Test sysmonitor checkset: %s' % checkset(set(['CPU','RAM','rete','mac','ip','pippo',8]))
+  
+  
