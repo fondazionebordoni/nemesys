@@ -450,14 +450,21 @@ if __name__ == '__main__':
   errors = Errorcoder(paths.CONF_ERRORS)
 
   try:
-    print '\ngetMac'
-    print 'Test sysmonitor getMac: %s' % getMac()
-  except Exception as e:
-    errorcode = errors.geterrorcode(e)
-    print 'Errore [%d]: %s' % (errorcode, e)
-  try:
     print '\ncheckall'
     print 'Test sysmonitor checkall: %s' % checkall(1000, 2000, 'fst001')
+  except Exception as e:
+    
+    if isinstance (e, SysmonitorException):
+      # Inserire nel test tutte le eccezioni da bypassare
+      if e.alert_type == sysmonitorexception.WARNCONN.alert_type or e.alert_type == sysmonitorexception.WARNPROC.alert_type:
+        logger.warning('Misura in esecuzione con warning: %s' % e)
+    
+    errorcode = errors.geterrorcode(e)
+    print 'Errore [%d]: %s' % (errorcode, e)
+  '''
+  try:
+    print '\ngetMac'
+    print 'Test sysmonitor getMac: %s' % getMac()
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
@@ -468,14 +475,14 @@ if __name__ == '__main__':
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-  '''
+  
   try:
     print '\ncheckhosts (ping)'
     print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', 0)  #PING
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-  '''
+  
   try:
     print '\ncheckcpu'
     print 'Test sysmonitor checkcpu: %s' % checkcpu()
@@ -526,4 +533,4 @@ if __name__ == '__main__':
   except Exception as e:
     errorcode = errors.geterrorcode(e)
     print 'Errore [%d]: %s' % (errorcode, e)
-
+  '''
