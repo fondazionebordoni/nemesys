@@ -29,15 +29,6 @@ import platform
 import socket
 import sysmonitorexception
 
-RES_CPU = 'CPU'
-RES_RAM = 'RAM'
-RES_WIFI = 'Wifi'
-RES_HOSTS = 'Hosts'
-RES_MAC = 'MAC'
-RES_IP = 'IP'
-RES_MASK = 'MASK'
-RES_OS = 'OS'
-RES_TRAFFIC = 'Traffic'
 
 platform_name = platform.system().lower()
 if platform_name == 'windows':
@@ -52,6 +43,18 @@ STRICT_CHECK = True
 
 CHECK_ALL = "ALL"
 CHECK_MEDIUM = "MEDIUM"
+
+RES_CPU = 'CPU'
+RES_RAM = 'RAM'
+RES_WIFI = 'Wifi'
+RES_HOSTS = 'Hosts'
+RES_MAC = 'MAC'
+RES_IP = 'IP'
+RES_MASK = 'MASK'
+RES_OS = 'OS'
+RES_TRAFFIC = 'Traffic'
+
+CHECK_VALUE = None
 
 tag_results = 'SystemProfilerResults'
 tag_threshold = 'SystemProfilerThreshold'
@@ -154,40 +157,58 @@ def _get_float_tag(tag, value, res):
 
 
 def _check_cpu():
+  
+  global CHECK_VALUE
 
+  CHECK_VALUE = None
   value = _get_float_tag(tag_cpu.split('.', 1)[1], th_cpu - 1, tag_cpu.split('.', 1)[0])
-
+  CHECK_VALUE = value
+  
   if value < 0 or value > 100:
     raise sysmonitorexception.BADCPU
 
   if value > th_cpu:
     raise sysmonitorexception.WARNCPU
 
-  return value
+  check_info = 'CPU utilizzata al %s%%' % value 
+
+  return check_info 
 
 
 def _check_mem():
+  
+  global CHECK_VALUE
 
+  CHECK_VALUE = None
   avMem = _get_float_tag(tag_avMem.split('.')[1], th_avMem + 1, tag_avMem.split('.')[0])
+  CHECK_VALUE = avMem
+  
   if avMem < 0:
     raise sysmonitorexception.BADMEM
   if avMem < th_avMem:
     raise sysmonitorexception.LOWMEM
 
+  CHECK_VALUE = None
   memLoad = _get_float_tag(tag_memLoad.split('.')[1], th_memLoad - 1, tag_memLoad.split('.')[0])
+  CHECK_VALUE = memLoad
+  
   if memLoad < 0 or memLoad > 100:
     raise sysmonitorexception.INVALIDMEM
   if memLoad > th_memLoad:
     raise sysmonitorexception.OVERMEM
 
-  memData = 'Used %s%% of %d MB' % (memLoad, avMem / 1024)
+  check_info = 'Utilizzato il %s%% di %d MB di RAM' % (memLoad, avMem / 1024)
 
-  return memData
+  return check_info
 
 
 def _check_wireless():
+  
+  global CHECK_VALUE
+  
+  CHECK_VALUE = None
 
-  wifi = 'Wireless LAN inattiva.'
+  check_info = 'Wireless LAN inattiva.'
   profiler = LocalProfilerFactory.getProfiler()
   data = profiler.profile(set(['rete']))
 
@@ -195,15 +216,22 @@ def _check_wireless():
     logger.debug(ET.tostring(device))
     status = device.find('Status').text
     if (status == 'Enabled'):
-        type = device.find('Type').text
-        if (type == 'Wireless'):
-            raise sysmonitorexception.WARNWLAN
+      type = device.find('Type').text
+      if (type == 'Wireless'):
+        CHECK_VALUE = 'On'  
+        raise sysmonitorexception.WARNWLAN
 
-  return wifi
+  CHECK_VALUE = 'Off'
+  
+  return check_info
 
 
 def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
+  
+  global CHECK_VALUE
 
+  CHECK_VALUE = None
+  
   ip = getIp();
   mac = _get_mac(ip)
   mask = _get_mask(ip)
@@ -216,6 +244,8 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
 
   value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac)
   logger.info('Trovati %d host in rete.' % value)
+  
+  CHECK_VALUE = value
 
   if value < 0:
     raise sysmonitorexception.BADHOST
@@ -226,10 +256,12 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
     else:
       raise sysmonitorexception.BADHOST
   elif value > thres:
-    logger.error('Presenza di altri %s host in rete.' % value)
+    #logger.error('Presenza di altri %s host in rete.' % value)
     raise sysmonitorexception.TOOHOST
 
-  return value
+  check_info = 'Trovati %d host in rete.' % value
+
+  return check_info
 
 
 def _check_ip_syntax(ip):
@@ -318,7 +350,11 @@ def _get_ActiveIp(host = 'finaluser.agcom244.fub.it', port = 443):
 
 
 def _get_mac(ip = _get_ActiveIp()):
+  
+  global CHECK_VALUE
 
+  CHECK_VALUE = None
+  
   mac = None
   netIF = _get_NetIF()
 
@@ -331,10 +367,16 @@ def _get_mac(ip = _get_ActiveIp()):
     logger.error('Impossibile recuperare il valore del mac address dell\'IP %s' % ip)
     raise sysmonitorexception.BADMAC
 
+  CHECK_VALUE = mac
+
   return mac
 
 
 def getIp():
+  
+  global CHECK_VALUE
+
+  CHECK_VALUE = None
 
   ip = None
   netIF = _get_NetIF()
@@ -348,11 +390,17 @@ def getIp():
   if (ip == None):
     raise sysmonitorexception.UNKIP
 
+  CHECK_VALUE = ip
+
   return ip
 
 
 def _get_mask(ip = _get_ActiveIp()):
+  
+  global CHECK_VALUE
 
+  CHECK_VALUE = None
+  
   cidrMask = 0
   dotMask = None
   netIF = _get_NetIF()
@@ -361,6 +409,7 @@ def _get_mask(ip = _get_ActiveIp()):
     if (netIF[interface]['ip'][0] == ip):
       #logger.debug('| Ip: %s | Mask: %s |' % (ip,netIF[interface]['mask'][0]))
       dotMask = netIF[interface]['mask'][0]
+      CHECK_VALUE = dotMask
       cidrMask = _mask_conversion(dotMask)
 
   if (cidrMask <= 0):
@@ -393,18 +442,20 @@ def _get_Sys():
 
 
 def checkset(check_set = set()):
+  
+  global CHECK_VALUE
 
-  available_check = \
-  {                                           \
-   RES_CPU:{'prio':1, 'meth':_check_cpu}, \
-   RES_RAM:{'prio':2, 'meth':_check_mem}, \
-   RES_WIFI:{'prio':3, 'meth':_check_wireless}, \
-   RES_HOSTS:{'prio':4, 'meth':_check_hosts}, \
-   RES_MAC:{'prio':5, 'meth':_get_mac}, \
-   RES_IP:{'prio':6, 'meth':getIp}, \
-   RES_MASK:{'prio':7, 'meth':_get_mask}, \
-   RES_OS:{'prio':8, 'meth':_get_os}, \
-   #'sys':{'prio':9,'meth':_get_Sys}          \
+  available_check =                               \
+  {                                               \
+   RES_CPU:{'prio':1, 'meth':_check_cpu},         \
+   RES_RAM:{'prio':2, 'meth':_check_mem},         \
+   RES_WIFI:{'prio':3, 'meth':_check_wireless},   \
+   RES_HOSTS:{'prio':4, 'meth':_check_hosts},     \
+   RES_MAC:{'prio':5, 'meth':_get_mac},           \
+   RES_IP:{'prio':6, 'meth':getIp},               \
+   RES_MASK:{'prio':7, 'meth':_get_mask},         \
+   RES_OS:{'prio':8, 'meth':_get_os},             \
+   #'sys':{'prio':9,'meth':_get_Sys}              \
   }
 
   system_profile = {}
@@ -417,6 +468,7 @@ def checkset(check_set = set()):
       for res in list(unavailable_check):
         system_profile[res] = {}
         system_profile[res]['status'] = None
+        system_profile[res]['value'] = None
         system_profile[res]['info'] = 'Risorsa non disponibile'
 
   else:
@@ -429,6 +481,7 @@ def checkset(check_set = set()):
       try:
         info = None
         status = None
+        CHECK_VALUE = None
         info = available_check[check]['meth']()
         if (info != None):
           status = True
@@ -440,6 +493,7 @@ def checkset(check_set = set()):
 
       system_profile[check] = {}
       system_profile[check]['status'] = status
+      system_profile[check]['value'] = CHECK_VALUE
       system_profile[check]['info'] = str(info)
       logger.info('%s: %s' % (check, system_profile[check]))
 

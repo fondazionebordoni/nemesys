@@ -148,9 +148,6 @@ class Frame(wx.Frame):
       res_bitmap = None
       res_label = None
 
-      # TODO Eliminare
-      info['value'] = info['info']
-
       if info['status'] == None:
         color = 'gray'
       elif info['status'] == True:
@@ -176,14 +173,13 @@ class Frame(wx.Frame):
 
       if res_bitmap != None:
         res_bitmap.SetBitmap(wx.Bitmap("../icons/%s_%s.png" % (resource.lower(), color)))
+        if resource == RES_CPU or resource == RES_RAM:
+          res_label.SetLabel("%s: %s%%" % (resource, info['value']))
+        else:
+          res_label.SetLabel("%s: %s" % (resource, info['value']))
         if info['status'] == False:
           self._update_messages("%s: %s" % (resource, info['info']), color)
-        elif info['status'] == True:
-          if resource == RES_WIFI:
-            info['value'] = 'Off' # TODO Eliminare
-          if resource == RES_CPU or resource == RES_RAM or resource == RES_TRAFFIC:
-            info['value'] = "%d%%" % round(float(info['value']))
-          res_label.SetLabel("%s: %s" % (resource, info['value']))
+          
       self.Layout()
 
     def _stop(self):
