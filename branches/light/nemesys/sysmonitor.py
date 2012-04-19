@@ -537,6 +537,7 @@ if __name__ == '__main__':
 
   print '\nCheck Set All'
   print 'Test sysmonitor checkset: %s' % checkset()
+  
   print '\nCheck Set Partial'
-  print 'Test sysmonitor checkset: %s' % checkset(set(['CPU', 'RAM', 'wifi', 'mac', 'ip', 'pippo', 8]))
+  print 'Test sysmonitor checkset: %s' % checkset(set(['CPU', 'RAM', 'Wifi', 'MAC', 'IP', 'pippo', 8]))
 

@@ -22,7 +22,7 @@ class SysmonitorException(Exception):
   def __init__(self, alert_type, message):
     Exception.__init__(self, message)
     if isinstance (alert_type, SysmonitorException):
-      self._alert_type = alert_type
+      self._alert_type = alert_type.alert_type.decode('utf-8')
     else:
       self._alert_type = alert_type.decode('utf-8')
         
