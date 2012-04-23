@@ -95,9 +95,14 @@ class _Tester(Thread):
       packet_ratio = float(packet_drop) / float(packet_tot)
       logger.debug('Percentuale di pacchetti persi: %.2f%%' % (packet_ratio * 100))
       if (packet_tot > 0 and packet_ratio > TH_PACKETDROP):
-        wx.CallAfter(self._gui._update_messages, 'Eccessiva presenza di traffico di rete, impossibile analizzare i dati di test', 'red')
+        info = 'Eccessiva presenza di traffico di rete, impossibile analizzare i dati di test'
+        wx.CallAfter(self._gui._update_messages, info, 'red')
+        wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': 0})
+
     else:
-      wx.CallAfter(self._gui._update_messages, 'Errore durante la misura, impossibile analizzare i dati di test', 'red')
+      info = 'Errore durante la misura, impossibile analizzare i dati di test'
+      wx.CallAfter(self._gui._update_messages, info, 'red')
+      wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': 0})
 
     if (testtype == DOWN):
       byte_nem = stats.payload_down_nem_net
@@ -129,7 +134,9 @@ class _Tester(Thread):
         wx.CallAfter(self._gui._update_messages, info, 'red')
         wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value})
     else:
-      wx.CallAfter(self._gui._update_messages, 'Errore durante la misura, impossibile analizzare i dati di test', 'red')
+      info = 'Errore durante la misura, impossibile analizzare i dati di test'
+      wx.CallAfter(self._gui._update_messages, info, 'red')
+      wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': 0})
 
   def _get_bandwith(self, test):
 
