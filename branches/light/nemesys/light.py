@@ -40,7 +40,7 @@ TH_TRAFFIC_INV = 0.9
 # Soglia per numero di pacchetti persi
 TH_PACKETDROP = 0.05
 
-TOTAL_STEPS = 20
+TOTAL_STEPS = 14
 
 logger = logging.getLogger()
 
@@ -141,8 +141,8 @@ class _Tester(Thread):
       task.update_ftpdownpath(bandwidth)
 
   def _update_gauge(self):
-    wx.CallAfter(self._gui.gauge.setValue, round((self._step * 100) / TOTAL_STEPS))
     self._step += 1
+    wx.CallAfter(self._gui.update_gauge, self._step)
 
   def run(self):
 
@@ -152,7 +152,6 @@ class _Tester(Thread):
 
     # Profilazione
     self._check_system(set([RES_HOSTS, RES_WIFI]))
-    self._update_gauge()
 
     # Scaricamento del task dallo scheduler
     task = self._download_task()
@@ -181,9 +180,9 @@ class _Tester(Thread):
         while (i <= task.download):
 
           self._check_system(set([RES_CPU, RES_RAM]))
-          self._update_gauge()
 
           test = t.testftpdown(task.ftpdownpath)
+          self._update_gauge()
           self._update_down(test, task)
 
           if i == 1:
@@ -199,7 +198,6 @@ class _Tester(Thread):
             # Salvataggio della misura
             m.savetest(test)
 
-          self._update_gauge()
           i = i + 1
 
         wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
@@ -210,9 +208,9 @@ class _Tester(Thread):
         while (i <= task.upload):
 
           self._check_system(set([RES_CPU, RES_RAM]))
-          self._update_gauge()
 
           test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
+          self._update_gauge()
           self._update_down(test, task)
 
           if i == 1:
@@ -228,7 +226,6 @@ class _Tester(Thread):
             # Salvataggio della misura
             m.savetest(test)
 
-          self._update_gauge()
           i = i + 1
 
         wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
@@ -240,17 +237,17 @@ class _Tester(Thread):
         while (i <= task.ping):
 
           test = t.testping()
+          self._update_gauge()
           wx.CallAfter(self._gui._update_messages, "Risultato ping: %d ms (test %d di %d)" % (test.value, i, task.ping), 'blue')
 
           # Salvataggio del test nella misura
           m.savetest(test)
 
-          self._update_gauge()
-          i = i + 1
-
-          if ((i - 1) % task.nicmp == 0):
+          if ((i + 2) % task.nicmp == 0):
             sleep(task.delay)
             self._check_system(set([RES_CPU, RES_RAM]))
+
+          i = i + 1
 
         wx.CallAfter(self._gui._update_ping, test.value)
 
@@ -259,6 +256,7 @@ class _Tester(Thread):
         wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s. Aspetta qualche secondo prima di effettuare una nuova misura.' % e)
 
     # Stop
+    self._update_gauge()
     sleep(TIME_LAG)
     wx.CallAfter(self._gui.stop)
 
@@ -304,7 +302,7 @@ class Frame(wx.Frame):
         self.label_wifi = wx.StaticText(self, -1, "%s\n- - - -" % RES_WIFI, style = wx.ALIGN_CENTRE)
         self.label_hosts = wx.StaticText(self, -1, "%s\n- - - -" % RES_HOSTS, style = wx.ALIGN_CENTRE)
         self.label_traffic = wx.StaticText(self, -1, "%s\n- - - -" % RES_TRAFFIC, style = wx.ALIGN_CENTRE)
-        self.gauge_1 = wx.Gauge(self, -1, 10, style = wx.GA_HORIZONTAL | wx.GA_SMOOTH)
+        self.gauge_1 = wx.Gauge(self, -1, TOTAL_STEPS, style = wx.GA_HORIZONTAL | wx.GA_SMOOTH)
         self.label_r_1 = wx.StaticText(self, -1, "Ping", style = wx.ALIGN_CENTRE)
         self.label_r_2 = wx.StaticText(self, -1, "Download", style = wx.ALIGN_CENTRE)
         self.label_r_3 = wx.StaticText(self, -1, "Upload", style = wx.ALIGN_CENTRE)
@@ -414,7 +412,11 @@ class Frame(wx.Frame):
       self.label_rr_up.SetLabel("- - - -")
       self.label_rr_ping.SetLabel("- - - -")
 
-      self.gauge_1.SetValue(0)
+      self.update_gauge(0)
+
+    def update_gauge(self, value):
+      #logger.debug("Gauge value %d" % value)
+      self.gauge_1.SetValue(value)
 
     def _play(self, event):
 
@@ -426,6 +428,9 @@ class Frame(wx.Frame):
       self.bitmap_button_1.Disable()
 
     def stop(self):
+
+      self.update_gauge(0)
+
       self.bitmap_button_1.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"play.png")))
       self.bitmap_button_1.Enable()
 
