@@ -349,7 +349,7 @@ def _get_ActiveIp(host = 'finaluser.agcom244.fub.it', port = 443):
   return value
 
 
-def _get_mac(ip = _get_ActiveIp()):
+def _get_mac(ip):
   
   global CHECK_VALUE
 
@@ -395,7 +395,7 @@ def getIp():
   return ip
 
 
-def _get_mask(ip = _get_ActiveIp()):
+def _get_mask(ip):
   
   global CHECK_VALUE
 

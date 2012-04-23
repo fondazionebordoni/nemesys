@@ -9,7 +9,8 @@ if (platform.python_version_tuple()[1] == 7):
     include_dirs = ['.'],
     libraries = ['python2.7', 'pcap'],
     #library_dirs = ['/usr/include/python2.7'],
-    library_dirs = ['/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7'],
+    #library_dirs = ['/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7'],
+    library_dirs = ['C:\Python27\libs', 'C:\winpcap-dev\Include'],
     sources = ['pktman.c'])
 else:
   module = Extension('pktman',
@@ -18,7 +19,8 @@ else:
     include_dirs = ['.'],
     libraries = ['python2.6', 'pcap'],
     #library_dirs = ['/usr/include/python2.6'],
-    library_dirs = ['/System/Library/Frameworks/Python.framework/Versions/2.6/include/python2.6'],
+    #library_dirs = ['/System/Library/Frameworks/Python.framework/Versions/2.6/include/python2.6'],
+    library_dirs = ['C:\Python27\libs', 'C:\winpcap-dev\Include'],
     sources = ['pktman.c'])
 
 setup (name = 'nemesys',

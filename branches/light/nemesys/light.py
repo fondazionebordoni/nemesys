@@ -39,6 +39,16 @@ class _Tester(Thread):
 
     # Misura
     wx.CallAfter(self._gui._update_messages, "Inizio misurazione")
+    
+    # Download
+
+    # Prequalifica per il downoload
+    
+    # Upload
+    
+    # Prequalifica per l'upload
+    
+    # Ping 
 
 
 
@@ -85,7 +95,7 @@ class Frame(wx.Frame):
         self.label_rr_1 = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
         self.label_rr_2 = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
         self.label_rr_3 = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
-        self.messages_area = wx.TextCtrl(self, -1, "- - - -", style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP)
+        self.messages_area = wx.TextCtrl(self, -1, "", style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP)
 
         self.__set_properties()
         self.__do_layout()
@@ -111,6 +121,10 @@ class Frame(wx.Frame):
         self.label_rr_2.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
         self.label_rr_3.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
         self.messages_area.SetMinSize((424, 121))
+        
+        #self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
+        self.SetBackgroundColour(wx.Colour(242, 241, 240))
+
         # end wxGlade
 
     def __do_layout(self):
