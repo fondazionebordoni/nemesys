@@ -27,6 +27,7 @@ import sysmonitor
 import wx
 from task import Task
 from server import Server
+from executer import bandwidth_sem
 
 __version__ = '2.2'
 
@@ -40,7 +41,7 @@ TH_TRAFFIC_INV = 0.9
 # Soglia per numero di pacchetti persi
 TH_PACKETDROP = 0.05
 
-TOTAL_STEPS = 14
+TOTAL_STEPS = 12
 
 logger = logging.getLogger()
 
@@ -78,6 +79,7 @@ class _Tester(Thread):
   def join(self, timeout = None):
     logger.debug('Richiesta di close')
     self._running = False
+    Thread.join(self, timeout)
 
   def _test_gating(self, test, testtype):
     '''
@@ -131,14 +133,10 @@ class _Tester(Thread):
 
   def _get_bandwith(self, test):
 
-    return int(round(test.bytes * 8 / test.value))
-
-  def _update_down(self, test, task):
-
-    if (test.value > 0):
-      bandwidth = self._get_bandwith(test)
-      logger.debug('Banda ipotizzata in download: %d' % bandwidth)
-      task.update_ftpdownpath(bandwidth)
+    if test.value > 0:
+      return int(round(test.bytes * 8 / test.value))
+    else:
+      raise Exception("Errore durante la valutazione del test")
 
   def _update_gauge(self):
     self._step += 1
@@ -146,8 +144,8 @@ class _Tester(Thread):
 
   def run(self):
 
-    logger.debug('Inizio misurazione')
-    wx.CallAfter(self._gui._update_messages, "Inizio misurazione")
+    logger.debug('Preparazione alla misurazione...')
+    wx.CallAfter(self._gui._update_messages, "Preparazione alla misurazione...")
     self._update_gauge()
 
     # Profilazione
@@ -177,21 +175,19 @@ class _Tester(Thread):
         # Testa gli ftp down
         # ------------------------
         i = 1;
-        while (i <= task.download):
+        while (i <= task.download and self._running):
 
           self._check_system(set([RES_CPU, RES_RAM]))
 
+          # Esecuzione del test
           test = t.testftpdown(task.ftpdownpath)
+          bandwidth = self._get_bandwith(test)
+          task.update_ftpdownpath(bandwidth)
+
           self._update_gauge()
-          self._update_down(test, task)
+          wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in download: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.download), 'blue')
 
-          if i == 1:
-            # Prequalifica della linea
-            wx.CallAfter(self._gui._update_messages, "Prequalifica della banda in download risultato: %d kbps" % self._get_bandwith(test), 'gray')
-          else:
-            # Esecuzione del test
-            wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in download: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.download), 'blue')
-
+          if i > 1:
             # Analisi da contabit
             self._test_gating(test, DOWN)
 
@@ -205,21 +201,19 @@ class _Tester(Thread):
         # Testa gli ftp up
         # ------------------------
         i = 1;
-        while (i <= task.upload):
+        while (i <= task.upload and self._running):
 
           self._check_system(set([RES_CPU, RES_RAM]))
 
+          # Esecuzione del test
           test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
+          bandwidth = self._get_bandwith(test)
+          self._client.profile.upload = bandwidth
+
           self._update_gauge()
-          self._update_down(test, task)
+          wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in upload: %d kbps (test %d di %d)" % (bandwidth, i, task.upload), 'blue')
 
-          if i == 1:
-            # Prequalifica della linea
-            wx.CallAfter(self._gui._update_messages, "Prequalifica della banda in upload risultato: %d kbps" % self._get_bandwith(test), 'gray')
-          else:
-            # Esecuzione del test
-            wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in upload: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.upload), 'blue')
-
+          if i > 1:
             # Analisi da contabit
             self._test_gating(test, UP)
 
@@ -228,13 +222,13 @@ class _Tester(Thread):
 
           i = i + 1
 
-        wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
+        wx.CallAfter(self._gui._update_up, bandwidth)
 
         # Ping
         i = 1
         self._check_system(set([RES_CPU, RES_RAM]))
-        self._update_gauge()
-        while (i <= task.ping):
+
+        while (i <= task.ping and self._running):
 
           test = t.testping()
           self._update_gauge()
@@ -256,7 +250,6 @@ class _Tester(Thread):
         wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s. Aspetta qualche secondo prima di effettuare una nuova misura.' % e)
 
     # Stop
-    self._update_gauge()
     sleep(TIME_LAG)
     wx.CallAfter(self._gui.stop)
 
@@ -415,7 +408,7 @@ class Frame(wx.Frame):
       self.update_gauge(0)
 
     def update_gauge(self, value):
-      #logger.debug("Gauge value %d" % value)
+      # logger.debug("Gauge value %d" % value)
       self.gauge_1.SetValue(value)
 
     def _play(self, event):
