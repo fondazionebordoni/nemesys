@@ -138,7 +138,8 @@ class _Tester(Thread):
       task.update_ftpdownpath(bandwidth)
 
   def run(self):
-    logger.debug('Inizio procedura di testing')
+    logger.debug('Inizio misurazione')
+    wx.CallAfter(self._gui._update_messages, "Inizio misurazione")
 
     # Profilazione
     self._check_system(set([RES_HOSTS, RES_WIFI]))
@@ -162,7 +163,6 @@ class _Tester(Thread):
         id = start.strftime('%y%m%d%H%M')
         m = Measure(id, task.server, self._client, __version__, start.isoformat())
 
-        wx.CallAfter(self._gui._update_messages, "Inizio misurazione")
 
         # Testa gli ftp down
         # ------------------------
@@ -176,7 +176,7 @@ class _Tester(Thread):
 
           if i == 1:
             # Prequalifica della linea
-            wx.CallAfter(self._gui._update_messages, "Prequalifica della banda in download risultato: %d kbps" % self._get_bandwith(test))
+            wx.CallAfter(self._gui._update_messages, "Prequalifica della banda in download risultato: %d kbps" % self._get_bandwith(test), 'gray')
           else:
             # Esecuzione del test
             wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in download: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.download), 'blue')
@@ -203,7 +203,7 @@ class _Tester(Thread):
 
           if i == 1:
             # Prequalifica della linea
-            wx.CallAfter(self._gui._update_messages, "Prequalifica della banda in upload risultato: %d kbps" % self._get_bandwith(test))
+            wx.CallAfter(self._gui._update_messages, "Prequalifica della banda in upload risultato: %d kbps" % self._get_bandwith(test), 'gray')
           else:
             # Esecuzione del test
             wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in upload: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.upload), 'blue')
@@ -290,10 +290,12 @@ class Frame(wx.Frame):
         self.label_r_1 = wx.StaticText(self, -1, "Ping", style = wx.ALIGN_CENTRE)
         self.label_r_2 = wx.StaticText(self, -1, "Download", style = wx.ALIGN_CENTRE)
         self.label_r_3 = wx.StaticText(self, -1, "Upload", style = wx.ALIGN_CENTRE)
-        self.label_rr_ping = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE, size = (60, 40))
-        self.label_rr_down = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE, size = (100, 40))
-        self.label_rr_up = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE, size = (100, 40))
+        self.label_rr_ping = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
+        self.label_rr_down = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
+        self.label_rr_up = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
         self.messages_area = wx.TextCtrl(self, -1, "", style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP)
+        self.grid_sizer_1 = wx.GridSizer(2, 5, 0, 0)
+        self.grid_sizer_2 = wx.GridSizer(2, 3, 0, 0)
 
         self.__set_properties()
         self.__do_layout()
@@ -320,6 +322,7 @@ class Frame(wx.Frame):
         self.label_rr_up.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
 
         self.messages_area.SetMinSize((700, 121))
+        self.grid_sizer_2.SetMinSize((700, 60))
 
         #self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
         self.SetBackgroundColour(wx.Colour(242, 241, 240))
@@ -328,32 +331,27 @@ class Frame(wx.Frame):
 
     def __do_layout(self):
         # begin wxGlade: Frame.__do_layout   
-        grid_sizer_1 = wx.GridSizer(2, 5, 0, 0)
-        grid_sizer_2 = wx.GridSizer(2, 3, 0, 0)
+        self.grid_sizer_1.Add(self.bitmap_cpu, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
+        self.grid_sizer_1.Add(self.bitmap_ram, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
+        self.grid_sizer_1.Add(self.bitmap_wifi, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
+        self.grid_sizer_1.Add(self.bitmap_hosts, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
+        self.grid_sizer_1.Add(self.bitmap_traffic, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
+        self.grid_sizer_1.Add(self.label_cpu, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_1.Add(self.label_ram, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_1.Add(self.label_wifi, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_1.Add(self.label_hosts, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_1.Add(self.label_traffic, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
 
-        grid_sizer_1.Add(self.bitmap_cpu, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
-        grid_sizer_1.Add(self.bitmap_ram, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
-        grid_sizer_1.Add(self.bitmap_wifi, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
-        grid_sizer_1.Add(self.bitmap_hosts, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
-        grid_sizer_1.Add(self.bitmap_traffic, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
-        grid_sizer_1.Add(self.label_cpu, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.label_ram, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.label_wifi, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.label_hosts, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_1.Add(self.label_traffic, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-
-        grid_sizer_2.Add(self.label_r_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
-        grid_sizer_2.Add(self.label_r_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
-        grid_sizer_2.Add(self.label_r_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
-        grid_sizer_2.Add(self.label_rr_ping, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_2.Add(self.label_rr_down, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        grid_sizer_2.Add(self.label_rr_up, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_2.Add(self.label_r_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        self.grid_sizer_2.Add(self.label_r_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        self.grid_sizer_2.Add(self.label_r_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        self.grid_sizer_2.Add(self.label_rr_ping, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        self.grid_sizer_2.Add(self.label_rr_down, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        self.grid_sizer_2.Add(self.label_rr_up, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
 
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_3 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_4 = wx.BoxSizer(wx.VERTICAL)
-        sizer_5 = wx.BoxSizer(wx.VERTICAL)
         sizer_6 = wx.StaticBoxSizer(self.sizer_3_staticbox, wx.VERTICAL)
 
         sizer_4.Add(self.bitmap_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
@@ -361,19 +359,16 @@ class Frame(wx.Frame):
         sizer_4.Add(self.label_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
 
         sizer_2.Add(self.bitmap_button_1, 0, wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_TOP, 4)
-        sizer_2.Add(grid_sizer_1, 0, wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 24)
+        sizer_2.Add(self.grid_sizer_1, 0, wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 10)
         sizer_2.Add(sizer_4, 0, wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
 
         sizer_6.Add(self.messages_area, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
 
-        sizer_5.Add(sizer_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        sizer_5.Add(grid_sizer_2, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-
-        sizer_3.Add(sizer_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-
         sizer_1.Add(sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 11)
         sizer_1.Add(self.gauge_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        sizer_1.Add(sizer_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 11)
+        sizer_1.Add(sizer_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 11)
+        sizer_1.Add(self.grid_sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+
         self.SetSizer(sizer_1)
         self.Layout()
         # end wxGlade
@@ -394,9 +389,9 @@ class Frame(wx.Frame):
       for resource in checkable_set:
         self.set_resource_info(resource, {'status': None, 'info': None, 'value': None})
 
-      self.label_rr_down.SetLabel("")
-      self.label_rr_up.SetLabel("")
-      self.label_rr_ping.SetLabel("")
+      self.label_rr_down.SetLabel("- - - -")
+      self.label_rr_up.SetLabel("- - - -")
+      self.label_rr_ping.SetLabel("- - - -")
 
     def _play(self, event):
 
