@@ -40,6 +40,8 @@ TH_TRAFFIC_INV = 0.9
 # Soglia per numero di pacchetti persi
 TH_PACKETDROP = 0.05
 
+TOTAL_STEPS = 20
+
 logger = logging.getLogger()
 
 def sleeper():
@@ -60,6 +62,7 @@ class _Tester(Thread):
     paths.check_paths()
 
     self._gui = gui
+    self._step = 0
 
     (options, args, md5conf) = parse()
 
@@ -137,15 +140,23 @@ class _Tester(Thread):
       logger.debug('Banda ipotizzata in download: %d' % bandwidth)
       task.update_ftpdownpath(bandwidth)
 
+  def _update_gauge(self):
+    wx.CallAfter(self._gui.gauge.setValue, round((self._step * 100) / TOTAL_STEPS))
+    self._step += 1
+
   def run(self):
+
     logger.debug('Inizio misurazione')
     wx.CallAfter(self._gui._update_messages, "Inizio misurazione")
+    self._update_gauge()
 
     # Profilazione
     self._check_system(set([RES_HOSTS, RES_WIFI]))
+    self._update_gauge()
 
     # Scaricamento del task dallo scheduler
     task = self._download_task()
+    self._update_gauge()
 
     # TODO Rimuovere dopo aver sistemato il backend
     server = Server('NAMEX', '193.104.137.133')
@@ -153,7 +164,7 @@ class _Tester(Thread):
 
     if task != None:
 
-      #try:
+      try:
         start = datetime.fromtimestamp(timestampNtp())
 
         ip = sysmonitor.getIp()
@@ -170,6 +181,7 @@ class _Tester(Thread):
         while (i <= task.download):
 
           self._check_system(set([RES_CPU, RES_RAM]))
+          self._update_gauge()
 
           test = t.testftpdown(task.ftpdownpath)
           self._update_down(test, task)
@@ -187,6 +199,7 @@ class _Tester(Thread):
             # Salvataggio della misura
             m.savetest(test)
 
+          self._update_gauge()
           i = i + 1
 
         wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
@@ -197,6 +210,7 @@ class _Tester(Thread):
         while (i <= task.upload):
 
           self._check_system(set([RES_CPU, RES_RAM]))
+          self._update_gauge()
 
           test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
           self._update_down(test, task)
@@ -214,6 +228,7 @@ class _Tester(Thread):
             # Salvataggio della misura
             m.savetest(test)
 
+          self._update_gauge()
           i = i + 1
 
         wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
@@ -221,6 +236,7 @@ class _Tester(Thread):
         # Ping
         i = 1
         self._check_system(set([RES_CPU, RES_RAM]))
+        self._update_gauge()
         while (i <= task.ping):
 
           test = t.testping()
@@ -228,6 +244,8 @@ class _Tester(Thread):
 
           # Salvataggio del test nella misura
           m.savetest(test)
+
+          self._update_gauge()
           i = i + 1
 
           if ((i - 1) % task.nicmp == 0):
@@ -236,9 +254,9 @@ class _Tester(Thread):
 
         wx.CallAfter(self._gui._update_ping, test.value)
 
-      #except Exception as e:
-      #  logger.warning('Misura sospesa per eccezione %s' % e)
-      #  wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s. Aspetta qualche secondo prima di effettuare una nuova misura.' % e)
+      except Exception as e:
+        logger.warning('Misura sospesa per eccezione %s' % e)
+        wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s. Aspetta qualche secondo prima di effettuare una nuova misura.' % e)
 
     # Stop
     sleep(TIME_LAG)
@@ -364,9 +382,9 @@ class Frame(wx.Frame):
 
         sizer_6.Add(self.messages_area, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
 
-        sizer_1.Add(sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 11)
+        sizer_1.Add(sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 6)
         sizer_1.Add(self.gauge_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        sizer_1.Add(sizer_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 11)
+        sizer_1.Add(sizer_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 6)
         sizer_1.Add(self.grid_sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
 
         self.SetSizer(sizer_1)
@@ -375,12 +393,15 @@ class Frame(wx.Frame):
 
     def _update_down(self, downwidth):
       self.label_rr_down.SetLabel("%d kbps" % downwidth)
+      self.Layout()
 
     def _update_up(self, upwidth):
       self.label_rr_up.SetLabel("%d kbps" % upwidth)
+      self.Layout()
 
     def _update_ping(self, rtt):
       self.label_rr_ping.SetLabel("%d ms" % rtt)
+      self.Layout()
 
     def _reset_info(self):
 
@@ -392,6 +413,8 @@ class Frame(wx.Frame):
       self.label_rr_down.SetLabel("- - - -")
       self.label_rr_up.SetLabel("- - - -")
       self.label_rr_ping.SetLabel("- - - -")
+
+      self.gauge_1.SetValue(0)
 
     def _play(self, event):
 
