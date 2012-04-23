@@ -96,13 +96,11 @@ class _Tester(Thread):
       logger.debug('Percentuale di pacchetti persi: %.2f%%' % (packet_ratio * 100))
       if (packet_tot > 0 and packet_ratio > TH_PACKETDROP):
         info = 'Eccessiva presenza di traffico di rete, impossibile analizzare i dati di test'
-        wx.CallAfter(self._gui._update_messages, info, 'red')
-        wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': 0})
+        wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': None})
 
     else:
       info = 'Errore durante la misura, impossibile analizzare i dati di test'
-      wx.CallAfter(self._gui._update_messages, info, 'red')
-      wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': 0})
+      wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': None})
 
     if (testtype == DOWN):
       byte_nem = stats.payload_down_nem_net
@@ -124,19 +122,17 @@ class _Tester(Thread):
       logger.debug('Percentuale di traffico spurio: %.2f%%/%.2f%%' % (traffic_ratio * 100, packet_ratio_inv * 100))
       if traffic_ratio < 0:
         wx.CallAfter(self._gui._update_messages, 'Errore durante la verifica del traffico di misura: impossibile salvare i dati.', 'red')
-      if traffic_ratio < TH_TRAFFIC and packet_ratio_inv < TH_TRAFFIC_INV:
+      elif traffic_ratio < TH_TRAFFIC and packet_ratio_inv < TH_TRAFFIC_INV:
         # Dato da salvare sulla misura
         test.bytes = byte_all
         info = 'Traffico internet non legato alla misura: percentuali %d%%/%d%%.' % (value, round(packet_ratio_inv * 100))
         wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': True, 'info': info, 'value': value})
       else:
         info = 'Eccessiva presenza di traffico internet non legato alla misura: percentuali %d%%/%d%%.' % (value, round(packet_ratio_inv * 100))
-        wx.CallAfter(self._gui._update_messages, info, 'red')
         wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value})
     else:
       info = 'Errore durante la misura, impossibile analizzare i dati di test'
-      wx.CallAfter(self._gui._update_messages, info, 'red')
-      wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': 0})
+      wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value})
 
   def _get_bandwith(self, test):
 
@@ -465,15 +461,17 @@ class Frame(wx.Frame):
 
       if res_bitmap != None:
         res_bitmap.SetBitmap(wx.Bitmap(path.join(paths.ICONS, u"%s_%s.png" % (resource.lower(), color))))
-        if info['value'] != None:
-          if resource == RES_CPU or resource == RES_RAM or resource == RES_TRAFFIC:
-              res_label.SetLabel("%s\n%s%%" % (resource, round(float(info['value']))))
-          else:
-            res_label.SetLabel("%s\n%s" % (resource, info['value']))
+
+      if info['value'] != None:
+        if resource == RES_CPU or resource == RES_RAM or resource == RES_TRAFFIC:
+            res_label.SetLabel("%s\n%s%%" % (resource, round(float(info['value']))))
         else:
-          res_label.SetLabel("%s\n- - - -" % resource)
-        if info['status'] == False:
-          self._update_messages("%s: %s" % (resource, info['info']), color)
+          res_label.SetLabel("%s\n%s" % (resource, info['value']))
+      else:
+        res_label.SetLabel("%s\n- - - -" % resource)
+
+      if info['status'] == False:
+        self._update_messages("%s: %s" % (resource, info['info']), color)
 
       self.Layout()
 
