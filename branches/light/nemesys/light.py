@@ -141,7 +141,7 @@ class _Tester(Thread):
     logger.debug('Inizio procedura di testing')
 
     # Profilazione
-    self._check_system()
+    self._check_system(set([RES_HOSTS, RES_WIFI]))
 
     # Scaricamento del task dallo scheduler
     task = self._download_task()
@@ -169,6 +169,8 @@ class _Tester(Thread):
         i = 1;
         while (i <= task.download):
 
+          self._check_system(set([RES_CPU, RES_RAM]))
+
           test = t.testftpdown(task.ftpdownpath)
           self._update_down(test, task)
 
@@ -177,7 +179,7 @@ class _Tester(Thread):
             wx.CallAfter(self._gui._update_messages, "Prequalifica della banda in download risultato: %d kbps" % self._get_bandwith(test))
           else:
             # Esecuzione del test
-            wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in download: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.download))
+            wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in download: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.download), 'blue')
 
             # Analisi da contabit
             self._test_gating(test, DOWN)
@@ -194,6 +196,8 @@ class _Tester(Thread):
         i = 1;
         while (i <= task.upload):
 
+          self._check_system(set([RES_CPU, RES_RAM]))
+
           test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
           self._update_down(test, task)
 
@@ -202,7 +206,7 @@ class _Tester(Thread):
             wx.CallAfter(self._gui._update_messages, "Prequalifica della banda in upload risultato: %d kbps" % self._get_bandwith(test))
           else:
             # Esecuzione del test
-            wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in upload: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.upload))
+            wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in upload: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.upload), 'blue')
 
             # Analisi da contabit
             self._test_gating(test, UP)
@@ -216,10 +220,11 @@ class _Tester(Thread):
 
         # Ping
         i = 1
+        self._check_system(set([RES_CPU, RES_RAM]))
         while (i <= task.ping):
 
           test = t.testping()
-          wx.CallAfter(self._gui._update_messages, "Risultato ping: %d ms (test %d di %d)" % (test.value, i, task.ping))
+          wx.CallAfter(self._gui._update_messages, "Risultato ping: %d ms (test %d di %d)" % (test.value, i, task.ping), 'blue')
 
           # Salvataggio del test nella misura
           m.savetest(test)
@@ -227,6 +232,7 @@ class _Tester(Thread):
 
           if ((i - 1) % task.nicmp == 0):
             sleep(task.delay)
+            self._check_system(set([RES_CPU, RES_RAM]))
 
         wx.CallAfter(self._gui._update_ping, test.value)
 
@@ -238,9 +244,8 @@ class _Tester(Thread):
     sleep(TIME_LAG)
     wx.CallAfter(self._gui.stop)
 
-  def _check_system(self):
-    wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
-    checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])
+  def _check_system(self, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])):
+    #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
     profiled_set = checkset(checkable_set)
 
     for resource in checkable_set:
@@ -285,9 +290,9 @@ class Frame(wx.Frame):
         self.label_r_1 = wx.StaticText(self, -1, "Ping", style = wx.ALIGN_CENTRE)
         self.label_r_2 = wx.StaticText(self, -1, "Download", style = wx.ALIGN_CENTRE)
         self.label_r_3 = wx.StaticText(self, -1, "Upload", style = wx.ALIGN_CENTRE)
-        self.label_rr_ping = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE, size = (60, 20))
-        self.label_rr_down = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE, size = (100, 20))
-        self.label_rr_up = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE, size = (100, 20))
+        self.label_rr_ping = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE, size = (60, 40))
+        self.label_rr_down = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE, size = (100, 40))
+        self.label_rr_up = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE, size = (100, 40))
         self.messages_area = wx.TextCtrl(self, -1, "", style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP)
 
         self.__set_properties()
@@ -299,7 +304,7 @@ class Frame(wx.Frame):
     def __set_properties(self):
         # begin wxGlade: Frame.__set_properties
         self.SetTitle("Ne.Me.Sys. Light")
-        self.SetSize((600, 400))
+        self.SetSize((720, 400))
         self.bitmap_button_1.SetMinSize((121, 121))
         self.bitmap_5.SetMinSize((95, 65))
         self.label_5.SetFont(wx.Font(18, wx.ROMAN, wx.NORMAL, wx.NORMAL, 0, ""))
@@ -309,12 +314,12 @@ class Frame(wx.Frame):
         self.bitmap_wifi.SetMinSize((60, 60))
         self.bitmap_hosts.SetMinSize((60, 60))
         self.bitmap_traffic.SetMinSize((60, 60))
-        self.gauge_1.SetMinSize((585, 28))
+        self.gauge_1.SetMinSize((700, 26))
         self.label_rr_ping.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
         self.label_rr_down.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
         self.label_rr_up.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
 
-        self.messages_area.SetMinSize((424, 121))
+        self.messages_area.SetMinSize((700, 121))
 
         #self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
         self.SetBackgroundColour(wx.Colour(242, 241, 240))
@@ -355,8 +360,9 @@ class Frame(wx.Frame):
         sizer_4.Add(self.label_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
         sizer_4.Add(self.label_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
 
+        sizer_2.Add(self.bitmap_button_1, 0, wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_TOP, 4)
         sizer_2.Add(grid_sizer_1, 0, wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 24)
-        sizer_2.Add(sizer_4, 0, wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 16)
+        sizer_2.Add(sizer_4, 0, wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
 
         sizer_6.Add(self.messages_area, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
 
@@ -364,7 +370,6 @@ class Frame(wx.Frame):
         sizer_5.Add(grid_sizer_2, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
 
         sizer_3.Add(sizer_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        sizer_3.Add(self.bitmap_button_1, 0, wx.ALL | wx.ALIGN_RIGHT | wx.ALIGN_TOP, 16)
 
         sizer_1.Add(sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 11)
         sizer_1.Add(self.gauge_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
