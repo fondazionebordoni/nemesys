@@ -291,8 +291,8 @@ class Frame(wx.Frame):
         self.sizer_3_staticbox = wx.StaticBox(self, -1, "Messaggi")
         self.bitmap_button_1 = wx.BitmapButton(self, -1, wx.Bitmap(path.join(paths.ICONS, u"play.png"), wx.BITMAP_TYPE_ANY))
         self.bitmap_5 = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"logo_nemesys.png"), wx.BITMAP_TYPE_ANY))
-        self.label_5 = wx.StaticText(self, -1, "Ne.Me.Sys.", style = wx.ALIGN_CENTRE)
-        self.label_6 = wx.StaticText(self, -1, "light", style = wx.ALIGN_CENTRE)
+        self.label_5 = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE)
+        self.label_6 = wx.StaticText(self, -1, "Speedtest", style = wx.ALIGN_CENTRE)
         self.bitmap_cpu = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_CPU.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_ram = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_RAM.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_wifi = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_WIFI.lower()), wx.BITMAP_TYPE_ANY))
@@ -322,11 +322,11 @@ class Frame(wx.Frame):
 
     def __set_properties(self):
         # begin wxGlade: Frame.__set_properties
-        self.SetTitle("Ne.Me.Sys. Light")
+        self.SetTitle("Misurainternet Speedtest")
         self.SetSize((720, 420))
         self.bitmap_button_1.SetMinSize((121, 121))
         self.bitmap_5.SetMinSize((95, 65))
-        self.label_5.SetFont(wx.Font(18, wx.ROMAN, wx.NORMAL, wx.NORMAL, 0, ""))
+        #self.label_5.SetFont(wx.Font(18, wx.ROMAN, wx.NORMAL, wx.NORMAL, 0, ""))
         self.label_6.SetFont(wx.Font(14, wx.ROMAN, wx.ITALIC, wx.NORMAL, 0, ""))
         self.bitmap_cpu.SetMinSize((60, 60))
         self.bitmap_ram.SetMinSize((60, 60))
@@ -372,7 +372,7 @@ class Frame(wx.Frame):
         sizer_6 = wx.StaticBoxSizer(self.sizer_3_staticbox, wx.VERTICAL)
 
         sizer_4.Add(self.bitmap_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        sizer_4.Add(self.label_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        #sizer_4.Add(self.label_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
         sizer_4.Add(self.label_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
 
         sizer_2.Add(self.bitmap_button_1, 0, wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_TOP, 4)

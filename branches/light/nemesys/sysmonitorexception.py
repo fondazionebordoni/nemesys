@@ -41,7 +41,7 @@ FAILPROF = SysmonitorException('FAILPROF', 'Non sono riuscito a trovare lo stato
 #Error retrieving the Profile Status (reading params)
 FAILSTATUS = SysmonitorException('FAILSTATUS', 'Errore durante il recupero dello stato del computer.')
 #Error on param reading
-FAILREADPARAM = SysmonitorException('FAILREADPARAM', 'Errore di letura di un parametro in SystemProfiler.')
+FAILREADPARAM = SysmonitorException('FAILREADPARAM', 'Errore di lettura di un parametro in SystemProfiler.')
 #Error  on determining param's value
 FAILVALUEPARAM = SysmonitorException('FAILVALUEPARAM', 'Errore nel valore di un parametro in SystemProfiler.')
 #Error on connection list
