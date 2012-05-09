@@ -10,9 +10,11 @@ from measure import Measure
 from optparse import OptionParser
 from os import path
 from profile import Profile
+from server import Server
 from sys import platform
 from sysmonitor import checkset, RES_CPU, RES_RAM, RES_WIFI, RES_TRAFFIC, \
   RES_HOSTS
+from task import Task
 from tester import Tester
 from threading import Thread
 from time import sleep
@@ -23,11 +25,9 @@ import hashlib
 import httputils
 import logging
 import paths
+import ping
 import sysmonitor
 import wx
-from task import Task
-from server import Server
-from executer import bandwidth_sem
 
 __version__ = '2.2'
 
@@ -73,8 +73,6 @@ class _Tester(Thread):
     self._testtimeout = options.testtimeout
     self._httptimeout = options.httptimeout
     self._md5conf = md5conf
-
-    self._check_system()
 
     self._running = True
 
@@ -147,6 +145,21 @@ class _Tester(Thread):
     self._step += 1
     wx.CallAfter(self._gui.update_gauge, self._step)
 
+  def _get_server(self):
+
+    servers = set([Server('NAMEX', '193.104.137.133', 'NAP di Roma'), Server('MIX', '193.104.137.4', 'NAP di Milano')])
+
+    for server in servers:
+      try:
+        if (ping.do_one("%s" % server.ip, 1) > 0):
+          return server
+      except Exception as e:
+        logger.debug('Errore durante il ping dell\'host %s: %s' % (server.ip, e))
+        pass
+
+    wx.CallAfter(self._gui._update_messages, "Non è stato possibile contattare il server di misura, la misurazione non può essere effettuata. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
+    return None
+
   def run(self):
 
     logger.debug('Preparazione alla misurazione...')
@@ -156,13 +169,19 @@ class _Tester(Thread):
     # Profilazione
     self._check_system(set([RES_HOSTS, RES_WIFI]))
 
-    # Scaricamento del task dallo scheduler
-    task = self._download_task()
-    self._update_gauge()
+
+    # TODO Il server deve essere indicato dal backend che è a conoscenza dell'occupazione della banda!
 
     # TODO Rimuovere dopo aver sistemato il backend
-    server = Server('NAMEX', '193.104.137.133')
-    task = Task(0, '2010-01-01 10:01:00', server, '/download/1000.rnd', 'upload/1000.rnd', 3, 3, 10, 4, 4, 0, True)
+    task = None
+    server = self._get_server()
+    if server != None:
+      wx.CallAfter(self._gui._update_messages, "Identificato il server di misura: %s" % server.name)
+
+      # Scaricamento del task dallo scheduler
+      task = self._download_task(server)
+      self._update_gauge()
+      task = Task(0, '2010-01-01 10:01:00', server, '/download/1000.rnd', 'upload/1000.rnd', 3, 3, 10, 4, 4, 0, True)
 
     if task != None:
 
@@ -269,13 +288,13 @@ class _Tester(Thread):
       wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
 
   # Scarica il prossimo task dallo scheduler
-  def _download_task(self):
+  def _download_task(self, server):
 
     url = urlparse(self._scheduler)
     connection = httputils.getverifiedconnection(url = url, certificate = None, timeout = self._httptimeout)
 
     try:
-      connection.request('GET', '%s?clientid=%s&version=%s&confid=%s' % (url.path, self._client.id, __version__, self._md5conf))
+      connection.request('GET', '%s?clientid=%s&version=%s&confid=%s&server=%s' % (url.path, self._client.id, __version__, self._md5conf, server.ip))
       data = connection.getresponse().read()
     except Exception as e:
       logger.error('Impossibile scaricare lo scheduling. Errore: %s.' % e)
@@ -289,7 +308,8 @@ class Frame(wx.Frame):
         # begin wxGlade: Frame.__init__
         wx.Frame.__init__(self, *args, **kwds)
         self.sizer_3_staticbox = wx.StaticBox(self, -1, "Messaggi")
-        self.bitmap_button_1 = wx.BitmapButton(self, -1, wx.Bitmap(path.join(paths.ICONS, u"play.png"), wx.BITMAP_TYPE_ANY))
+        self.bitmap_button_play = wx.BitmapButton(self, -1, wx.Bitmap(path.join(paths.ICONS, u"play.png"), wx.BITMAP_TYPE_ANY))
+        self.bitmap_button_check = wx.BitmapButton(self, -1, wx.Bitmap(path.join(paths.ICONS, u"check.png"), wx.BITMAP_TYPE_ANY))
         self.bitmap_5 = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"logo_nemesys.png"), wx.BITMAP_TYPE_ANY))
         self.label_5 = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE)
         self.label_6 = wx.StaticText(self, -1, "Speedtest", style = wx.ALIGN_CENTRE)
@@ -317,14 +337,16 @@ class Frame(wx.Frame):
         self.__set_properties()
         self.__do_layout()
 
-        self.Bind(wx.EVT_BUTTON, self._play, self.bitmap_button_1)
+        self.Bind(wx.EVT_BUTTON, self._play, self.bitmap_button_play)
+        self.Bind(wx.EVT_BUTTON, self._check, self.bitmap_button_check)
         # end wxGlade
 
     def __set_properties(self):
         # begin wxGlade: Frame.__set_properties
-        self.SetTitle("Misurainternet Speedtest")
+        self.SetTitle("Ne.Me.Sys Speedtest")
         self.SetSize((720, 420))
-        self.bitmap_button_1.SetMinSize((121, 121))
+        self.bitmap_button_play.SetMinSize((120, 120))
+        self.bitmap_button_check.SetMinSize((40, 120))
         self.bitmap_5.SetMinSize((95, 65))
         #self.label_5.SetFont(wx.Font(18, wx.ROMAN, wx.NORMAL, wx.NORMAL, 0, ""))
         self.label_6.SetFont(wx.Font(14, wx.ROMAN, wx.ITALIC, wx.NORMAL, 0, ""))
@@ -339,6 +361,7 @@ class Frame(wx.Frame):
         self.label_rr_up.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
 
         self.messages_area.SetMinSize((700, 121))
+        self.messages_area.SetFont(wx.Font(10, wx.SWISS, wx.NORMAL, wx.NORMAL, 0, ""))
         self.grid_sizer_2.SetMinSize((700, 60))
 
         #self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
@@ -375,7 +398,8 @@ class Frame(wx.Frame):
         #sizer_4.Add(self.label_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
         sizer_4.Add(self.label_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
 
-        sizer_2.Add(self.bitmap_button_1, 0, wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_TOP, 4)
+        sizer_2.Add(self.bitmap_button_play, 0, wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_TOP, 4)
+        sizer_2.Add(self.bitmap_button_check, 0, wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_TOP, 4)
         sizer_2.Add(self.grid_sizer_1, 0, wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 10)
         sizer_2.Add(sizer_4, 0, wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
 
@@ -390,7 +414,21 @@ class Frame(wx.Frame):
         self.Layout()
         # end wxGlade
 
-        self._tester = _Tester(self)
+        self._check(None)
+
+    def _check(self, event):
+      self.bitmap_button_check.Disable()
+      self._check_system()
+      self.bitmap_button_check.Enable()
+
+    # TODO Spostare il check in un thread separato
+    def _check_system(self, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])):
+
+      #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
+      profiled_set = checkset(checkable_set)
+
+      for resource in checkable_set:
+        self.set_resource_info(resource, profiled_set[resource])
 
     def _update_down(self, downwidth):
       self.label_rr_down.SetLabel("%d kbps" % downwidth)
@@ -416,6 +454,7 @@ class Frame(wx.Frame):
       self.label_rr_ping.SetLabel("- - - -")
 
       self.update_gauge(0)
+      self.Layout()
 
     def update_gauge(self, value):
       # logger.debug("Gauge value %d" % value)
@@ -424,17 +463,20 @@ class Frame(wx.Frame):
     def _play(self, event):
 
       self._reset_info()
+      self._tester = _Tester(self)
       self._tester.start()
 
-      #self.bitmap_button_1.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
-      self.bitmap_button_1.Disable()
+      #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
+      self.bitmap_button_play.Disable()
+      self.bitmap_button_check.Disable()
 
     def stop(self):
 
       self.update_gauge(0)
 
-      #self.bitmap_button_1.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"play.png")))
-      self.bitmap_button_1.Enable()
+      #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"play.png")))
+      self.bitmap_button_play.Enable()
+      self.bitmap_button_check.Enable()
 
       self._update_messages("Sistema pronto per una nuova misura")
 
@@ -483,6 +525,7 @@ class Frame(wx.Frame):
 
     def _update_messages(self, message, color = 'black'):
 
+      logger.info('Messagio all\'utente: "%s"' % message)
       date = '\n%s' % getdate().strftime('%c')
       self.messages_area.AppendText("%s %s" % (date, message))
       end = self.messages_area.GetLastPosition() - len(message)
