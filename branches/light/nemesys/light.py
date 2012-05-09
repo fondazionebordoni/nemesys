@@ -74,6 +74,8 @@ class _Tester(Thread):
     self._httptimeout = options.httptimeout
     self._md5conf = md5conf
 
+    self._check_system()
+
     self._running = True
 
   def join(self, timeout = None):
@@ -188,7 +190,8 @@ class _Tester(Thread):
           task.update_ftpdownpath(bandwidth)
 
           self._update_gauge()
-          wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in download: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.download), 'blue')
+          #wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in download: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.download), 'blue')
+          wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP download." % (i, task.download), 'blue')
 
           if i > 1:
             # Analisi da contabit
@@ -214,7 +217,8 @@ class _Tester(Thread):
           self._client.profile.upload = bandwidth
 
           self._update_gauge()
-          wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in upload: %d kbps (test %d di %d)" % (bandwidth, i, task.upload), 'blue')
+          #wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in upload: %d kbps (test %d di %d)" % (bandwidth, i, task.upload), 'blue')
+          wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP upload." % (i, task.download), 'blue')
 
           if i > 1:
             # Analisi da contabit
@@ -235,7 +239,8 @@ class _Tester(Thread):
 
           test = t.testping()
           self._update_gauge()
-          wx.CallAfter(self._gui._update_messages, "Risultato ping: %d ms (test %d di %d)" % (test.value, i, task.ping), 'blue')
+          #wx.CallAfter(self._gui._update_messages, "Risultato ping: %d ms (test %d di %d)" % (test.value, i, task.ping), 'blue')
+          wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.download), 'blue')
 
           # Salvataggio del test nella misura
           m.savetest(test)
@@ -385,6 +390,8 @@ class Frame(wx.Frame):
         self.Layout()
         # end wxGlade
 
+        self._tester = _Tester(self)
+
     def _update_down(self, downwidth):
       self.label_rr_down.SetLabel("%d kbps" % downwidth)
       self.Layout()
@@ -417,17 +424,16 @@ class Frame(wx.Frame):
     def _play(self, event):
 
       self._reset_info()
-      self._tester = _Tester(self)
       self._tester.start()
 
-      self.bitmap_button_1.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
+      #self.bitmap_button_1.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
       self.bitmap_button_1.Disable()
 
     def stop(self):
 
       self.update_gauge(0)
 
-      self.bitmap_button_1.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"play.png")))
+      #self.bitmap_button_1.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"play.png")))
       self.bitmap_button_1.Enable()
 
       self._update_messages("Sistema pronto per una nuova misura")
