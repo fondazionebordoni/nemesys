@@ -82,3 +82,5 @@ UNKDISKLOAD = SysmonitorException('UNKDISKLOAD', 'Impossibile detereminare il ca
 DISKOVERLOAD = SysmonitorException('DISKOVERLOAD', 'Eccessivo carico in scrittura del disco.')
 #Error retrieving IP address
 UNKIP = SysmonitorException('UNKIP', 'Impossibile ottenere il dettaglio dell\'indirizzo IP')
+#Error retrieving Device Name
+UNKDEV = SysmonitorException('UNKDEV', 'Impossibile ottenere il nome del device associato all\'indirizzo IP')

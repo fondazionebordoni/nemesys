@@ -233,16 +233,18 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
   CHECK_VALUE = None
   
   ip = getIp();
+  dev = getDev()
   mac = _get_mac(ip)
   mask = _get_mask(ip)
-  logger.info('| Mac: %s | Ip: %s | Cidr Mask: %d |' % (mac, ip, mask))
+  
+  logger.info('| Dev: %s | Mac: %s | Ip: %s | Cidr Mask: %d |' % (dev, mac, ip, mask))
 
   if (arping == 0):
     thres = th_host + 1
   else:
     thres = th_host
 
-  value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac)
+  value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac, dev)
   logger.info('Trovati %d host in rete.' % value)
   
   CHECK_VALUE = value
@@ -337,7 +339,7 @@ def _get_NetIF():
 
 def _get_ActiveIp(host = 'finaluser.agcom244.fub.it', port = 443):
 
-  logger.info('Determinazione dell\'IP attivo verso Internet')
+  #logger.debug('Determinazione dell\'IP attivo verso Internet')
 
   s = socket.socket(socket.AF_INET)
   s.connect((host, port))
@@ -349,11 +351,14 @@ def _get_ActiveIp(host = 'finaluser.agcom244.fub.it', port = 443):
   return value
 
 
-def _get_mac(ip):
+def _get_mac(ip=None):
   
   global CHECK_VALUE
 
   CHECK_VALUE = None
+  
+  if ip==None:
+    ip=_get_ActiveIp()
   
   mac = None
   netIF = _get_NetIF()
@@ -395,11 +400,14 @@ def getIp():
   return ip
 
 
-def _get_mask(ip):
+def _get_mask(ip=None):
   
   global CHECK_VALUE
 
   CHECK_VALUE = None
+  
+  if ip==None:
+    ip=_get_ActiveIp()
   
   cidrMask = 0
   dotMask = None
@@ -417,6 +425,33 @@ def _get_mask(ip):
     raise sysmonitorexception.BADMASK
 
   return cidrMask
+
+
+def getDev(ip=None):
+  
+  global CHECK_VALUE
+
+  CHECK_VALUE = None
+
+  Dev=None
+
+  if ip==None:
+    ip=_get_ActiveIp()
+    
+  netIF = _get_NetIF()
+
+  for interface in netIF:
+    if (netIF[interface]['ip'][0] == ip):
+      #logger.debug('| Ip: %s | Find on Dev: %s |' % (ip,interface))
+      Dev = interface
+
+  if (Dev == None):
+    logger.error('Impossibile recuperare il nome del Device associato all\'IP %s' % ip)
+    raise sysmonitorexception.UNKDEV
+
+  CHECK_VALUE = Dev
+
+  return Dev
 
 
 def _get_os():

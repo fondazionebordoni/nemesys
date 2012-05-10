@@ -95,7 +95,7 @@ def receive_arping(MACsrc):
   return len(IPtable)
 
 
-def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 2):
+def do_arping(dev, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 2):
 
   nHosts = 0
 
@@ -115,17 +115,11 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, thresh
 
   pktman.debugmode(0)
 
-  dev = pktman.getdev(IPsrc)
-  if (dev['err_flag'] != 0):
-    raise Exception (dev['err_str'])
-  else:
-    dev_name=dev['dev_name']
-
-  rec_init = pktman.initialize(dev_name, 1024000, 150, timeout*1000)
+  rec_init = pktman.initialize(dev, 1024000, 150, timeout*1000)
   if (rec_init['err_flag'] != 0):
     raise Exception (rec_init['err_str'])
   rec_init = pktman.setfilter(pcap_filter)
-  logger.debug("Inizializzato sniffer (%s, %s)" % (dev_name, pcap_filter))
+  logger.debug("Inizializzato sniffer (%s, %s)" % (dev, pcap_filter))
   if (rec_init['err_flag'] != 0):
     raise Exception (rec_init['err_str'])
   else:
@@ -167,10 +161,11 @@ if __name__ == '__main__':
   s.connect(('www.fub.it', 80))
   ip = s.getsockname()[0]
   s.close()
+  dev='eth0'
   mymac='F0:4D:A2:53:AD:AE'
   print mymac.split(':')
 
   if ip != None:
     #print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
-    print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
+    print("Trovati: %d host" % do_arping(dev, ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
 
