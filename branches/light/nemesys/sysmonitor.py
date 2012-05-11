@@ -53,6 +53,7 @@ RES_IP = 'IP'
 RES_MASK = 'MASK'
 RES_OS = 'OS'
 RES_TRAFFIC = 'Traffic'
+RES_DEV = 'Device'
 
 CHECK_VALUE = None
 
@@ -327,9 +328,12 @@ def _get_NetIF():
   netIF = {}
 
   for ifName in netifaces.interfaces():
-    ip = [i['addr'] for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'addr':'No IP addr'}])]
-    mask = [i['netmask'] for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'netmask':'No IP addr'}])]
-    mac = [i['addr'] for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_LINK, [{'addr':'No IP addr'}])]
+    #logger.debug((ifName,netifaces.ifaddresses(ifName)))
+    mac = [i.setdefault('addr','') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_LINK, [{'addr':''}])]
+    ip = [i.setdefault('addr','') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'addr':''}])]
+    mask = [i.setdefault('netmask','') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'netmask':''}])]    
+    if mask[0]=='0.0.0.0':
+      mask = [i.setdefault('broadcast','') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'broadcast':''}])]
     netIF[ifName] = {'mac':mac, 'ip':ip, 'mask':mask}
 
   #logger.debug('Network Interfaces:\n %s' %netIF)
@@ -489,9 +493,10 @@ def checkset(check_set = set()):
    RES_MAC:{'prio':5, 'meth':_get_mac},           \
    RES_IP:{'prio':6, 'meth':getIp},               \
    RES_MASK:{'prio':7, 'meth':_get_mask},         \
-   RES_OS:{'prio':8, 'meth':_get_os},             \
+   RES_DEV:{'prio':8, 'meth':getDev},             \
+   RES_OS:{'prio':9, 'meth':_get_os},             \
    #'sys':{'prio':9,'meth':_get_Sys}              \
-  }
+   }
 
   system_profile = {}
 
