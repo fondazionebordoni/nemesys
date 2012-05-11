@@ -90,6 +90,12 @@ class _Tester(Thread):
     self._testtimeout = options.testtimeout
     self._httptimeout = options.httptimeout
     self._md5conf = md5conf
+    
+    self._running = True
+    
+  def _join(self):
+    Thread.join(self)
+    self._running = False
 
   def _test_gating(self, test, testtype):
     '''
