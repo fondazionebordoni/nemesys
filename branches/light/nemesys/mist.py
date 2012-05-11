@@ -61,7 +61,7 @@ class OptionParser(OptionParser):
 
 class _Checker(Thread):
 
-  def __init__(self, gui, checkable_set=set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])):
+  def __init__(self, gui, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])):
     Thread.__init__(self)
     self._gui = gui
     self._checkable_set = checkable_set
@@ -90,11 +90,12 @@ class _Tester(Thread):
     self._testtimeout = options.testtimeout
     self._httptimeout = options.httptimeout
     self._md5conf = md5conf
-    
+
     self._running = True
-    
-  def _join(self):
-    Thread.join(self)
+
+  def join(self, timeout = None):
+    logger.debug("Richiesta di close")
+    #wx.CallAfter(self._gui._update_messages, "Attendere la chiusura del programma...")
     self._running = False
 
   def _test_gating(self, test, testtype):
@@ -150,6 +151,8 @@ class _Tester(Thread):
       info = 'Errore durante la misura, impossibile analizzare i dati di test'
       wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value})
 
+    return True
+
   def _get_bandwith(self, test):
 
     if test.value > 0:
@@ -178,25 +181,26 @@ class _Tester(Thread):
 
   def _check_usb(self, device_id):
     result = False
-    
+
     if re.search('AD37D0A15D234E&0', device_id):
       result = True
-      
+
     return result
 
   def _check_usb_devices(self):
 
     result = False
-    
+
     pythoncom.CoInitialize()
     info = wmi.WMI()
-    for usb in info.Win32_DiskDrive(InterfaceType='USB'):
+    for usb in info.Win32_DiskDrive(InterfaceType = 'USB'):
       logger.debug("Trovato device USB: %s" % usb.PNPDeviceID)
       if (self._check_usb(usb.PNPDeviceID)):
         result = True
-        # break
+        break
     pythoncom.CoUninitialize()
 
+    return True
     return result
 
   def run(self):
@@ -204,128 +208,137 @@ class _Tester(Thread):
     if (not self._check_usb_devices()):
       logger.debug('Verifica della presenza della pennetta USB fallita')
       wx.CallAfter(self._gui._update_messages, "Attenzione: per eseguire le misure occorre disporre della penna USB fornita per l'installazione dei Ne.Me.Sys.", 'red')
-    
+
     else:
 
       logger.debug('Preparazione alla misurazione...')
       wx.CallAfter(self._gui._update_messages, "Preparazione alla misurazione...")
       self._update_gauge()
-  
+
       # Profilazione
       self._check_system(set([RES_HOSTS, RES_WIFI]))
-  
+
       # TODO Il server deve essere indicato dal backend che è a conoscenza dell'occupazione della banda!
-  
+
       # TODO Rimuovere dopo aver sistemato il backend
       task = None
       server = self._get_server()
       if server != None:
         wx.CallAfter(self._gui._update_messages, "Identificato il server di misura: %s" % server.name)
-  
+
         # Scaricamento del task dallo scheduler
         task = self._download_task(server)
         self._update_gauge()
         task = Task(0, '2010-01-01 10:01:00', server, '/download/1000.rnd', 'upload/1000.rnd', 3, 3, 10, 4, 4, 0, True)
-  
+
       if task != None:
-  
+
         try:
           start = datetime.fromtimestamp(timestampNtp())
-  
+
           ip = sysmonitor.getIp()
-          t = Tester(if_ip=ip, host=task.server, timeout=self._testtimeout,
-                     username=self._client.username, password=self._client.password)
-  
+          t = Tester(if_ip = ip, host = task.server, timeout = self._testtimeout,
+                     username = self._client.username, password = self._client.password)
+
           id = start.strftime('%y%m%d%H%M')
           m = Measure(id, task.server, self._client, __version__, start.isoformat())
-  
-  
+
+
           # Testa gli ftp down
           # ------------------------
           i = 1;
           while (i <= task.download and self._running):
-  
+
             self._check_system(set([RES_CPU, RES_RAM]))
-  
+
             # Esecuzione del test
             test = t.testftpdown(task.ftpdownpath)
             bandwidth = self._get_bandwith(test)
             task.update_ftpdownpath(bandwidth)
-  
+
             self._update_gauge()
-            #wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in download: %d kbps (test %d di %d)" % (self._get_bandwith(test), i, task.download), 'blue')
             wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP download." % (i, task.download), 'blue')
-  
+
             if i > 1:
               # Analisi da contabit
-              self._test_gating(test, DOWN)
-  
-              # Salvataggio della misura
-              m.savetest(test)
-  
-            i = i + 1
-  
+              if (self._test_gating(test, DOWN)):
+                i = i + 1
+            else:
+              i = i + 1
+
+          # Salvataggio dell'ultima misura
+          m.savetest(test)
           wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
-  
+
           # Testa gli ftp up
           # ------------------------
           i = 1;
           while (i <= task.upload and self._running):
-  
+
             self._check_system(set([RES_CPU, RES_RAM]))
-  
+
             # Esecuzione del test
             test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
             bandwidth = self._get_bandwith(test)
-            self._client.profile.upload = bandwidth
-  
+            self._client.profile.upload = max(bandwidth, 40000)
+
             self._update_gauge()
-            #wx.CallAfter(self._gui._update_messages, "Banda ipotizzata in upload: %d kbps (test %d di %d)" % (bandwidth, i, task.upload), 'blue')
             wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP upload." % (i, task.download), 'blue')
-  
+
             if i > 1:
               # Analisi da contabit
-              self._test_gating(test, UP)
-  
-              # Salvataggio della misura
-              m.savetest(test)
-  
-            i = i + 1
-  
+              if (self._test_gating(test, UP)):
+                i = i + 1
+            else:
+              i = i + 1
+
+          # Salvataggio dell'ultima misura
+          m.savetest(test)
           wx.CallAfter(self._gui._update_up, bandwidth)
-  
+
           # Ping
           i = 1
           self._check_system(set([RES_CPU, RES_RAM]))
-  
+
           while (i <= task.ping and self._running):
-  
+
             test = t.testping()
             self._update_gauge()
-            #wx.CallAfter(self._gui._update_messages, "Risultato ping: %d ms (test %d di %d)" % (test.value, i, task.ping), 'blue')
             wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.download), 'blue')
-  
-            # Salvataggio del test nella misura
-            m.savetest(test)
-  
+
             if ((i + 2) % task.nicmp == 0):
               sleep(task.delay)
               self._check_system(set([RES_CPU, RES_RAM]))
-  
+
             i = i + 1
-  
+
+          # Salvataggio dell'ultima misura
+          m.savetest(test)
           wx.CallAfter(self._gui._update_ping, test.value)
-  
+
         except Exception as e:
           logger.warning('Misura sospesa per eccezione %s' % e)
           wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s. Aspetta qualche secondo prima di effettuare una nuova misura.' % e)
-  
-      # Stop
-      sleep(TIME_LAG)
+
+        self._save_measure(m)
+
+        # Stop
+        sleep(TIME_LAG)
 
     wx.CallAfter(self._gui.stop)
+    self.join()
 
-  def _check_system(self, checkable_set=set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])):
+  def _save_measure(self, measure):
+    # Salva il file con le misure
+    sec = datetime.fromtimestamp(timestampNtp()).strftime('%S')
+    f = open('%s/measure_%s%s.xml' % (self._outbox, measure.id, sec), 'w')
+    f.write(str(measure))
+
+    # Aggiungi la data di fine in fondo al file
+    f.write('\n<!-- [finished] %s -->' % datetime.fromtimestamp(timestampNtp()).isoformat())
+    f.close()
+
+  def _check_system(self, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])):
     #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
     profiled_set = checkset(checkable_set)
 
@@ -336,7 +349,7 @@ class _Tester(Thread):
   def _download_task(self, server):
 
     url = urlparse(self._scheduler)
-    connection = httputils.getverifiedconnection(url=url, certificate=None, timeout=self._httptimeout)
+    connection = httputils.getverifiedconnection(url = url, certificate = None, timeout = self._httptimeout)
 
     try:
       connection.request('GET', '%s?clientid=%s&version=%s&confid=%s&server=%s' % (url.path, self._client.id, __version__, self._md5conf, server.ip))
@@ -349,42 +362,52 @@ class _Tester(Thread):
 
 class Frame(wx.Frame):
     def __init__(self, *args, **kwds):
+        self._tester = None
 
         # begin wxGlade: Frame.__init__
         wx.Frame.__init__(self, *args, **kwds)
+
         self.sizer_3_staticbox = wx.StaticBox(self, -1, "Messaggi")
         self.bitmap_button_play = wx.BitmapButton(self, -1, wx.Bitmap(path.join(paths.ICONS, u"play.png"), wx.BITMAP_TYPE_ANY))
         self.bitmap_button_check = wx.BitmapButton(self, -1, wx.Bitmap(path.join(paths.ICONS, u"check.png"), wx.BITMAP_TYPE_ANY))
         self.bitmap_5 = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"logo_nemesys.png"), wx.BITMAP_TYPE_ANY))
-        self.label_5 = wx.StaticText(self, -1, "", style=wx.ALIGN_CENTRE)
-        self.label_6 = wx.StaticText(self, -1, "Speedtest", style=wx.ALIGN_CENTRE)
+        self.label_5 = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE)
+        self.label_6 = wx.StaticText(self, -1, "Speedtest", style = wx.ALIGN_CENTRE)
         self.bitmap_cpu = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_CPU.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_ram = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_RAM.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_wifi = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_WIFI.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_hosts = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_HOSTS.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_traffic = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_TRAFFIC.lower()), wx.BITMAP_TYPE_ANY))
-        self.label_cpu = wx.StaticText(self, -1, "%s\n- - - -" % RES_CPU, style=wx.ALIGN_CENTRE)
-        self.label_ram = wx.StaticText(self, -1, "%s\n- - - -" % RES_RAM, style=wx.ALIGN_CENTRE)
-        self.label_wifi = wx.StaticText(self, -1, "%s\n- - - -" % RES_WIFI, style=wx.ALIGN_CENTRE)
-        self.label_hosts = wx.StaticText(self, -1, "%s\n- - - -" % RES_HOSTS, style=wx.ALIGN_CENTRE)
-        self.label_traffic = wx.StaticText(self, -1, "%s\n- - - -" % RES_TRAFFIC, style=wx.ALIGN_CENTRE)
-        self.gauge_1 = wx.Gauge(self, -1, TOTAL_STEPS, style=wx.GA_HORIZONTAL | wx.GA_SMOOTH)
-        self.label_r_1 = wx.StaticText(self, -1, "Ping", style=wx.ALIGN_CENTRE)
-        self.label_r_2 = wx.StaticText(self, -1, "Download", style=wx.ALIGN_CENTRE)
-        self.label_r_3 = wx.StaticText(self, -1, "Upload", style=wx.ALIGN_CENTRE)
-        self.label_rr_ping = wx.StaticText(self, -1, "- - - -", style=wx.ALIGN_CENTRE)
-        self.label_rr_down = wx.StaticText(self, -1, "- - - -", style=wx.ALIGN_CENTRE)
-        self.label_rr_up = wx.StaticText(self, -1, "- - - -", style=wx.ALIGN_CENTRE)
-        self.messages_area = wx.TextCtrl(self, -1, "", style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP)
+        self.label_cpu = wx.StaticText(self, -1, "%s\n- - - -" % RES_CPU, style = wx.ALIGN_CENTRE)
+        self.label_ram = wx.StaticText(self, -1, "%s\n- - - -" % RES_RAM, style = wx.ALIGN_CENTRE)
+        self.label_wifi = wx.StaticText(self, -1, "%s\n- - - -" % RES_WIFI, style = wx.ALIGN_CENTRE)
+        self.label_hosts = wx.StaticText(self, -1, "%s\n- - - -" % RES_HOSTS, style = wx.ALIGN_CENTRE)
+        self.label_traffic = wx.StaticText(self, -1, "%s\n- - - -" % RES_TRAFFIC, style = wx.ALIGN_CENTRE)
+        self.gauge_1 = wx.Gauge(self, -1, TOTAL_STEPS, style = wx.GA_HORIZONTAL | wx.GA_SMOOTH)
+        self.label_r_1 = wx.StaticText(self, -1, "Ping", style = wx.ALIGN_CENTRE)
+        self.label_r_2 = wx.StaticText(self, -1, "Download", style = wx.ALIGN_CENTRE)
+        self.label_r_3 = wx.StaticText(self, -1, "Upload", style = wx.ALIGN_CENTRE)
+        self.label_rr_ping = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
+        self.label_rr_down = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
+        self.label_rr_up = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
+        self.messages_area = wx.TextCtrl(self, -1, "", style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP)
         self.grid_sizer_1 = wx.GridSizer(2, 5, 0, 0)
         self.grid_sizer_2 = wx.GridSizer(2, 3, 0, 0)
 
         self.__set_properties()
         self.__do_layout()
 
+        #self.Bind(wx.EVT_CLOSE, self._on_close)
         self.Bind(wx.EVT_BUTTON, self._play, self.bitmap_button_play)
         self.Bind(wx.EVT_BUTTON, self._check, self.bitmap_button_check)
         # end wxGlade
+
+    def _on_close_event(self, event):
+
+      logger.debug("Richiesta di close")
+      #if (self._tester and self._tester != None):
+      #  self._tester.join()
+      self.Destroy()
 
     def __set_properties(self):
         # begin wxGlade: Frame.__set_properties
@@ -467,7 +490,7 @@ class Frame(wx.Frame):
       self.bitmap_button_check.Enable()
 
     # TODO Spostare il check in un thread separato
-    def _check_system(self, checkable_set=set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])):
+    def _check_system(self, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])):
 
       #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
       profiled_set = checkset(checkable_set)
@@ -568,7 +591,7 @@ class Frame(wx.Frame):
 
       self.Layout()
 
-    def _update_messages(self, message, color='black'):
+    def _update_messages(self, message, color = 'black'):
 
       logger.info('Messagio all\'utente: "%s"' % message)
       date = '\n%s' % getdate().strftime('%c')
@@ -591,7 +614,7 @@ def parse():
     config.read(paths.CONF_MAIN)
     logger.info('Caricata configurazione da %s' % paths.CONF_MAIN)
 
-  parser = OptionParser(version=__version__, description='')
+  parser = OptionParser(version = __version__, description = '')
 
   # Task options
   # --------------------------------------------------------------------------
@@ -605,8 +628,8 @@ def parse():
     value = config.getint(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--task-timeout', dest=option, type='int', default=value,
-                    help='global timeout (in seconds) for each task [%s]' % value)
+  parser.add_option('--task-timeout', dest = option, type = 'int', default = value,
+                    help = 'global timeout (in seconds) for each task [%s]' % value)
 
   option = 'testtimeout'
   value = '60'
@@ -614,8 +637,8 @@ def parse():
     value = config.getint(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--test-timeout', dest=option, type='float', default=value,
-                    help='timeout (in seconds as float number) for each test in a task [%s]' % value)
+  parser.add_option('--test-timeout', dest = option, type = 'float', default = value,
+                    help = 'timeout (in seconds as float number) for each test in a task [%s]' % value)
 
   option = 'scheduler'
   value = 'https://finaluser.agcom244.fub.it/Scheduler'
@@ -623,8 +646,8 @@ def parse():
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('-s', '--scheduler', dest=option, default=value,
-                    help='complete url for schedule download [%s]' % value)
+  parser.add_option('-s', '--scheduler', dest = option, default = value,
+                    help = 'complete url for schedule download [%s]' % value)
 
   option = 'httptimeout'
   value = '60'
@@ -632,8 +655,8 @@ def parse():
     value = config.getint(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--http-timeout', dest=option, type='int', default=value,
-                    help='timeout (in seconds) for http operations [%s]' % value)
+  parser.add_option('--http-timeout', dest = option, type = 'int', default = value,
+                    help = 'timeout (in seconds) for http operations [%s]' % value)
 
   # Client options
   # --------------------------------------------------------------------------
@@ -647,8 +670,8 @@ def parse():
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     pass
-  parser.add_option('-c', '--clientid', dest=option, default=value,
-                    help='client identification string [%s]' % value)
+  parser.add_option('-c', '--clientid', dest = option, default = value,
+                    help = 'client identification string [%s]' % value)
 
   option = 'username'
   value = 'anonymous'
@@ -656,8 +679,8 @@ def parse():
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--username', dest=option, default=value,
-                    help='username for FTP login [%s]' % value)
+  parser.add_option('--username', dest = option, default = value,
+                    help = 'username for FTP login [%s]' % value)
 
   option = 'password'
   value = '@anonymous'
@@ -665,8 +688,8 @@ def parse():
     value = config.get(section, option)
   except (ValueError, NoOptionError):
     config.set(section, option, value)
-  parser.add_option('--password', dest=option, default=value,
-                    help='password for FTP login [%s]' % value)
+  parser.add_option('--password', dest = option, default = value,
+                    help = 'password for FTP login [%s]' % value)
 
   # Profile options
   # --------------------------------------------------------------------------
@@ -680,8 +703,8 @@ def parse():
     value = config.getint(section, option)
   except (ValueError, NoOptionError):
     pass
-  parser.add_option('--up', dest=option, default=value, type='int',
-                    help='upload bandwidth [%s]' % value)
+  parser.add_option('--up', dest = option, default = value, type = 'int',
+                    help = 'upload bandwidth [%s]' % value)
 
   option = 'bandwidthdown'
   value = 1000
@@ -689,8 +712,8 @@ def parse():
     value = config.getint(section, option)
   except (ValueError, NoOptionError):
     pass
-  parser.add_option('--down', dest=option, default=value, type='int',
-                    help='download bandwidth [%s]' % value)
+  parser.add_option('--down', dest = option, default = value, type = 'int',
+                    help = 'download bandwidth [%s]' % value)
 
   with open(paths.CONF_MAIN, 'w') as file:
     config.write(file)
@@ -722,12 +745,12 @@ def parse():
 
 def getclient(options):
 
-  profile = Profile(id=None, upload=options.bandwidthup,
-                    download=options.bandwidthdown)
+  profile = Profile(id = None, upload = options.bandwidthup,
+                    download = options.bandwidthdown)
   isp = Isp('fub001')
-  return Client(id=options.clientid, profile=profile, isp=isp,
-                geocode=None, username=options.username,
-                password=options.password)
+  return Client(id = options.clientid, profile = profile, isp = isp,
+                geocode = None, username = options.username,
+                password = options.password)
 
 if __name__ == "__main__":
 
@@ -737,7 +760,7 @@ if __name__ == "__main__":
   if platform == 'win32':
     wx.CallLater(200, sleeper)
   wx.InitAllImageHandlers()
-  frame_1 = Frame(None, -1, "", style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX))
+  frame_1 = Frame(None, -1, "", style = wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX))
   app.SetTopWindow(frame_1)
   frame_1.Show()
   app.MainLoop()
