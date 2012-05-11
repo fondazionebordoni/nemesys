@@ -49,7 +49,7 @@ class Pcapper(Thread):
     
     self._dev = getDev(dev)
 
-    logger.debug(self._dev)
+    logger.debug('Inizializzato sullo sniffer NIC device %s' % self._dev)
 
     pktman.debugmode(0)
     r = pktman.initialize(self._dev, buff, snaplen, timeout, promisc, online, pcap_file, pkt_start, pkt_stop)

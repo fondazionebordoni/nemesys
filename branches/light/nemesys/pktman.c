@@ -421,31 +421,31 @@ void find_devices(void)
         {
             addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
             ip = inet_ntoa(addr);
-
             // DEBUG-BEGIN
             if(DEBUG_MODE)
             {
                 fprintf(debug_log,"\nAddrPcap: %s",ip);
             }
             // DEBUG-END//
-
             IpInNet = ip_in_net(ip,device[tot_dev].net,device[tot_dev].mask);
 
+            while((IpInNet != 1) && (dl->addresses->next))
+            {
+                dl->addresses=dl->addresses->next;
+                addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
+                ip = inet_ntoa(addr);
+                // DEBUG-BEGIN
+                if(DEBUG_MODE)
+                {
+                    fprintf(debug_log,"\nAddrPcap: %s",ip);
+                }
+                // DEBUG-END//
+                IpInNet = ip_in_net(ip,device[tot_dev].net,device[tot_dev].mask);
+            }
+
+            #if _WIN32
             if(IpInNet != 1)
             {
-                #if _WIN32
-                while(dl->addresses->next)
-                {
-                    dl->addresses=dl->addresses->next;
-                    addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
-                    ip = inet_ntoa(addr);
-                    // DEBUG-BEGIN
-                    if(DEBUG_MODE)
-                    {
-                        fprintf(debug_log,"\nAddrPcap: %s",ip);
-                    }
-                    // DEBUG-END//
-                }
                 WSAStartup(0x101,&wsa_Data);
                 gethostname(HostName, 255);
                 host_entry = gethostbyname(HostName);
@@ -463,22 +463,8 @@ void find_devices(void)
 					addr_num++;
 				}
                 WSACleanup();
-                #else
-                while((IpInNet != 1) && (dl->addresses->next))
-                {
-                    dl->addresses=dl->addresses->next;
-                    addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
-                    ip = inet_ntoa(addr);
-                    // DEBUG-BEGIN
-                    if(DEBUG_MODE)
-                    {
-                        fprintf(debug_log,"\nAddrPcap: %s",ip);
-                    }
-                    // DEBUG-END//
-                    IpInNet = ip_in_net(ip,device[tot_dev].net,device[tot_dev].mask);
-                }
-                #endif
             }
+            #endif
 
 			if(IpInNet == 1)
             {
@@ -489,8 +475,6 @@ void find_devices(void)
 			{
 				device[tot_dev].ip="0.0.0.0";
 			}
-
-
         }
         else
         {
