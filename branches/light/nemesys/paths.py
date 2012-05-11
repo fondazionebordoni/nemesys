@@ -42,6 +42,7 @@ CONF_ERRORS = path.join(_CONF_DIR, 'errorcodes.conf')
 THRESHOLD = path.join(_CONF_DIR, 'threshold.xml')
 RESULTS = path.join(_CONF_DIR, 'result.xml')
 MEASURE_STATUS = path.join(_CONF_DIR, 'progress.xml')
+MEASURE_PROSPECT = path.join(OUTBOX, 'prospect.xml')
 
 from logger import logging
 def check_paths():

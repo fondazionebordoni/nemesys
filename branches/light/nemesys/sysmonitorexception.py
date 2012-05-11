@@ -67,7 +67,7 @@ OVERMEM = SysmonitorException('OVERMEM', 'Memoria occupata. Per limitare l\'uso 
 #Warning firewall is activated
 WARNFW = SysmonitorException('WARNFW', 'Firewall attivo.')
 #Warning Wireless is activated
-WARNWLAN = SysmonitorException('WARNWLAN', 'Wireless LAN attiva. Se possibile spegnere l\'interfaccia di rete wireless')
+WARNWLAN = SysmonitorException('WARNWLAN', 'Wireless LAN attiva. Se possibile, disattivare l\'interfaccia di rete wireless')
 #Error while retrieving the number of online Host
 BADHOST = SysmonitorException('BADHOST', 'Impossibile determinare il numero di host in rete.')
 #Warning because of the presence of other hosts online

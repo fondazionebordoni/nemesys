@@ -31,6 +31,7 @@ import re
 import sysmonitor
 import wmi
 import wx
+from prospect import Prospect
 
 __version__ = '2.2'
 
@@ -78,6 +79,8 @@ class _Tester(Thread):
   def __init__(self, gui):
     Thread.__init__(self)
     paths.check_paths()
+    self._outbox = paths.OUTBOX
+    self._prospect = Prospect()
 
     self._gui = gui
     self._step = 0
@@ -104,6 +107,7 @@ class _Tester(Thread):
     '''
     stats = test.counter_stats
     logger.debug('Valori di test: %s' % stats)
+    continue_testing = True
 
     logger.debug('Analisi della percentuale dei pacchetti persi')
     packet_drop = stats.packet_drop
@@ -114,10 +118,12 @@ class _Tester(Thread):
       if (packet_tot > 0 and packet_ratio > TH_PACKETDROP):
         info = 'Eccessiva presenza di traffico di rete, impossibile analizzare i dati di test'
         wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': None})
+        return continue_testing
 
     else:
       info = 'Errore durante la misura, impossibile analizzare i dati di test'
       wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': None})
+      return continue_testing
 
     if (testtype == DOWN):
       byte_nem = stats.payload_down_nem_net
@@ -139,17 +145,21 @@ class _Tester(Thread):
       logger.debug('Percentuale di traffico spurio: %.2f%%/%.2f%%' % (traffic_ratio * 100, packet_ratio_inv * 100))
       if traffic_ratio < 0:
         wx.CallAfter(self._gui._update_messages, 'Errore durante la verifica del traffico di misura: impossibile salvare i dati.', 'red')
+        return continue_testing
       elif traffic_ratio < TH_TRAFFIC and packet_ratio_inv < TH_TRAFFIC_INV:
         # Dato da salvare sulla misura
         test.bytes = byte_all
         info = 'Traffico internet non legato alla misura: percentuali %d%%/%d%%.' % (value, round(packet_ratio_inv * 100))
         wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': True, 'info': info, 'value': value})
+        return True
       else:
         info = 'Eccessiva presenza di traffico internet non legato alla misura: percentuali %d%%/%d%%.' % (value, round(packet_ratio_inv * 100))
         wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value})
+        return continue_testing
     else:
       info = 'Errore durante la misura, impossibile analizzare i dati di test'
       wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value})
+      return continue_testing
 
     return True
 
@@ -280,7 +290,7 @@ class _Tester(Thread):
             # Esecuzione del test
             test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
             bandwidth = self._get_bandwith(test)
-            self._client.profile.upload = max(bandwidth, 40000)
+            self._client.profile.upload = max(bandwidth, 200 / 8 * 10)
 
             self._update_gauge()
             wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP upload." % (i, task.download), 'blue')
@@ -304,7 +314,7 @@ class _Tester(Thread):
 
             test = t.testping()
             self._update_gauge()
-            wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.download), 'blue')
+            wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.ping), 'blue')
 
             if ((i + 2) % task.nicmp == 0):
               sleep(task.delay)
@@ -316,11 +326,12 @@ class _Tester(Thread):
           m.savetest(test)
           wx.CallAfter(self._gui._update_ping, test.value)
 
+          self._save_measure(m)
+          self._prospect.save_measure(m)
+
         except Exception as e:
           logger.warning('Misura sospesa per eccezione %s' % e)
           wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s. Aspetta qualche secondo prima di effettuare una nuova misura.' % e)
-
-        self._save_measure(m)
 
         # Stop
         sleep(TIME_LAG)

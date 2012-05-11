@@ -30,17 +30,17 @@ import platform
 logger = logging.getLogger()
 
 def getos():
-  
+
   os = 'n.d.'
   try:
     os = '%s %s' % (platform.system(), platform.release())
   except Exception as e:
     logger.error('Impossibile determinare il tipo di sistema operativo: %s' % e)
-    
+
   return os
 
 class Measure:
-  def __init__(self, id, server, client, version=None, start=datetime.fromtimestamp(timestampNtp()).isoformat()):  
+  def __init__(self, id, server, client, version = None, start = datetime.fromtimestamp(timestampNtp()).isoformat()):
     '''
     Costruisce un oggetto Measure utilizzando i parametri ricevuti nella
     chiamata.
@@ -175,7 +175,7 @@ class Measure:
 
 if __name__ == '__main__':
   c = Client('fub0010000001', Profile('1mb512kb', 1024, 512), Isp('fub001'), 'geo')
-  m = Measure(1, Server(id='fubsrvnmx01', ip='127.0.0.1'), c)
+  m = Measure(1, Server(id = 'fubsrvnmx01', ip = '127.0.0.1'), c)
   m.savetest(Proof('download', datetime.utcnow(), .020, 1024 * 1024))
   print m
 
