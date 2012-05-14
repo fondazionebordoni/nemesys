@@ -201,7 +201,7 @@ class _Tester(Thread):
   def _check_usb(self, device_id):
     result = False
 
-    if re.search('AD37D0A15D234E&0', device_id):
+    if re.search('5B5B1B000BAD&0', device_id):
       result = True
 
     return result
@@ -299,7 +299,7 @@ class _Tester(Thread):
             # Esecuzione del test
             test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
             bandwidth = self._get_bandwith(test)
-            self._client.profile.upload = max(bandwidth, 200 / 8 * 10)
+            self._client.profile.upload = max(bandwidth, 40000 / 8 * 10)
 
             self._update_gauge()
             wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP upload." % (i, task.download), 'blue')
