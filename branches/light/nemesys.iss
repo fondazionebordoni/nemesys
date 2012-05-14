@@ -5,7 +5,7 @@
 #define MyAppVersion "0.1"
 #define MyAppPublisher "Fondazione Ugo Bordoni"
 #define MyAppURL "http://www.misurainternet.it/"
-#define MyAppExeName "Mist"
+#define MyAppExeName "NemesysSpeedtest"
 #define MyAppDir "C:\Documents and Settings\Fondazione\Desktop\nemesys\light"
 
 ; Read the previuos build number. If there is none take 0 instead.
@@ -69,23 +69,23 @@ Name: {app}\sent
 Name: {app}\logs
 
 [Icons]
-Name: {group}\{#MyAppName}; Filename: {app}\dist\Mist.exe
+Name: {group}\{#MyAppName}; Filename: {app}\dist\NemesysSpeedtest.exe
 Name: {group}\{cm:UninstallProgram,{#MyAppName}}; Filename: {uninstallexe}
-Name: {commondesktop}\{#MyAppName}; Filename: {app}\dist\Mist.exe; IconIndex: 0
-Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}; Filename: {app}\dist\Mist.exe; Tasks: quicklaunchicon; IconIndex: 0
+Name: {commondesktop}\{#MyAppName}; Filename: {app}\dist\NemesysSpeedtest.exe; IconIndex: 0
+Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}; Filename: {app}\dist\NemesysSpeedtest.exe; Tasks: quicklaunchicon; IconIndex: 0
 
 [Run]
 Filename: {sys}\netsh.exe; Parameters: " int ip set global taskoffload=disabled"; Description: "Disable TCP Task Offload"; Flags: RunHidden RunAsCurrentUser; 
-Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\Mist.exe"" ""Mist"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable Mist traffic"; Flags: RunHidden RunAsCurrentUser; 
-Filename: {sys}\netsh.exe; Parameters: " advfirewall firewall add rule name=""Mist"" dir=out action=allow program=""{app}\dist\Mist.exe"" enable=yes"; Description: "Enable Mist traffic"; Flags: RunHidden RunAsCurrentUser; MinVersion: ,6.1.7600; 
+Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\NemesysSpeedtest.exe"" ""NemesysSpeedtest"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable NemesysSpeedtest traffic"; Flags: RunHidden RunAsCurrentUser; 
+Filename: {sys}\netsh.exe; Parameters: " advfirewall firewall add rule name=""NemesysSpeedtest"" dir=out action=allow program=""{app}\dist\NemesysSpeedtest.exe"" enable=yes"; Description: "Enable NemesysSpeedtest traffic"; Flags: RunHidden RunAsCurrentUser; MinVersion: ,6.1.7600; 
 ;Filename: {app}\dist\Nemesys.exe; Parameters: "--startup auto install"; Description: "Installazione del servizio Nemesys."; StatusMsg: "Installazione del servizio Nemesys"; Flags: RunHidden RunAsCurrentUser; 
 ;Filename: {app}\dist\Nemesys.exe; Parameters: start; Description: "Avvia il servizio Nemesys"; Flags: PostInstall RunHidden RunAsCurrentUser; StatusMsg: "Avvia il servizio Nemesys"; 
  
 [UninstallRun]
-Filename: taskkill; Parameters: /f /im Mist.exe; WorkingDir: {sys}; Flags: runminimized RunAsCurrentUser
-Filename: {sys}\netsh.exe; Parameters: " firewall delete allowedprogram program=""{app}\dist\Mist.exe"""; Flags: RunHidden RunAsCurrentUser; 
+Filename: taskkill; Parameters: /f /im NemesysSpeedtest.exe; WorkingDir: {sys}; Flags: runminimized RunAsCurrentUser
+Filename: {sys}\netsh.exe; Parameters: " firewall delete allowedprogram program=""{app}\dist\NemesysSpeedtest.exe"""; Flags: RunHidden RunAsCurrentUser; 
 ;Filename: {app}\dist\Nemesys.exe; Parameters: " --wait 25 stop"; Flags: runminimized RunAsCurrentUser
-;Filename: {app}\dist\Mist.exe; Parameters: " remove"; Flags: runminimized RunAsCurrentUser
+;Filename: {app}\dist\NemesysSpeedtest.exe; Parameters: " remove"; Flags: runminimized RunAsCurrentUser
 
 
 [UninstallDelete]
