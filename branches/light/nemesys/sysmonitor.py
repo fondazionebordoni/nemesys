@@ -149,6 +149,8 @@ def _get_float_tag(tag, value, res):
 
   try:
     value = float(values[tag])
+  except ValueError:
+    value = None
   except Exception as e:
     logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
     if STRICT_CHECK:
@@ -161,16 +163,20 @@ def _check_cpu():
   
   global CHECK_VALUE
 
-  CHECK_VALUE = None
-  value = _get_float_tag(tag_cpu.split('.', 1)[1], th_cpu - 1, tag_cpu.split('.', 1)[0])
-  CHECK_VALUE = value
+  for check in range(3):
+    CHECK_VALUE = None
+    value = _get_float_tag(tag_cpu.split('.', 1)[1], th_cpu - 1, tag_cpu.split('.', 1)[0])
+    if value!=None:
+      CHECK_VALUE = value
+      if value < 0 or value > 100:
+        raise sysmonitorexception.BADCPU
+      if value > th_cpu:
+        raise sysmonitorexception.WARNCPU
+      break
+    else:
+      value = 'unknow'
+      CHECK_VALUE = value
   
-  if value < 0 or value > 100:
-    raise sysmonitorexception.BADCPU
-
-  if value > th_cpu:
-    raise sysmonitorexception.WARNCPU
-
   check_info = 'CPU utilizzata al %s%%' % value 
 
   return check_info 
@@ -180,24 +186,36 @@ def _check_mem():
   
   global CHECK_VALUE
 
-  CHECK_VALUE = None
-  avMem = _get_float_tag(tag_avMem.split('.')[1], th_avMem + 1, tag_avMem.split('.')[0])
-  CHECK_VALUE = avMem
+  for check in range(3):
+    CHECK_VALUE = None
+    avMem = _get_float_tag(tag_avMem.split('.')[1], th_avMem + 1, tag_avMem.split('.')[0])
+    if avMem!=None:
+      CHECK_VALUE = avMem
+      if avMem < 0:
+        raise sysmonitorexception.BADMEM
+      if avMem < th_avMem:
+        raise sysmonitorexception.LOWMEM      
+      break
+    else: 
+      avmem = 'unknow'
+      CHECK_VALUE = avMem
   
-  if avMem < 0:
-    raise sysmonitorexception.BADMEM
-  if avMem < th_avMem:
-    raise sysmonitorexception.LOWMEM
-
-  CHECK_VALUE = None
-  memLoad = _get_float_tag(tag_memLoad.split('.')[1], th_memLoad - 1, tag_memLoad.split('.')[0])
-  CHECK_VALUE = memLoad
   
-  if memLoad < 0 or memLoad > 100:
-    raise sysmonitorexception.INVALIDMEM
-  if memLoad > th_memLoad:
-    raise sysmonitorexception.OVERMEM
-
+  for check in range(3):
+    CHECK_VALUE = None
+    memLoad = _get_float_tag(tag_memLoad.split('.')[1], th_memLoad - 1, tag_memLoad.split('.')[0])
+    if memLoad!=None:
+      CHECK_VALUE = memLoad
+      if memLoad < 0 or memLoad > 100:
+        raise sysmonitorexception.INVALIDMEM
+      if memLoad > th_memLoad:
+        raise sysmonitorexception.OVERMEM
+      break
+    else: 
+      memLoad = 'unknow'
+      CHECK_VALUE = memLoad
+  
+  
   check_info = 'Utilizzato il %s%% di %d MB di RAM' % (memLoad, avMem / 1024)
 
   return check_info
@@ -232,6 +250,9 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
   global CHECK_VALUE
 
   CHECK_VALUE = None
+  
+  netIF = _get_NetIF()
+  logger.debug('Network Interfaces: %s' %netIF)
   
   ip = getIp();
   dev = getDev()
