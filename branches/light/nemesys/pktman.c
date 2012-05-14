@@ -537,7 +537,10 @@ void select_device(char *dev)
         if (indice>0)
         {
             if ((handle=pcap_open_live(device[num_dev].name,BUFSIZ,1,4000,errbuf)) == NULL)
-            {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;return;}
+            {
+                if ((handle=pcap_open_live(device[num_dev].name,BUFSIZ,0,4000,errbuf)) == NULL)
+                {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;return;}
+            }
 
             active=sniffer(1);
 
@@ -575,9 +578,6 @@ void initialize(char *dev, int promisc, int timeout, int snaplen, int buffer)
         if ((handle=pcap_create(device[num_dev].name,errbuf)) == NULL)
         {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;return;}
 
-        if (pcap_set_promisc(handle,promisc) != 0)
-        {sprintf(err_str,"PromiscuousMode error: %s",pcap_geterr(handle));err_flag=-1;return;}
-
         if (pcap_set_timeout(handle,timeout) != 0)
         {sprintf(err_str,"Timeout error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
@@ -586,9 +586,17 @@ void initialize(char *dev, int promisc, int timeout, int snaplen, int buffer)
 
         if (pcap_set_buffer_size(handle,buffer) !=0)
         {sprintf(err_str,"SetBuffer error: %s",pcap_geterr(handle));err_flag=-1;return;}
+        
+        if (pcap_set_promisc(handle,promisc) != 0)
+        {sprintf(err_str,"PromiscuousMode error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
         if (pcap_activate(handle) !=0)
-        {sprintf(err_str,"Activate error: %s",pcap_geterr(handle));err_flag=-1;return;}
+        {
+            if (pcap_set_promisc(handle,0) != 0)
+            {sprintf(err_str,"PromiscuousMode error: %s",pcap_geterr(handle));err_flag=-1;return;}
+            if (pcap_activate(handle) !=0)
+            {sprintf(err_str,"Activate error: %s",pcap_geterr(handle));err_flag=-1;return;}
+        }
 
         data_link=pcap_datalink(handle);
 
