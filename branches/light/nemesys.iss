@@ -58,7 +58,7 @@ Source: {#MyAppDir}\COPYING; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\LICENSE; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\config\errorcodes.conf; DestDir: {app}\config; Flags: ignoreversion
 Source: {#MyAppDir}\config\client.conf; DestDir: {app}\config; Flags: ignoreversion
-Source: {#MyAppDir}\outbox\prospect.xsl; DestDir: {app}\config; Flags: ignoreversion
+Source: {#MyAppDir}\outbox\prospect.xsl; DestDir: {app}\outbox; Flags: ignoreversion
 Source: {#MyAppDir}\icons\*.png; DestDir: {app}\icons; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
