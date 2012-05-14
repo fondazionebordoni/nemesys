@@ -12,8 +12,7 @@ from os import path
 from profile import Profile
 from server import Server
 from sys import platform
-from sysmonitor import checkset, RES_CPU, RES_RAM, RES_WIFI, RES_TRAFFIC, \
-  RES_HOSTS
+from sysmonitor import checkset, RES_CPU, RES_RAM, RES_WIFI, RES_TRAFFIC, RES_HOSTS
 from task import Task
 from tester import Tester
 from threading import Thread
@@ -178,14 +177,24 @@ class _Tester(Thread):
 
     servers = set([Server('NAMEX', '193.104.137.133', 'NAP di Roma'), Server('MIX', '193.104.137.4', 'NAP di Milano')])
 
-    for server in servers:
-      try:
-        if (ping.do_one("%s" % server.ip, 1) > 0):
-          return server
-      except Exception as e:
-        logger.debug('Errore durante il ping dell\'host %s: %s' % (server.ip, e))
-        pass
+    maxRTT = 8000
+    RTT = {maxRTT:None}
+    
+    for repeat in range(3):
+      for server in servers:
+        try:
+          delay = ping.do_one("%s" % server.ip, 1)
+          RTT[delay] = server
+        except Exception as e:
+          logger.debug('Errore durante il ping dell\'host %s: %s' % (server.ip, e))
+          pass
 
+    for key in RTT:
+      logger.debug('RTT vector: %s - %s[ms]' % (RTT[key],key))
+    
+    if min(RTT)<=maxRTT:
+      return RTT[min(RTT)]
+    
     wx.CallAfter(self._gui._update_messages, "Non è stato possibile contattare il server di misura, la misurazione non può essere effettuata. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
     return None
 
@@ -591,7 +600,7 @@ class Frame(wx.Frame):
 
       if info['value'] != None:
         if resource == RES_CPU or resource == RES_RAM or resource == RES_TRAFFIC:
-            res_label.SetLabel("%s\n%s%%" % (resource, round(float(info['value']))))
+            res_label.SetLabel("%s\n%.1f%%" % (resource, float(info['value'])))
         else:
           res_label.SetLabel("%s\n%s" % (resource, info['value']))
       else:
