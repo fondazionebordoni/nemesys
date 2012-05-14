@@ -43,7 +43,7 @@ filepath = None
 size = 0
 
 #Parametri Sniffer:
-BUFF = 16 * 1024 * 1024 # MegaByte
+BUFF = 44 * 1024 * 1024 # MegaByte
 SNAPLEN = 150           # Byte
 TIMEOUT = 1             # MilliSeconds
 PROMISC = 1             # Promisc Mode ON/OFF

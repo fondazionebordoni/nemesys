@@ -704,14 +704,12 @@ class Contabyte(Analyzer):
                 elif (self._packet_table[ipDst][tcpDstPort][tcpSeqNum] == tcpAckNum):
                   is_retransmission = True
 
-                if (ipSrc == self._ip):
-                  keys = self._packet_table[ipDst][tcpDstPort].keys()
-                  keys.sort()
-                  tcpSeqNumOne = keys[0]
-                  keys.reverse()
-                  tcpSeqNumBig = keys[0]
+                if (ipSrc == self._ip):                  
+                  tcpSeqNumBig = max(self._packet_table[ipDst][tcpDstPort])
+                  #logger.debug('\nDST: %s PORT: %s SEQ: %s BIG: %s' % (ipDst,tcpDstPort,tcpSeqNum,tcpSeqNumBig))
 
                   if (tcpSeqNum < tcpSeqNumBig):
+                    #logger.debug('\n|RITRASMISSIONE| DST: %s PORT: %s SEQ: %s BIG: %s' % (ipDst,tcpDstPort,tcpSeqNum,tcpSeqNumBig))
                     is_retransmission = True
 
             elif ('udpTotLen' in l4_hdr):
