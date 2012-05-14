@@ -20,6 +20,7 @@ from time import sleep
 from timeNtp import timestampNtp
 from urlparse import urlparse
 from xmlutils import xml2task
+from uids import UIDS
 import hashlib
 import httputils
 import logging
@@ -190,20 +191,22 @@ class _Tester(Thread):
           pass
 
     for key in RTT:
-      logger.debug('RTT vector: %s - %s[ms]' % (RTT[key],key))
+      logger.debug('RTT: %s - %s[ms]' % (RTT[key],key))
     
-    if min(RTT)<=maxRTT:
+    if min(RTT)<maxRTT:
       return RTT[min(RTT)]
     
     wx.CallAfter(self._gui._update_messages, "Non è stato possibile contattare il server di misura, la misurazione non può essere effettuata. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
     return None
 
   def _check_usb(self, device_id):
+    
     result = False
 
-    if re.search('5B5B1B000BAD&0', device_id):
-      result = True
-
+    for ID in UIDS:
+      if re.search(ID, device_id):
+        result = True
+        
     return result
 
   def _check_usb_devices(self):
@@ -219,7 +222,7 @@ class _Tester(Thread):
         break
     pythoncom.CoUninitialize()
 
-    return True
+    #return True
     return result
 
   def run(self):

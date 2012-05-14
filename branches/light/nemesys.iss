@@ -6,7 +6,8 @@
 #define MyAppPublisher "Fondazione Ugo Bordoni"
 #define MyAppURL "http://www.misurainternet.it/"
 #define MyAppExeName "NemesysSpeedtest"
-#define MyAppDir "C:\Documents and Settings\Fondazione\Desktop\nemesys\light"
+#define MyRoot "C:\Documents and Settings\Fondazione\Desktop"
+#define MyAppDir MyRoot + "\nemesys-qos\branches\light"
 
 ; Read the previuos build number. If there is none take 0 instead.
 #define BuildNum Int(ReadIni(SourcePath	+ "\\buildinfo.ini","Info","Build","1"))
