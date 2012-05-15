@@ -395,8 +395,6 @@ void find_devices(void)
         device[tot_dev].name=PyMem_New(char,strlen(dl->name)+1);
         memcpy(device[tot_dev].name,dl->name,strlen(dl->name)+1);
 
-        //printf("\nNAME: %s",device[tot_dev].name);
-
         if (pcap_lookupnet(dl->name, &netp, &maskp, errbuf) != 0)
         {sprintf (err_str,"LookUpNet Warnings: %s", errbuf);err_flag=0;}
 
@@ -405,27 +403,49 @@ void find_devices(void)
         device[tot_dev].net=PyMem_New(char,strlen(net)+1);
         memcpy(device[tot_dev].net,net,strlen(net)+1);
 
-        //printf("\nNET: %s",device[tot_dev].net);
-
         addr.s_addr = maskp;
         mask = inet_ntoa(addr);
         device[tot_dev].mask=PyMem_New(char,strlen(mask)+1);
         memcpy(device[tot_dev].mask,mask,strlen(mask)+1);
 
-        //printf("\nMASK: %s",device[tot_dev].mask);
+        // DEBUG-BEGIN
+        if(DEBUG_MODE)
+        {
+            fprintf(debug_log,"\nNAME: %s",device[tot_dev].name);
+            fprintf(debug_log,"\nNET: %s",device[tot_dev].net);
+            fprintf(debug_log,"\nMASK: %s",device[tot_dev].mask);
+        }
+        // DEBUG-END//
 
         if(dl->addresses!=NULL)
         {
             addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
             ip = inet_ntoa(addr);
-
-			//printf("\nProvo: %s",ip);
-
+            // DEBUG-BEGIN
+            if(DEBUG_MODE)
+            {
+                fprintf(debug_log,"\nAddrPcap: %s",ip);
+            }
+            // DEBUG-END//
             IpInNet = ip_in_net(ip,device[tot_dev].net,device[tot_dev].mask);
 
+            while((IpInNet != 1) && (dl->addresses->next))
+            {
+                dl->addresses=dl->addresses->next;
+                addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
+                ip = inet_ntoa(addr);
+                // DEBUG-BEGIN
+                if(DEBUG_MODE)
+                {
+                    fprintf(debug_log,"\nAddrPcap: %s",ip);
+                }
+                // DEBUG-END//
+                IpInNet = ip_in_net(ip,device[tot_dev].net,device[tot_dev].mask);
+            }
+
+            #if _WIN32
             if(IpInNet != 1)
             {
-                #if _WIN32
                 WSAStartup(0x101,&wsa_Data);
                 gethostname(HostName, 255);
                 host_entry = gethostbyname(HostName);
@@ -433,22 +453,18 @@ void find_devices(void)
 				while((IpInNet != 1) && (host_entry->h_addr_list[addr_num] != NULL))
                 {
 					ip = inet_ntoa (*(struct in_addr *)(host_entry->h_addr_list)[addr_num]);
-					//printf("\nProvo: %s",ip);
+                    // DEBUG-BEGIN
+                    if(DEBUG_MODE)
+                    {
+                        fprintf(debug_log,"\nAddrWin: %s",ip);
+                    }
+                    // DEBUG-END//
 					IpInNet = ip_in_net(ip,device[tot_dev].net,device[tot_dev].mask);
 					addr_num++;
 				}
                 WSACleanup();
-                #else
-                while((IpInNet != 1) && (dl->addresses->next))
-                {
-                    dl->addresses=dl->addresses->next;
-                    addr.s_addr = ((struct sockaddr_in *)(dl->addresses->addr))->sin_addr.s_addr;
-                    ip = inet_ntoa(addr);
-					//printf("\nProvo: %s",ip);
-                    IpInNet = ip_in_net(ip,device[tot_dev].net,device[tot_dev].mask);
-                }
-                #endif
             }
+            #endif
 
 			if(IpInNet == 1)
             {
@@ -459,15 +475,18 @@ void find_devices(void)
 			{
 				device[tot_dev].ip="0.0.0.0";
 			}
-
-
         }
         else
         {
             device[tot_dev].ip="0.0.0.0";
         }
 
-        //printf("\nIP: %s\n\n",device[tot_dev].ip);
+        // DEBUG-BEGIN
+        if(DEBUG_MODE)
+        {
+            fprintf(debug_log,"\nIP: %s\n\n",device[tot_dev].ip);
+        }
+        // DEBUG-END//
     }
 
     pcap_freealldevs(alldevs);
@@ -498,7 +517,7 @@ void select_device(char *dev)
         }
         // DEBUG-END//
 
-        if ((strcmp(dev,device[num_dev].name)==0)||(strcmp(dev,device[num_dev].ip)==0)||(IpInNet==1))
+        if (strstr(device[num_dev].name,dev)!=NULL||(strcmp(dev,device[num_dev].name)==0)||(strcmp(dev,device[num_dev].ip)==0)||(IpInNet==1))
         {
             indice++;
             find[indice]=num_dev;
@@ -518,7 +537,10 @@ void select_device(char *dev)
         if (indice>0)
         {
             if ((handle=pcap_open_live(device[num_dev].name,BUFSIZ,1,4000,errbuf)) == NULL)
-            {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;return;}
+            {
+                if ((handle=pcap_open_live(device[num_dev].name,BUFSIZ,0,4000,errbuf)) == NULL)
+                {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;return;}
+            }
 
             active=sniffer(1);
 
@@ -556,9 +578,6 @@ void initialize(char *dev, int promisc, int timeout, int snaplen, int buffer)
         if ((handle=pcap_create(device[num_dev].name,errbuf)) == NULL)
         {sprintf (err_str,"Couldn't open device: %s",errbuf);err_flag=-1;return;}
 
-        if (pcap_set_promisc(handle,promisc) != 0)
-        {sprintf(err_str,"PromiscuousMode error: %s",pcap_geterr(handle));err_flag=-1;return;}
-
         if (pcap_set_timeout(handle,timeout) != 0)
         {sprintf(err_str,"Timeout error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
@@ -567,9 +586,17 @@ void initialize(char *dev, int promisc, int timeout, int snaplen, int buffer)
 
         if (pcap_set_buffer_size(handle,buffer) !=0)
         {sprintf(err_str,"SetBuffer error: %s",pcap_geterr(handle));err_flag=-1;return;}
+        
+        if (pcap_set_promisc(handle,promisc) != 0)
+        {sprintf(err_str,"PromiscuousMode error: %s",pcap_geterr(handle));err_flag=-1;return;}
 
         if (pcap_activate(handle) !=0)
-        {sprintf(err_str,"Activate error: %s",pcap_geterr(handle));err_flag=-1;return;}
+        {
+            if (pcap_set_promisc(handle,0) != 0)
+            {sprintf(err_str,"PromiscuousMode error: %s",pcap_geterr(handle));err_flag=-1;return;}
+            if (pcap_activate(handle) !=0)
+            {sprintf(err_str,"Activate error: %s",pcap_geterr(handle));err_flag=-1;return;}
+        }
 
         data_link=pcap_datalink(handle);
 
@@ -609,7 +636,7 @@ static PyObject *pktman_getdev(PyObject *self, PyObject *args)
 
     char build_string[202];
 
-    char *dev;
+    char *dev=NULL;
 
     err_flag=0; strcpy(err_str,"No Error");
 
