@@ -44,13 +44,13 @@ logger = logging.getLogger()
 
 class Pcapper(Thread):
 
-  def __init__(self, dev, buff = 22 * 1024000, snaplen = 8192, timeout = 1, promisc = 1, online = 1, pcap_file = None, pkt_start = 0, pkt_stop = 0):
+  def __init__(self, dev, buff = 88 * 1024000, snaplen = 8192, timeout = 1, promisc = 1, online = 1, pcap_file = None, pkt_start = 0, pkt_stop = 0):
     Thread.__init__(self)
     
     self._dev = getDev(dev)
-
-    logger.debug('Inizializzato sullo sniffer NIC device %s' % self._dev)
-
+    
+    logger.debug('Sniffing: [IP|%s][NIC|%s][Parameters|%s|%s|%s|%s|%s|%s|%s|%s]' % (dev,self._dev, buff, snaplen, timeout, promisc, online, pcap_file, pkt_start, pkt_stop))
+    
     pktman.debugmode(0)
     r = pktman.initialize(self._dev, buff, snaplen, timeout, promisc, online, pcap_file, pkt_start, pkt_stop)
     if (r['err_flag'] != 0):

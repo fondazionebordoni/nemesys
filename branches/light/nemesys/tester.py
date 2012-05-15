@@ -43,7 +43,7 @@ filepath = None
 size = 0
 
 #Parametri Sniffer:
-BUFF = 44 * 1024 * 1024 # MegaByte
+BUFF = 8 * 1024 * 1024 # MegaByte
 SNAPLEN = 150           # Byte
 TIMEOUT = 1             # MilliSeconds
 PROMISC = 1             # Promisc Mode ON/OFF
@@ -95,7 +95,9 @@ class Tester:
 
     try:
       logger.debug('Test initializing...')
-      pcapper = Pcapper(self._if_ip, BUFF, SNAPLEN, TIMEOUT, PROMISC)
+      logger.debug('File dimension: %s bytes' % bytes)
+      buff = int(max(bytes*4,BUFF))
+      pcapper = Pcapper(self._if_ip, buff, SNAPLEN, TIMEOUT, PROMISC)
       pcapper.start()
 
       logger.debug('Testing... ')
@@ -131,7 +133,7 @@ class Tester:
 
     return Proof(test_type, start, elapsed, size, counter_stats)
 
-  def testftpdown(self, filename):
+  def testftpdown(self, filename, bytes = BUFF*2):
     global ftp, file, size
     test_type = 'download'
     size = 0
@@ -157,7 +159,9 @@ class Tester:
 
     try:
       logger.debug('Test initializing...')
-      pcapper = Pcapper(self._if_ip, BUFF, SNAPLEN, TIMEOUT, PROMISC)
+      logger.debug('File dimension: %s bytes' % bytes)
+      buff = int(max(bytes*4,BUFF))
+      pcapper = Pcapper(self._if_ip, buff, SNAPLEN, TIMEOUT, PROMISC)
       pcapper.start()
 
       logger.debug('Testing... ')

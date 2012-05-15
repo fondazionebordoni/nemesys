@@ -705,25 +705,25 @@ class Contabyte(Analyzer):
                   is_retransmission = True
 
                 if (ipSrc == self._ip):
-                  if ('biggest' in self._packet_table[ipDst][tcpDstPort]):
-                    tcpSeqNumBig = self._packet_table[ipDst][tcpDstPort]['biggest']
-                    if (tcpSeqNum > tcpSeqNumBig):
-                      self._packet_table[ipDst][tcpDstPort]['biggest'] = tcpSeqNum                      
-                    else:
-                      logger.debug('\n|RITRASMISSIONE| DST: %s PORT: %s SEQ: %s BIG: %s' % (ipDst,tcpDstPort,tcpSeqNum,tcpSeqNumBig))
-                      is_retransmission = True
-                  else:
-                    tcpSeqNumBig = tcpSeqNum
-                    self._packet_table[ipDst][tcpDstPort]['bigges'] = tcpSeqNum
-                  #logger.debug('\nDST: %s PORT: %s SEQ: %s BIG: %s' % (ipDst,tcpDstPort,tcpSeqNum,tcpSeqNumBig))
+                  tcpSeqNumBig = max(self._packet_table[ipDst][tcpDstPort])
+                  # logger.debug('| DST: %s PORT: %s SEQ: %s BIG: %s |' % (ipDst,tcpDstPort,tcpSeqNum,tcpSeqNumBig))
 
+                  if (tcpSeqNum < tcpSeqNumBig):
+                    #logger.debug('| DST: %s PORT: %s SEQ: %s BIG: %s | RITRASMISSIONE |' % (ipDst,tcpDstPort,tcpSeqNum,tcpSeqNumBig))
+                    is_retransmission = True
+                    
                   #OTHER METHOD:
-                  # tcpSeqNumBig = max(self._packet_table[ipDst][tcpDstPort])
+                  # if ('biggest' in self._packet_table[ipDst][tcpDstPort]):
+                    # tcpSeqNumBig = self._packet_table[ipDst][tcpDstPort]['biggest']
+                    # if (tcpSeqNum > tcpSeqNumBig):
+                      # self._packet_table[ipDst][tcpDstPort]['biggest'] = tcpSeqNum                      
+                    # else:
+                      # logger.debug('\n|RITRASMISSIONE| DST: %s PORT: %s SEQ: %s BIG: %s' % (ipDst,tcpDstPort,tcpSeqNum,tcpSeqNumBig))
+                      # is_retransmission = True
+                  # else:
+                    # tcpSeqNumBig = tcpSeqNum
+                    # self._packet_table[ipDst][tcpDstPort]['bigges'] = tcpSeqNum
                   # logger.debug('\nDST: %s PORT: %s SEQ: %s BIG: %s' % (ipDst,tcpDstPort,tcpSeqNum,tcpSeqNumBig))
-
-                  # if (tcpSeqNum < tcpSeqNumBig):
-                    # logger.debug('\n|RITRASMISSIONE| DST: %s PORT: %s SEQ: %s BIG: %s' % (ipDst,tcpDstPort,tcpSeqNum,tcpSeqNumBig))
-                    # is_retransmission = True
 
             elif ('udpTotLen' in l4_hdr):
               udpHdrLen = UDP_HDR_LEN
