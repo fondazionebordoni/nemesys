@@ -302,7 +302,7 @@ class _Tester(Thread):
             # Esecuzione del test
             test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
             bandwidth = self._get_bandwith(test)
-            self._client.profile.upload = max(bandwidth, 40000 / 8 * 10)
+            self._client.profile.upload = min(bandwidth, (40000 / 8) * 10)
 
             self._update_gauge()
             wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP upload." % (i, task.download), 'blue')
