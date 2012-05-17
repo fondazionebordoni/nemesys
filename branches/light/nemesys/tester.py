@@ -268,24 +268,27 @@ if __name__ == '__main__':
     s.close()
     nap = '193.104.137.133'
 
-    TOT = 10
+    TOT = 5
 
     t1 = Tester(ip, Host(ip = nap), 'nemesys', '4gc0m244')
 
     for i in range(1, TOT + 1):
       logger.info('Test Download %d/%d' % (i, TOT))
-      test = t1.testftpdown('/download/1000.rnd')
+      test = t1.testftpdown('/download/20000.rnd')
       logger.info(test)
+      logger.info("Risultato di banda in download: %d" % (test.bytes * 8 / test.value))
 
     for i in range(1, TOT + 1):
       logger.info('Test Upload %d/%d' % (i, TOT))
       test = t1.testftpup(2048, '/upload/r.raw')
       logger.info(test)
+      logger.info("Risultato di banda in upload: %d" % (test.bytes * 8 / test.value))
 
     for i in range(1, TOT + 1):
       logger.info('\nTest Ping %d/%d' % (i, TOT))
       test = t1.testping()
       logger.info(test)
+      logger.info("Risultato ping: %d" % test.value)
 
   else:
     main()

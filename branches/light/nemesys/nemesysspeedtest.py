@@ -71,7 +71,7 @@ class _Checker(Thread):
     #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
     profiled_set = checkset(self._checkable_set)
 
-    for resource in checkable_set:
+    for resource in self._checkable_set:
       wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
 
 class _Tester(Thread):
@@ -180,7 +180,7 @@ class _Tester(Thread):
 
     maxRTT = 8000
     RTT = {maxRTT:None}
-    
+
     for repeat in range(3):
       for server in servers:
         try:
@@ -191,22 +191,22 @@ class _Tester(Thread):
           pass
 
     for key in RTT:
-      logger.debug('RTT: %s - %s[ms]' % (RTT[key],key))
-    
-    if min(RTT)<maxRTT:
+      logger.debug('RTT: %s - %s[ms]' % (RTT[key], key))
+
+    if min(RTT) < maxRTT:
       return RTT[min(RTT)]
-    
+
     wx.CallAfter(self._gui._update_messages, "Non è stato possibile contattare il server di misura, la misurazione non può essere effettuata. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
     return None
 
   def _check_usb(self, device_id):
-    
+
     result = False
 
     for ID in UIDS:
       if re.search(ID, device_id):
         result = True
-        
+
     return result
 
   def _check_usb_devices(self):
@@ -453,7 +453,7 @@ class Frame(wx.Frame):
         self.label_rr_up.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
 
         self.messages_area.SetMinSize((700, 121))
-        self.messages_area.SetFont(wx.Font(11, wx.SWISS, wx.NORMAL, wx.NORMAL, 0, ""))
+        self.messages_area.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL, 0, ""))
         self.grid_sizer_2.SetMinSize((700, 60))
 
         #self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
@@ -506,7 +506,7 @@ class Frame(wx.Frame):
         self.Layout()
         # end wxGlade
 
-        #self._check(None)
+        self._check(None)
 
     def _check(self, event):
       self.bitmap_button_check.Disable()
@@ -610,8 +610,7 @@ class Frame(wx.Frame):
       else:
         res_label.SetLabel("%s\n- - - -" % resource)
 
-      if info['status'] == False:
-        self._update_messages("%s: %s" % (resource, info['info']), color)
+      self._update_messages("%s: %s" % (resource, info['info']), color)
 
       self.Layout()
 
