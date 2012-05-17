@@ -21,6 +21,8 @@ from SysProf.NemesysException import LocalProfilerException, RisorsaException, F
 from logger import logging
 from errorcoder import Errorcoder
 from xml.etree import ElementTree as ET
+from contabyte import Contabyte
+from pcapper import Pcapper
 
 import checkhost
 import netifaces
@@ -28,7 +30,8 @@ import paths
 import platform
 import socket
 import sysmonitorexception
-
+import re
+import time
 
 platform_name = platform.system().lower()
 if platform_name == 'windows':
@@ -261,30 +264,69 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
   
   logger.info('| Dev: %s | Mac: %s | Ip: %s | Cidr Mask: %d |' % (dev, mac, ip, mask))
 
-  if (arping == 0):
-    thres = th_host + 1
-  else:
-    thres = th_host
-
-  value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac, dev)
-  logger.info('Trovati %d host in rete.' % value)
-  
-  CHECK_VALUE = value
-
-  if value < 0:
-    raise sysmonitorexception.BADHOST
-  elif (value == 0):
-    if arping == 1:
-      logger.warning('Passaggio a PING per controllo host in rete')
-      return _check_hosts(up, down, ispid, 0)
+  # Controllo se ho un indirizzo pubblico, in quel caso ritorno 1
+  if bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
+    
+    if (arping == 0):
+      thres = th_host + 1
     else:
+      thres = th_host
+
+    value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac, dev)
+    logger.info('Trovati %d host in rete.' % value)
+    
+    CHECK_VALUE = value
+    
+    if value < 0:
       raise sysmonitorexception.BADHOST
-  elif value > thres:
-    #logger.error('Presenza di altri %s host in rete.' % value)
-    raise sysmonitorexception.TOOHOST
+    elif (value == 0):
+      if arping == 1:
+        logger.warning('Passaggio a PING per controllo host in rete')
+        return _check_hosts(up, down, ispid, 0)
+      else:
+        raise sysmonitorexception.BADHOST
+    elif value > thres:
+      #logger.error('Presenza di altri %s host in rete.' % value)
+      raise sysmonitorexception.TOOHOST
+      
+    check_info = 'Trovati %d host in rete.' % value
 
-  check_info = 'Trovati %d host in rete.' % value
+  else:
+    value = 1
+    CHECK_VALUE = value
+    logger.info('La scheda di rete in uso ha un IP pubblico. Non controllo il numero degli altri host in rete.')
+    check_info = 'La scheda di rete in uso ha un IP pubblico. Non controllo il numero degli altri host in rete.'
+  
+  return check_info
+  
 
+def _check_traffic(sec = 2):
+  
+  global CHECK_VALUE
+
+  CHECK_VALUE = None
+
+  traffic=None
+  ip = _get_ActiveIp()
+  dev = getDev(ip)
+  buff = 8 * 1024 * 1024
+  
+  pcapper = Pcapper(dev, buff, 150)
+  pcapper.start()
+  pcapper.sniff(Contabyte(ip, '0.0.0.0'))
+  #logger.debug("Checking Traffic for %d seconds...." % sec)
+  time.sleep(sec)
+  pcapper.stop_sniff()
+  stats = pcapper.get_stats()
+  pcapper.stop()
+  pcapper.join()
+
+  traffic = '%d up | %d down' % (stats.byte_up_all,stats.byte_down_all)
+  
+  CHECK_VALUE = traffic
+
+  check_info = 'Traffico globale iniziale in KByte: %s' % traffic
+  
   return check_info
 
 
@@ -500,7 +542,7 @@ def _get_Sys():
 
   return r
 
-
+  
 def checkset(check_set = set()):
   
   global CHECK_VALUE
@@ -511,12 +553,13 @@ def checkset(check_set = set()):
    RES_RAM:{'prio':2, 'meth':_check_mem},         \
    RES_WIFI:{'prio':3, 'meth':_check_wireless},   \
    RES_HOSTS:{'prio':4, 'meth':_check_hosts},     \
-   RES_MAC:{'prio':5, 'meth':_get_mac},           \
-   RES_IP:{'prio':6, 'meth':getIp},               \
-   RES_MASK:{'prio':7, 'meth':_get_mask},         \
-   RES_DEV:{'prio':8, 'meth':getDev},             \
-   RES_OS:{'prio':9, 'meth':_get_os},             \
-   #'sys':{'prio':9,'meth':_get_Sys}              \
+   RES_TRAFFIC:{'prio':5, 'meth':_check_traffic}, \
+   RES_MAC:{'prio':6, 'meth':_get_mac},           \
+   RES_IP:{'prio':7, 'meth':getIp},               \
+   RES_MASK:{'prio':8, 'meth':_get_mask},         \
+   RES_DEV:{'prio':9, 'meth':getDev},             \
+   RES_OS:{'prio':10, 'meth':_get_os},             \
+   #'sys':{'prio':11,'meth':_get_Sys}              \
    }
 
   system_profile = {}

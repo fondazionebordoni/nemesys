@@ -238,7 +238,7 @@ class _Tester(Thread):
       self._update_gauge()
 
       # Profilazione
-      self._check_system(set([RES_HOSTS, RES_WIFI]))
+      self._check_system(set([RES_HOSTS, RES_WIFI, RES_TRAFFIC]))
 
       # TODO Il server deve essere indicato dal backend che è a conoscenza dell'occupazione della banda!
 
@@ -514,7 +514,7 @@ class Frame(wx.Frame):
       self.bitmap_button_check.Enable()
 
     # TODO Spostare il check in un thread separato
-    def _check_system(self, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])):
+    def _check_system(self, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
 
       #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
       profiled_set = checkset(checkable_set)
@@ -603,8 +603,8 @@ class Frame(wx.Frame):
         res_bitmap.SetBitmap(wx.Bitmap(path.join(paths.ICONS, u"%s_%s.png" % (resource.lower(), color))))
 
       if info['value'] != None:
-        if resource == RES_CPU or resource == RES_RAM or resource == RES_TRAFFIC:
-            res_label.SetLabel("%s\n%.1f%%" % (resource, float(info['value'])))
+        if resource == RES_CPU or resource == RES_RAM:
+          res_label.SetLabel("%s\n%.1f%%" % (resource, float(info['value'])))
         else:
           res_label.SetLabel("%s\n%s" % (resource, info['value']))
       else:

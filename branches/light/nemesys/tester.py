@@ -28,12 +28,12 @@ from pcapper import Pcapper
 from proof import Proof
 from statistics import Statistics
 from timeNtp import timestampNtp
+from sysmonitor import getIp, getDev
 import ftplib
 import paths
 import ping
 import socket
 import sys
-import sysmonitor
 import time
 import timeit
 
@@ -61,6 +61,7 @@ class Tester:
 
   def __init__(self, if_ip, host, username = 'anonymous', password = 'anonymous@', timeout = 60):
     self._if_ip = if_ip
+    self._nic_if = getDev(if_ip)
     self._host = host
     self._username = username
     self._password = password
@@ -97,7 +98,7 @@ class Tester:
       logger.debug('Test initializing...')
       logger.debug('File dimension: %s bytes' % bytes)
       buff = int(max(bytes*4,BUFF))
-      pcapper = Pcapper(self._if_ip, buff, SNAPLEN, TIMEOUT, PROMISC)
+      pcapper = Pcapper(self._nic_if, buff, SNAPLEN, TIMEOUT, PROMISC)
       pcapper.start()
 
       logger.debug('Testing... ')
@@ -161,7 +162,7 @@ class Tester:
       logger.debug('Test initializing...')
       logger.debug('File dimension: %s bytes' % bytes)
       buff = int(max(bytes*2,BUFF))
-      pcapper = Pcapper(self._if_ip, buff, SNAPLEN, TIMEOUT, PROMISC)
+      pcapper = Pcapper(self._nic_if, buff, SNAPLEN, TIMEOUT, PROMISC)
       pcapper.start()
 
       logger.debug('Testing... ')
@@ -245,7 +246,7 @@ def main():
   (options, args) = parser.parse_args()
   #TODO inserire controllo host
 
-  t = Tester(sysmonitor.getIp(), Host(options.host), options.username, options.password)
+  t = Tester(getIp(), Host(options.host), options.username, options.password)
   test = None
   print ('Prova: %s' % options.host)
 

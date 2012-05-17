@@ -59,9 +59,9 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, 
       logger.debug("Profilo Fastweb ADSL o Fibra con indirizzo 10.*. Modificata sottorete in %d" % netMask)
 
   # Controllo che non siano indirizzi pubblici, in quel caso ritorno 1, effettuo la misura
-  elif not bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ipAddress)):
-    logger.info("IP della scheda di rete di misura pubblico. Non controllo il numero degli host. Host in rete: 1")
-    return 1
+  # elif not bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ipAddress)):
+    # logger.info("IP della scheda di rete di misura pubblico. Non controllo il numero degli host. Host in rete: 1")
+    # return 1
 
   logger.info("Indirizzo: %s/%d; Realsubnet: %s; Threshold: %d" % (ipAddress, netMask, realSubnet, threshold))
 

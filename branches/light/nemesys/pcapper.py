@@ -19,7 +19,6 @@
 from contabyte import Contabyte
 from random import randint
 from statistics import Statistics
-from sysmonitor import getDev
 from threading import Thread, Event
 import logging
 import pktman
@@ -47,12 +46,10 @@ class Pcapper(Thread):
   def __init__(self, dev, buff = 88 * 1024000, snaplen = 8192, timeout = 1, promisc = 1, online = 1, pcap_file = None, pkt_start = 0, pkt_stop = 0):
     Thread.__init__(self)
     
-    self._dev = getDev(dev)
-    
-    logger.debug('Sniffing: [IP|%s][NIC|%s][Parameters|%s|%s|%s|%s|%s|%s|%s|%s]' % (dev,self._dev, buff, snaplen, timeout, promisc, online, pcap_file, pkt_start, pkt_stop))
+    logger.debug('Sniffing: [%s|%s|%s|%s|%s|%s|%s|%s|%s]' % (dev, buff, snaplen, timeout, promisc, online, pcap_file, pkt_start, pkt_stop))
     
     pktman.debugmode(0)
-    r = pktman.initialize(self._dev, buff, snaplen, timeout, promisc, online, pcap_file, pkt_start, pkt_stop)
+    r = pktman.initialize(dev, buff, snaplen, timeout, promisc, online, pcap_file, pkt_start, pkt_stop)
     if (r['err_flag'] != 0):
       logger.error('Errore inizializzazione dello Sniffer: %s' % str(r['err_str']))
       raise Exception('Errore inizializzazione dello Sniffer')
