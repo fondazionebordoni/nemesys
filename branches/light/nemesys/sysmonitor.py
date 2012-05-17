@@ -163,13 +163,13 @@ def _get_float_tag(tag, value, res):
 
 
 def _check_cpu():
-  
+
   global CHECK_VALUE
 
   for check in range(3):
     CHECK_VALUE = None
     value = _get_float_tag(tag_cpu.split('.', 1)[1], th_cpu - 1, tag_cpu.split('.', 1)[0])
-    if value!=None:
+    if value != None:
       CHECK_VALUE = value
       if value < 0 or value > 100:
         raise sysmonitorexception.BADCPU
@@ -179,55 +179,55 @@ def _check_cpu():
     else:
       value = 'unknow'
       CHECK_VALUE = value
-  
-  check_info = 'CPU utilizzata al %s%%' % value 
 
-  return check_info 
+  check_info = 'CPU utilizzata al %s%%' % value
+
+  return check_info
 
 
 def _check_mem():
-  
+
   global CHECK_VALUE
 
   for check in range(3):
     CHECK_VALUE = None
     avMem = _get_float_tag(tag_avMem.split('.')[1], th_avMem + 1, tag_avMem.split('.')[0])
-    if avMem!=None:
+    if avMem != None:
       CHECK_VALUE = avMem
       if avMem < 0:
         raise sysmonitorexception.BADMEM
       if avMem < th_avMem:
-        raise sysmonitorexception.LOWMEM      
+        raise sysmonitorexception.LOWMEM
       break
-    else: 
+    else:
       avmem = 'unknow'
       CHECK_VALUE = avMem
-  
-  
+
+
   for check in range(3):
     CHECK_VALUE = None
     memLoad = _get_float_tag(tag_memLoad.split('.')[1], th_memLoad - 1, tag_memLoad.split('.')[0])
-    if memLoad!=None:
+    if memLoad != None:
       CHECK_VALUE = memLoad
       if memLoad < 0 or memLoad > 100:
         raise sysmonitorexception.INVALIDMEM
       if memLoad > th_memLoad:
         raise sysmonitorexception.OVERMEM
       break
-    else: 
+    else:
       memLoad = 'unknow'
       CHECK_VALUE = memLoad
-  
-  
+
+
   check_info = 'Utilizzato il %s%% di %d MB di RAM' % (memLoad, avMem / 1024)
 
   return check_info
 
 
 def _check_wireless():
-  
+
   global CHECK_VALUE
-  
+
   CHECK_VALUE = None
 
   check_info = 'Wireless LAN inattiva.'
@@ -240,33 +240,33 @@ def _check_wireless():
     if (status == 'Enabled'):
       type = device.find('Type').text
       if (type == 'Wireless'):
-        CHECK_VALUE = 'On'  
+        CHECK_VALUE = 'On'
         raise sysmonitorexception.WARNWLAN
 
   CHECK_VALUE = 'Off'
-  
+
   return check_info
 
 
 def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
-  
+
   global CHECK_VALUE
 
   CHECK_VALUE = None
-  
+
   netIF = _get_NetIF()
-  logger.debug('Network Interfaces: %s' %netIF)
-  
+  logger.debug('Network Interfaces: %s' % netIF)
+
   ip = getIp();
   dev = getDev()
   mac = _get_mac(ip)
   mask = _get_mask(ip)
-  
+
   logger.info('| Dev: %s | Mac: %s | Ip: %s | Cidr Mask: %d |' % (dev, mac, ip, mask))
 
   # Controllo se ho un indirizzo pubblico, in quel caso ritorno 1
   if bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
-    
+
     if (arping == 0):
       thres = th_host + 1
     else:
@@ -274,9 +274,9 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
 
     value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac, dev)
     logger.info('Trovati %d host in rete.' % value)
-    
+
     CHECK_VALUE = value
-    
+
     if value < 0:
       raise sysmonitorexception.BADHOST
     elif (value == 0):
@@ -288,7 +288,7 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
     elif value > thres:
       #logger.error('Presenza di altri %s host in rete.' % value)
       raise sysmonitorexception.TOOHOST
-      
+
     check_info = 'Trovati %d host in rete.' % value
 
   else:
@@ -296,21 +296,22 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
     CHECK_VALUE = value
     logger.info('La scheda di rete in uso ha un IP pubblico. Non controllo il numero degli altri host in rete.')
     check_info = 'La scheda di rete in uso ha un IP pubblico. Non controllo il numero degli altri host in rete.'
-  
+
   return check_info
-  
+
 
 def _check_traffic(sec = 2):
-  
+
   global CHECK_VALUE
 
   CHECK_VALUE = None
 
-  traffic=None
+  traffic = None
   ip = _get_ActiveIp()
   dev = getDev(ip)
   buff = 8 * 1024 * 1024
-  
+
+  start_time = time.time()
   pcapper = Pcapper(dev, buff, 150)
   pcapper.start()
   pcapper.sniff(Contabyte(ip, '0.0.0.0'))
@@ -318,15 +319,16 @@ def _check_traffic(sec = 2):
   time.sleep(sec)
   pcapper.stop_sniff()
   stats = pcapper.get_stats()
+  total_time = time.time() - start_time
   pcapper.stop()
   pcapper.join()
 
-  traffic = '%d up | %d down' % (stats.byte_up_all,stats.byte_down_all)
-  
+  traffic = '%.1f/%.1f' % (stats.byte_down_all * 8 / (1000 * total_time), stats.byte_up_all * 8 / (1000 * total_time))
+
   CHECK_VALUE = traffic
 
-  check_info = 'Traffico globale iniziale in KByte: %s' % traffic
-  
+  check_info = 'Traffico globale attuale kbps: %s' % traffic
+
   return check_info
 
 
@@ -392,11 +394,11 @@ def _get_NetIF():
 
   for ifName in netifaces.interfaces():
     #logger.debug((ifName,netifaces.ifaddresses(ifName)))
-    mac = [i.setdefault('addr','') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_LINK, [{'addr':''}])]
-    ip = [i.setdefault('addr','') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'addr':''}])]
-    mask = [i.setdefault('netmask','') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'netmask':''}])]    
-    if mask[0]=='0.0.0.0':
-      mask = [i.setdefault('broadcast','') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'broadcast':''}])]
+    mac = [i.setdefault('addr', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_LINK, [{'addr':''}])]
+    ip = [i.setdefault('addr', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'addr':''}])]
+    mask = [i.setdefault('netmask', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'netmask':''}])]
+    if mask[0] == '0.0.0.0':
+      mask = [i.setdefault('broadcast', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'broadcast':''}])]
     netIF[ifName] = {'mac':mac, 'ip':ip, 'mask':mask}
 
   #logger.debug('Network Interfaces:\n %s' %netIF)
@@ -418,15 +420,15 @@ def _get_ActiveIp(host = 'finaluser.agcom244.fub.it', port = 443):
   return value
 
 
-def _get_mac(ip=None):
-  
+def _get_mac(ip = None):
+
   global CHECK_VALUE
 
   CHECK_VALUE = None
-  
-  if ip==None:
-    ip=_get_ActiveIp()
-  
+
+  if ip == None:
+    ip = _get_ActiveIp()
+
   mac = None
   netIF = _get_NetIF()
 
@@ -445,7 +447,7 @@ def _get_mac(ip=None):
 
 
 def getIp():
-  
+
   global CHECK_VALUE
 
   CHECK_VALUE = None
@@ -467,15 +469,15 @@ def getIp():
   return ip
 
 
-def _get_mask(ip=None):
-  
+def _get_mask(ip = None):
+
   global CHECK_VALUE
 
   CHECK_VALUE = None
-  
-  if ip==None:
-    ip=_get_ActiveIp()
-  
+
+  if ip == None:
+    ip = _get_ActiveIp()
+
   cidrMask = 0
   dotMask = None
   netIF = _get_NetIF()
@@ -494,17 +496,17 @@ def _get_mask(ip=None):
   return cidrMask
 
 
-def getDev(ip=None):
-  
+def getDev(ip = None):
+
   global CHECK_VALUE
 
   CHECK_VALUE = None
 
-  Dev=None
+  Dev = None
 
-  if ip==None:
-    ip=_get_ActiveIp()
-    
+  if ip == None:
+    ip = _get_ActiveIp()
+
   netIF = _get_NetIF()
 
   for interface in netIF:
@@ -542,23 +544,23 @@ def _get_Sys():
 
   return r
 
-  
+
 def checkset(check_set = set()):
-  
+
   global CHECK_VALUE
 
-  available_check =                               \
+  available_check = \
   {                                               \
-   RES_CPU:{'prio':1, 'meth':_check_cpu},         \
-   RES_RAM:{'prio':2, 'meth':_check_mem},         \
-   RES_WIFI:{'prio':3, 'meth':_check_wireless},   \
-   RES_HOSTS:{'prio':4, 'meth':_check_hosts},     \
+   RES_CPU:{'prio':1, 'meth':_check_cpu}, \
+   RES_RAM:{'prio':2, 'meth':_check_mem}, \
+   RES_WIFI:{'prio':3, 'meth':_check_wireless}, \
+   RES_HOSTS:{'prio':4, 'meth':_check_hosts}, \
    RES_TRAFFIC:{'prio':5, 'meth':_check_traffic}, \
-   RES_MAC:{'prio':6, 'meth':_get_mac},           \
-   RES_IP:{'prio':7, 'meth':getIp},               \
-   RES_MASK:{'prio':8, 'meth':_get_mask},         \
-   RES_DEV:{'prio':9, 'meth':getDev},             \
-   RES_OS:{'prio':10, 'meth':_get_os},             \
+   RES_MAC:{'prio':6, 'meth':_get_mac}, \
+   RES_IP:{'prio':7, 'meth':getIp}, \
+   RES_MASK:{'prio':8, 'meth':_get_mask}, \
+   RES_DEV:{'prio':9, 'meth':getDev}, \
+   RES_OS:{'prio':10, 'meth':_get_os}, \
    #'sys':{'prio':11,'meth':_get_Sys}              \
    }
 
@@ -641,7 +643,7 @@ if __name__ == '__main__':
 
   print '\nCheck Set All'
   print 'Test sysmonitor checkset: %s' % checkset()
-  
+
   print '\nCheck Set Partial'
   print 'Test sysmonitor checkset: %s' % checkset(set(['CPU', 'RAM', 'Wifi', 'MAC', 'IP', 'pippo', 8]))
 

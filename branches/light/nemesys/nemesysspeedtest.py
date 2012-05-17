@@ -44,6 +44,7 @@ TH_TRAFFIC = 0.1
 TH_TRAFFIC_INV = 0.9
 # Soglia per numero di pacchetti persi
 TH_PACKETDROP = 0.05
+MAX_TEST_ERROR = 0
 
 TOTAL_STEPS = 12
 
@@ -107,7 +108,7 @@ class _Tester(Thread):
     '''
     stats = test.counter_stats
     logger.debug('Valori di test: %s' % stats)
-    continue_testing = True
+    continue_testing = False
 
     logger.debug('Analisi della percentuale dei pacchetti persi')
     packet_drop = stats.packet_drop
@@ -225,6 +226,65 @@ class _Tester(Thread):
     #return True
     return result
 
+  def _do_ftp_test(self, tester, type, task):
+    i = 1
+    test_number = 0
+
+    if type == DOWN:
+      test_number = task.download
+    elif type == UP:
+      test_number = task.upload
+
+    while (i <= test_number and self._running):
+
+      self._check_system(set([RES_CPU, RES_RAM]))
+
+      # Esecuzione del test
+      test = None
+      error = 0
+      while (error < MAX_TEST_ERROR or test != None):
+        try:
+          if type == DOWN:
+            logger.info("Esecuzione di un test Donwload FTP")
+            test = tester.testftpdown(self._client.profile.download * task.multiplier * 1000 / 8, task.ftpdownpath)
+          elif type == UP:
+            logger.info("Esecuzione di un test Upload FTP")
+            test = tester.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
+          else:
+            logger.warn("Tipo di test da effettuare non definito!")
+        except Exception as e:
+          error = error + 1
+          logger.error("Errore durante l'esecuzione di un test: %s" % e)
+          wx.CallAfter(self._gui._update_messages, "Errore durante l'esecuzione di un test: %s" % e, 'red')
+          wx.CallAfter(self._gui._update_messages, "Ripresa del test tra %d secondi" % TIME_LAG)
+          sleep(TIME_LAG)
+
+      if test != None:
+        bandwidth = self._get_bandwith(test)
+
+        if type == DOWN:
+          #self._client.profile.download = min(bandwidth, (40000 / 8) * 10)
+          task.update_ftpdownpath(bandwidth)
+        elif type == UP:
+          self._client.profile.upload = min(bandwidth, (40000 / 8) * 10)
+        else:
+          logger.warn("Tipo di test effettuato non definito!")
+
+        self._update_gauge()
+        wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP %s" % (i, test_number, type), 'blue')
+
+        if i > 1:
+          # Analisi da contabit
+          if (self._test_gating(test, type)):
+            i = i + 1
+        else:
+          i = i + 1
+
+      else:
+        raise Exception("errore durante i test, la misurazione non può essere completata")
+
+      return test
+
   def run(self):
 
     if (not self._check_usb_devices()):
@@ -265,64 +325,17 @@ class _Tester(Thread):
           id = start.strftime('%y%m%d%H%M')
           m = Measure(id, task.server, self._client, __version__, start.isoformat())
 
-
           # Testa gli ftp down
-          # ------------------------
-          i = 1;
-          while (i <= task.download and self._running):
-
-            self._check_system(set([RES_CPU, RES_RAM]))
-
-            # Esecuzione del test
-            test = t.testftpdown(self._client.profile.download * task.multiplier * 1000 / 8, task.ftpdownpath)
-            bandwidth = self._get_bandwith(test)
-            self._client.profile.download = min(bandwidth, (40000 / 8) * 10)
-            task.update_ftpdownpath(bandwidth)
-
-            self._update_gauge()
-            wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP download." % (i, task.download), 'blue')
-
-            if i > 1:
-              # Analisi da contabit
-              if (self._test_gating(test, DOWN)):
-                i = i + 1
-            else:
-              i = i + 1
-
-          # Salvataggio dell'ultima misura
+          test = self._do_ftp_test(t, DOWN, task)
           m.savetest(test)
           wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
 
           # Testa gli ftp up
-          # ------------------------
-          i = 1;
-          while (i <= task.upload and self._running):
-
-            self._check_system(set([RES_CPU, RES_RAM]))
-
-            # Esecuzione del test
-            test = t.testftpup(self._client.profile.upload * task.multiplier * 1000 / 8, task.ftpuppath)
-            bandwidth = self._get_bandwith(test)
-            self._client.profile.upload = min(bandwidth, (40000 / 8) * 10)
-
-            self._update_gauge()
-            wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP upload." % (i, task.download), 'blue')
-
-            if i > 1:
-              # Analisi da contabit
-              if (self._test_gating(test, UP)):
-                i = i + 1
-            else:
-              i = i + 1
-
-          # Salvataggio dell'ultima misura
+          self._do_ftp_test(t, UP, task)
           m.savetest(test)
-          wx.CallAfter(self._gui._update_up, bandwidth)
+          wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
 
-          # Ping
-          i = 1
-          self._check_system(set([RES_CPU, RES_RAM]))
-
+          # Testa i ping
           while (i <= task.ping and self._running):
 
             test = t.testping()
@@ -344,7 +357,7 @@ class _Tester(Thread):
 
         except Exception as e:
           logger.warning('Misura sospesa per eccezione %s' % e)
-          wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s. Aspetta qualche secondo prima di effettuare una nuova misura.' % e)
+          wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s. Aspetta qualche secondo prima di effettuare una nuova misura.' % e, 'red')
 
         # Stop
         sleep(TIME_LAG)
