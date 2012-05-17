@@ -274,8 +274,9 @@ class _Tester(Thread):
             self._check_system(set([RES_CPU, RES_RAM]))
 
             # Esecuzione del test
-            test = t.testftpdown(task.ftpdownpath)
+            test = t.testftpdown(self._client.profile.download * task.multiplier * 1000 / 8, task.ftpdownpath)
             bandwidth = self._get_bandwith(test)
+            self._client.profile.download = min(bandwidth, (40000 / 8) * 10)
             task.update_ftpdownpath(bandwidth)
 
             self._update_gauge()

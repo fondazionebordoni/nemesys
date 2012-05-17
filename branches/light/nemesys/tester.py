@@ -133,7 +133,7 @@ class Tester:
 
     return Proof(test_type, start, elapsed, size, counter_stats)
 
-  def testftpdown(self, filename, bytes = BUFF*2):
+  def testftpdown(self, bytes, filename):
     global ftp, file, size
     test_type = 'download'
     size = 0
@@ -160,7 +160,7 @@ class Tester:
     try:
       logger.debug('Test initializing...')
       logger.debug('File dimension: %s bytes' % bytes)
-      buff = int(max(bytes*4,BUFF))
+      buff = int(max(bytes*2,BUFF))
       pcapper = Pcapper(self._if_ip, buff, SNAPLEN, TIMEOUT, PROMISC)
       pcapper.start()
 
