@@ -242,7 +242,7 @@ class _Tester(Thread):
       # Esecuzione del test
       test = None
       error = 0
-      while (error < MAX_TEST_ERROR or test != None):
+      while (error < MAX_TEST_ERROR or test == None):
         try:
           if type == DOWN:
             logger.info("Esecuzione di un test Donwload FTP")
@@ -254,6 +254,7 @@ class _Tester(Thread):
             logger.warn("Tipo di test da effettuare non definito!")
         except Exception as e:
           error = error + 1
+          test = None
           logger.error("Errore durante l'esecuzione di un test: %s" % e)
           wx.CallAfter(self._gui._update_messages, "Errore durante l'esecuzione di un test: %s" % e, 'red')
           wx.CallAfter(self._gui._update_messages, "Ripresa del test tra %d secondi" % TIME_LAG)
@@ -263,7 +264,7 @@ class _Tester(Thread):
         bandwidth = self._get_bandwith(test)
 
         if type == DOWN:
-          #self._client.profile.download = min(bandwidth, (40000 / 8) * 10)
+          self._client.profile.download = min(bandwidth, (40000 / 8) * 10)
           task.update_ftpdownpath(bandwidth)
         elif type == UP:
           self._client.profile.upload = min(bandwidth, (40000 / 8) * 10)
@@ -283,7 +284,7 @@ class _Tester(Thread):
       else:
         raise Exception("errore durante i test, la misurazione non può essere completata")
 
-      return test
+    return test
 
   def run(self):
 
@@ -331,11 +332,13 @@ class _Tester(Thread):
           wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
 
           # Testa gli ftp up
-          self._do_ftp_test(t, UP, task)
+          test = self._do_ftp_test(t, UP, task)
           m.savetest(test)
           wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
 
           # Testa i ping
+          i = 1
+          
           while (i <= task.ping and self._running):
 
             test = t.testping()
