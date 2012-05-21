@@ -236,12 +236,17 @@ def _check_wireless():
 
   for device in data.findall('rete/NetworkDevice'):
     logger.debug(ET.tostring(device))
-    status = device.find('Status').text
-    if (status == 'Enabled'):
-      type = device.find('Type').text
-      if (type == 'Wireless'):
+    type = device.find('Type').text
+    if (type == 'Wireless'):
+      status = device.find('Status').text
+      if (status == 'Enabled'):
         CHECK_VALUE = 'On'
         raise sysmonitorexception.WARNWLAN
+    elif (type == 'External Modem'):
+      dev_id = device.find('ID').text
+      if re.search('USB',dev_id):
+        CHECK_VALUE = 'HSPA'
+        raise sysmonitorexception.WARNHSPA
 
   CHECK_VALUE = 'Off'
 
@@ -311,20 +316,27 @@ def _check_traffic(sec = 2):
   dev = getDev(ip)
   buff = 8 * 1024 * 1024
 
-  start_time = time.time()
-  pcapper = Pcapper(dev, buff, 150)
-  pcapper.start()
-  pcapper.sniff(Contabyte(ip, '0.0.0.0'))
-  #logger.debug("Checking Traffic for %d seconds...." % sec)
-  time.sleep(sec)
-  pcapper.stop_sniff()
-  stats = pcapper.get_stats()
-  total_time = time.time() - start_time
-  pcapper.stop()
-  pcapper.join()
-
-  traffic = '%.1f/%.1f' % (stats.byte_down_all * 8 / (1000 * total_time), stats.byte_up_all * 8 / (1000 * total_time))
-
+  try:
+    pcapper = Pcapper(dev, buff, 150)
+    start_time = time.time()
+    pcapper.start()
+    pcapper.sniff(Contabyte(ip, '0.0.0.0'))
+    #logger.debug("Checking Traffic for %d seconds...." % sec)
+    time.sleep(sec)
+    pcapper.stop_sniff()
+    stats = pcapper.get_stats()
+    total_time = time.time() - start_time
+    logger.debug('Total Time: %s' % total_time)
+    pcapper.stop()
+    pcapper.join()
+    
+    traffic = '%.1f/%.1f' % (stats.byte_down_all * 8 / (1000 * total_time), stats.byte_up_all * 8 / (1000 * total_time))
+    
+  except Exception as e:
+    traffic = '0.0/0.0'
+    CHECK_VALUE = traffic
+    raise e
+  
   CHECK_VALUE = traffic
 
   check_info = 'Traffico globale attuale kbps: %s' % traffic

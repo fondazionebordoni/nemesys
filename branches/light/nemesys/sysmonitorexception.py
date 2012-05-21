@@ -84,3 +84,5 @@ DISKOVERLOAD = SysmonitorException('DISKOVERLOAD', 'Eccessivo carico in scrittur
 UNKIP = SysmonitorException('UNKIP', 'Impossibile ottenere il dettaglio dell\'indirizzo IP')
 #Error retrieving Device Name
 UNKDEV = SysmonitorException('UNKDEV', 'Impossibile ottenere il nome del device associato all\'indirizzo IP')
+#Warning for HSPA or other USB modem
+WARNHSPA = SysmonitorException('WARNHSPA', 'Dispositivo HSPA o altro USB modem connesso. Se possibile, disconnetterlo')

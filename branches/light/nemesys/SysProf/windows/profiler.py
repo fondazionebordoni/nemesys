@@ -29,7 +29,7 @@ def executeQuery(wmi_class, whereCondition=""):
 class RisorsaWin(Risorsa):
     def __init__(self):
         Risorsa.__init__(self)
-        self.whereCondition = ""
+        self.whereCondition = {}
         
     def getSingleInfo(self, obj, attr):
         val = obj.__getattr__(attr)
@@ -42,8 +42,11 @@ class RisorsaWin(Risorsa):
     
     def getStatusInfo(self, root):
         try:
+            classCondition = ""
             for wmi_class in self._params:
-                items = executeQuery(wmi_class, self.whereCondition)
+                if wmi_class in self.whereCondition:
+                    classCondition = self.whereCondition[wmi_class]
+                items = executeQuery(wmi_class, classCondition)
                 if len(items) == 0:
                     raise RisorsaException("La risorsa con le caratteristiche richieste non e' presente nel server")
                 else:
@@ -141,7 +144,7 @@ class disco(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
         self._params = {'Win32_PerfFormattedData_PerfDisk_PhysicalDisk':['byte_transfer']}
-        self.whereCondition = " WHERE Name= \"_Total\"" #problema, conta tutti i byte trasferiti, anche tra memorie esterne che non coinvolgono il disco del pc
+        self.whereCondition = {'Win32_PerfFormattedData_PerfDisk_PhysicalDisk':" WHERE Name= \"_Total\""} #problema, conta tutti i byte trasferiti, anche tra memorie esterne che non coinvolgono il disco del pc
     
     def byte_transfer(self, obj):
         var = 'DiskBytesPersec'
@@ -180,9 +183,9 @@ class rete(RisorsaWin):
     
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params = {'Win32_NetworkAdapter':['profileDevice']}
+        self._params = {'Win32_NetworkAdapter':['profileDevice'],'Win32_POTSModem':['profileModem']}
         self.ipaddr = ""
-        self.whereCondition = " WHERE Manufacturer != 'Microsoft' "# AND NOT PNPDeviceID LIKE 'ROOT\\*' "
+        self.whereCondition = {'Win32_NetworkAdapter':" WHERE Manufacturer != 'Microsoft' "} # " AND NOT PNPDeviceID LIKE 'ROOT\\*' "
         self._activeMAC = None
         self._checked = False
         self.ipenabdic={}
@@ -218,7 +221,17 @@ class rete(RisorsaWin):
                 return True
         else:
             raise RisorsaException("E' impossibile interrogare le risorse di rete")
-            
+    
+    def _is_wireless_text(self,text):
+      keywords = ['wireless', 'wlan', 'wifi', 'wi-fi','fili']
+      ltext=text.lower()
+      words=ltext.split(' ')
+      for w in words:
+        for key in keywords:
+          if w==key:
+            return True
+      return False
+      
     def profileDevice(self, obj):
         running = 0X3 #running Net Interface CODE
         features = {'Name':'', 'AdapterType':'', 'MACAddress':'','NetConnectionID':''}
@@ -263,16 +276,28 @@ class rete(RisorsaWin):
             devxml.append(self.xmlFormat('isActive', devIsActive))
             devxml.append(self.xmlFormat('Status', devStatus))
             return devxml
-          
-    def _is_wireless_text(self,text):
-      keywords = ['wireless', 'wlan', 'wifi', 'wi-fi','fili']
-      ltext=text.lower()
-      words=ltext.split(' ')
-      for w in words:
-        for key in keywords:
-          if w==key:
-            return True
-      return False
+            
+    def profileModem(self, obj):
+        features = {'Name':'', 'DeviceType':'', 'DeviceID':''}
+        devName = 'unknown'
+        devType = 'unknown'
+        devID = 'unknown'
+        try:
+            keys = features.keys()
+            for key in keys:
+                features[key] = self.getSingleInfo(obj, key)
+        finally:
+            if (features['Name']):
+                devName = features['Name']
+            if (features['DeviceType']):
+                devType = features['DeviceType']
+            if (features['DeviceID']):
+                devID = features['DeviceID']
+            devxml = ET.Element('NetworkDevice')
+            devxml.append(self.xmlFormat('Name', devName))
+            devxml.append(self.xmlFormat('Type', devType))
+            devxml.append(self.xmlFormat('ID', devID))
+            return devxml
                    
 class processi(RisorsaWin):
     def __init__(self):
@@ -405,7 +430,7 @@ class connection(RisorsaWin):
 class Profiler(LocalProfiler):
     
     def __init__(self):
-        available_resources = set(['CPU', 'RAM', 'sistemaOperativo', 'rete', 'wireless', 'disco'])
+        available_resources = set(['CPU', 'RAM', 'sistemaOperativo', 'rete', 'disco'])
         LocalProfiler.__init__(self, available_resources)
 
     def profile(self, resource=set()):
