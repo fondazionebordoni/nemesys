@@ -201,7 +201,7 @@ class _Tester(Thread):
     if min(RTT) < maxRTT:
       return RTT[min(RTT)]
 
-    wx.CallAfter(self._gui._update_messages, "Non è stato possibile contattare il server di misura, la misurazione non può essere effettuata. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
+    wx.CallAfter(self._gui._update_messages, "Impossibile eseguire i test poiche' i server risultano irragiungibili da questa linea. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
     return None
 
   def _check_usb(self, devices):
