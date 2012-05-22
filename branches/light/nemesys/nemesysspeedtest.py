@@ -20,18 +20,14 @@ from time import sleep
 from timeNtp import timestampNtp
 from urlparse import urlparse
 from xmlutils import xml2task
-from uids import QUERY, UIDS
+from usbkey import check_usb
 import hashlib
 import httputils
 import logging
 import paths
 import ping
-import pythoncom
-import re
 import sysmonitor
-import wmi
 import wx
-import ctypes
 from prospect import Prospect
 
 __version__ = '2.2'
@@ -204,36 +200,6 @@ class _Tester(Thread):
     wx.CallAfter(self._gui._update_messages, "Impossibile eseguire i test poiche' i server risultano irragiungibili da questa linea. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
     return None
 
-  def _check_usb(self, devices):
-
-    result = False
-
-    for dev in devices:
-      devID = "%s_%s_%s" % (dev.PNPDeviceID, ctypes.c_uint32(dev.Signature).value, dev.SerialNumber)
-      logger.debug("Trovato device: %s" % devID)
-      for ID in UIDS:
-        if re.search(ID, devID):
-          result = True
-          break
-      if result:
-        break
-
-    return result
-
-  def _check_usb_devices(self):
-
-    result = False
-
-    pythoncom.CoInitialize()
-    c = wmi.WMI()
-    q = QUERY
-    r = c.query(q)      
-    result = self._check_usb(r)
-    pythoncom.CoUninitialize()
-
-    #return True
-    return result
-
   def _do_ftp_test(self, tester, type, task):
     i = 1
     test_number = 0
@@ -298,7 +264,7 @@ class _Tester(Thread):
 
   def run(self):
 
-    if (not self._check_usb_devices()):
+    if (not check_usb()):
       logger.debug('Verifica della presenza della pennetta USB fallita')
       wx.CallAfter(self._gui._update_messages, "Attenzione: per eseguire le misure occorre disporre della penna USB fornita per l'installazione dei Ne.Me.Sys.", 'red')
 
