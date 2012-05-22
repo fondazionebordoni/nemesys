@@ -180,7 +180,7 @@ def _check_cpu():
       value = 'unknow'
       CHECK_VALUE = value
 
-  check_info = 'CPU utilizzata al %s%%' % value
+  check_info = 'Utilizzato il %s%% del processore' % value
 
   return check_info
 
@@ -219,7 +219,7 @@ def _check_mem():
       CHECK_VALUE = memLoad
 
 
-  check_info = 'Utilizzato il %s%% di %d MB di RAM' % (memLoad, avMem / 1024)
+  check_info = 'Utilizzato il %s%% di %d MB della memoria' % (memLoad, avMem / 1024)
 
   return check_info
 

@@ -20,7 +20,7 @@ from time import sleep
 from timeNtp import timestampNtp
 from urlparse import urlparse
 from xmlutils import xml2task
-from uids import UIDS
+from uids import QUERY, UIDS
 import hashlib
 import httputils
 import logging
@@ -31,6 +31,7 @@ import re
 import sysmonitor
 import wmi
 import wx
+import ctypes
 from prospect import Prospect
 
 __version__ = '2.2'
@@ -179,16 +180,19 @@ class _Tester(Thread):
 
     servers = set([Server('NAMEX', '193.104.137.133', 'NAP di Roma'), Server('MIX', '193.104.137.4', 'NAP di Milano')])
 
+    maxREP = 3
     maxRTT = 8000
     RTT = {maxRTT:None}
 
-    for repeat in range(3):
+    for repeat in range(maxREP):
       for server in servers:
         try:
           delay = ping.do_one("%s" % server.ip, 1)
           RTT[delay] = server
+          wx.CallAfter(self._gui._update_messages, "Ping %d/%d verso %s con RTT: %.1f ms" % (repeat+1,maxREP,server.name,delay*1000), 'blue')
         except Exception as e:
           logger.debug('Errore durante il ping dell\'host %s: %s' % (server.ip, e))
+          wx.CallAfter(self._gui._update_messages, "Ping %d/%d verso %s: TimeOut" % (repeat+1,maxREP,server.name), 'blue')
           pass
 
     for key in RTT:
@@ -200,13 +204,19 @@ class _Tester(Thread):
     wx.CallAfter(self._gui._update_messages, "Non è stato possibile contattare il server di misura, la misurazione non può essere effettuata. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
     return None
 
-  def _check_usb(self, device_id):
+  def _check_usb(self, devices):
 
     result = False
 
-    for ID in UIDS:
-      if re.search(ID, device_id):
-        result = True
+    for dev in devices:
+      devID = "%s_%s_%s" % (dev.PNPDeviceID, ctypes.c_uint32(dev.Signature).value, dev.SerialNumber)
+      logger.debug("Trovato device: %s" % devID)
+      for ID in UIDS:
+        if re.search(ID, devID):
+          result = True
+          break
+      if result:
+        break
 
     return result
 
@@ -215,12 +225,10 @@ class _Tester(Thread):
     result = False
 
     pythoncom.CoInitialize()
-    info = wmi.WMI()
-    for usb in info.Win32_DiskDrive(InterfaceType = 'USB'):
-      logger.debug("Trovato device USB: %s" % usb.PNPDeviceID)
-      if (self._check_usb(usb.PNPDeviceID)):
-        result = True
-        break
+    c = wmi.WMI()
+    q = QUERY
+    r = c.query(q)      
+    result = self._check_usb(r)
     pythoncom.CoUninitialize()
 
     #return True
@@ -237,6 +245,8 @@ class _Tester(Thread):
 
     while (i <= test_number and self._running):
 
+      wx.CallAfter(self._gui._update_messages, "Test %d di %d di FTP %s" % (i, test_number, type), 'blue')
+      
       self._check_system(set([RES_CPU, RES_RAM]))
 
       # Esecuzione del test
@@ -272,7 +282,7 @@ class _Tester(Thread):
           logger.warn("Tipo di test effettuato non definito!")
 
         self._update_gauge()
-        wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP %s" % (i, test_number, type), 'blue')
+        #wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP %s" % (i, test_number, type), 'blue')
 
         if i > 1:
           # Analisi da contabit
@@ -307,7 +317,7 @@ class _Tester(Thread):
       task = None
       server = self._get_server()
       if server != None:
-        wx.CallAfter(self._gui._update_messages, "Identificato il server di misura: %s" % server.name)
+        wx.CallAfter(self._gui._update_messages, "Scelto il server di misura %s" % server.name)
 
         # Scaricamento del task dallo scheduler
         task = self._download_task(server)
@@ -329,21 +339,24 @@ class _Tester(Thread):
           # Testa gli ftp down
           test = self._do_ftp_test(t, DOWN, task)
           m.savetest(test)
+          wx.CallAfter(self._gui._update_messages, "Download bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
 
           # Testa gli ftp up
           test = self._do_ftp_test(t, UP, task)
           m.savetest(test)
+          wx.CallAfter(self._gui._update_messages, "Upload bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
 
           # Testa i ping
           i = 1
-          
+                    
           while (i <= task.ping and self._running):
 
+            wx.CallAfter(self._gui._update_messages, "Test %d di %d di ping." % (i, task.ping), 'blue')          
             test = t.testping()
             self._update_gauge()
-            wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.ping), 'blue')
+            #wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.ping), 'blue')
 
             if ((i + 2) % task.nicmp == 0):
               sleep(task.delay)
@@ -526,6 +539,7 @@ class Frame(wx.Frame):
 
     def _check(self, event):
       self.bitmap_button_check.Disable()
+      self._reset_info()
       self._check_system()
       self.bitmap_button_check.Enable()
 
@@ -626,7 +640,8 @@ class Frame(wx.Frame):
       else:
         res_label.SetLabel("%s\n- - - -" % resource)
 
-      self._update_messages("%s: %s" % (resource, info['info']), color)
+      if info['info'] != None:
+        self._update_messages("%s: %s" % (resource, info['info']), color)
 
       self.Layout()
 

@@ -85,4 +85,4 @@ UNKIP = SysmonitorException('UNKIP', 'Impossibile ottenere il dettaglio dell\'in
 #Error retrieving Device Name
 UNKDEV = SysmonitorException('UNKDEV', 'Impossibile ottenere il nome del device associato all\'indirizzo IP')
 #Warning for HSPA or other USB modem
-WARNHSPA = SysmonitorException('WARNHSPA', 'Dispositivo HSPA o altro USB modem connesso. Se possibile, disconnetterlo')
+WARNHSPA = SysmonitorException('WARNHSPA', 'Rilevato dispositivo HSPA o altro USB modem connesso al computer. Se possibile, disconnetterlo e rimuoverlo')
