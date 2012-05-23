@@ -49,18 +49,18 @@ keys=console,file
 keys=formatter
 
 [logger_root]
-level=INFO
+level=DEBUG
 handlers=console,file
 
 [handler_console]
 class=StreamHandler
-level=INFO
+level=DEBUG
 formatter=formatter
 args=(sys.stdout,)
 
 [handler_file]
 class=FileHandler
-level=INFO
+level=DEBUG
 formatter=formatter
 args=(''' + repr(logfile) + ''',)
 

@@ -260,7 +260,8 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
   CHECK_VALUE = None
 
   netIF = _get_NetIF()
-  logger.debug('Network Interfaces: %s' % netIF)
+  for key in netIF:
+    logger.debug('%s : %s' % (key,netIF[key]))
 
   ip = getIp();
   dev = getDev()

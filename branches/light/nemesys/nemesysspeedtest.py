@@ -74,6 +74,18 @@ class _Checker(Thread):
 
     for resource in self._checkable_set:
       wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
+      
+  def _check_software(self):
+    check = False
+    if (deadline()):
+      logger.debug('Verifica della scadenza del software fallita')
+      wx.CallAfter(self._gui._update_messages,"Questa copia di Ne.Me.Sys Speedtest risulta scaduta.", 'red')     
+    elif (not check_usb()):
+      logger.debug('Verifica della presenza della chiave USB fallita')
+      wx.CallAfter(self._gui._update_messages,"Per l'utilizzo di questo software occorre disporre della chiave USB fornita per l'installazione dei Ne.Me.Sys. Inserire la chiave nel computer e riavviare il software.", 'red')
+    else:
+      check = True     
+    return check
 
 class _Tester(Thread):
 
@@ -84,6 +96,7 @@ class _Tester(Thread):
     self._prospect = Prospect()
 
     self._gui = gui
+    self._checker = _Checker(gui)
     self._step = 0
 
     (options, args, md5conf) = parse()
@@ -261,91 +274,95 @@ class _Tester(Thread):
           i = i + 1
 
       else:
-        raise Exception("errore durante i test, la misurazione non può essere completata")
+        raise Exception("errore durante i test, la misurazione non puo' essere completata")
 
     return test
 
   def run(self):
+  
+    logger.debug('Preparazione alla misurazione...')
+    wx.CallAfter(self._gui._update_messages, "Preparazione alla misurazione...")
+    self._update_gauge()
 
-    if (not check_usb()):
-      logger.debug('Verifica della presenza della pennetta USB fallita')
-      wx.CallAfter(self._gui._update_messages, "Attenzione: per eseguire le misure occorre disporre della penna USB fornita per l'installazione dei Ne.Me.Sys.", 'red')
+    # Profilazione
+    self._check_system(set([RES_HOSTS, RES_WIFI, RES_TRAFFIC]))
 
-    else:
+    # TODO Il server deve essere indicato dal backend che è a conoscenza dell'occupazione della banda!
 
-      logger.debug('Preparazione alla misurazione...')
-      wx.CallAfter(self._gui._update_messages, "Preparazione alla misurazione...")
+    # TODO Rimuovere dopo aver sistemato il backend
+    task = None
+    server = self._get_server()
+    if server != None:
+      wx.CallAfter(self._gui._update_messages, "Scelto il server di misura %s" % server.name)
+
+      # Scaricamento del task dallo scheduler
+      task = self._download_task(server)
       self._update_gauge()
+      task = Task(0, '2010-01-01 10:01:00', server, '/download/1000.rnd', 'upload/1000.rnd', 3, 3, 10, 4, 4, 0, True)
 
-      # Profilazione
-      self._check_system(set([RES_HOSTS, RES_WIFI, RES_TRAFFIC]))
+    if task != None:
 
-      # TODO Il server deve essere indicato dal backend che è a conoscenza dell'occupazione della banda!
+      try:
+        start = datetime.fromtimestamp(timestampNtp())
 
-      # TODO Rimuovere dopo aver sistemato il backend
-      task = None
-      server = self._get_server()
-      if server != None:
-        wx.CallAfter(self._gui._update_messages, "Scelto il server di misura %s" % server.name)
+        ip = sysmonitor.getIp()
+        t = Tester(if_ip = ip, host = task.server, timeout = self._testtimeout,
+                   username = self._client.username, password = self._client.password)
 
-        # Scaricamento del task dallo scheduler
-        task = self._download_task(server)
-        self._update_gauge()
-        task = Task(0, '2010-01-01 10:01:00', server, '/download/1000.rnd', 'upload/1000.rnd', 3, 3, 10, 4, 4, 0, True)
+        id = start.strftime('%y%m%d%H%M')
+        m = Measure(id, task.server, self._client, __version__, start.isoformat())
 
-      if task != None:
-
-        try:
-          start = datetime.fromtimestamp(timestampNtp())
-
-          ip = sysmonitor.getIp()
-          t = Tester(if_ip = ip, host = task.server, timeout = self._testtimeout,
-                     username = self._client.username, password = self._client.password)
-
-          id = start.strftime('%y%m%d%H%M')
-          m = Measure(id, task.server, self._client, __version__, start.isoformat())
-
-          # Testa gli ftp down
-          test = self._do_ftp_test(t, DOWN, task)
-          m.savetest(test)
+        # Testa gli ftp down
+        test = self._do_ftp_test(t, DOWN, task)
+        m.savetest(test)
+        if (self._checker._check_software()):
           wx.CallAfter(self._gui._update_messages, "Download bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
+        else:
+          raise Exception("Check Software Error")
 
-          # Testa gli ftp up
-          test = self._do_ftp_test(t, UP, task)
-          m.savetest(test)
+        # Testa gli ftp up
+        test = self._do_ftp_test(t, UP, task)
+        m.savetest(test)
+        if (self._checker._check_software()):
           wx.CallAfter(self._gui._update_messages, "Upload bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
+        else:
+          raise Exception("Check Software Error")
 
-          # Testa i ping
-          i = 1
-                    
-          while (i <= task.ping and self._running):
+          
+        # Testa i ping
+        i = 1
+                  
+        while (i <= task.ping and self._running):
 
-            wx.CallAfter(self._gui._update_messages, "Test %d di %d di ping." % (i, task.ping), 'blue')          
-            test = t.testping()
-            self._update_gauge()
-            #wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.ping), 'blue')
+          wx.CallAfter(self._gui._update_messages, "Test %d di %d di ping." % (i, task.ping), 'blue')          
+          test = t.testping()
+          self._update_gauge()
+          #wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.ping), 'blue')
 
-            if ((i + 2) % task.nicmp == 0):
-              sleep(task.delay)
-              self._check_system(set([RES_CPU, RES_RAM]))
+          if ((i + 2) % task.nicmp == 0):
+            sleep(task.delay)
+            self._check_system(set([RES_CPU, RES_RAM]))
 
-            i = i + 1
+          i = i + 1
 
-          # Salvataggio dell'ultima misura
-          m.savetest(test)
+        # Salvataggio dell'ultima misura
+        m.savetest(test)
+        if (self._checker._check_software()):
           wx.CallAfter(self._gui._update_ping, test.value)
+        else:
+          raise Exception("Check Software Error")
+          
+        self._save_measure(m)
+        self._prospect.save_measure(m)
 
-          self._save_measure(m)
-          self._prospect.save_measure(m)
+      except Exception as e:
+        logger.warning('Misura sospesa per eccezione: %s.' % e)
+        wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s.' % e, 'red')
 
-        except Exception as e:
-          logger.warning('Misura sospesa per eccezione %s' % e)
-          wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s. Aspetta qualche secondo prima di effettuare una nuova misura.' % e, 'red')
-
-        # Stop
-        sleep(TIME_LAG)
+      # Stop
+      sleep(TIME_LAG)
 
     wx.CallAfter(self._gui.stop)
     self.join()
@@ -385,6 +402,7 @@ class _Tester(Thread):
 class Frame(wx.Frame):
     def __init__(self, *args, **kwds):
         self._tester = None
+        self._checker = _Checker(self)
 
         # begin wxGlade: Frame.__init__
         wx.Frame.__init__(self, *args, **kwds)
@@ -507,14 +525,15 @@ class Frame(wx.Frame):
         self._check(None)
 
     def _check(self, event):
-      if (not deadline()):
-        self.bitmap_button_check.Disable()
+
+      self.bitmap_button_play.Disable()
+      self.bitmap_button_check.Disable()
+      if (self._checker._check_software()):
         self._reset_info()
         self._check_system()
+        self.bitmap_button_play.Enable()
         self.bitmap_button_check.Enable()
-      else:
-        self._update_messages("Questa copia di Ne.Me.Sys Speedtest risulta scaduta.", 'red')
-
+        
     # TODO Spostare il check in un thread separato
     def _check_system(self, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
 
@@ -556,16 +575,13 @@ class Frame(wx.Frame):
 
     def _play(self, event):
 
-      if (not deadline()):
+      self.bitmap_button_play.Disable()
+      self.bitmap_button_check.Disable()
+      if (self._checker._check_software()):
         self._reset_info()
         self._tester = _Tester(self)
         self._tester.start()
-
         #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
-        self.bitmap_button_play.Disable()
-        self.bitmap_button_check.Disable()
-      else:
-        self._update_messages("Questa copia di Ne.Me.Sys Speedtest risulta scaduta.", 'red')
 
     def stop(self):
 
@@ -628,7 +644,7 @@ class Frame(wx.Frame):
       end = self.messages_area.GetLastPosition() - len(message)
       start = end - len(date)
       self.messages_area.SetStyle(start, end, wx.TextAttr(color))
-
+      
 def getdate():
   return datetime.fromtimestamp(timestampNtp())
   
