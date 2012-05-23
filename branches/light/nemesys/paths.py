@@ -25,9 +25,13 @@ if hasattr(sys, 'frozen'):
   _APP_PATH = path.dirname(sys.executable) + sep + '..'
 else:
   _APP_PATH = path.abspath(path.dirname(__file__)) + sep + '..'
-
+  
 _APP_PATH = path.normpath(_APP_PATH)
-_USB_PATH = path.normpath(get_path() + sep + '..')
+
+if (get_path() != None):
+  _USB_PATH = path.normpath(get_path() + sep + '..')
+else:
+  _USB_PATH = _APP_PATH
 
 # Resources path
 ICONS = path.join(_APP_PATH, 'icons')
