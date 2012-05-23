@@ -28,7 +28,7 @@ else:
   
 _APP_PATH = path.normpath(_APP_PATH)
 
-if (get_path() != None):
+if (get_path() != []):
   _USB_PATH = path.normpath(get_path() + sep + '..')
 else:
   _USB_PATH = _APP_PATH
