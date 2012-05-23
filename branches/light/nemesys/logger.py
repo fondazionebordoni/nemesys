@@ -18,11 +18,25 @@
 
 from os import path
 from os import mkdir
+from datetime import datetime
+from timeNtp import timestampNtp
 import logging.config
 import paths
+import re
 
 configfile = paths.CONF_LOG
-logfile = paths.FILE_LOG
+#logfile = paths.FILE_LOG
+
+def getdate(mode='sec'):
+  this_date = datetime.fromtimestamp(timestampNtp())
+  if mode == 'day':
+    format_date = str(this_date.strftime('%Y%m%d'))
+  elif mode == 'sec':
+    format_date = str(this_date.strftime('%Y%m%d_%H%M%S'))
+  return format_date
+
+DAY_LOG_DIR = path.join(paths.LOG_DIR,getdate('day'))
+logfile = path.join(DAY_LOG_DIR, getdate('sec')+'.log')
 
 default = '''
 [loggers]
@@ -57,6 +71,9 @@ datefmt=%b %d %H:%M:%S
 
 if not path.exists(paths.LOG_DIR):
   mkdir(paths.LOG_DIR)
+  
+if not path.exists(DAY_LOG_DIR):
+  mkdir(DAY_LOG_DIR)
 
 # Se il file configurazione di log non esiste, creane uno con le impostazioni base
 if (not path.exists(configfile)):
@@ -65,8 +82,24 @@ if (not path.exists(configfile)):
     s = str(default)
     file.write(s)
 
-logging.config.fileConfig(configfile)
+else:
 
+  ind = 0
+  data = None
+  
+  with open(configfile, 'r') as file:
+    data = file.readlines()
+    for line in data:
+      ind += 1
+      if (re.search('logs',line)):
+        data[ind-1]="args=("+repr(logfile)+",)\n"
+        
+  with open(configfile, 'w') as file:
+    file.writelines(data)
+        
+
+logging.config.fileConfig(configfile)
+    
 # create logger
 class Logger(logging.getLoggerClass()):
 

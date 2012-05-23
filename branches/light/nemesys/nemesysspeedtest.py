@@ -21,9 +21,9 @@ from timeNtp import timestampNtp
 from urlparse import urlparse
 from xmlutils import xml2task
 from usbkey import check_usb
+from logger import logging
 import hashlib
 import httputils
-import logging
 import paths
 import ping
 import sysmonitor
@@ -31,6 +31,9 @@ import wx
 from prospect import Prospect
 
 __version__ = '2.2'
+
+#Data di scadenza
+dead_date = 20120930
 
 # Tempo di attesa tra una misura e la successiva in caso di misura fallita
 TIME_LAG = 5
@@ -431,7 +434,7 @@ class Frame(wx.Frame):
     def __set_properties(self):
         # begin wxGlade: Frame.__set_properties
         self.SetTitle("Ne.Me.Sys Speedtest")
-        self.SetSize((720, 420))
+        self.SetSize((720, 440))
         self.bitmap_button_play.SetMinSize((120, 120))
         self.bitmap_button_check.SetMinSize((40, 120))
         self.bitmap_5.SetMinSize((95, 65))
@@ -442,17 +445,17 @@ class Frame(wx.Frame):
         self.bitmap_wifi.SetMinSize((60, 60))
         self.bitmap_hosts.SetMinSize((60, 60))
         self.bitmap_traffic.SetMinSize((60, 60))
-        self.gauge_1.SetMinSize((700, 26))
+        self.gauge_1.SetMinSize((700, 24))
         self.label_rr_ping.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
         self.label_rr_down.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
         self.label_rr_up.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
 
-        self.messages_area.SetMinSize((700, 121))
+        self.messages_area.SetMinSize((700, 160))
         self.messages_area.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL, 0, ""))
         self.grid_sizer_2.SetMinSize((700, 60))
 
         #self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
-        self.SetBackgroundColour(wx.Colour(242, 241, 240))
+        self.SetBackgroundColour(wx.Colour(242, 242, 242))
 
         # end wxGlade
 
@@ -495,7 +498,7 @@ class Frame(wx.Frame):
         sizer_1.Add(sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 6)
         sizer_1.Add(self.gauge_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
         sizer_1.Add(sizer_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 6)
-        sizer_1.Add(self.grid_sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        sizer_1.Add(self.grid_sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
 
         self.SetSizer(sizer_1)
         self.Layout()
@@ -504,10 +507,13 @@ class Frame(wx.Frame):
         self._check(None)
 
     def _check(self, event):
-      self.bitmap_button_check.Disable()
-      self._reset_info()
-      self._check_system()
-      self.bitmap_button_check.Enable()
+      if (not deadline()):
+        self.bitmap_button_check.Disable()
+        self._reset_info()
+        self._check_system()
+        self.bitmap_button_check.Enable()
+      else:
+        self._update_messages("Questa copia di Ne.Me.Sys Speedtest risulta scaduta.", 'red')
 
     # TODO Spostare il check in un thread separato
     def _check_system(self, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
@@ -550,13 +556,16 @@ class Frame(wx.Frame):
 
     def _play(self, event):
 
-      self._reset_info()
-      self._tester = _Tester(self)
-      self._tester.start()
+      if (not deadline()):
+        self._reset_info()
+        self._tester = _Tester(self)
+        self._tester.start()
 
-      #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
-      self.bitmap_button_play.Disable()
-      self.bitmap_button_check.Disable()
+        #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
+        self.bitmap_button_play.Disable()
+        self.bitmap_button_check.Disable()
+      else:
+        self._update_messages("Questa copia di Ne.Me.Sys Speedtest risulta scaduta.", 'red')
 
     def stop(self):
 
@@ -622,6 +631,11 @@ class Frame(wx.Frame):
 
 def getdate():
   return datetime.fromtimestamp(timestampNtp())
+  
+def deadline():
+  this_date = int(getdate().strftime('%Y%m%d'))
+  #logger.debug('%d > %d = %s' % (this_date,dead_date,(this_date > dead_date)))
+  return (this_date > dead_date)
 
 def parse():
   '''

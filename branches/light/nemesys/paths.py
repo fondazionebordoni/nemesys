@@ -17,6 +17,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from os import mkdir, path, sep
+from usbkey import get_path
 import sys
 
 if hasattr(sys, 'frozen'):
@@ -26,6 +27,7 @@ else:
   _APP_PATH = path.abspath(path.dirname(__file__)) + sep + '..'
 
 _APP_PATH = path.normpath(_APP_PATH)
+_USB_PATH = path.normpath(get_path() + sep + '..')
 
 # Resources path
 ICONS = path.join(_APP_PATH, 'icons')
@@ -34,7 +36,7 @@ SENT = path.join(_APP_PATH, 'sent')
 
 # Configuration dirs and files
 _CONF_DIR = path.join(_APP_PATH, 'config')
-LOG_DIR = path.join(_APP_PATH, 'logs')
+LOG_DIR = path.join(_USB_PATH, 'logs')
 FILE_LOG = path.join(LOG_DIR, 'nemesys.log')
 CONF_LOG = path.join(_CONF_DIR, 'log.conf')
 CONF_MAIN = path.join(_CONF_DIR, 'client.conf')
