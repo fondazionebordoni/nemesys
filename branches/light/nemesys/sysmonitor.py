@@ -219,7 +219,7 @@ def _check_mem():
       CHECK_VALUE = memLoad
 
 
-  check_info = 'Utilizzato il %s%% di %d MB della memoria' % (memLoad, avMem / 1024)
+  check_info = 'Utilizzato il %s%% di %d GB della memoria' % (memLoad, avMem / (1000*1024*1024))
 
   return check_info
 
@@ -331,10 +331,10 @@ def _check_traffic(sec = 2):
     pcapper.stop()
     pcapper.join()
     
-    traffic = '%.1f/%.1f' % (stats.byte_down_all * 8 / (1000 * total_time), stats.byte_up_all * 8 / (1000 * total_time))
+    traffic = '%.1f D | %.1f U' % (stats.byte_down_all * 8 / (1000 * total_time), stats.byte_up_all * 8 / (1000 * total_time))
     
   except Exception as e:
-    traffic = '0.0/0.0'
+    traffic = '0.0 D | 0.0 U'
     CHECK_VALUE = traffic
     raise e
   
@@ -563,18 +563,18 @@ def checkset(check_set = set()):
   global CHECK_VALUE
 
   available_check = \
-  {                                               \
-   RES_CPU:{'prio':1, 'meth':_check_cpu}, \
-   RES_RAM:{'prio':2, 'meth':_check_mem}, \
-   RES_WIFI:{'prio':3, 'meth':_check_wireless}, \
-   RES_HOSTS:{'prio':4, 'meth':_check_hosts}, \
-   RES_TRAFFIC:{'prio':5, 'meth':_check_traffic}, \
-   RES_MAC:{'prio':6, 'meth':_get_mac}, \
-   RES_IP:{'prio':7, 'meth':getIp}, \
-   RES_MASK:{'prio':8, 'meth':_get_mask}, \
-   RES_DEV:{'prio':9, 'meth':getDev}, \
-   RES_OS:{'prio':10, 'meth':_get_os}, \
-   #'sys':{'prio':11,'meth':_get_Sys}              \
+  { \
+   RES_OS:{'prio':1, 'meth':_get_os}, \
+   RES_CPU:{'prio':2, 'meth':_check_cpu}, \
+   RES_RAM:{'prio':3, 'meth':_check_mem}, \
+   RES_WIFI:{'prio':4, 'meth':_check_wireless}, \
+   RES_HOSTS:{'prio':5, 'meth':_check_hosts}, \
+   RES_TRAFFIC:{'prio':6, 'meth':_check_traffic}, \
+   RES_MAC:{'prio':7, 'meth':_get_mac}, \
+   RES_IP:{'prio':8, 'meth':getIp}, \
+   RES_MASK:{'prio':9, 'meth':_get_mask}, \
+   RES_DEV:{'prio':10, 'meth':getDev}, \
+   #'sys':{'prio':11,'meth':_get_Sys} \
    }
 
   system_profile = {}

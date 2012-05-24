@@ -12,7 +12,7 @@ from os import path
 from profile import Profile
 from server import Server
 from sys import platform
-from sysmonitor import checkset, RES_CPU, RES_RAM, RES_WIFI, RES_TRAFFIC, RES_HOSTS
+from sysmonitor import checkset, RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_TRAFFIC, RES_HOSTS
 from task import Task
 from tester import Tester
 from threading import Thread
@@ -30,7 +30,7 @@ import sysmonitor
 import wx
 from prospect import Prospect
 
-__version__ = '2.2'
+__version__ = '0.1'
 
 #Data di scadenza
 dead_date = 20120930
@@ -79,10 +79,10 @@ class _Checker(Thread):
     check = False
     if (deadline()):
       logger.debug('Verifica della scadenza del software fallita')
-      wx.CallAfter(self._gui._update_messages,"Questa copia di Ne.Me.Sys Speedtest risulta scaduta.", 'red')     
+      wx.CallAfter(self._gui._update_messages,"Questa copia di Ne.Me.Sys Speedtest risulta scaduta. Si consiglia di disinstallare il software.", 'red')     
     elif (not check_usb()):
       logger.debug('Verifica della presenza della chiave USB fallita')
-      wx.CallAfter(self._gui._update_messages,"Per l'utilizzo di questo software occorre disporre della chiave USB fornita per l'installazione dei Ne.Me.Sys. Inserire la chiave nel computer e riavviare il software.", 'red')
+      wx.CallAfter(self._gui._update_messages,"Per l'utilizzo di questo software occorre disporre della chiave USB fornita per l'installazione. Inserire la chiave nel computer e riavviare il software.", 'red')
     else:
       check = True     
     return check
@@ -154,7 +154,8 @@ class _Tester(Thread):
     if byte_all > 0 and packet_all_inv > 0:
       traffic_ratio = float(byte_all - byte_nem) / float(byte_all)
       packet_ratio_inv = float(packet_all_inv - packet_nem_inv) / float(packet_all_inv)
-      value = round(traffic_ratio * 100)
+      value1 = "%.2f%%" % (traffic_ratio * 100)
+      value2 = "%.2f%%" % (packet_ratio_inv * 100)
       logger.info('kbyte_nem: %.1f; kbyte_all %.1f; packet_nem_inv: %d; packet_all_inv: %d' % (byte_nem / 1024.0, byte_all / 1024.0, packet_nem_inv, packet_all_inv))
       logger.debug('Percentuale di traffico spurio: %.2f%%/%.2f%%' % (traffic_ratio * 100, packet_ratio_inv * 100))
       if traffic_ratio < 0:
@@ -163,16 +164,16 @@ class _Tester(Thread):
       elif traffic_ratio < TH_TRAFFIC and packet_ratio_inv < TH_TRAFFIC_INV:
         # Dato da salvare sulla misura
         test.bytes = byte_all
-        info = 'Traffico internet non legato alla misura: percentuali %d%%/%d%%.' % (value, round(packet_ratio_inv * 100))
-        wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': True, 'info': info, 'value': value})
+        info = 'Traffico internet non legato alla misura: percentuali %s/%s.' % (value1, value2)
+        wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': True, 'info': info, 'value': value1})
         return True
       else:
-        info = 'Eccessiva presenza di traffico internet non legato alla misura: percentuali %d%%/%d%%.' % (value, round(packet_ratio_inv * 100))
-        wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value})
+        info = 'Eccessiva presenza di traffico internet non legato alla misura: percentuali %s/%s.' % (value1, value2)
+        wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value1})
         return continue_testing
     else:
       info = 'Errore durante la misura, impossibile analizzare i dati di test'
-      wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value})
+      wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value1})
       return continue_testing
 
     return True
@@ -535,13 +536,14 @@ class Frame(wx.Frame):
         self.bitmap_button_check.Enable()
         
     # TODO Spostare il check in un thread separato
-    def _check_system(self, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
+    def _check_system(self, checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
 
       #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
       profiled_set = checkset(checkable_set)
 
       for resource in checkable_set:
-        self.set_resource_info(resource, profiled_set[resource])
+        if resource != RES_OS:
+          self.set_resource_info(resource, profiled_set[resource])
 
     def _update_down(self, downwidth):
       self.label_rr_down.SetLabel("%d kbps" % downwidth)
@@ -804,7 +806,7 @@ def getclient(options):
 
 if __name__ == "__main__":
 
-  logger.info('Starting Nemesys v.%s' % __version__)
+  logger.info('Starting Nemesys SpeedTest v.%s' % __version__)
 
   app = wx.PySimpleApp(0)
   if platform == 'win32':

@@ -16,8 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import win32api, win32con
 from os import mkdir, path, sep
 from usbkey import get_path
+import distutils.dir_util
+import shutil
 import sys
 
 if hasattr(sys, 'frozen'):
@@ -30,18 +33,22 @@ _APP_PATH = path.normpath(_APP_PATH)
 
 if (get_path() != []):
   _USB_PATH = path.normpath(get_path() + sep + '..')
+  _USB_PATH = path.join(_USB_PATH, 'NemesysSpeedtest')
+  if not path.exists(_USB_PATH):
+    mkdir(_USB_PATH)
+  win32api.SetFileAttributes(_USB_PATH,win32con.FILE_ATTRIBUTE_HIDDEN)
 else:
   _USB_PATH = _APP_PATH
 
 # Resources path
 ICONS = path.join(_APP_PATH, 'icons')
-OUTBOX = path.join(_APP_PATH, 'outbox')
-SENT = path.join(_APP_PATH, 'sent')
+OUTBOX = path.join(_USB_PATH, 'outbox')
+SENT = path.join(_USB_PATH, 'sent')
 
 # Configuration dirs and files
 _CONF_DIR = path.join(_APP_PATH, 'config')
 LOG_DIR = path.join(_USB_PATH, 'logs')
-FILE_LOG = path.join(LOG_DIR, 'nemesys.log')
+#FILE_LOG = path.join(LOG_DIR, 'nemesys.log')
 CONF_LOG = path.join(_CONF_DIR, 'log.conf')
 CONF_MAIN = path.join(_CONF_DIR, 'client.conf')
 CONF_ERRORS = path.join(_CONF_DIR, 'errorcodes.conf')
@@ -59,7 +66,10 @@ def check_paths():
     logger.debug('Creata la cartella "%s".' % _CONF_DIR)
 
   if not path.exists(OUTBOX):
-    mkdir(OUTBOX)
+    SRC_DIR = path.join(_APP_PATH, 'outbox')
+    DST_DIR = OUTBOX
+    distutils.dir_util.copy_tree(SRC_DIR,DST_DIR)
+    #mkdir(OUTBOX)
     logger.debug('Creata la cartella "%s".' % OUTBOX)
 
   if not path.exists(SENT):

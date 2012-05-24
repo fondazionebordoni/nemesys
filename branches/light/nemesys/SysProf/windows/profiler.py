@@ -47,7 +47,7 @@ class RisorsaWin(Risorsa):
                 if wmi_class in self.whereCondition:
                     classCondition = self.whereCondition[wmi_class]
                 items = executeQuery(wmi_class, classCondition)
-                if len(items) == 0:
+                if len(items) == 0 and (wmi_class != 'Win32_NetworkAdapter') and (wmi_class != 'Win32_POTSModem')
                     raise RisorsaException("La risorsa con le caratteristiche richieste non e' presente nel server")
                 else:
                     for obj in items:
