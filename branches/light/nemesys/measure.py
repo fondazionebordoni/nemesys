@@ -115,21 +115,30 @@ class Measure:
     # --------------------------------------------------------------------------
     measure.appendChild(xml.createElement('body'))
     return xml
-
-  def savetest(self, test):
+    
+  def savetest(self, test, prof):
     '''
     Salva l'oggetto Test ricevuto nel file XML interno.
     '''
-    node = self.test2node(test)
+    node = self.test2node(test, prof)
     body = self._xml.getElementsByTagName('body')[0]
     body.appendChild(node)
 
-  def test2node(self, test):
+  def test2node(self, test, prof):
     xml = self._xml
 
     t = xml.createElement('test')
     t.setAttribute('type', str(test.type))
 
+    profiler = xml.createElement('profiler') 
+    
+    for key in prof:
+      res = xml.createElement(key)
+      res.appendChild(xml.createTextNode(str(prof[key]['value'])))
+      profiler.appendChild(res)
+      
+    t.appendChild(profiler)
+    
     time = xml.createElement('time')
 
     start = xml.createElement('start')

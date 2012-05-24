@@ -150,7 +150,7 @@ def do_arping(dev, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, t
       if(nHosts > threshold):
         break
 
-    logger.debug("Totale host: %d" % nHosts)
+    #logger.debug("Totale host: %d" % nHosts)
     pktman.close()
 
   return nHosts

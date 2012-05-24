@@ -103,7 +103,7 @@ def _get_values(tagrisorsa, xmlresult, tag = tag_results):
 
 def _get_status(res):
 
-  logger.debug('Recupero stato della risorsa %s' % res)
+  #logger.debug('Recupero stato della risorsa %s' % res)
   data = ET.ElementTree()
 
   try:
@@ -593,7 +593,7 @@ def checkset(check_set = set()):
   else:
     checks = set(available_check.keys())
 
-  logger.debug('Check Order: %s' % sorted(available_check, key = lambda check: available_check[check]['prio']))
+  #logger.debug('Check Order: %s' % sorted(available_check, key = lambda check: available_check[check]['prio']))
   for check in sorted(available_check, key = lambda check: available_check[check]['prio']):
     if check in checks:
 

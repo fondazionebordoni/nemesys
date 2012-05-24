@@ -208,8 +208,8 @@ class _Tester(Thread):
           wx.CallAfter(self._gui._update_messages, "Ping %d/%d verso %s: TimeOut" % (repeat+1,maxREP,server.name), 'blue')
           pass
 
-    for key in RTT:
-      logger.debug('RTT: %s - %s[ms]' % (RTT[key], key))
+    # for key in RTT:
+      # logger.debug('RTT: %s - %s[ms]' % (RTT[key], key))
 
     if min(RTT) < maxRTT:
       return RTT[min(RTT)]
@@ -220,17 +220,22 @@ class _Tester(Thread):
   def _do_ftp_test(self, tester, type, task):
     i = 1
     test_number = 0
-
+    
+    best_band = 0
+    best_test = None
+    best_prof = {}
+    
     if type == DOWN:
       test_number = task.download
     elif type == UP:
       test_number = task.upload
 
     while (i <= test_number and self._running):
-
-      wx.CallAfter(self._gui._update_messages, "Test %d di %d di FTP %s" % (i, test_number, type), 'blue')
       
-      self._check_system(set([RES_CPU, RES_RAM]))
+      wx.CallAfter(self._gui._update_messages, "Test %d di %d di FTP %s" % (i, test_number, type), 'blue')
+
+      prof = {}      
+      prof = self._check_system(set([RES_CPU, RES_RAM]))
 
       # Esecuzione del test
       test = None
@@ -255,7 +260,7 @@ class _Tester(Thread):
 
       if test != None:
         bandwidth = self._get_bandwith(test)
-
+                
         if type == DOWN:
           self._client.profile.download = min(bandwidth, (40000 / 8) * 10)
           task.update_ftpdownpath(bandwidth)
@@ -271,22 +276,28 @@ class _Tester(Thread):
           # Analisi da contabit
           if (self._test_gating(test, type)):
             i = i + 1
+            logger.debug("| Test Bandwidth: %s | Actual Best: %s |" % (bandwidth,best_band))
+            if bandwidth > best_band:
+              best_band = bandwidth
+              best_test = test
+              best_prof = prof
         else:
           i = i + 1
 
       else:
         raise Exception("errore durante i test, la misurazione non puo' essere completata")
 
-    return test
+    return (best_test, best_prof)
 
   def run(self):
-  
+      
     logger.debug('Preparazione alla misurazione...')
     wx.CallAfter(self._gui._update_messages, "Preparazione alla misurazione...")
     self._update_gauge()
 
     # Profilazione
-    self._check_system(set([RES_HOSTS, RES_WIFI, RES_TRAFFIC]))
+    profiler = {}
+    profiler = self._check_system(set([RES_HOSTS, RES_WIFI, RES_TRAFFIC]))
 
     # TODO Il server deve essere indicato dal backend che è a conoscenza dell'occupazione della banda!
 
@@ -299,7 +310,7 @@ class _Tester(Thread):
       # Scaricamento del task dallo scheduler
       task = self._download_task(server)
       self._update_gauge()
-      task = Task(0, '2010-01-01 10:01:00', server, '/download/1000.rnd', 'upload/1000.rnd', 3, 3, 10, 4, 4, 0, True)
+      task = Task(0, '2010-01-01 10:01:00', server, '/download/1000.rnd', 'upload/1000.rnd', 4, 4, 10, 4, 4, 0, True)
 
     if task != None:
 
@@ -314,8 +325,9 @@ class _Tester(Thread):
         m = Measure(id, task.server, self._client, __version__, start.isoformat())
 
         # Testa gli ftp down
-        test = self._do_ftp_test(t, DOWN, task)
-        m.savetest(test)
+        (test, prof) = self._do_ftp_test(t, DOWN, task)
+        profiler.update(prof)
+        m.savetest(test,profiler)
         if (self._checker._check_software()):
           wx.CallAfter(self._gui._update_messages, "Download bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
@@ -323,8 +335,9 @@ class _Tester(Thread):
           raise Exception("Check Software Error")
 
         # Testa gli ftp up
-        test = self._do_ftp_test(t, UP, task)
-        m.savetest(test)
+        (test, prof) = self._do_ftp_test(t, UP, task)
+        profiler.update(prof)
+        m.savetest(test,profiler)
         if (self._checker._check_software()):
           wx.CallAfter(self._gui._update_messages, "Upload bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
@@ -344,12 +357,13 @@ class _Tester(Thread):
 
           if ((i + 2) % task.nicmp == 0):
             sleep(task.delay)
-            self._check_system(set([RES_CPU, RES_RAM]))
+            prof = self._check_system(set([RES_CPU, RES_RAM]))
 
           i = i + 1
 
         # Salvataggio dell'ultima misura
-        m.savetest(test)
+        profiler.update(prof)
+        m.savetest(test,profiler)
         if (self._checker._check_software()):
           wx.CallAfter(self._gui._update_ping, test.value)
         else:
@@ -378,13 +392,15 @@ class _Tester(Thread):
     f.write('\n<!-- [finished] %s -->' % datetime.fromtimestamp(timestampNtp()).isoformat())
     f.close()
 
-  def _check_system(self, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])):
+  def _check_system(self, checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
     #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
     profiled_set = checkset(checkable_set)
 
     for resource in checkable_set:
       wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
 
+    return profiled_set
+      
   # Scarica il prossimo task dallo scheduler
   def _download_task(self, server):
 
