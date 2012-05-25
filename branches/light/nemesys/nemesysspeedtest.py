@@ -78,7 +78,7 @@ class _Checker(Thread):
         if resource != RES_OS:
           wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
     
-      wx.CallAfter(self._gui._enable_button)
+      wx.CallAfter(self._gui._after_check)
       
   def _check_software(self):
     check = False
@@ -425,6 +425,8 @@ class _Tester(Thread):
 class Frame(wx.Frame):
     def __init__(self, *args, **kwds):
         self._tester = None
+        self._checker = None
+        self._button_play = False
 
         # begin wxGlade: Frame.__init__
         wx.Frame.__init__(self, *args, **kwds)
@@ -554,8 +556,6 @@ class Frame(wx.Frame):
       self._reset_info()
       self._checker = _Checker(self)
       self._checker.start()
-        # self.bitmap_button_play.Enable()
-        # self.bitmap_button_check.Enable()
         
     def _update_down(self, downwidth):
       self.label_rr_down.SetLabel("%d kbps" % downwidth)
@@ -588,17 +588,10 @@ class Frame(wx.Frame):
       self.gauge_1.SetValue(value)
 
     def _play(self, event):
+      self._button_play = True
+      self._check(None)
 
-      self._checker = _Checker(self)
-      self.bitmap_button_play.Disable()
-      self.bitmap_button_check.Disable()
-      if (self._checker._check_software()):
-        self._reset_info()
-        self._tester = _Tester(self)
-        self._tester.start()
-        #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
-      # else:
-        # self.stop()
+      #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
         
 
     def stop(self):
@@ -611,6 +604,14 @@ class Frame(wx.Frame):
         self._enable_button()
         self._update_messages("Sistema pronto per una nuova misura")
 
+    def _after_check(self):
+      if (self._button_play):
+        self._button_play = False
+        self._tester = _Tester(self)
+        self._tester.start()
+      else:
+        self._enable_button()
+        
     def _enable_button(self):
       self.bitmap_button_play.Enable()
       self.bitmap_button_check.Enable()
