@@ -480,7 +480,7 @@ class Frame(wx.Frame):
         self.SetSize((720, 440))
         self.bitmap_button_play.SetMinSize((120, 120))
         self.bitmap_button_check.SetMinSize((40, 120))
-        self.bitmap_5.SetMinSize((95, 65))
+        self.bitmap_5.SetMinSize((95, 70))
         #self.label_5.SetFont(wx.Font(18, wx.ROMAN, wx.NORMAL, wx.NORMAL, 0, ""))
         self.label_6.SetFont(wx.Font(14, wx.ROMAN, wx.ITALIC, wx.NORMAL, 0, ""))
         self.bitmap_cpu.SetMinSize((60, 60))
