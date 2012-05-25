@@ -30,7 +30,7 @@ import sysmonitor
 import wx
 from prospect import Prospect
 
-__version__ = '2.2'
+__version__ = '1.0'
 
 #Data di scadenza
 dead_date = 20120930
