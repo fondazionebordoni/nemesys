@@ -65,6 +65,10 @@ class _Checker(Thread):
 
   def __init__(self, gui, checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
     Thread.__init__(self)
+    
+    (options, args, md5conf) = parse()
+    self._httptimeout = options.httptimeout
+    
     self._gui = gui
     self._checkable_set = checkable_set
 
@@ -72,9 +76,11 @@ class _Checker(Thread):
 
     if (self._check_software()):
       #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
-      profiled_set = checkset(self._checkable_set)
 
       for resource in self._checkable_set:
+        this_set = set([resource])
+        logger.debug(this_set)
+        profiled_set = checkset(this_set)
         if resource != RES_OS:
           wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
 
@@ -99,12 +105,13 @@ class _Checker(Thread):
   def new_version_available(self):
     new_version = False
 
-    url = urlparse("http://misurainternettest.fub.it/nemesys_speedtest.php")
+    url = urlparse("https://www.misurainternet.it/nemesys_speedtest.php")
     connection = httputils.getverifiedconnection(url = url, certificate = None, timeout = self._httptimeout)
 
     try:
       connection.request('GET', '%s?speedtest=true&version=%s' % (url.path, __version__))
       data = connection.getresponse().read()
+      #logger.debug(data)
       if (data == "NEWVERSION"):
         new_version = True
     except Exception as e:
