@@ -16,11 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import win32api, win32con
+from datetime import datetime
+from timeNtp import timestampNtp
 from os import mkdir, path, sep
-from usbkey import get_path
-import distutils.dir_util
-import shutil
 import sys
 
 if hasattr(sys, 'frozen'):
@@ -31,33 +29,43 @@ else:
   
 _APP_PATH = path.normpath(_APP_PATH)
 
-if (get_path() != []):
-  _USB_PATH = path.normpath(get_path() + sep + '..')
-  _USB_PATH = path.join(_USB_PATH, 'NemesysSpeedtest')
-  if not path.exists(_USB_PATH):
-    mkdir(_USB_PATH)
-  win32api.SetFileAttributes(_USB_PATH,win32con.FILE_ATTRIBUTE_HIDDEN)
-else:
-  _USB_PATH = _APP_PATH
+def getdate(mode='sec'):
+  this_date = datetime.fromtimestamp(timestampNtp())
+  if mode == 'day':
+    format_date = str(this_date.strftime('%Y%m%d'))
+  elif mode == 'sec':
+    format_date = str(this_date.strftime('%Y%m%d_%H%M%S'))
+  return format_date
 
 # Resources path
 ICONS = path.join(_APP_PATH, 'icons')
-OUTBOX = path.join(_USB_PATH, 'outbox')
-SENT = path.join(_USB_PATH, 'sent')
+OUTBOX = path.join(_APP_PATH, 'outbox')
+SENT = path.join(_APP_PATH, 'sent')
+
+#Logs
+LOG_DIR = path.join(_APP_PATH, 'logs')
+DAY_LOG_DIR = path.join(LOG_DIR,getdate('day'))
+FILE_LOG = path.join(DAY_LOG_DIR, getdate('sec')+'.log')
+
+if not path.exists(LOG_DIR):
+  mkdir(LOG_DIR)
+  
+if not path.exists(DAY_LOG_DIR):
+  mkdir(DAY_LOG_DIR)
 
 # Configuration dirs and files
 _CONF_DIR = path.join(_APP_PATH, 'config')
-LOG_DIR = path.join(_USB_PATH, 'logs')
-#FILE_LOG = path.join(LOG_DIR, 'nemesys.log')
 CONF_LOG = path.join(_CONF_DIR, 'log.conf')
 CONF_MAIN = path.join(_CONF_DIR, 'client.conf')
 CONF_ERRORS = path.join(_CONF_DIR, 'errorcodes.conf')
 THRESHOLD = path.join(_CONF_DIR, 'threshold.xml')
 RESULTS = path.join(_CONF_DIR, 'result.xml')
 MEASURE_STATUS = path.join(_CONF_DIR, 'progress.xml')
+
 MEASURE_PROSPECT = path.join(OUTBOX, 'prospect.xml')
 
 from logger import logging
+
 def check_paths():
   logger = logging.getLogger()
 
@@ -66,13 +74,9 @@ def check_paths():
     logger.debug('Creata la cartella "%s".' % _CONF_DIR)
 
   if not path.exists(OUTBOX):
-    SRC_DIR = path.join(_APP_PATH, 'outbox')
-    DST_DIR = OUTBOX
-    distutils.dir_util.copy_tree(SRC_DIR,DST_DIR)
-    #mkdir(OUTBOX)
+    mkdir(OUTBOX)
     logger.debug('Creata la cartella "%s".' % OUTBOX)
 
   if not path.exists(SENT):
     mkdir(SENT)
     logger.debug('Creata la cartella "%s".' % SENT)
-

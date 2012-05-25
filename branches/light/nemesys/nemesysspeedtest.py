@@ -20,7 +20,7 @@ from time import sleep
 from timeNtp import timestampNtp
 from urlparse import urlparse
 from xmlutils import xml2task
-from usbkey import check_usb
+from usbkey import check_usb, move_on_key
 from logger import logging
 import hashlib
 import httputils
@@ -63,17 +63,22 @@ class OptionParser(OptionParser):
 
 class _Checker(Thread):
 
-  def __init__(self, gui, checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS])):
+  def __init__(self, gui, checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
     Thread.__init__(self)
     self._gui = gui
     self._checkable_set = checkable_set
 
   def run(self):
-    #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
-    profiled_set = checkset(self._checkable_set)
+  
+    if (self._check_software()):
+      #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
+      profiled_set = checkset(self._checkable_set)
 
-    for resource in self._checkable_set:
-      wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
+      for resource in self._checkable_set:
+        if resource != RES_OS:
+          wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
+    
+    wx.CallAfter(self._gui._enable_button)
       
   def _check_software(self):
     check = False
@@ -328,21 +333,21 @@ class _Tester(Thread):
         (test, prof) = self._do_ftp_test(t, DOWN, task)
         profiler.update(prof)
         m.savetest(test,profiler)
-        if (self._checker._check_software()):
+        if (move_on_key()):
           wx.CallAfter(self._gui._update_messages, "Download bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
         else:
-          raise Exception("Check Software Error")
+          raise Exception("USB KEY check fail")
 
         # Testa gli ftp up
         (test, prof) = self._do_ftp_test(t, UP, task)
         profiler.update(prof)
         m.savetest(test,profiler)
-        if (self._checker._check_software()):
+        if (move_on_key()):
           wx.CallAfter(self._gui._update_messages, "Upload bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
         else:
-          raise Exception("Check Software Error")
+          raise Exception("USB KEY check fail")
 
           
         # Testa i ping
@@ -364,10 +369,10 @@ class _Tester(Thread):
         # Salvataggio dell'ultima misura
         profiler.update(prof)
         m.savetest(test,profiler)
-        if (self._checker._check_software()):
+        if (move_on_key()):
           wx.CallAfter(self._gui._update_ping, test.value)
         else:
-          raise Exception("Check Software Error")
+          raise Exception("USB KEY check fail")
           
         self._save_measure(m)
         self._prospect.save_measure(m)
@@ -397,7 +402,8 @@ class _Tester(Thread):
     profiled_set = checkset(checkable_set)
 
     for resource in checkable_set:
-      wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
+      if resource != RES_OS:
+        wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
 
     return profiled_set
       
@@ -419,7 +425,6 @@ class _Tester(Thread):
 class Frame(wx.Frame):
     def __init__(self, *args, **kwds):
         self._tester = None
-        self._checker = _Checker(self)
 
         # begin wxGlade: Frame.__init__
         wx.Frame.__init__(self, *args, **kwds)
@@ -539,28 +544,19 @@ class Frame(wx.Frame):
         self.Layout()
         # end wxGlade
 
+        self._update_messages("Sto inizializzando il sistema. Attendere.")
         self._check(None)
 
     def _check(self, event):
 
       self.bitmap_button_play.Disable()
-      self.bitmap_button_check.Disable()
-      if (self._checker._check_software()):
-        self._reset_info()
-        self._check_system()
-        self.bitmap_button_play.Enable()
-        self.bitmap_button_check.Enable()
+      self.bitmap_button_check.Disable()      
+      self._reset_info()
+      self._checker = _Checker(self)
+      self._checker.start()
+        # self.bitmap_button_play.Enable()
+        # self.bitmap_button_check.Enable()
         
-    # TODO Spostare il check in un thread separato
-    def _check_system(self, checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
-
-      #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
-      profiled_set = checkset(checkable_set)
-
-      for resource in checkable_set:
-        if resource != RES_OS:
-          self.set_resource_info(resource, profiled_set[resource])
-
     def _update_down(self, downwidth):
       self.label_rr_down.SetLabel("%d kbps" % downwidth)
       self.Layout()
@@ -593,6 +589,7 @@ class Frame(wx.Frame):
 
     def _play(self, event):
 
+      self._checker = _Checker(self)
       self.bitmap_button_play.Disable()
       self.bitmap_button_check.Disable()
       if (self._checker._check_software()):
@@ -600,17 +597,24 @@ class Frame(wx.Frame):
         self._tester = _Tester(self)
         self._tester.start()
         #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
+      # else:
+        # self.stop()
+        
 
     def stop(self):
 
       self.update_gauge(0)
 
       #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"play.png")))
+      if (self._checker._check_software()):
+        move_on_key()
+        self._enable_button()
+        self._update_messages("Sistema pronto per una nuova misura")
+
+    def _enable_button(self):
       self.bitmap_button_play.Enable()
       self.bitmap_button_check.Enable()
-
-      self._update_messages("Sistema pronto per una nuova misura")
-
+        
     def set_resource_info(self, resource, info):
       res_bitmap = None
       res_label = None

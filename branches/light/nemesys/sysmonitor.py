@@ -331,10 +331,10 @@ def _check_traffic(sec = 2):
     pcapper.stop()
     pcapper.join()
     
-    traffic = '%.1f D | %.1f U' % (stats.byte_down_all * 8 / (1000 * total_time), stats.byte_up_all * 8 / (1000 * total_time))
+    traffic = '%.1f D / %.1f U' % (stats.byte_down_all * 8 / (1000 * total_time), stats.byte_up_all * 8 / (1000 * total_time))
     
   except Exception as e:
-    traffic = '0.0 D | 0.0 U'
+    traffic = '0.0 D / 0.0 U'
     CHECK_VALUE = traffic
     raise e
   
