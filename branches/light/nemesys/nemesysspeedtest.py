@@ -69,7 +69,7 @@ class _Checker(Thread):
     self._checkable_set = checkable_set
 
   def run(self):
-  
+
     if (self._check_software()):
       #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
       profiled_set = checkset(self._checkable_set)
@@ -77,21 +77,42 @@ class _Checker(Thread):
       for resource in self._checkable_set:
         if resource != RES_OS:
           wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
-      
+
       move_on_key()
       wx.CallAfter(self._gui._after_check)
-      
+
   def _check_software(self):
     check = False
     if (deadline()):
       logger.debug('Verifica della scadenza del software fallita')
-      wx.CallAfter(self._gui._update_messages,"Questa copia di Ne.Me.Sys Speedtest risulta scaduta. Si consiglia di disinstallare il software.", 'red')     
+      wx.CallAfter(self._gui._update_messages, "Questa copia di Ne.Me.Sys Speedtest risulta scaduta. Si consiglia di disinstallare il software.", 'red')
     elif (not check_usb()):
       logger.debug('Verifica della presenza della chiave USB fallita')
-      wx.CallAfter(self._gui._update_messages,"Per l'utilizzo di questo software occorre disporre della opportuna chiave USB. Inserire la chiave nel computer e riavviare il programma.", 'red')
+      wx.CallAfter(self._gui._update_messages, "Per l'utilizzo di questo software occorre disporre della opportuna chiave USB. Inserire la chiave nel computer e riavviare il programma.", 'red')
+    elif (self.new_version_available()):
+      logger.debug('Verifica della presenza di nuove versioni del software')
+      wx.CallAfter(self._gui._update_messages, "E' disponibile per il download una nuova versione del software!", 'red')
     else:
-      check = True     
+      check = True
     return check
+
+  def new_version_available(self):
+    new_version = False
+
+    url = urlparse("http://misurainternettest.fub.it/nemesys_speedtest.php")
+    connection = httputils.getverifiedconnection(url = url, certificate = None, timeout = self._httptimeout)
+
+    try:
+      connection.request('GET', '%s?speedtest=true&version=%s' % (url.path, __version__))
+      data = connection.getresponse().read()
+      if (data == "NEWVERSION"):
+        new_version = True
+    except Exception as e:
+      logger.error('Impossibile controllare per nuove versioni. Errore: %s.' % e)
+      new_version = False
+
+    return new_version
+
 
 class _Tester(Thread):
 
@@ -208,10 +229,10 @@ class _Tester(Thread):
         try:
           delay = ping.do_one("%s" % server.ip, 1)
           RTT[delay] = server
-          wx.CallAfter(self._gui._update_messages, "Ping %d/%d verso %s con RTT: %.1f ms" % (repeat+1,maxREP,server.name,delay*1000), 'blue')
+          wx.CallAfter(self._gui._update_messages, "Ping %d/%d verso %s con RTT: %.1f ms" % (repeat + 1, maxREP, server.name, delay * 1000), 'blue')
         except Exception as e:
           logger.debug('Errore durante il ping dell\'host %s: %s' % (server.ip, e))
-          wx.CallAfter(self._gui._update_messages, "Ping %d/%d verso %s: TimeOut" % (repeat+1,maxREP,server.name), 'blue')
+          wx.CallAfter(self._gui._update_messages, "Ping %d/%d verso %s: TimeOut" % (repeat + 1, maxREP, server.name), 'blue')
           pass
 
     # for key in RTT:
@@ -226,21 +247,21 @@ class _Tester(Thread):
   def _do_ftp_test(self, tester, type, task):
     i = 1
     test_number = 0
-    
+
     best_band = 0
     best_test = None
     best_prof = {}
-    
+
     if type == DOWN:
       test_number = task.download
     elif type == UP:
       test_number = task.upload
 
     while (i <= test_number and self._running):
-      
+
       wx.CallAfter(self._gui._update_messages, "Test %d di %d di FTP %s" % (i, test_number, type), 'blue')
 
-      prof = {}      
+      prof = {}
       prof = self._check_system(set([RES_CPU, RES_RAM]))
 
       # Esecuzione del test
@@ -266,7 +287,7 @@ class _Tester(Thread):
 
       if test != None:
         bandwidth = self._get_bandwith(test)
-                
+
         if type == DOWN:
           self._client.profile.download = min(bandwidth, (40000 / 8) * 10)
           task.update_ftpdownpath(bandwidth)
@@ -282,7 +303,7 @@ class _Tester(Thread):
           # Analisi da contabit
           if (self._test_gating(test, type)):
             i = i + 1
-            logger.debug("| Test Bandwidth: %s | Actual Best: %s |" % (bandwidth,best_band))
+            logger.debug("| Test Bandwidth: %s | Actual Best: %s |" % (bandwidth, best_band))
             if bandwidth > best_band:
               best_band = bandwidth
               best_test = test
@@ -296,7 +317,7 @@ class _Tester(Thread):
     return (best_test, best_prof)
 
   def run(self):
-      
+
     logger.debug('Preparazione alla misurazione...')
     wx.CallAfter(self._gui._update_messages, "Preparazione alla misurazione...")
     self._update_gauge()
@@ -333,7 +354,7 @@ class _Tester(Thread):
         # Testa gli ftp down
         (test, prof) = self._do_ftp_test(t, DOWN, task)
         profiler.update(prof)
-        m.savetest(test,profiler)
+        m.savetest(test, profiler)
         if (move_on_key()):
           wx.CallAfter(self._gui._update_messages, "Download bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
@@ -343,20 +364,20 @@ class _Tester(Thread):
         # Testa gli ftp up
         (test, prof) = self._do_ftp_test(t, UP, task)
         profiler.update(prof)
-        m.savetest(test,profiler)
+        m.savetest(test, profiler)
         if (move_on_key()):
           wx.CallAfter(self._gui._update_messages, "Upload bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
         else:
           raise Exception("chiave USB mancante")
 
-          
+
         # Testa i ping
         i = 1
-                  
+
         while (i <= task.ping and self._running):
 
-          wx.CallAfter(self._gui._update_messages, "Test %d di %d di ping." % (i, task.ping), 'blue')          
+          wx.CallAfter(self._gui._update_messages, "Test %d di %d di ping." % (i, task.ping), 'blue')
           test = t.testping()
           self._update_gauge()
           #wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.ping), 'blue')
@@ -369,12 +390,12 @@ class _Tester(Thread):
 
         # Salvataggio dell'ultima misura
         profiler.update(prof)
-        m.savetest(test,profiler)
+        m.savetest(test, profiler)
         if (move_on_key()):
           wx.CallAfter(self._gui._update_ping, test.value)
         else:
           raise Exception("chiave USB mancante")
-          
+
         self._save_measure(m)
         self._prospect.save_measure(m)
 
@@ -407,7 +428,7 @@ class _Tester(Thread):
         wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
 
     return profiled_set
-      
+
   # Scarica il prossimo task dallo scheduler
   def _download_task(self, server):
 
@@ -553,11 +574,11 @@ class Frame(wx.Frame):
     def _check(self, event):
 
       self.bitmap_button_play.Disable()
-      self.bitmap_button_check.Disable()      
+      self.bitmap_button_check.Disable()
       self._reset_info()
       self._checker = _Checker(self)
       self._checker.start()
-        
+
     def _update_down(self, downwidth):
       self.label_rr_down.SetLabel("%d kbps" % downwidth)
       self.Layout()
@@ -593,7 +614,7 @@ class Frame(wx.Frame):
       self._check(None)
 
       #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
-        
+
 
     def stop(self):
 
@@ -612,11 +633,11 @@ class Frame(wx.Frame):
         self._tester.start()
       else:
         self._enable_button()
-        
+
     def _enable_button(self):
       self.bitmap_button_play.Enable()
       self.bitmap_button_check.Enable()
-        
+
     def set_resource_info(self, resource, info):
       res_bitmap = None
       res_label = None
@@ -668,10 +689,10 @@ class Frame(wx.Frame):
       end = self.messages_area.GetLastPosition() - len(message)
       start = end - len(date)
       self.messages_area.SetStyle(start, end, wx.TextAttr(color))
-      
+
 def getdate():
   return datetime.fromtimestamp(timestampNtp())
-  
+
 def deadline():
   this_date = int(getdate().strftime('%Y%m%d'))
   #logger.debug('%d > %d = %s' % (this_date,dead_date,(this_date > dead_date)))
