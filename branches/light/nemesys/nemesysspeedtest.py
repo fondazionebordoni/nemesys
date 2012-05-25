@@ -77,7 +77,8 @@ class _Checker(Thread):
       for resource in self._checkable_set:
         if resource != RES_OS:
           wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
-    
+      
+      move_on_key()
       wx.CallAfter(self._gui._after_check)
       
   def _check_software(self):
