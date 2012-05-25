@@ -60,9 +60,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="3.959798"
-     inkscape:cx="51.563741"
-     inkscape:cy="50.561771"
+     inkscape:zoom="7.919596"
+     inkscape:cx="26.147987"
+     inkscape:cy="44.632759"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -89,7 +89,7 @@
      transform="translate(0,-952.3622)">
     <text
        xml:space="preserve"
-       style="font-size:25.42372894000000016px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:50%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:url(#linearGradient3771);fill-opacity:1;stroke:#204a87;stroke-width:0.39000000000000001;stroke-miterlimit:4;stroke-dasharray:none;font-family:DIN 1451 Std;-inkscape-font-specification:DIN 1451 Std"
+       style="font-size:25.42372894000000016px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:50%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#3465a4;fill-opacity:1;stroke:#204a87;stroke-width:0.39000000000000001;stroke-miterlimit:4;stroke-dasharray:none;font-family:DIN 1451 Std;-inkscape-font-specification:DIN 1451 Std"
        x="-1035.8479"
        y="19.050848"
        id="text2985"
@@ -100,7 +100,7 @@
          x="-1035.8479"
          y="19.050848"
          dx="0"
-         style="letter-spacing:3.53251838999999990px;fill:url(#linearGradient3771);stroke:#204a87;stroke-width:0.39000000000000001;stroke-miterlimit:4;stroke-dasharray:none;fill-opacity:1"
+         style="letter-spacing:3.53251838999999990px;fill:#3465a4;stroke:#204a87;stroke-width:0.39000000000000001;stroke-miterlimit:4;stroke-dasharray:none;fill-opacity:1"
          rotate="0 0 0 0 0 0">CHECK</tspan></text>
   </g>
 </svg>
