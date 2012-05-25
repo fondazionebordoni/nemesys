@@ -823,7 +823,7 @@ def getclient(options):
                     download = options.bandwidthdown)
   isp = Isp('fub001')
   return Client(id = options.clientid, profile = profile, isp = isp,
-                geocode = None, username = options.username,
+                geocode = None, username = 'speedtest',
                 password = options.password)
 
 if __name__ == "__main__":

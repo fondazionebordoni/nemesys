@@ -108,7 +108,7 @@ Type: dirifempty; Name: {app}\include
 Type: dirifempty; Name: {app}\lib
 Type: dirifempty; Name: {app}\outbox
 Type: dirifempty; Name: {app}\sent
-Type: dirifempty; Name: {app}\logs
+Type: filesandordirs; Name: {app}\logs
 Type: dirifempty; Name: {app}
 
 [Registry]
