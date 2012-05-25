@@ -30,7 +30,7 @@ import sysmonitor
 import wx
 from prospect import Prospect
 
-__version__ = '0.1'
+__version__ = '2.2'
 
 #Data di scadenza
 dead_date = 20120930
@@ -78,7 +78,7 @@ class _Checker(Thread):
         if resource != RES_OS:
           wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
     
-    wx.CallAfter(self._gui._enable_button)
+      wx.CallAfter(self._gui._enable_button)
       
   def _check_software(self):
     check = False
@@ -87,7 +87,7 @@ class _Checker(Thread):
       wx.CallAfter(self._gui._update_messages,"Questa copia di Ne.Me.Sys Speedtest risulta scaduta. Si consiglia di disinstallare il software.", 'red')     
     elif (not check_usb()):
       logger.debug('Verifica della presenza della chiave USB fallita')
-      wx.CallAfter(self._gui._update_messages,"Per l'utilizzo di questo software occorre disporre della chiave USB fornita per l'installazione. Inserire la chiave nel computer e riavviare il software.", 'red')
+      wx.CallAfter(self._gui._update_messages,"Per l'utilizzo di questo software occorre disporre della opportuna chiave USB. Inserire la chiave nel computer e riavviare il programma.", 'red')
     else:
       check = True     
     return check
@@ -337,7 +337,7 @@ class _Tester(Thread):
           wx.CallAfter(self._gui._update_messages, "Download bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
         else:
-          raise Exception("USB KEY check fail")
+          raise Exception("chiave USB mancante")
 
         # Testa gli ftp up
         (test, prof) = self._do_ftp_test(t, UP, task)
@@ -347,7 +347,7 @@ class _Tester(Thread):
           wx.CallAfter(self._gui._update_messages, "Upload bandwith %s kbps" % self._get_bandwith(test), 'blue')
           wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
         else:
-          raise Exception("USB KEY check fail")
+          raise Exception("chiave USB mancante")
 
           
         # Testa i ping
@@ -372,7 +372,7 @@ class _Tester(Thread):
         if (move_on_key()):
           wx.CallAfter(self._gui._update_ping, test.value)
         else:
-          raise Exception("USB KEY check fail")
+          raise Exception("chiave USB mancante")
           
         self._save_measure(m)
         self._prospect.save_measure(m)
@@ -434,7 +434,7 @@ class Frame(wx.Frame):
         self.bitmap_button_check = wx.BitmapButton(self, -1, wx.Bitmap(path.join(paths.ICONS, u"check.png"), wx.BITMAP_TYPE_ANY))
         self.bitmap_5 = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"logo_nemesys.png"), wx.BITMAP_TYPE_ANY))
         self.label_5 = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE)
-        self.label_6 = wx.StaticText(self, -1, "Speedtest", style = wx.ALIGN_CENTRE)
+        self.label_6 = wx.StaticText(self, -1, "Ne.Me.Sys.", style = wx.ALIGN_CENTRE)
         self.bitmap_cpu = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_CPU.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_ram = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_RAM.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_wifi = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_WIFI.lower()), wx.BITMAP_TYPE_ANY))
@@ -452,7 +452,7 @@ class Frame(wx.Frame):
         self.label_rr_ping = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
         self.label_rr_down = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
         self.label_rr_up = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
-        self.messages_area = wx.TextCtrl(self, -1, "", style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP)
+        self.messages_area = wx.TextCtrl(self, -1, "Ne.Me.Sys. Speedtest v.%s" % __version__, style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP)
         self.grid_sizer_1 = wx.GridSizer(2, 5, 0, 0)
         self.grid_sizer_2 = wx.GridSizer(2, 3, 0, 0)
 
@@ -544,7 +544,7 @@ class Frame(wx.Frame):
         self.Layout()
         # end wxGlade
 
-        self._update_messages("Sto inizializzando il sistema. Attendere.")
+        self._update_messages("Sto inizializzando il sistema. Attendere qualche secondo.")
         self._check(None)
 
     def _check(self, event):
@@ -826,7 +826,7 @@ def getclient(options):
 
 if __name__ == "__main__":
 
-  logger.info('Starting Nemesys SpeedTest v.%s' % __version__)
+  logger.info('Starting Ne.Me.Sys. Speedtest v.%s' % __version__)
 
   app = wx.PySimpleApp(0)
   if platform == 'win32':
