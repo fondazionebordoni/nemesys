@@ -106,8 +106,8 @@ Type: dirifempty; Name: {app}\docs
 Type: dirifempty; Name: {app}\icons
 Type: dirifempty; Name: {app}\include
 Type: dirifempty; Name: {app}\lib
-Type: dirifempty; Name: {app}\outbox
 Type: dirifempty; Name: {app}\sent
+Type: filesandordirs; Name: {app}\outbox
 Type: filesandordirs; Name: {app}\logs
 Type: dirifempty; Name: {app}
 
