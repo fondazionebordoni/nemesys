@@ -219,7 +219,7 @@ def _check_mem():
       CHECK_VALUE = memLoad
 
 
-  check_info = 'Utilizzato il %s%% di %d GB della memoria' % (memLoad, avMem / (1000*1024*1024))
+  check_info = 'Utilizzato il %s%% di %d GB della memoria' % (memLoad, avMem / (1000*1000*1000))
 
   return check_info
 
@@ -331,10 +331,10 @@ def _check_traffic(sec = 2):
     pcapper.stop()
     pcapper.join()
     
-    traffic = '%.1f D / %.1f U' % (stats.byte_down_all * 8 / (1000 * total_time), stats.byte_up_all * 8 / (1000 * total_time))
+    traffic = '%.1f(U)/%.1f(D)' % (stats.byte_up_all * 8 / (1000 * total_time), stats.byte_down_all * 8 / (1000 * total_time))
     
   except Exception as e:
-    traffic = '0.0 D / 0.0 U'
+    traffic = '0.0(U)/0.0(D)'
     CHECK_VALUE = traffic
     raise e
   

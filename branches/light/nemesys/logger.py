@@ -22,7 +22,7 @@ import paths
 #import re
 
 configfile = paths.CONF_LOG
-logfile = paths.FILE_LOG
+logfile = paths.LOG_FILE
 
 default = '''
 [loggers]
@@ -57,31 +57,7 @@ datefmt=%b %d %H:%M:%S
 
 with open(configfile, 'w') as file:
   s = str(default)
-  file.write(s)
-
-
-# Se il file configurazione di log non esiste, creane uno con le impostazioni base
-# if (not path.exists(configfile)):
-
-  # with open(configfile, 'w') as file:
-    # s = str(default)
-    # file.write(s)
-
-# else:
-
-  # ind = 0
-  # data = None
-  
-  # with open(configfile, 'r') as file:
-    # data = file.readlines()
-    # for line in data:
-      # ind += 1
-      # if (re.search('logs',line)):
-        # data[ind-1]="args=("+repr(logfile)+",)\n"
-        
-  # with open(configfile, 'w') as file:
-    # file.writelines(data)
-        
+  file.write(s) 
 
 logging.config.fileConfig(configfile)
     

@@ -15,13 +15,14 @@ from sys import platform
 from sysmonitor import checkset, RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_TRAFFIC, RES_HOSTS
 from task import Task
 from tester import Tester
-from threading import Thread
+from threading import Thread, Event
 from time import sleep
 from timeNtp import timestampNtp
 from urlparse import urlparse
 from xmlutils import xml2task
 from usbkey import check_usb, move_on_key
 from logger import logging
+from collections import deque
 import hashlib
 import httputils
 import paths
@@ -70,7 +71,7 @@ class _Checker(Thread):
     self._httptimeout = options.httptimeout
     
     self._gui = gui
-    self._checkable_set = checkable_set
+    self._checkable_set = [RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC]
 
   def run(self):
 
@@ -79,12 +80,11 @@ class _Checker(Thread):
 
       for resource in self._checkable_set:
         this_set = set([resource])
-        logger.debug(this_set)
+        #logger.debug(this_set)
         profiled_set = checkset(this_set)
         if resource != RES_OS:
           wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
 
-      move_on_key()
       wx.CallAfter(self._gui._after_check)
 
   def _check_software(self):
@@ -126,7 +126,7 @@ class _Tester(Thread):
   def __init__(self, gui):
     Thread.__init__(self)
     paths.check_paths()
-    self._outbox = paths.OUTBOX
+    self._outbox = paths.OUTBOX_DAY_DIR
     self._prospect = Prospect()
 
     self._gui = gui
@@ -198,11 +198,11 @@ class _Tester(Thread):
       elif traffic_ratio < TH_TRAFFIC and packet_ratio_inv < TH_TRAFFIC_INV:
         # Dato da salvare sulla misura
         test.bytes = byte_all
-        info = 'Traffico internet non legato alla misura: percentuali %s/%s.' % (value1, value2)
+        info = 'Traffico internet non legato alla misura: percentuali %s/%s' % (value1, value2)
         wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': True, 'info': info, 'value': value1})
         return True
       else:
-        info = 'Eccessiva presenza di traffico internet non legato alla misura: percentuali %s/%s.' % (value1, value2)
+        info = 'Eccessiva presenza di traffico internet non legato alla misura: percentuali %s/%s' % (value1, value2)
         wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value1})
         return continue_testing
     else:
@@ -325,8 +325,8 @@ class _Tester(Thread):
 
   def run(self):
 
-    logger.debug('Preparazione alla misurazione...')
-    wx.CallAfter(self._gui._update_messages, "Preparazione alla misurazione...")
+    logger.debug('Preparazione alla misurazione....')
+    wx.CallAfter(self._gui._update_messages, "Preparazione alla misurazione....")
     self._update_gauge()
 
     # Profilazione
@@ -398,20 +398,19 @@ class _Tester(Thread):
         # Salvataggio dell'ultima misura
         profiler.update(prof)
         m.savetest(test, profiler)
+        self._save_measure(m)
+        self._prospect.save_measure(m)
         if (move_on_key()):
           wx.CallAfter(self._gui._update_ping, test.value)
         else:
           raise Exception("chiave USB mancante")
-
-        self._save_measure(m)
-        self._prospect.save_measure(m)
 
       except Exception as e:
         logger.warning('Misura sospesa per eccezione: %s.' % e)
         wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s.' % e, 'red')
 
       # Stop
-      sleep(TIME_LAG)
+      #sleep(TIME_LAG)
 
     wx.CallAfter(self._gui.stop)
     self.join()
@@ -453,6 +452,9 @@ class _Tester(Thread):
 
 class Frame(wx.Frame):
     def __init__(self, *args, **kwds):
+        self._stream = deque([], maxlen = 800)
+        self._stream_flag = Event()
+        
         self._tester = None
         self._checker = None
         self._button_play = False
@@ -521,7 +523,7 @@ class Frame(wx.Frame):
         self.label_rr_down.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
         self.label_rr_up.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
 
-        self.messages_area.SetMinSize((700, 160))
+        self.messages_area.SetMinSize((700, 150))
         self.messages_area.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL, 0, ""))
         self.grid_sizer_2.SetMinSize((700, 60))
 
@@ -543,9 +545,9 @@ class Frame(wx.Frame):
         self.grid_sizer_1.Add(self.label_hosts, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
         self.grid_sizer_1.Add(self.label_traffic, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
 
-        self.grid_sizer_2.Add(self.label_r_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        self.grid_sizer_2.Add(self.label_r_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        self.grid_sizer_2.Add(self.label_r_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        self.grid_sizer_2.Add(self.label_r_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_2.Add(self.label_r_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_2.Add(self.label_r_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
         self.grid_sizer_2.Add(self.label_rr_ping, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_TOP, 2)
         self.grid_sizer_2.Add(self.label_rr_down, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_TOP, 2)
         self.grid_sizer_2.Add(self.label_rr_up, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_TOP, 2)
@@ -625,13 +627,12 @@ class Frame(wx.Frame):
 
     def stop(self):
 
-      self.update_gauge(0)
-
       #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"play.png")))
       if (self._checker._check_software()):
-        move_on_key()
         self._enable_button()
         self._update_messages("Sistema pronto per una nuova misura")
+        
+      self.update_gauge(0)
 
     def _after_check(self):
       if (self._button_play):
@@ -639,6 +640,7 @@ class Frame(wx.Frame):
         self._tester = _Tester(self)
         self._tester.start()
       else:
+        move_on_key()
         self._enable_button()
 
     def _enable_button(self):
@@ -689,13 +691,23 @@ class Frame(wx.Frame):
       self.Layout()
 
     def _update_messages(self, message, color = 'black'):
-
       logger.info('Messagio all\'utente: "%s"' % message)
-      date = '\n%s' % getdate().strftime('%c')
-      self.messages_area.AppendText("%s %s" % (date, message))
-      end = self.messages_area.GetLastPosition() - len(message)
-      start = end - len(date)
-      self.messages_area.SetStyle(start, end, wx.TextAttr(color))
+      self._stream.append((message, color))
+      if (not self._stream_flag.isSet()):
+        writer = Thread(target=self._writer)
+        writer.start()
+    
+    def _writer(self):
+      self._stream_flag.set()
+      while (len(self._stream) > 0):
+        (message, color) = self._stream.popleft()
+        date = '\n%s' % getdate().strftime('%c')
+        self.messages_area.AppendText("%s %s" % (date, message))
+        end = self.messages_area.GetLastPosition() - len(message)
+        start = end - len(date)
+        self.messages_area.SetStyle(start, end, wx.TextAttr(color))
+        self.messages_area.ScrollLines(-1)       
+      self._stream_flag.clear()
 
 def getdate():
   return datetime.fromtimestamp(timestampNtp())
