@@ -76,7 +76,8 @@ class _Checker(Thread):
   def run(self):
 
     if (self._check_software()):
-      #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
+      logger.debug('Profilazione dello stato del sistema di misura.')
+      wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misura.")
 
       for resource in self._checkable_set:
         this_set = set([resource])
@@ -325,8 +326,8 @@ class _Tester(Thread):
 
   def run(self):
 
-    logger.debug('Preparazione alla misurazione....')
-    wx.CallAfter(self._gui._update_messages, "Preparazione alla misurazione....")
+    logger.debug('Inizio dei test di misura')
+    wx.CallAfter(self._gui._update_messages, "Inizio dei test di misura")
     self._update_gauge()
 
     # Profilazione
@@ -362,8 +363,9 @@ class _Tester(Thread):
         (test, prof) = self._do_ftp_test(t, DOWN, task)
         profiler.update(prof)
         m.savetest(test, profiler)
+        wx.CallAfter(self._gui._update_messages, "Elaborazione dei dati")
         if (move_on_key()):
-          wx.CallAfter(self._gui._update_messages, "Download bandwith %s kbps" % self._get_bandwith(test), 'blue')
+          wx.CallAfter(self._gui._update_messages, "Download bandwith %s kbps" % self._get_bandwith(test), 'green')
           wx.CallAfter(self._gui._update_down, self._get_bandwith(test))
         else:
           raise Exception("chiave USB mancante")
@@ -372,8 +374,9 @@ class _Tester(Thread):
         (test, prof) = self._do_ftp_test(t, UP, task)
         profiler.update(prof)
         m.savetest(test, profiler)
+        wx.CallAfter(self._gui._update_messages, "Elaborazione dei dati")
         if (move_on_key()):
-          wx.CallAfter(self._gui._update_messages, "Upload bandwith %s kbps" % self._get_bandwith(test), 'blue')
+          wx.CallAfter(self._gui._update_messages, "Upload bandwith %s kbps" % self._get_bandwith(test), 'green')
           wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
         else:
           raise Exception("chiave USB mancante")
@@ -400,7 +403,9 @@ class _Tester(Thread):
         m.savetest(test, profiler)
         self._save_measure(m)
         self._prospect.save_measure(m)
+        wx.CallAfter(self._gui._update_messages, "Elaborazione dei dati")
         if (move_on_key()):
+          wx.CallAfter(self._gui._update_messages, "Tempo di risposta del server %s ms" % int(round(test.value)), 'green')
           wx.CallAfter(self._gui._update_ping, test.value)
         else:
           raise Exception("chiave USB mancante")
@@ -458,6 +463,7 @@ class Frame(wx.Frame):
         self._tester = None
         self._checker = None
         self._button_play = False
+        self._button_check = False
 
         # begin wxGlade: Frame.__init__
         wx.Frame.__init__(self, *args, **kwds)
@@ -485,7 +491,7 @@ class Frame(wx.Frame):
         self.label_rr_ping = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
         self.label_rr_down = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
         self.label_rr_up = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
-        self.messages_area = wx.TextCtrl(self, -1, "Ne.Me.Sys. Speedtest v.%s" % __version__, style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH | wx.TE_RICH2 | wx.TE_WORDWRAP)
+        self.messages_area = wx.TextCtrl(self, -1, "Ne.Me.Sys. Speedtest v.%s" % __version__, style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2 | wx.TE_WORDWRAP)
         self.grid_sizer_1 = wx.GridSizer(2, 5, 0, 0)
         self.grid_sizer_2 = wx.GridSizer(2, 3, 0, 0)
 
@@ -577,11 +583,11 @@ class Frame(wx.Frame):
         self.Layout()
         # end wxGlade
 
-        self._update_messages("Sto inizializzando il sistema. Attendere qualche secondo.")
+        #self._update_messages("Sto inizializzando il sistema. Attendere qualche secondo.")
         self._check(None)
 
     def _check(self, event):
-
+      self._button_check = True
       self.bitmap_button_play.Disable()
       self.bitmap_button_check.Disable()
       self._reset_info()
@@ -611,6 +617,7 @@ class Frame(wx.Frame):
       self.label_rr_up.SetLabel("- - - -")
       self.label_rr_ping.SetLabel("- - - -")
 
+      self.messages_area.Clear()
       self.update_gauge(0)
       self.Layout()
 
@@ -631,16 +638,19 @@ class Frame(wx.Frame):
       if (self._checker._check_software()):
         self._enable_button()
         self._update_messages("Sistema pronto per una nuova misura")
-        
+            
       self.update_gauge(0)
 
     def _after_check(self):
       if (self._button_play):
         self._button_play = False
+        self._button_check = False
         self._tester = _Tester(self)
         self._tester.start()
       else:
         move_on_key()
+        self._button_check = False
+        self._update_messages("Profilazione terminata")
         self._enable_button()
 
     def _enable_button(self):
@@ -685,7 +695,7 @@ class Frame(wx.Frame):
       else:
         res_label.SetLabel("%s\n- - - -" % resource)
 
-      if info['info'] != None:
+      if (self._button_check) and (info['info'] != None):
         self._update_messages("%s: %s" % (resource, info['info']), color)
 
       self.Layout()
@@ -701,12 +711,13 @@ class Frame(wx.Frame):
       self._stream_flag.set()
       while (len(self._stream) > 0):
         (message, color) = self._stream.popleft()
-        date = '\n%s' % getdate().strftime('%c')
-        self.messages_area.AppendText("%s %s" % (date, message))
-        end = self.messages_area.GetLastPosition() - len(message)
-        start = end - len(date)
+        date = getdate().strftime('%c')
+        txt = ("%s %s\n" % (date, message))
+        self.messages_area.AppendText(txt)
+        end = self.messages_area.GetLastPosition() - len(message) - 2
+        start = end - len(date) - 1
         self.messages_area.SetStyle(start, end, wx.TextAttr(color))
-        self.messages_area.ScrollLines(-1)       
+        self.messages_area.ScrollLines(-2)       
       self._stream_flag.clear()
 
 def getdate():
