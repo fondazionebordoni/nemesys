@@ -331,17 +331,29 @@ def _check_traffic(sec = 2):
     pcapper.stop()
     pcapper.join()
     
-    traffic = '%.1f(U)/%.1f(D)' % (stats.byte_up_all * 8 / (1000 * total_time), stats.byte_down_all * 8 / (1000 * total_time))
+    UP_kbps = stats.byte_up_all * 8 / (1000 * total_time)
+    DOWN_kbps = stats.byte_down_all * 8 / (1000 * total_time)
     
-  except Exception as e:
-    traffic = '0.0(U)/0.0(D)'
+    if (int(UP_kbps) < 20 and int(DOWN_kbps) < 200):
+      traffic = 'LOW'
+    elif (int(UP_kbps) < 180 and int(DOWN_kbps) < 1800):
+      traffic = 'MEDIUM'
+    else:
+      traffic = 'HIGH'
+    
     CHECK_VALUE = traffic
+    
+    traffic = '%.1f(U)/%.1f(D)' % (stats.byte_up_all * 8 / (1000 * total_time), stats.byte_down_all * 8 / (1000 * total_time))
+     
+  except Exception as e:
+    CHECK_VALUE = 'unknown'
     raise e
-  
-  CHECK_VALUE = traffic
-
+ 
   check_info = 'Traffico globale attuale kbps: %s' % traffic
-
+  
+  if (CHECK_VALUE != 'LOW'):
+    raise Exception(check_info)
+  
   return check_info
 
 

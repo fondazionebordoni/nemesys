@@ -304,7 +304,6 @@ class _Tester(Thread):
         else:
           logger.warn("Tipo di test effettuato non definito!")
 
-        self._update_gauge()
         #wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di FTP %s" % (i, test_number, type), 'blue')
 
         if i > 1:
@@ -316,6 +315,7 @@ class _Tester(Thread):
               best_band = bandwidth
               best_test = test
               best_prof = prof
+            self._update_gauge()
         else:
           i = i + 1
 
@@ -695,7 +695,7 @@ class Frame(wx.Frame):
       else:
         res_label.SetLabel("%s\n- - - -" % resource)
 
-      if (self._button_check) and (info['info'] != None):
+      if (self._button_check or (color == 'red')) and (info['info'] != None):
         self._update_messages("%s: %s" % (resource, info['info']), color)
 
       self.Layout()
@@ -715,7 +715,7 @@ class Frame(wx.Frame):
         txt = ("%s %s\n" % (date, message))
         self.messages_area.AppendText(txt)
         end = self.messages_area.GetLastPosition() - len(message) - 2
-        start = end - len(date) - 1
+        start = end - len(date)
         self.messages_area.SetStyle(start, end, wx.TextAttr(color))
         self.messages_area.ScrollLines(-2)       
       self._stream_flag.clear()
