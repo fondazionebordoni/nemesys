@@ -16,16 +16,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from threading import Thread
+import Queue
 import ntplib
 import time
-SERVERNTP = "tempo.cstv.to.cnr.it"
 
-def timestampNtp():
+SERVERNTP = ["0.pool.ntp.org","1.pool.ntp.org","2.pool.ntp.org","3.pool.ntp.org","time.windows.com"]
+
+def _request(server, result):
   x = ntplib.NTPClient()
   try:
-    TimeRX = x.request(SERVERNTP, version=3)
-    timestamp = TimeRX.tx_time
-  except Exception:
+    TimeRX = x.request(server, version=3)
+    result.put(TimeRX.tx_time)
+  except Exception as e:
+    result.put(str(e))
+
+def timestampNtp():
+  timestamp = None
+  result = Queue.Queue()
+  for server in SERVERNTP:
+    request = Thread(target=_request, args=(server, result))
+    request.start()
+  timestamp = result.get()
+  if (timestamp == "timed out"):
     timestamp = time.time()
   return timestamp
 
