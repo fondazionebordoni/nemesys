@@ -343,14 +343,12 @@ def _check_traffic(sec = 2):
     
     CHECK_VALUE = traffic
     
-    traffic = '%.1f(U)/%.1f(D)' % (stats.byte_up_all * 8 / (1000 * total_time), stats.byte_down_all * 8 / (1000 * total_time))
+    check_info = "%.1f kbps in download e %.1f kbps in upload di traffico globale attuale sull'interfaccia di rete in uso." % (DOWN_kbps, UP_kbps)
      
   except Exception as e:
     CHECK_VALUE = 'unknown'
     raise e
  
-  check_info = 'Traffico globale attuale kbps: %s' % traffic
-  
   if (CHECK_VALUE != 'LOW'):
     raise Exception(check_info)
   

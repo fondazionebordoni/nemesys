@@ -720,12 +720,15 @@ class Frame(wx.Frame):
       while (len(self._stream) > 0):
         (message, color) = self._stream.popleft()
         date = getdate().strftime('%c')
-        txt = ("%s %s\n" % (date, message))
+        start = self.messages_area.GetLastPosition()
+        end = start + len(date) + 1
+        if (start != 0):
+          txt = ("\n%s %s" % (date, message))
+        else:
+          txt = ("%s %s" % (date, message))
         self.messages_area.AppendText(txt)
-        end = self.messages_area.GetLastPosition() - len(message) - 2
-        start = end - len(date)
+        self.messages_area.ScrollLines(-1)
         self.messages_area.SetStyle(start, end, wx.TextAttr(color))
-        self.messages_area.ScrollLines(-2)       
       self._stream_flag.clear()
 
 def getdate():
