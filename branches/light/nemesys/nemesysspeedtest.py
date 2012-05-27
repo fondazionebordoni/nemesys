@@ -31,7 +31,7 @@ import sysmonitor
 import wx
 from prospect import Prospect
 
-__version__ = '1.0'
+__version__ = '1.0.1'
 
 #Data di scadenza
 dead_date = 20120930
@@ -224,33 +224,43 @@ class _Tester(Thread):
     self._step += 1
     wx.CallAfter(self._gui.update_gauge, self._step)
 
-  def _get_server(self):
-
-    servers = set([Server('NAMEX', '193.104.137.133', 'NAP di Roma'), Server('MIX', '193.104.137.4', 'NAP di Milano')])
+  def _get_server(self, servers = set([Server('NAMEX', '193.104.137.133', 'NAP di Roma'), Server('MIX', '193.104.137.4', 'NAP di Milano')])):
 
     maxREP = 3
-    maxRTT = 8000
-    RTT = {maxRTT:None}
+    best_delay = 8000
+    best_server = None
+    RTT = {}
+    
+    wx.CallAfter(self._gui._update_messages, "Scelta del server di misura in corso")
 
+    for server in servers:
+      RTT[server] = best_delay
+    
     for repeat in range(maxREP):
       for server in servers:
         try:
           delay = ping.do_one("%s" % server.ip, 1)
-          RTT[delay] = server
-          wx.CallAfter(self._gui._update_messages, "Ping %d/%d verso %s con RTT: %.1f ms" % (repeat + 1, maxREP, server.name, delay * 1000), 'blue')
+          if (delay < RTT[server]):
+            RTT[server] = delay
+          if (delay < best_delay):
+            best_delay = delay
+            best_server = server
         except Exception as e:
           logger.debug('Errore durante il ping dell\'host %s: %s' % (server.ip, e))
-          wx.CallAfter(self._gui._update_messages, "Ping %d/%d verso %s: TimeOut" % (repeat + 1, maxREP, server.name), 'blue')
           pass
-
-    # for key in RTT:
-      # logger.debug('RTT: %s - %s[ms]' % (RTT[key], key))
-
-    if min(RTT) < maxRTT:
-      return RTT[min(RTT)]
-
-    wx.CallAfter(self._gui._update_messages, "Impossibile eseguire i test poiche' i server risultano irragiungibili da questa linea. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
-    return None
+         
+    if best_server != None:
+      for server in servers:
+        if (RTT[server] != 8000):
+          wx.CallAfter(self._gui._update_messages, "Distanza dal %s: %.1f ms" % (server.name, RTT[server] * 1000), 'blue')
+        else:
+          wx.CallAfter(self._gui._update_messages, "Distanza dal %s: TimeOut" % (server.name), 'blue')
+      wx.CallAfter(self._gui._update_messages, "Scelto il server di misura %s" % best_server.name)
+      # return best_server
+    else:
+      wx.CallAfter(self._gui._update_messages, "Impossibile eseguire i test poiche' i server risultano irragiungibili da questa linea. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
+      
+    return best_server
 
   def _do_ftp_test(self, tester, type, task):
     i = 1
@@ -340,8 +350,6 @@ class _Tester(Thread):
     task = None
     server = self._get_server()
     if server != None:
-      wx.CallAfter(self._gui._update_messages, "Scelto il server di misura %s" % server.name)
-
       # Scaricamento del task dallo scheduler
       task = self._download_task(server)
       self._update_gauge()
@@ -406,7 +414,7 @@ class _Tester(Thread):
         wx.CallAfter(self._gui._update_messages, "Elaborazione dei dati")
         if (move_on_key()):
           wx.CallAfter(self._gui._update_messages, "Tempo di risposta del server %s ms" % int(round(test.value)), 'green')
-          wx.CallAfter(self._gui._update_ping, test.value)
+          wx.CallAfter(self._gui._update_ping, int(round(test.value)))
         else:
           raise Exception("chiave USB mancante")
 
