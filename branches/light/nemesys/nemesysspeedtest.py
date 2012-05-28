@@ -31,7 +31,7 @@ import sysmonitor
 import wx
 from prospect import Prospect
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 #Data di scadenza
 dead_date = 20120930
@@ -106,7 +106,7 @@ class _Checker(Thread):
   def new_version_available(self):
     new_version = False
 
-    url = urlparse("https://www.misurainternet.it/nemesys_speedtest.php")
+    url = urlparse("https://www.misurainternet.it/nemesys_speedtest_check.php")
     connection = httputils.getverifiedconnection(url = url, certificate = None, timeout = self._httptimeout)
 
     try:
@@ -719,7 +719,8 @@ class Frame(wx.Frame):
       self._stream_flag.set()
       while (len(self._stream) > 0):
         (message, color) = self._stream.popleft()
-        date = getdate().strftime('%c')
+        #date = getdate().strftime('%c')
+        date = time.time().strftime('%c')
         start = self.messages_area.GetLastPosition()
         end = start + len(date) + 1
         if (start != 0):
