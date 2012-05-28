@@ -16,12 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from datetime import datetime
+from logger import logging
 from threading import Thread
 import Queue
 import ntplib
 import time
 
-SERVERNTP = ["0.pool.ntp.org","1.pool.ntp.org","2.pool.ntp.org","3.pool.ntp.org","time.windows.com"]
+SERVERNTP = ["0.pool.ntp.org","1.pool.ntp.org","2.pool.ntp.org","3.pool.ntp.org","ntp.fub.it","time.windows.com"]
+
+logger = logging.getLogger()
 
 def _request(server, result):
   x = ntplib.NTPClient()
@@ -33,15 +37,19 @@ def _request(server, result):
 
 def timestampNtp():
   timestamp = None
+  type = 'Internet'
   result = Queue.Queue()
   for server in SERVERNTP:
     request = Thread(target=_request, args=(server, result))
     request.start()
   timestamp = result.get()
-  if (timestamp == "timed out"):
+  if not isinstance(timestamp, float):
     timestamp = time.time()
+    type = 'Local'
+  #logger.debug("%s Time: %s" % (type, datetime.fromtimestamp(timestamp).strftime('%Y/%m/%d %H:%M:%S')))
   return timestamp
 
 if __name__ == '__main__':
-  n = timestampNtp()
-  print n
+  request_num = 150
+  for x in range(request_num):
+   logger.debug("Richiesta %s di %s: %s" % (x+1,request_num,timestampNtp()))
