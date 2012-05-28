@@ -28,6 +28,7 @@ import httputils
 import paths
 import ping
 import sysmonitor
+import time
 import wx
 from prospect import Prospect
 
