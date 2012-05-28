@@ -721,7 +721,7 @@ class Frame(wx.Frame):
       while (len(self._stream) > 0):
         (message, color) = self._stream.popleft()
         #date = getdate().strftime('%c')
-        date = time.time().strftime('%c')
+        date = datetime.fromtimestamp(time.time()).strftime('%c')
         start = self.messages_area.GetLastPosition()
         end = start + len(date) + 1
         if (start != 0):
