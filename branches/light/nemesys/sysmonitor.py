@@ -58,7 +58,7 @@ RES_OS = 'OS'
 RES_TRAFFIC = 'Traffic'
 RES_DEV = 'Device'
 
-CHECK_VALUE = None
+CHECK_VALUES = {}
 
 tag_results = 'SystemProfilerResults'
 tag_threshold = 'SystemProfilerThreshold'
@@ -162,38 +162,42 @@ def _get_float_tag(tag, value, res):
   return value
 
 
-def _check_cpu():
+def _check_cpu(res = RES_CPU):
 
-  global CHECK_VALUE
-
-  for check in range(3):
-    CHECK_VALUE = None
+  global CHECK_VALUES
+  
+  num_check = 0
+  tot_value = 0
+  
+  CHECK_VALUES[res] = None
+  
+  for check in range(5):
     value = _get_float_tag(tag_cpu.split('.', 1)[1], th_cpu - 1, tag_cpu.split('.', 1)[0])
     if value != None:
-      CHECK_VALUE = value
-      if value < 0 or value > 100:
-        raise sysmonitorexception.BADCPU
-      if value > th_cpu:
-        raise sysmonitorexception.WARNCPU
-      break
-    else:
-      value = 'unknow'
-      CHECK_VALUE = value
+      tot_value += value 
+      num_check += 1
+  
+  value = tot_value / float(num_check)  
+  CHECK_VALUES[res] = value
+  if value < 0 or value > 100:
+    raise sysmonitorexception.BADCPU
+  if value > th_cpu:
+    raise sysmonitorexception.WARNCPU
 
   check_info = 'Utilizzato il %s%% del processore' % value
 
   return check_info
 
 
-def _check_mem():
+def _check_mem(res = RES_RAM):
 
-  global CHECK_VALUE
+  global CHECK_VALUES
 
   for check in range(3):
-    CHECK_VALUE = None
+    CHECK_VALUES[res] = None
     avMem = _get_float_tag(tag_avMem.split('.')[1], th_avMem + 1, tag_avMem.split('.')[0])
     if avMem != None:
-      CHECK_VALUE = avMem
+      CHECK_VALUES[res] = avMem
       if avMem < 0:
         raise sysmonitorexception.BADMEM
       if avMem < th_avMem:
@@ -201,14 +205,14 @@ def _check_mem():
       break
     else:
       avmem = 'unknow'
-      CHECK_VALUE = avMem
+      CHECK_VALUES[res] = avMem
 
 
   for check in range(3):
-    CHECK_VALUE = None
+    CHECK_VALUES[res] = None
     memLoad = _get_float_tag(tag_memLoad.split('.')[1], th_memLoad - 1, tag_memLoad.split('.')[0])
     if memLoad != None:
-      CHECK_VALUE = memLoad
+      CHECK_VALUES[res] = memLoad
       if memLoad < 0 or memLoad > 100:
         raise sysmonitorexception.INVALIDMEM
       if memLoad > th_memLoad:
@@ -216,7 +220,7 @@ def _check_mem():
       break
     else:
       memLoad = 'unknow'
-      CHECK_VALUE = memLoad
+      CHECK_VALUES[res] = memLoad
 
 
   check_info = 'Utilizzato il %s%% di %d GB della memoria' % (memLoad, avMem / (1000*1000*1000))
@@ -224,11 +228,11 @@ def _check_mem():
   return check_info
 
 
-def _check_wireless():
+def _check_wireless(res = RES_WIFI):
 
-  global CHECK_VALUE
+  global CHECK_VALUES
 
-  CHECK_VALUE = None
+  CHECK_VALUES[res] = None
 
   check_info = 'Wireless LAN inattiva.'
   profiler = LocalProfilerFactory.getProfiler()
@@ -240,24 +244,24 @@ def _check_wireless():
     if (type == 'Wireless'):
       status = device.find('Status').text
       if (status == 'Enabled'):
-        CHECK_VALUE = 'On'
+        CHECK_VALUES[res] = 'On'
         raise sysmonitorexception.WARNWLAN
     elif (type == 'External Modem'):
       dev_id = device.find('ID').text
       if re.search('USB',dev_id):
-        CHECK_VALUE = 'HSPA'
+        CHECK_VALUES[res] = 'HSPA'
         raise sysmonitorexception.WARNHSPA
 
-  CHECK_VALUE = 'Off'
+  CHECK_VALUES[res] = 'Off'
 
   return check_info
 
 
-def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
+def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1, res = RES_HOSTS):
 
-  global CHECK_VALUE
+  global CHECK_VALUES
 
-  CHECK_VALUE = None
+  CHECK_VALUES[res] = None
 
   netIF = _get_NetIF()
   for key in netIF:
@@ -281,7 +285,7 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
     value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac, dev)
     logger.info('Trovati %d host in rete.' % value)
 
-    CHECK_VALUE = value
+    CHECK_VALUES[res] = value
 
     if value < 0:
       raise sysmonitorexception.BADHOST
@@ -299,18 +303,18 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1):
 
   else:
     value = 1
-    CHECK_VALUE = value
+    CHECK_VALUES[res] = value
     logger.info('La scheda di rete in uso ha un IP pubblico. Non controllo il numero degli altri host in rete.')
     check_info = 'La scheda di rete in uso ha un IP pubblico. Non controllo il numero degli altri host in rete.'
 
   return check_info
 
 
-def _check_traffic(sec = 2):
+def _check_traffic(sec = 2, res = RES_TRAFFIC):
 
-  global CHECK_VALUE
+  global CHECK_VALUES
 
-  CHECK_VALUE = None
+  CHECK_VALUES[res] = None
 
   traffic = None
   ip = _get_ActiveIp()
@@ -341,15 +345,15 @@ def _check_traffic(sec = 2):
     else:
       traffic = 'HIGH'
     
-    CHECK_VALUE = traffic
+    CHECK_VALUES[res] = traffic
     
     check_info = "%.1f kbps in download e %.1f kbps in upload di traffico globale attuale sull'interfaccia di rete in uso." % (DOWN_kbps, UP_kbps)
      
   except Exception as e:
-    CHECK_VALUE = 'unknown'
+    CHECK_VALUES[res] = 'unknown'
     raise e
  
-  if (CHECK_VALUE != 'LOW'):
+  if (CHECK_VALUES[res] != 'LOW'):
     raise Exception(check_info)
   
   return check_info
@@ -443,11 +447,11 @@ def _get_ActiveIp(host = 'finaluser.agcom244.fub.it', port = 443):
   return value
 
 
-def _get_mac(ip = None):
+def _get_mac(ip = None , res = RES_MAC):
 
-  global CHECK_VALUE
+  global CHECK_VALUES
 
-  CHECK_VALUE = None
+  CHECK_VALUES[res] = None
 
   if ip == None:
     ip = _get_ActiveIp()
@@ -464,16 +468,16 @@ def _get_mac(ip = None):
     logger.error('Impossibile recuperare il valore del mac address dell\'IP %s' % ip)
     raise sysmonitorexception.BADMAC
 
-  CHECK_VALUE = mac
+  CHECK_VALUES[res] = mac
 
   return mac
 
 
-def getIp():
+def getIp(res = RES_IP):
 
-  global CHECK_VALUE
+  global CHECK_VALUES
 
-  CHECK_VALUE = None
+  CHECK_VALUES[res] = None
 
   ip = None
   netIF = _get_NetIF()
@@ -487,16 +491,16 @@ def getIp():
   if (ip == None):
     raise sysmonitorexception.UNKIP
 
-  CHECK_VALUE = ip
+  CHECK_VALUES[res] = ip
 
   return ip
 
 
-def _get_mask(ip = None):
+def _get_mask(ip = None, res = RES_MASK):
 
-  global CHECK_VALUE
+  global CHECK_VALUES
 
-  CHECK_VALUE = None
+  CHECK_VALUES[res] = None
 
   if ip == None:
     ip = _get_ActiveIp()
@@ -509,7 +513,7 @@ def _get_mask(ip = None):
     if (netIF[interface]['ip'][0] == ip):
       #logger.debug('| Ip: %s | Mask: %s |' % (ip,netIF[interface]['mask'][0]))
       dotMask = netIF[interface]['mask'][0]
-      CHECK_VALUE = dotMask
+      CHECK_VALUES[res] = dotMask
       cidrMask = _mask_conversion(dotMask)
 
   if (cidrMask <= 0):
@@ -519,11 +523,11 @@ def _get_mask(ip = None):
   return cidrMask
 
 
-def getDev(ip = None):
+def getDev(ip = None, res = RES_DEV):
 
-  global CHECK_VALUE
+  global CHECK_VALUES
 
-  CHECK_VALUE = None
+  CHECK_VALUES[res] = None
 
   Dev = None
 
@@ -541,20 +545,25 @@ def getDev(ip = None):
     logger.error('Impossibile recuperare il nome del Device associato all\'IP %s' % ip)
     raise sysmonitorexception.UNKDEV
 
-  CHECK_VALUE = Dev
+  CHECK_VALUES[res] = Dev
 
   return Dev
 
 
-def _get_os():
+def _get_os(res = RES_OS):
 
-  d = {tag_sys:''}
-  r = []
-
-  for keys in d:
-    r.append(_get_string_tag(keys.split('.', 1)[1], 1, keys.split('.', 1)[0]))
-
-  return r
+  global CHECK_VALUES
+  
+  CHECK_VALUES[res] = None
+  
+  query = {tag_sys:''}
+  os = _get_string_tag(tag_sys.split('.', 1)[1], 1, tag_sys.split('.', 1)[0])
+  
+  CHECK_VALUES[res] = os
+  
+  check_info = ("Sistema Operativo %s" % os)
+  
+  return check_info
 
 
 def _get_Sys():
@@ -570,7 +579,8 @@ def _get_Sys():
 
 def checkset(check_set = set()):
 
-  global CHECK_VALUE
+  global CHECK_VALUES
+  CHECK_VALUES = {}
 
   available_check = \
   { \
@@ -610,7 +620,6 @@ def checkset(check_set = set()):
       try:
         info = None
         status = None
-        CHECK_VALUE = None
         info = available_check[check]['meth']()
         if (info != None):
           status = True
@@ -622,9 +631,10 @@ def checkset(check_set = set()):
 
       system_profile[check] = {}
       system_profile[check]['status'] = status
-      system_profile[check]['value'] = CHECK_VALUE
+      system_profile[check]['value'] = CHECK_VALUES[check]
       system_profile[check]['info'] = str(info)
       logger.info('%s: %s' % (check, system_profile[check]))
+      #logger.debug(CHECK_VALUES)
 
   return system_profile
 

@@ -50,6 +50,8 @@ MAX_TEST_ERROR = 0
 
 TOTAL_STEPS = 12
 
+RES_SOFTWARE = 'software'
+
 logger = logging.getLogger()
 
 def sleeper():
@@ -65,50 +67,112 @@ class OptionParser(OptionParser):
 
 class _Checker(Thread):
 
-  def __init__(self, gui, checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
+  def __init__(self, gui, type = 'check', checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
     Thread.__init__(self)
-    
-    (options, args, md5conf) = parse()
-    self._httptimeout = options.httptimeout
-    
     self._gui = gui
-    self._checkable_set = [RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC]
-
+    self._type = type
+    self._events = {}
+    self._results = {}
+    self._cycle = Event()
+    self._results_flag = Event()
+    self._traffic_wait_hosts = Event()
+    self._software_ok = False
+    self._checkable_set = checkable_set
+    
+    
   def run(self):
 
-    if (self._check_software()):
-      logger.debug('Profilazione dello stato del sistema di misura.')
-      wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misura.")
+    self._cycle.set()
+  
+    while (self._cycle.isSet()):
+      self._results_flag.clear()
+      
+      if (self._type != 'tester'):
+        self._software_ok = self._check_software()
+      else:
+        self._software_ok = True
 
-      for resource in self._checkable_set:
-        this_set = set([resource])
-        #logger.debug(this_set)
-        profiled_set = checkset(this_set)
-        if resource != RES_OS:
-          wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
-
+      if (self._software_ok or self._type == 'software'):
+        self._traffic_wait_hosts.clear()
+        
+        for res in self._checkable_set:
+          res_flag = Event()
+          self._events[res] = res_flag
+          self._events[res].clear()
+          res_check = Thread(target=self._check_resource, args=(res,))
+          res_check.start()
+            
+        while (len(self._events) > 0):
+          for res in self._events.keys():
+            if self._events[res].isSet():
+              del self._events[res]
+              if (self._type == 'tester'):
+                message_flag = False
+              else:
+                message_flag = True
+              wx.CallAfter(self._gui.set_resource_info, res, self._results[res], message_flag)
+              
+              
+        self._results_flag.set()
+        
+        if (self._type != 'tester'):
+          self._cycle.clear()
+          
+    if (self._type == 'check'):
       wx.CallAfter(self._gui._after_check)
-
+  
+  def stop(self):
+    self._cycle.clear()
+    
+  def set_check(self, checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
+    self._checkable_set = checkable_set
+  
+  def _check_resource(self, resource):
+    if resource == RES_TRAFFIC:
+      self._traffic_wait_hosts.wait()
+    result = checkset(set([resource]))
+    self._results.update(result)
+    self._events[resource].set()
+    if resource == RES_HOSTS:
+      self._traffic_wait_hosts.set()
+    
+  def get_results(self):
+    self._results_flag.wait()
+    self._results_flag.clear()
+    if (self._type == 'software'):
+      results = self._software_ok
+    else:
+      results = self._results
+    return results
+    
   def _check_software(self):
     check = False
-    if (deadline()):
+    if (self._deadline()):
       logger.debug('Verifica della scadenza del software fallita')
       wx.CallAfter(self._gui._update_messages, "Questa copia di Ne.Me.Sys Speedtest risulta scaduta. Si consiglia di disinstallare il software.", 'red')
     elif (not check_usb()):
       logger.debug('Verifica della presenza della chiave USB fallita')
       wx.CallAfter(self._gui._update_messages, "Per l'utilizzo di questo software occorre disporre della opportuna chiave USB. Inserire la chiave nel computer e riavviare il programma.", 'red')
-    elif (self.new_version_available()):
+    elif (self._new_version_available()):
       logger.debug('Verifica della presenza di nuove versioni del software')
       wx.CallAfter(self._gui._update_messages, "E' disponibile per il download una nuova versione del software!", 'red')
     else:
       check = True
     return check
-
-  def new_version_available(self):
+    
+  def _deadline(self):
+    this_date = int(getdate().strftime('%Y%m%d'))
+    #logger.debug('%d > %d = %s' % (this_date,dead_date,(this_date > dead_date)))
+    return (this_date > dead_date)
+    
+  def _new_version_available(self):
+    (options, args, md5conf) = parse()
+    httptimeout = options.httptimeout
+    
     new_version = False
 
     url = urlparse("https://www.misurainternet.it/nemesys_speedtest_check.php")
-    connection = httputils.getverifiedconnection(url = url, certificate = None, timeout = self._httptimeout)
+    connection = httputils.getverifiedconnection(url = url, certificate = None, timeout = httptimeout)
 
     try:
       connection.request('GET', '%s?speedtest=true&version=%s' % (url.path, __version__))
@@ -131,10 +195,11 @@ class _Tester(Thread):
     self._outbox = paths.OUTBOX_DAY_DIR
     self._prospect = Prospect()
 
-    self._gui = gui
-    self._checker = _Checker(gui)
     self._step = 0
-
+    self._gui = gui
+    self._checker = _Checker(self._gui, 'tester')
+    self._checker.start()
+    
     (options, args, md5conf) = parse()
 
     self._client = getclient(options)
@@ -201,7 +266,7 @@ class _Tester(Thread):
         # Dato da salvare sulla misura
         test.bytes = byte_all
         info = 'Traffico internet non legato alla misura: percentuali %s/%s' % (value1, value2)
-        wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': True, 'info': info, 'value': value1})
+        wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': True, 'info': info, 'value': value1}, False)
         return True
       else:
         info = 'Eccessiva presenza di traffico internet non legato alla misura: percentuali %s/%s' % (value1, value2)
@@ -281,7 +346,9 @@ class _Tester(Thread):
       wx.CallAfter(self._gui._update_messages, "Test %d di %d di FTP %s" % (i, test_number, type), 'blue')
 
       prof = {}
-      prof = self._check_system(set([RES_CPU, RES_RAM]))
+      # self._checker = _Checker(self._gui, 'tester', set([RES_CPU, RES_RAM]))
+      # self._checker.start()
+      prof = self._checker.get_results()
 
       # Esecuzione del test
       test = None
@@ -343,7 +410,10 @@ class _Tester(Thread):
 
     # Profilazione
     profiler = {}
-    profiler = self._check_system(set([RES_HOSTS, RES_WIFI, RES_TRAFFIC]))
+    # self._checker = _Checker(self._gui, 'tester', set([RES_HOSTS, RES_WIFI, RES_TRAFFIC]))
+    # self._checker.start()
+    profiler = self._checker.get_results()
+    self._checker.set_check(set([RES_CPU, RES_RAM, RES_WIFI]))
 
     # TODO Il server deve essere indicato dal backend che è a conoscenza dell'occupazione della banda!
 
@@ -403,7 +473,10 @@ class _Tester(Thread):
 
           if ((i + 2) % task.nicmp == 0):
             sleep(task.delay)
-            prof = self._check_system(set([RES_CPU, RES_RAM]))
+            prof = {}
+            # self._checker = _Checker(self._gui, 'tester', set([RES_CPU, RES_RAM]))
+            # self._checker.start()
+            prof = self._checker.get_results()
 
           i = i + 1
 
@@ -425,7 +498,8 @@ class _Tester(Thread):
 
       # Stop
       #sleep(TIME_LAG)
-
+      
+    self._checker.stop()
     wx.CallAfter(self._gui.stop)
     self.join()
 
@@ -438,16 +512,6 @@ class _Tester(Thread):
     # Aggiungi la data di fine in fondo al file
     f.write('\n<!-- [finished] %s -->' % datetime.fromtimestamp(timestampNtp()).isoformat())
     f.close()
-
-  def _check_system(self, checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
-    #wx.CallAfter(self._gui._update_messages, "Profilazione dello stato del sistema di misurazione")
-    profiled_set = checkset(checkable_set)
-
-    for resource in checkable_set:
-      if resource != RES_OS:
-        wx.CallAfter(self._gui.set_resource_info, resource, profiled_set[resource])
-
-    return profiled_set
 
   # Scarica il prossimo task dallo scheduler
   def _download_task(self, server):
@@ -592,17 +656,51 @@ class Frame(wx.Frame):
         self.Layout()
         # end wxGlade
 
-        #self._update_messages("Sto inizializzando il sistema. Attendere qualche secondo.")
         self._check(None)
 
+    def _play(self, event):
+      self._button_play = True
+      self._check(None)
+      #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
+
+    def stop(self):
+      #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"play.png")))
+      self._checker = _Checker(self, 'software', set())
+      self._checker.start()
+      self._check_software = self._checker.get_results()
+      if (self._check_software):
+        self._enable_button()
+        self._update_messages("Sistema pronto per una nuova misura")
+            
+      self.update_gauge(0)
+      
     def _check(self, event):
+      logger.debug('Profilazione dello stato del sistema di misura.')
+      self._update_messages("Profilazione dello stato del sistema di misura.")
+      
       self._button_check = True
       self.bitmap_button_play.Disable()
       self.bitmap_button_check.Disable()
       self._reset_info()
       self._checker = _Checker(self)
       self._checker.start()
+      
+    def _after_check(self):
+      if (self._button_play):
+        self._button_play = False
+        self._button_check = False
+        self._tester = _Tester(self)
+        self._tester.start()
+      else:
+        move_on_key()
+        self._button_check = False
+        self._update_messages("Profilazione terminata")
+        self._enable_button()
 
+    def _enable_button(self):
+      self.bitmap_button_play.Enable()
+      self.bitmap_button_check.Enable()
+      
     def _update_down(self, downwidth):
       self.label_rr_down.SetLabel("%d kbps" % downwidth)
       self.Layout()
@@ -634,39 +732,8 @@ class Frame(wx.Frame):
       # logger.debug("Gauge value %d" % value)
       self.gauge_1.SetValue(value)
 
-    def _play(self, event):
-      self._button_play = True
-      self._check(None)
-
-      #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"stop.png")))
-
-
-    def stop(self):
-
-      #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"play.png")))
-      if (self._checker._check_software()):
-        self._enable_button()
-        self._update_messages("Sistema pronto per una nuova misura")
-            
-      self.update_gauge(0)
-
-    def _after_check(self):
-      if (self._button_play):
-        self._button_play = False
-        self._button_check = False
-        self._tester = _Tester(self)
-        self._tester.start()
-      else:
-        move_on_key()
-        self._button_check = False
-        self._update_messages("Profilazione terminata")
-        self._enable_button()
-
-    def _enable_button(self):
-      self.bitmap_button_play.Enable()
-      self.bitmap_button_check.Enable()
-
-    def set_resource_info(self, resource, info):
+      
+    def set_resource_info(self, resource, info, message_flag = True):
       res_bitmap = None
       res_label = None
 
@@ -693,18 +760,19 @@ class Frame(wx.Frame):
         res_bitmap = self.bitmap_traffic
         res_label = self.label_traffic
 
-      if res_bitmap != None:
+      if (res_bitmap != None):
         res_bitmap.SetBitmap(wx.Bitmap(path.join(paths.ICONS, u"%s_%s.png" % (resource.lower(), color))))
 
-      if info['value'] != None:
-        if resource == RES_CPU or resource == RES_RAM:
-          res_label.SetLabel("%s\n%.1f%%" % (resource, float(info['value'])))
+      if (res_label != None):
+        if (info['value'] != None):
+          if resource == RES_CPU or resource == RES_RAM:
+            res_label.SetLabel("%s\n%.1f%%" % (resource, float(info['value'])))
+          else:
+            res_label.SetLabel("%s\n%s" % (resource, info['value']))
         else:
-          res_label.SetLabel("%s\n%s" % (resource, info['value']))
-      else:
-        res_label.SetLabel("%s\n- - - -" % resource)
+          res_label.SetLabel("%s\n- - - -" % resource)
 
-      if (self._button_check or (color == 'red')) and (info['info'] != None):
+      if (message_flag) and (info['info'] != None):
         self._update_messages("%s: %s" % (resource, info['info']), color)
 
       self.Layout()
@@ -720,8 +788,8 @@ class Frame(wx.Frame):
       self._stream_flag.set()
       while (len(self._stream) > 0):
         (message, color) = self._stream.popleft()
-        #date = getdate().strftime('%c')
-        date = datetime.fromtimestamp(time.time()).strftime('%c')
+        #date = getdate('ntp').strftime('%c')
+        date = getdate('local').strftime('%c')
         start = self.messages_area.GetLastPosition()
         end = start + len(date) + 1
         if (start != 0):
@@ -733,13 +801,12 @@ class Frame(wx.Frame):
         self.messages_area.SetStyle(start, end, wx.TextAttr(color))
       self._stream_flag.clear()
 
-def getdate():
-  return datetime.fromtimestamp(timestampNtp())
-
-def deadline():
-  this_date = int(getdate().strftime('%Y%m%d'))
-  #logger.debug('%d > %d = %s' % (this_date,dead_date,(this_date > dead_date)))
-  return (this_date > dead_date)
+def getdate(type = 'local'):
+  if type == 'ntp':
+    date = datetime.fromtimestamp(timestampNtp())
+  elif type == 'local':
+    date = datetime.fromtimestamp(time.time())
+  return date
 
 def parse():
   '''
