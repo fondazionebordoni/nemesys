@@ -346,8 +346,6 @@ class _Tester(Thread):
       wx.CallAfter(self._gui._update_messages, "Test %d di %d di FTP %s" % (i, test_number, type), 'blue')
 
       prof = {}
-      # self._checker = _Checker(self._gui, 'tester', set([RES_CPU, RES_RAM]))
-      # self._checker.start()
       prof = self._checker.get_results()
 
       # Esecuzione del test
@@ -410,8 +408,6 @@ class _Tester(Thread):
 
     # Profilazione
     profiler = {}
-    # self._checker = _Checker(self._gui, 'tester', set([RES_HOSTS, RES_WIFI, RES_TRAFFIC]))
-    # self._checker.start()
     profiler = self._checker.get_results()
     self._checker.set_check(set([RES_CPU, RES_RAM, RES_WIFI]))
 
@@ -474,8 +470,6 @@ class _Tester(Thread):
           if ((i + 2) % task.nicmp == 0):
             sleep(task.delay)
             prof = {}
-            # self._checker = _Checker(self._gui, 'tester', set([RES_CPU, RES_RAM]))
-            # self._checker.start()
             prof = self._checker.get_results()
 
           i = i + 1
