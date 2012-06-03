@@ -18,40 +18,47 @@
 
 from exceptions import Exception
 from logger import logging
+from sys import platform
+from threading import Thread
+
 import pktman
 import ipcalc
 import socket
 import string
 import struct
+import subprocess
 
 logger = logging.getLogger()
 
 ETH_P_IP = 0x0800
 ETH_P_ARP = 0x0806
+ARP_REQUEST = 0x0001
 ARP_REPLY = 0x0002
 
-MAX = 128
+MAX = 256
 
 def display_mac(value):
     return string.join(["%02X" % ord(b) for b in value], ':')
 
-def send_arping(IPsrc, IPdst, MACsrc, MACdst):
+def send_arping(IPsrc, IPdst, MACsrc, MACdst, sock):
 
   hwsrc = MACsrc
   hwdst = MACdst
 
   psrc = socket.inet_aton(IPsrc)
-  pdst = socket.inet_aton(str(IPdst))
+  pdst = socket.inet_aton(IPdst)
 
-  arpPkt = struct.pack('!HHbbH6s4s6s4s', 0x0001, 0x0800, 6, 4, 0x0001, hwsrc, psrc, '\x00', pdst)
+  arpPkt = struct.pack('!HHbbH6s4s6s4s', 0x0001, ETH_P_IP, 6, 4, ARP_REQUEST, hwsrc, psrc, '\x00', pdst)
 
-  ethPkt = struct.pack("!6s6sh", hwdst, hwsrc, 0x0806) + arpPkt
+  ethPkt = struct.pack("!6s6sh", hwdst, hwsrc, ETH_P_ARP) + arpPkt
 
   netPkt = ethPkt + (60 - len(ethPkt)) * '\x00'
 
-  sended = pktman.push(netPkt)
-  if (sended['err_flag'] != 0):
-    logger.debug("%s" % sended['err_str'])
+  # sended = pktman.push(netPkt)
+  # if (sended['err_flag'] != 0):
+    # logger.debug("%s" % sended['err_str'])
+  
+  sock.sendto(netPkt, (IPdst, 0))
 
 
 def receive_arping(MACsrc):
@@ -75,7 +82,7 @@ def receive_arping(MACsrc):
 
       pktSec, pktUsec, pktCaplen, pktLen = struct.unpack("LLII", pktHdr)
 
-      pktTimeStamp = float(pktSec) + (float(pktUsec) / 1000000)
+      #pktTimeStamp = float(pktSec) + (float(pktUsec) / 1000000)
 
       pktData = received['py_pcap_data']
 
@@ -95,7 +102,7 @@ def receive_arping(MACsrc):
   return len(IPtable)
 
 
-def do_arping(dev, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 2):
+def do_arping(dev, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 1):
 
   nHosts = 0
 
@@ -105,7 +112,7 @@ def do_arping(dev, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, t
     return 0
   MACdst = "\xFF"*6
   
-  logger.debug("MAC_source = %s" % mac)
+  # logger.debug("MAC_source = %s" % mac)
   IPsrc = socket.gethostbyname(IPsrc)
   IPnet = ipcalc.Network('%s/%d' % (IPsrc, NETmask))
   net = IPnet.network()
@@ -123,9 +130,14 @@ def do_arping(dev, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, t
   if (rec_init['err_flag'] != 0):
     raise Exception (rec_init['err_str'])
   else:
-
+  
+    if (platform.startswith('win')):
+      subprocess.call('netsh interface ip delete arpcache', shell=False, stdout=subprocess.PIPE)
+      
+    sock = socket.socket(socket.AF_INET, socket.SOCK_RAW)
+    
     lasting = 2 ** (32 - NETmask)
-    i = 0
+    index = 0
 
     for IPdst in IPnet:
       if ((IPdst.hex() == net.hex() or IPdst.hex() == bcast.hex()) and realSubnet):
@@ -133,25 +145,28 @@ def do_arping(dev, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, t
       elif(IPdst.dq == IPsrc):
         logger.debug("Salto il mio ip %s" % IPdst)
       else:
+        IPdst = str(IPdst)
         #logger.debug('Arping host %s' % IPdst)
-        send_arping(IPsrc, IPdst, MACsrc, MACdst)
-        i += 1
+        send = Thread(target=send_arping, args=(IPsrc, IPdst, MACsrc, MACdst, sock))
+        send.start()
+        index += 1
 
       lasting -= 1
 
-      if (i >= MAX or lasting <= 0):
-        i = 0
+      if (index >= MAX or lasting <= 0):
+        index = 0
 
         try:
           nHosts += receive_arping(MACsrc)
         except Exception as e:
           logger.warning("Errore durante la ricezione degli arping: %s" % e)
 
-      if(nHosts > threshold):
-        break
+      # if(nHosts > threshold):
+        # break
 
     #logger.debug("Totale host: %d" % nHosts)
     pktman.close()
+    sock.close()
 
   return nHosts
 

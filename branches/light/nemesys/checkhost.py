@@ -41,7 +41,7 @@ class sendit(Thread):
       if (self.elapsed > 0):
         self.status = 1
     except Exception as e:
-      logger.debug('Errore durante il ping dell\'host %s: %s' % (self.ip, e))
+      #logger.debug('Errore durante il ping dell\'host %s: %s' % (self.ip, e))
       self.status = 0
       pass
 
@@ -95,8 +95,10 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
       lasting -= 1
       if ((ip.hex() == net.hex() or ip.hex() == bcast.hex()) and realSubnet):
         logger.debug("Saltato ip %s" % ip)
+      elif(ip.dq == ipAddress):
+        logger.debug("Salto il mio ip %s" % ipAddress)
       else:
-        logger.debug('Ping host %s' % ip)
+        #logger.debug('Ping host %s' % ip)
         current = sendit(ip)
         pinglist.append(current)
         current.start()
@@ -113,9 +115,9 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
 
         pinglist = []
 
-      if(nHosts > threshold):
-        break
-
+      # if(nHosts > threshold):
+        # break
+      
   return nHosts
 
 

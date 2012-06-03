@@ -239,7 +239,7 @@ def _check_wireless(res = RES_WIFI):
   data = profiler.profile(set(['rete']))
 
   for device in data.findall('rete/NetworkDevice'):
-    logger.debug(ET.tostring(device))
+    #logger.debug(ET.tostring(device))
     type = device.find('Type').text
     if (type == 'Wireless'):
       status = device.find('Status').text
@@ -277,15 +277,10 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1, res = RES
   # Controllo se ho un indirizzo pubblico, in quel caso ritorno 1
   if bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
 
-    if (arping == 0):
-      thres = th_host + 1
-    else:
-      thres = th_host
+    value = checkhost.countHosts(ip, mask, up, down, ispid, th_host, arping, mac, dev)
+    logger.info('Trovati %d host in rete che eccedono la soglia.' % (value - th_host))
 
-    value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac, dev)
-    logger.info('Trovati %d host in rete.' % value)
-
-    CHECK_VALUES[res] = value
+    CHECK_VALUES[res] = (value - th_host)
 
     if value < 0:
       raise sysmonitorexception.BADHOST
@@ -295,15 +290,15 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1, res = RES
         return _check_hosts(up, down, ispid, 0)
       else:
         raise sysmonitorexception.BADHOST
-    elif value > thres:
+    elif value > th_host:
       #logger.error('Presenza di altri %s host in rete.' % value)
       raise sysmonitorexception.TOOHOST
 
-    check_info = 'Trovati %d host in rete.' % value
+    check_info = 'Trovati %d host in rete che eccedono la soglia.' % (value - th_host)
 
   else:
     value = 1
-    CHECK_VALUES[res] = value
+    CHECK_VALUES[res] = (value - th_host)
     logger.info('La scheda di rete in uso ha un IP pubblico. Non controllo il numero degli altri host in rete.')
     check_info = 'La scheda di rete in uso ha un IP pubblico. Non controllo il numero degli altri host in rete.'
 

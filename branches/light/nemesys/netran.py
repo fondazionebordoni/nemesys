@@ -21,6 +21,7 @@ from collections import deque
 from logger import logging
 from threading import Thread, Condition, Event
 from contabyte import Contabyte
+from sysmonitor import getIp
 
 import random
 import pktman
@@ -55,7 +56,7 @@ class Sniffer(Thread):
     logger.debug('Inizializzazione dello sniffer')
     self._run_sniffer = 1
     self._stop_pkt = 0
-    pktman.debugmode(1)
+    pktman.debugmode(0)
     self._init = pktman.initialize(dev, buff, snaplen, timeout, promisc, online, pcap_file)
     if (self._init['err_flag'] != 0):
       self._run_sniffer = 0
@@ -194,7 +195,7 @@ class ContabyteN(Thread):
 
 if __name__ == '__main__':
 
-  mydev = '192.168.112.53'
+  mydev = getIp()
   mynem = '90.147.120.14'   #www.fub.it#
 
   print "\nDevices:"
@@ -253,7 +254,7 @@ if __name__ == '__main__':
 
   print "Sniffing And Analyzing...."
 
-  raw_input("\nPress Enter For Sniffing Result!!")
+  raw_input("\nPress Enter For Sniffing Result!!\n")
 
   mycontabyte.stop()
 

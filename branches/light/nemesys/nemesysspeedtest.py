@@ -50,8 +50,6 @@ MAX_TEST_ERROR = 0
 
 TOTAL_STEPS = 12
 
-RES_SOFTWARE = 'software'
-
 logger = logging.getLogger()
 
 def sleeper():
@@ -69,19 +67,22 @@ class _Checker(Thread):
 
   def __init__(self, gui, type = 'check', checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
     Thread.__init__(self)
+    
     self._gui = gui
     self._type = type
+    self._checkable_set = checkable_set
+    
     self._events = {}
     self._results = {}
     self._cycle = Event()
     self._results_flag = Event()
     self._traffic_wait_hosts = Event()
     self._software_ok = False
-    self._checkable_set = checkable_set
-    
-    
+
   def run(self):
 
+    self._events.clear()
+    self._results.clear()
     self._cycle.set()
   
     while (self._cycle.isSet()):
@@ -956,7 +957,7 @@ if __name__ == "__main__":
   logger.info('Starting Ne.Me.Sys. Speedtest v.%s' % __version__)
 
   app = wx.PySimpleApp(0)
-  if platform == 'win32':
+  if (platform.startswith('win')):
     wx.CallLater(200, sleeper)
   wx.InitAllImageHandlers()
   frame_1 = Frame(None, -1, "", style = wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX))
