@@ -22,6 +22,7 @@ from logger import logging
 from threading import Thread, Condition, Event
 from contabyte import Contabyte
 from sysmonitor import getIp
+from hexDump import printData
 
 import random
 import pktman
@@ -56,7 +57,7 @@ class Sniffer(Thread):
     logger.debug('Inizializzazione dello sniffer')
     self._run_sniffer = 1
     self._stop_pkt = 0
-    pktman.debugmode(0)
+    pktman.debugmode(1)
     self._init = pktman.initialize(dev, buff, snaplen, timeout, promisc, online, pcap_file)
     if (self._init['err_flag'] != 0):
       self._run_sniffer = 0
@@ -88,7 +89,6 @@ class Sniffer(Thread):
                 logger.error(sniffer_data['err_str'])
                 raise Exception (sniffer_data['err_str'])
               if (sniffer_data['py_pcap_hdr'] != None):
-                #print("\nOK-01\n")
                 condition.acquire()
                 buffer_shared.append(sniffer_data)
                 condition.notify()
@@ -164,6 +164,7 @@ class ContabyteN(Thread):
           condition.notify()
           condition.release()
           if (contabyte_data['py_pcap_hdr'] != None):
+            printData(contabyte_data['py_pcap_data'])
             self._analyzer.analyze(contabyte_data['py_pcap_hdr'], contabyte_data['py_pcap_data'])
             self._stat = self._analyzer.statistics
         except:
@@ -196,7 +197,7 @@ class ContabyteN(Thread):
 if __name__ == '__main__':
 
   mydev = getIp()
-  mynem = '90.147.120.14'   #www.fub.it#
+  mynem = '194.244.5.206'   #www.ansa.it#
 
   print "\nDevices:"
 

@@ -190,7 +190,7 @@ void dumper(void)
     dumpfile = pcap_dump_open(handle,dump_file);
 
     if (dumpfile == NULL)
-    {sprintf(err_str,"Error opening savefile %s for writing: %s\n",dump_file, pcap_geterr(handle));err_flag=-1;return;}
+    {sprintf(err_str,"Error opening savefile %s for writing: %s",dump_file, pcap_geterr(handle));err_flag=-1;return;}
 
     //DEBUG-BEGIN
     if(DEBUG_MODE)
@@ -375,13 +375,13 @@ void find_devices(void)
     WSADATA wsa_Data;
     char HostName[255];
     struct hostent *host_entry;
-	int addr_num = 0;
+    int addr_num = 0;
     #endif
 
     tot_dev=0;
 
     if (pcap_findalldevs (&alldevs, errbuf) != 0)
-    {sprintf(err_str,"FindAllDevs error: %s\n",errbuf);err_flag=-1;return;}
+    {sprintf(err_str,"FindAllDevs error: %s",errbuf);err_flag=-1;return;}
 
     if (alldevs == NULL)
     {sprintf(err_str,"No Sniffable Device or User Without Root Permissions");err_flag=-1;return;}

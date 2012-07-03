@@ -119,7 +119,7 @@ class _Checker(Thread):
         if (self._type != 'tester'):
           self._cycle.clear()
           
-    if (self._type == 'check'):
+    if (self._software_ok and self._type == 'check'):
       wx.CallAfter(self._gui._after_check)
   
   def stop(self):
@@ -149,12 +149,15 @@ class _Checker(Thread):
   def _check_software(self):
     check = False
     if (self._deadline()):
+      self._cycle.clear()
       logger.debug('Verifica della scadenza del software fallita')
       wx.CallAfter(self._gui._update_messages, "Questa copia di Ne.Me.Sys Speedtest risulta scaduta. Si consiglia di disinstallare il software.", 'red')
     elif (not check_usb()):
+      self._cycle.clear()
       logger.debug('Verifica della presenza della chiave USB fallita')
       wx.CallAfter(self._gui._update_messages, "Per l'utilizzo di questo software occorre disporre della opportuna chiave USB. Inserire la chiave nel computer e riavviare il programma.", 'red')
     elif (self._new_version_available()):
+      self._cycle.clear()
       logger.debug('Verifica della presenza di nuove versioni del software')
       wx.CallAfter(self._gui._update_messages, "E' disponibile per il download una nuova versione del software!", 'red')
     else:
@@ -265,7 +268,7 @@ class _Tester(Thread):
         return continue_testing
       elif traffic_ratio < TH_TRAFFIC and packet_ratio_inv < TH_TRAFFIC_INV:
         # Dato da salvare sulla misura
-        test.bytes = byte_all
+        # test.bytes = byte_all
         info = 'Traffico internet non legato alla misura: percentuali %s/%s' % (value1, value2)
         wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': True, 'info': info, 'value': value1}, False)
         return True
@@ -353,6 +356,7 @@ class _Tester(Thread):
       test = None
       error = 0
       while (error < MAX_TEST_ERROR or test == None):
+        sleep(1)
         try:
           if type == DOWN:
             logger.info("Esecuzione di un test Donwload FTP")
@@ -416,6 +420,7 @@ class _Tester(Thread):
 
     # TODO Rimuovere dopo aver sistemato il backend
     task = None
+    sleep(1)
     server = self._get_server()
     if server != None:
       # Scaricamento del task dallo scheduler
