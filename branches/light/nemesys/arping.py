@@ -132,7 +132,7 @@ def do_arping(dev, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, t
   else:
   
     if (platform.startswith('win')):
-      subprocess.call('netsh interface ip delete arpcache', shell=False, stdout=subprocess.PIPE)
+      subprocess.call('netsh interface ip delete arpcache', shell=True)
       
     sock = socket.socket(socket.AF_INET, socket.SOCK_RAW)
     sock.setblocking(True)

@@ -9,6 +9,8 @@ def printData(data):
   size = 16
   bytesRead = len(data)
 
+  size = min(size, bytesRead)
+  
   logger.debug("================================================================================")
   while index < bytesRead:
       
