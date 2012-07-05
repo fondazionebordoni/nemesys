@@ -50,7 +50,8 @@ Name: italian; MessagesFile: compiler:Languages\Italian.isl
 Name: quicklaunchicon; Description: {cm:CreateQuickLaunchIcon}; GroupDescription: {cm:AdditionalIcons}; Flags: unchecked; OnlyBelowVersion: 0,6.1
 
 [Files]
-Source: {#MyAppDir}\nemesys\winpcap\WinPcap.exe; Flags: dontcopy
+;Source: {#MyAppDir}\nemesys\winpcap\WinPcap.exe; Flags: dontcopy
+Source: {#MyAppDir}\nemesys\MNM34\netmon.msi; Flags: dontcopy
 Source: {#MyAppDir}\nemesys\dist\*; DestDir: {app}\dist; Flags: ignoreversion recursesubdirs createallsubdirs
 ;Source: {#MyAppDir}\nemesys\cfg\*; DestDir: {app}\dist\cfg; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: {#MyAppDir}\ABOUT; DestDir: {app}; Flags: ignoreversion
@@ -79,7 +80,7 @@ Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}; Filen
 [Run]
 Filename: {sys}\netsh.exe; Parameters: " int ip set global taskoffload=disabled"; Description: "Disable TCP Task Offload"; Flags: RunHidden RunAsCurrentUser; 
 Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\NemesysSpeedtest.exe"" ""NemesysSpeedtest"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable NemesysSpeedtest traffic"; Flags: RunHidden RunAsCurrentUser; 
-Filename: {sys}\netsh.exe; Parameters: " advfirewall firewall add rule name=""NemesysSpeedtest"" dir=out action=allow program=""{app}\dist\NemesysSpeedtest.exe"" enable=yes"; Description: "Enable NemesysSpeedtest traffic"; Flags: RunHidden RunAsCurrentUser; MinVersion: ,6.1.7600; 
+Filename: {sys}\netsh.exe; Parameters: " advfirewall firewall add rule name=""NemesysSpeedtest"" dir=out action=allow program=""{app}\dist\NemesysSpeedtest.exe"" enable=yes"; Description: "Enable NemesysSpeedtest traffic"; Flags: RunHidden RunAsCurrentUser; MinVersion: 0,6.1.7600; 
 ;Filename: {app}\dist\Nemesys.exe; Parameters: "--startup auto install"; Description: "Installazione del servizio Nemesys."; StatusMsg: "Installazione del servizio Nemesys"; Flags: RunHidden RunAsCurrentUser; 
 ;Filename: {app}\dist\Nemesys.exe; Parameters: start; Description: "Avvia il servizio Nemesys"; Flags: PostInstall RunHidden RunAsCurrentUser; StatusMsg: "Avvia il servizio Nemesys"; 
  
@@ -129,30 +130,35 @@ procedure WinPcapInst();
 var
   ResultCode: Integer;
 begin
-  ExtractTemporaryFile(ExpandConstant('WinPcap.exe'));
-  Exec(ExpandConstant('{tmp}\WinPcap.exe'),'', '', SW_SHOW,ewWaitUntilTerminated, ResultCode);
-  if not RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\NPF','Start')
-  then
+  ExtractTemporaryFile(ExpandConstant('netmon.msi'));
+  ShellExec('', 'msiexec', ExpandConstant('/I "{tmp}\netmon.msi"'),'', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+  if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm3','Start') then
     begin
-      MsgBox('Installazione del software NeMeSys terminata poichè si è scelto di non installare WinPcap',mbInformation, MB_OK);
-      WizardForm.Close;
+      RegWriteDWordValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm3','Start', 1);
+    end
+  else if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm','Start') then
+    begin
+      RegWriteDWordValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm','Start', 3);
+      RegWriteStringValue(HKEY_CLASSES_ROOT, 'CLSID\{425882B0-B0BF-11CE-B59F-00AA006CB37D}\InProcServer32','ThreadingModel','Both');
     end
   else
     begin
-      RegWriteDWordValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\NPF','Start', 2);
+      MsgBox('Installazione del software NeMeSys terminata poichè si è scelto di non installare le Microsoft Network Monitor',mbInformation, MB_OK);
+      WizardForm.Close;
     end;
 end;
 
 procedure WinPcapRem();
 var
   ResultCode: Integer;
-  uninstallPath: String;
 begin
-  if RegValueExists(HKEY_LOCAL_MACHINE,'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinPcapInst','UninstallString')
-  then
+  if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm3','Start') then
     begin
-      RegQueryStringValue(HKEY_LOCAL_MACHINE,'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinPcapInst','UninstallString',uninstallPath);
-      Exec(RemoveQuotes(uninstallPath),'', '', SW_SHOW,ewWaitUntilTerminated, ResultCode);
+      ShellExec('', 'msiexec', '/I{8C5B5A11-CBF8-451B-B201-77FAB0D0B77D}','', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+    end
+  else if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm','Start') then
+    begin
+      ShellExec('', 'msiexec', '/I{A2F2C44A-869E-4C32-9CEC-E22B1CC91F06}','', SW_SHOW, ewWaitUntilTerminated, ResultCode);
     end;
 end;
 
