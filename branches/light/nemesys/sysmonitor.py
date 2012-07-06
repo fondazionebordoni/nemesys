@@ -278,9 +278,15 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1, res = RES
   if bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)):
 
     value = checkhost.countHosts(ip, mask, up, down, ispid, th_host, arping, mac, dev)
-    logger.info('Trovati %d host in rete che eccedono la soglia.' % (value - th_host))
+    
+    if (value >= th_host):
+      other = value - th_host
+    else:
+      other = value
+    
+    logger.info('Trovati %d host in rete che eccedono la soglia.' % other)
 
-    CHECK_VALUES[res] = (value - th_host)
+    CHECK_VALUES[res] = other
 
     if value < 0:
       raise sysmonitorexception.BADHOST
@@ -294,7 +300,7 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1, res = RES
       #logger.error('Presenza di altri %s host in rete.' % value)
       raise sysmonitorexception.TOOHOST
 
-    check_info = 'Trovati %d host in rete che eccedono la soglia.' % (value - th_host)
+    check_info = ('Trovati %d host in rete che eccedono la soglia.' % other)
 
   else:
     value = 1
