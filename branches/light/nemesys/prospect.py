@@ -88,7 +88,12 @@ if __name__ == '__main__':
   p = Prospect()
   c = Client('fub0010000001', Profile('1mb512kb', 1024, 512), Isp('fub001'), 'geo')
   m = Measure(1, Server(id = 'fubsrvnmx01', ip = '127.0.0.1'), c)
-  m.savetest(Proof('download', datetime.utcnow(), .020, 1024 * 1024))
+  m.savetest(Proof('download', datetime.utcnow(), .020, 1024 * 1024), {})
+  m.savetest(Proof('upload', datetime.utcnow(), .020, 1024 * 1024), {})
+  p.save_measure(m)
+  m = Measure(1, Server(id = 'fubsrvnmx01', ip = '127.0.0.1'), c)
+  m.savetest(Proof('download', datetime.utcnow(), .030, 1024 * 1024), {})
+  m.savetest(Proof('upload', datetime.utcnow(), .030, 1024 * 1024), {})
   p.save_measure(m)
   print p
   p._saveonfile()

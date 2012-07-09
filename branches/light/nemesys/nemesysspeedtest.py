@@ -67,11 +67,11 @@ class _Checker(Thread):
 
   def __init__(self, gui, type = 'check', checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
     Thread.__init__(self)
-    
+
     self._gui = gui
     self._type = type
     self._checkable_set = checkable_set
-    
+
     self._events = {}
     self._results = {}
     self._cycle = Event()
@@ -84,10 +84,10 @@ class _Checker(Thread):
     self._events.clear()
     self._results.clear()
     self._cycle.set()
-  
+
     while (self._cycle.isSet()):
       self._results_flag.clear()
-      
+
       if (self._type != 'tester'):
         self._software_ok = self._check_software()
       else:
@@ -95,14 +95,14 @@ class _Checker(Thread):
 
       if (self._software_ok or self._type == 'software'):
         self._traffic_wait_hosts.clear()
-        
+
         for res in self._checkable_set:
           res_flag = Event()
           self._events[res] = res_flag
           self._events[res].clear()
-          res_check = Thread(target=self._check_resource, args=(res,))
+          res_check = Thread(target = self._check_resource, args = (res,))
           res_check.start()
-            
+
         while (len(self._events) > 0):
           for res in self._events.keys():
             if self._events[res].isSet():
@@ -112,22 +112,22 @@ class _Checker(Thread):
               else:
                 message_flag = True
               wx.CallAfter(self._gui.set_resource_info, res, self._results[res], message_flag)
-              
-              
+
+
         self._results_flag.set()
-        
+
         if (self._type != 'tester'):
           self._cycle.clear()
-          
+
     if (self._software_ok and self._type == 'check'):
       wx.CallAfter(self._gui._after_check)
-  
+
   def stop(self):
     self._cycle.clear()
-    
+
   def set_check(self, checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
     self._checkable_set = checkable_set
-  
+
   def _check_resource(self, resource):
     if resource == RES_TRAFFIC:
       self._traffic_wait_hosts.wait()
@@ -136,7 +136,7 @@ class _Checker(Thread):
     self._events[resource].set()
     if resource == RES_HOSTS:
       self._traffic_wait_hosts.set()
-    
+
   def get_results(self):
     self._results_flag.wait()
     self._results_flag.clear()
@@ -145,7 +145,7 @@ class _Checker(Thread):
     else:
       results = self._results
     return results
-    
+
   def _check_software(self):
     check = False
     if (self._deadline()):
@@ -163,16 +163,16 @@ class _Checker(Thread):
     else:
       check = True
     return check
-    
+
   def _deadline(self):
     this_date = int(getdate().strftime('%Y%m%d'))
     #logger.debug('%d > %d = %s' % (this_date,dead_date,(this_date > dead_date)))
     return (this_date > dead_date)
-    
+
   def _new_version_available(self):
     (options, args, md5conf) = parse()
     httptimeout = options.httptimeout
-    
+
     new_version = False
 
     url = urlparse("https://www.misurainternet.it/nemesys_speedtest_check.php")
@@ -203,7 +203,7 @@ class _Tester(Thread):
     self._gui = gui
     self._checker = _Checker(self._gui, 'tester')
     self._checker.start()
-    
+
     (options, args, md5conf) = parse()
 
     self._client = getclient(options)
@@ -300,12 +300,12 @@ class _Tester(Thread):
     best_delay = 8000
     best_server = None
     RTT = {}
-    
+
     wx.CallAfter(self._gui._update_messages, "Scelta del server di misura in corso")
 
     for server in servers:
       RTT[server] = best_delay
-    
+
     for repeat in range(maxREP):
       for server in servers:
         try:
@@ -318,7 +318,7 @@ class _Tester(Thread):
         except Exception as e:
           logger.debug('Errore durante il ping dell\'host %s: %s' % (server.ip, e))
           pass
-         
+
     if best_server != None:
       for server in servers:
         if (RTT[server] != 8000):
@@ -329,7 +329,7 @@ class _Tester(Thread):
       # return best_server
     else:
       wx.CallAfter(self._gui._update_messages, "Impossibile eseguire i test poiche' i server risultano irragiungibili da questa linea. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
-      
+
     return best_server
 
   def _do_ftp_test(self, tester, type, task):
@@ -492,16 +492,22 @@ class _Tester(Thread):
         else:
           raise Exception("chiave USB mancante")
 
+        self._upload(self._prospect)
+
       except Exception as e:
         logger.warning('Misura sospesa per eccezione: %s.' % e)
         wx.CallAfter(self._gui._update_messages, 'Misura sospesa per errore: %s.' % e, 'red')
 
       # Stop
       #sleep(TIME_LAG)
-      
+
     self._checker.stop()
     wx.CallAfter(self._gui.stop)
     self.join()
+
+  def _upload(self, prospect):
+    # TODO
+    pass
 
   def _save_measure(self, measure):
     # Salva il file con le misure
@@ -532,7 +538,7 @@ class Frame(wx.Frame):
     def __init__(self, *args, **kwds):
         self._stream = deque([], maxlen = 800)
         self._stream_flag = Event()
-        
+
         self._tester = None
         self._checker = None
         self._button_play = False
@@ -671,20 +677,20 @@ class Frame(wx.Frame):
       if (self._check_software):
         self._enable_button()
         self._update_messages("Sistema pronto per una nuova misura")
-            
+
       self.update_gauge(0)
-      
+
     def _check(self, event):
       logger.debug('Profilazione dello stato del sistema di misura.')
       self._update_messages("Profilazione dello stato del sistema di misura.")
-      
+
       self._button_check = True
       self.bitmap_button_play.Disable()
       self.bitmap_button_check.Disable()
       self._reset_info()
       self._checker = _Checker(self)
       self._checker.start()
-      
+
     def _after_check(self):
       if (self._button_play):
         self._button_play = False
@@ -700,7 +706,7 @@ class Frame(wx.Frame):
     def _enable_button(self):
       self.bitmap_button_play.Enable()
       self.bitmap_button_check.Enable()
-      
+
     def _update_down(self, downwidth):
       self.label_rr_down.SetLabel("%d kbps" % downwidth)
       self.Layout()
@@ -732,7 +738,7 @@ class Frame(wx.Frame):
       # logger.debug("Gauge value %d" % value)
       self.gauge_1.SetValue(value)
 
-      
+
     def set_resource_info(self, resource, info, message_flag = True):
       res_bitmap = None
       res_label = None
@@ -781,9 +787,9 @@ class Frame(wx.Frame):
       logger.info('Messagio all\'utente: "%s"' % message)
       self._stream.append((message, color))
       if (not self._stream_flag.isSet()):
-        writer = Thread(target=self._writer)
+        writer = Thread(target = self._writer)
         writer.start()
-    
+
     def _writer(self):
       self._stream_flag.set()
       while (len(self._stream) > 0):
