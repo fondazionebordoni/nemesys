@@ -246,15 +246,18 @@ void updateStats()
 
 void writeBuffer(HANDLE rawFrame)
 {
+	AdapterInfo.Size = sizeof(AdapterInfo); /* Necessary for AdapterInfo */
+	int ExtraByte = 0;
+	int OffSetMac = 0;
+	
 	UINT index=0;
-	UINT OffSet = 0;
 	UINT SnapLen = 0;
 	ULONG datalink = 0;
 	ULONG rawFrameLen = 0;
 	ULONG rawFrameSnapLen = 0;
 	UINT64 timestamp = 0;
 	
-	PBYTE buffer_data;
+	PBYTE buffer_data, buffer_mac;
 	char *pkt_data;
 
 	packet_header *pkt_header = (packet_header *)MALLOC(16);
@@ -271,55 +274,89 @@ void writeBuffer(HANDLE rawFrame)
 	/* Frame Data Link Type */
 	response = NmGetFrameMacType(rawFrame, &datalink);
 	if (response == ERROR_SUCCESS)
-	{
-		data_link = (int)datalink;
-		
-		if (data_link == 6)
-		{ OffSet = 50; }
-		else
-		{ OffSet = 0; }
-	}
+	{ data_link = (int)datalink; }
 
 	/* Frame Length */
 	response = NmGetRawFrameLength(rawFrame, &rawFrameLen);	
 	if (response == ERROR_SUCCESS)
-	{pkt_header->len = (UINT)rawFrameLen - OffSet;}
-
-	/* Frame Snap Length */
-	if ( (UINT)rawFrameLen < (maxSnapLen + OffSet) )
-	{SnapLen = (UINT)rawFrameLen;}
-	else
-	{SnapLen = (maxSnapLen + OffSet);}
+	{;}
 
 	/* Extract Frame*/
-	buffer_data = (PBYTE)MALLOC(SnapLen);
-	pkt_data = (char *)MALLOC(SnapLen);
+	buffer_data = (PBYTE)MALLOC(rawFrameLen);
 
-	response = NmGetPartialRawFrame(rawFrame, 0, SnapLen, buffer_data, &rawFrameSnapLen);
+	response = NmGetRawFrame(rawFrame, rawFrameLen, buffer_data, &rawFrameSnapLen);
 	if (response == ERROR_SUCCESS)
 	{
-		pkt_header->caplen = ( (UINT)rawFrameSnapLen - OffSet );
-
 		if (datalink == 6)
 		{
-			memcpy_s(pkt_data, SnapLen, buffer_data + 36, 12);
+			OffSetMac = 36;
+
+			if ((buffer_data[32] & 0xFF) == 0x08)
+			{ ExtraByte = 50; }
+			else if ((buffer_data[32] & 0xFF) == 0x88)
+			{ ExtraByte = 52; }
+			else
+			{ ExtraByte = -12; }
+		}
+		else if (datalink == 8)
+		{
+			OffSetMac = 0;
+			ExtraByte = -14;
+
+			buffer_mac = (PBYTE)MALLOC(14);
 			
-			if ((buffer_data[32] & 0xFF) != 8)
+			response = NmGetAdapter(inputHandle, adapterIndex, &AdapterInfo);
+			if (response != ERROR_SUCCESS)
 			{
-				memcpy_s(pkt_data + 12, SnapLen, buffer_data, 2);
-				pkt_header->caplen = 14;
+				for (index = 0; index < 12 ; index++)
+				{buffer_mac[index] = 0xFF;}
 			}
 			else
 			{
-				memcpy_s(pkt_data + 12, SnapLen, buffer_data + 62, SnapLen - 12);
+				for (index = 0; index < 6 ; index++)
+				{
+					buffer_mac[index] = AdapterInfo.PermanentAddr[index];
+					buffer_mac[index+6] = AdapterInfo.PermanentAddr[index];
+				}
 			}
+
+			buffer_mac[12] = 0x08;
+			buffer_mac[13] = 0x00;
 		}
 		else
 		{
-			memcpy_s(pkt_data, SnapLen, buffer_data, SnapLen);
+			OffSetMac = 0;
+			ExtraByte = 0;
 		}
 
-		/* HEADER and DATA */
+		/* Frame Snap Length */
+		if ( ((UINT)rawFrameLen - ExtraByte) < maxSnapLen )
+		{ SnapLen = ((UINT)rawFrameLen - ExtraByte); }
+		else if (ExtraByte == -12)
+		{ SnapLen = 14; }
+		else
+		{ SnapLen = maxSnapLen; }
+
+		/* Fill DATA */
+		pkt_data = (char *)MALLOC(SnapLen);
+
+		if (datalink != 8)
+		{
+			memcpy_s(pkt_data, SnapLen, buffer_data + OffSetMac, 12);
+			memcpy_s(pkt_data + 12, SnapLen, buffer_data + (12 + ExtraByte), 2);
+		}
+		else
+		{
+			memcpy_s(pkt_data, SnapLen, buffer_mac, 14);
+		}
+		
+		memcpy_s(pkt_data + 14, SnapLen, buffer_data + (14 + ExtraByte), (SnapLen - 14));
+
+		/* Fill HEADER*/
+		pkt_header->len = ( (UINT)rawFrameLen - ExtraByte );
+		pkt_header->caplen = SnapLen;
+
+		/* Fill PACKET with HEADER and DATA */
 		packet->header = pkt_header;
 		packet->data = pkt_data;
 	
@@ -367,6 +404,7 @@ void __stdcall theCallback(HANDLE NMhandle, ULONG NMdevice, PVOID NMcontext, HAN
 				, stats.last_write, (stats.last_write - stats.last_read), stats.last_read
 				, stats.pkt_tot , stats.pkt_drop, stats.pkt_dropHandle, stats.write_dropped, stats.pkt_filtered
 				);
+		fprintf(debug_log," Data Link : %d |", data_link);
 		fprintf(debug_log,"\n====================================================================================================");
 	}
 	/* DEBUG END */
@@ -989,6 +1027,8 @@ extern "C"
 	static PyObject *pktman_debugmode(PyObject *self, PyObject *args)
 	{
 		PyArg_ParseTuple(args, "i", &DEBUG_MODE);
+
+		//if(DEBUG_MODE==0) {DEBUG_MODE=1;}
 
 		/* DEBUG BEGIN */
 		if(DEBUG_MODE) {err_flag = fopen_s(&debug_log,"pktman.txt","w");}
