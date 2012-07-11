@@ -60,7 +60,7 @@ struct statistics
 };
 
 UINT DEBUG_MODE=0;
-FILE *debug_log;
+FILE *debug_log = NULL;
 
 char *dump_file;
 
@@ -105,50 +105,57 @@ struct statistics stats;
 
 
 
-void print_hex_ascii_line(const u_char *payload, int len, int offset)
+void print_hex_ascii_line(const u_char *payload, int len, int offset, char *packet)
 {
 	int i;
 	int gap;
 	const u_char *ch;
+	char buffer[22];
 
 	/* offset */
-	fprintf(debug_log,"| %05d |  ", offset);
+	sprintf_s(buffer,22,"| %05d |  ", offset);
+	strcat(packet,buffer);
 
 	/* hex */
 	ch = payload;
 	for(i = 0; i < len; i++)
 	{
-		fprintf(debug_log,"%02x ", *ch);
+		sprintf_s(buffer,22,"%02x ", *ch);
+		strcat(packet,buffer);
 		ch++;
 		/* print extra space after 8th byte for visual aid */
-		if (i == 7) {fprintf(debug_log," ");}
+		if (i == 7) {strcat(packet," ");}
 	}
 	/* print space to handle line less than 8 bytes */
-	if (len < 8) {fprintf(debug_log," ");}
+	if (len < 8) {strcat(packet," ");}
 
 	/* fill hex gap with spaces if not full line */
 	if (len < 16)
 	{
 		gap = 16 - len;
-		for (i = 0; i < gap; i++) {fprintf(debug_log,"   ");}
+		for (i = 0; i < gap; i++) {strcat(packet,"   ");}
 	}
-	fprintf(debug_log," | ");
+	strcat(packet," | ");
 
 	/* ascii (if printable) */
 	ch = payload;
 	for(i = 0; i < len; i++)
 	{
-		if (isprint(*ch)) {fprintf(debug_log,"%c", *ch);}
-		else {fprintf(debug_log,".");}
+		if (isprint(*ch))
+		{
+			sprintf_s(buffer,22,"%c", *ch);
+			strcat(packet,buffer);
+		}
+		else {strcat(packet,".");}
 		ch++;
 	}
 
 	if (len < 16)
 	{
 		gap = 16 - len;
-		for (i = 0; i < gap; i++) {fprintf(debug_log,".");}
+		for (i = 0; i < gap; i++) {strcat(packet,".");}
 	}
-	fprintf(debug_log," |\n");
+	strcat(packet," |\n");
 
     return;
 }
@@ -161,15 +168,18 @@ void print_payload(const u_char *payload, int len)
 	int line_len;
 	int offset = 0;					/* zero-based offset counter */
 	const u_char *ch = payload;
+	char *packet;
 
-	fprintf(debug_log,"\n");
+	packet = (char *)MALLOC(88*((len/line_width)+1));
+
+	strcpy(packet,"\n");
 
 	if (len <= 0) {return;}
 
 	/* data fits on one line */
 	if (len <= line_width)
 	{
-		print_hex_ascii_line(ch, len, offset);
+		print_hex_ascii_line(ch, len, offset, packet);
 		return;
 	}
 
@@ -179,7 +189,7 @@ void print_payload(const u_char *payload, int len)
 		/* compute current line length */
 		line_len = line_width % len_rem;
 		/* print line */
-		print_hex_ascii_line(ch, line_len, offset);
+		print_hex_ascii_line(ch, line_len, offset, packet);
 		/* compute total remaining */
 		len_rem = len_rem - line_len;
 		/* shift pointer to remaining bytes to print */
@@ -190,10 +200,14 @@ void print_payload(const u_char *payload, int len)
 		if (len_rem <= line_width)
 		{
 			/* print last line and get out */
-			print_hex_ascii_line(ch, len_rem, offset);
+			print_hex_ascii_line(ch, len_rem, offset, packet);
 			break;
 		}
 	}
+
+	fprintf(debug_log,"%s",packet);
+
+	FREE(packet);
 
     return;
 }
@@ -201,12 +215,14 @@ void print_payload(const u_char *payload, int len)
 
 void setfilter(const char *filter)
 {
-	///* DEBUG BEGIN */
-	//if(DEBUG_MODE)
+	/* DEBUG BEGIN */
+	//if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
 	//{
 	//	fprintf(debug_log,"\nFILTRO: %s \n",filter);
+	//	fclose(debug_log);
+	//	debug_log = NULL;
 	//}
-	///* DEBUG END */
+	/* DEBUG END */
 }
 
 
@@ -392,7 +408,7 @@ void __stdcall theCallback(HANDLE NMhandle, ULONG NMdevice, PVOID NMcontext, HAN
 	}
 
 	/* DEBUG BEGIN */
-	if(DEBUG_MODE)
+	if(DEBUG_MODE && (debug_log != NULL))
 	{
 		if(stats.last_write % 10 == 1)
 		{
@@ -404,7 +420,9 @@ void __stdcall theCallback(HANDLE NMhandle, ULONG NMdevice, PVOID NMcontext, HAN
 				, stats.last_write, (stats.last_write - stats.last_read), stats.last_read
 				, stats.pkt_tot , stats.pkt_drop, stats.pkt_dropHandle, stats.write_dropped, stats.pkt_filtered
 				);
-		fprintf(debug_log," Data Link : %d |", data_link);
+		
+		fprintf(debug_log,"\t\t[ Data Link Type: %d ]", data_link);
+		
 		fprintf(debug_log,"\n====================================================================================================");
 	}
 	/* DEBUG END */
@@ -449,7 +467,7 @@ void sniffer()
 			data = bufferTot[index]->data;
 
 			/* DEBUG BEGIN */
-			if(DEBUG_MODE)
+			if(DEBUG_MODE && (debug_log != NULL))
 			{
 				timestamp = header->sec;
 				ts = (struct tm *)MALLOC(sizeof(struct tm));
@@ -468,10 +486,13 @@ void sniffer()
 						, timestamp_string, header->usec
 						, header->len, header->caplen
 						);
+
 				fprintf(debug_log,"\n====================================================================================================");
 
-				//fprintf(debug_log,"================================================================================");
 				print_payload((const u_char *)data,header->caplen);
+
+				fprintf(debug_log,"====================================================================================================");
+				//fprintf(debug_log,"================================================================================");
 			}
 			/* DEBUG END */
 			
@@ -520,11 +541,15 @@ void dumper(void)
 
 	response = NmCreateCaptureFile((LPCWSTR)fileName, 10*maxBufferSize /* maxFileSize */, NmCaptureFileChain, &outputHandle, &fileSize);
 	if(response != ERROR_SUCCESS)
-	{sprintf_s(err_str,sizeof(err_str),"Error creating output file: 0x%X\n",response);err_flag=-1;return;}
+	{sprintf_s(err_str,sizeof(err_str),"Error creating output file: 0x%X",response);err_flag=-1;return;}
 
     /* DEBUG BEGIN */
-    if(DEBUG_MODE)
-	{fprintf(debug_log,"\n[ DUMP MODE ]    [ File Name: %S ]    [ Max File Size: %u ]\n",fileName,fileSize);}
+    if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
+	{
+		fprintf(debug_log,"\n[ DUMP MODE ]    [ File Name: %S ]    [ Max File Size: %u ]\n",fileName,fileSize);
+		fclose(debug_log);
+		debug_log = NULL;
+	}
     /* DEBUG END */
 }
 
@@ -614,8 +639,12 @@ void find_devices(void)
     PIP_ADAPTER_PREFIX pPrefix = NULL;
 
 	/* DEBUG BEGIN */
-	if(DEBUG_MODE)
-	{fprintf(debug_log,"========================================================================================[DEVICE]\n\n");}
+	if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
+	{
+		fprintf(debug_log,"========================================================================================[DEVICE]\n\n");
+		fclose(debug_log);
+		debug_log = NULL;
+	}
 	/* DEBUG END */
 
     outBufLen = 40000;	/* Allocate a 40 KB buffer to start with. */
@@ -627,7 +656,7 @@ void find_devices(void)
 		configNMapi();
 		response = NmOpenCaptureEngine(&inputHandle);
 		if(response != ERROR_SUCCESS)
-		{sprintf_s(err_str,sizeof(err_str),"Error opening input handle: 0x%X\n",response);err_flag=-1;return;}
+		{sprintf_s(err_str,sizeof(err_str),"Error opening input handle: 0x%X",response);err_flag=-1;return;}
 	}
 
 	response = NmGetAdapterCount(inputHandle, &adapterCount);
@@ -677,26 +706,28 @@ void find_devices(void)
 			{
 				response = NmGetAdapter(inputHandle, i, &AdapterInfo);
 				if(response != ERROR_SUCCESS)
-				{sprintf_s(err_str,sizeof(err_str),"Error getting adapter info: 0x%X\n",response);err_flag=-1;return;}
-				
-				sizeBuff = wcslen(AdapterInfo.Guid)+1;
-				guid = (char *)MALLOC(sizeBuff);
-				sprintf_s(guid, sizeBuff, "%S", AdapterInfo.Guid);
-
-				if (strcmp(guid,device[tot_dev].name)==0)
+				{/* sprintf_s(err_str,sizeof(err_str),"Error getting adapter info: 0x%X",response);err_flag=-1;return */;}
+				else
 				{
-					/* Device Index */
-					device[tot_dev].index = i;
+					sizeBuff = wcslen(AdapterInfo.Guid)+1;
+					guid = (char *)MALLOC(sizeBuff);
+					sprintf_s(guid, sizeBuff, "%S", AdapterInfo.Guid);
 
-					/* Device Mac Address */
-					sprintf_s(device[tot_dev].mac,18,"%02X:%02X:%02X:%02X:%02X:%02X"
-							,AdapterInfo.PermanentAddr[0],AdapterInfo.PermanentAddr[1],AdapterInfo.PermanentAddr[2]
-							,AdapterInfo.PermanentAddr[3],AdapterInfo.PermanentAddr[4],AdapterInfo.PermanentAddr[5]
-							);
-					break;
+					if (strcmp(guid,device[tot_dev].name)==0)
+					{
+						/* Device Index */
+						device[tot_dev].index = i;
+
+						/* Device Mac Address */
+						sprintf_s(device[tot_dev].mac,18,"%02X:%02X:%02X:%02X:%02X:%02X"
+								,AdapterInfo.PermanentAddr[0],AdapterInfo.PermanentAddr[1],AdapterInfo.PermanentAddr[2]
+								,AdapterInfo.PermanentAddr[3],AdapterInfo.PermanentAddr[4],AdapterInfo.PermanentAddr[5]
+								);
+						break;
+					}
+
+					FREE(guid);
 				}
-
-				FREE(guid);
 			}
 
 			/* Device Description */
@@ -777,31 +808,33 @@ void find_devices(void)
 				{
 					response = NmGetAdapter(inputHandle, i, &AdapterInfo);
 					if(response != ERROR_SUCCESS)
-					{sprintf_s(err_str,sizeof(err_str),"Error getting adapter info: 0x%X\n",response);err_flag=-1;return;}
-				
-					sizeBuff = wcslen(AdapterInfo.FriendlyName)+1;
-					guid = (char *)MALLOC(sizeBuff);
-					sprintf_s(guid, sizeBuff, "%S", AdapterInfo.FriendlyName);
-
-					if (strstr(guid,"NDISWAN")!=NULL)
+					{/* sprintf_s(err_str,sizeof(err_str),"Error getting adapter info: 0x%X",response);err_flag=-1;return */;}
+					else
 					{
-						/* Device Index */
-						device[tot_dev].index = i;
+						sizeBuff = wcslen(AdapterInfo.FriendlyName)+1;
+						guid = (char *)MALLOC(sizeBuff);
+						sprintf_s(guid, sizeBuff, "%S", AdapterInfo.FriendlyName);
 
-						/* Device Mac Address */
-						sprintf_s(device[tot_dev].mac,18,"%02X:%02X:%02X:%02X:%02X:%02X"
-								,AdapterInfo.PermanentAddr[0],AdapterInfo.PermanentAddr[1],AdapterInfo.PermanentAddr[2]
-								,AdapterInfo.PermanentAddr[3],AdapterInfo.PermanentAddr[4],AdapterInfo.PermanentAddr[5]
-								);
-						break;
+						if (strstr(guid,"NDISWAN")!=NULL)
+						{
+							/* Device Index */
+							device[tot_dev].index = i;
+
+							/* Device Mac Address */
+							sprintf_s(device[tot_dev].mac,18,"%02X:%02X:%02X:%02X:%02X:%02X"
+									,AdapterInfo.PermanentAddr[0],AdapterInfo.PermanentAddr[1],AdapterInfo.PermanentAddr[2]
+									,AdapterInfo.PermanentAddr[3],AdapterInfo.PermanentAddr[4],AdapterInfo.PermanentAddr[5]
+									);
+							break;
+						}
+
+						FREE(guid);
 					}
-
-					FREE(guid);
 				}
 			}
 
 			/* DEBUG BEGIN */
-			if(DEBUG_MODE)
+			if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
 			{
 				fprintf(debug_log,"\t----====[DEVICE N.%02d]====----\n",tot_dev);
 				fprintf(debug_log,"\tINDEX:\t%d\n",device[tot_dev].index);
@@ -812,6 +845,9 @@ void find_devices(void)
 				fprintf(debug_log,"\tNET:\t%s\n",device[tot_dev].net);
 				fprintf(debug_log,"\tMASK:\t%s\n",device[tot_dev].mask);
 				fprintf(debug_log,"\t\n",tot_dev);
+
+				fclose(debug_log);
+				debug_log = NULL;
 			}
 			/* DEBUG END */
 
@@ -826,8 +862,12 @@ void find_devices(void)
 	//inputHandle = NULL;
 
 	/* DEBUG BEGIN */
-	if(DEBUG_MODE)
-	{fprintf(debug_log,"========================================================================================[DEVICE]\n\n");}
+	if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
+	{
+		fprintf(debug_log,"========================================================================================[DEVICE]\n\n");
+		fclose(debug_log);
+		debug_log = NULL;
+	}
 	/* DEBUG END */
 }
 
@@ -864,8 +904,12 @@ void select_device(char *dev)
     num_dev=0;
 
 	/* DEBUG BEGIN */
-	if(DEBUG_MODE)
-	{fprintf(debug_log,"\nSEARCHING FOR: %s\n",dev);}
+	if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
+	{
+		fprintf(debug_log,"\nSEARCHING FOR: %s\n",dev);
+		fclose(debug_log);
+		debug_log = NULL;
+	}
     /* DEBUG END */
 
     for(num_dev=1; num_dev<=tot_dev; num_dev++)
@@ -873,9 +917,11 @@ void select_device(char *dev)
         IpInNet = ip_in_net(dev,device[num_dev].net,device[num_dev].mask);
 
         /* DEBUG BEGIN */
-        if(DEBUG_MODE)
+        if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
         {
             fprintf(debug_log,"\nNAME: %s\nIP: %s\nNET: %s\nMASK: %s\nIpInNet: %i\n",device[num_dev].name,device[num_dev].ip,device[num_dev].net,device[num_dev].mask,IpInNet);
+			fclose(debug_log);
+			debug_log = NULL;
         }
         /* DEBUG END */
 
@@ -884,8 +930,12 @@ void select_device(char *dev)
             indice++;
             find[indice]=num_dev;
 			/* DEBUG BEGIN */
-			if(DEBUG_MODE)
-			{fprintf(debug_log,"\n[%i] Trovato Device n°%i [%s]\n",indice,num_dev,device[num_dev].name);}
+			if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
+			{
+				fprintf(debug_log,"\n[%i] Trovato Device n°%i [%s]\n",indice,num_dev,device[num_dev].name);
+				fclose(debug_log);
+				debug_log = NULL;
+			}
 			/* DEBUG END */
         }
     }
@@ -896,8 +946,12 @@ void select_device(char *dev)
     {
         num_dev=find[indice];
 		/* DEBUG BEGIN */
-        if(DEBUG_MODE)
-        {fprintf(debug_log,"\n[%i] Scelto Device n°%i [%s]\n",indice,num_dev,device[num_dev].name);}
+        if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
+        {
+			fprintf(debug_log,"\n[%i] Scelto Device n°%i [%s]\n",indice,num_dev,device[num_dev].name);
+			fclose(debug_log);
+			debug_log = NULL;
+		}
         /* DEBUG END */
         
         indice--;
@@ -935,8 +989,12 @@ void initialize(char *dev, UINT promisc)
 	{bufferTot[i]=NULL;}
 	
 	/* DEBUG BEGIN */
-	if(DEBUG_MODE)
-	{fprintf(debug_log,"\nNUMERO DI SLOT NEL BUFFER CICLICO : %d\n\n",num_unit);}
+	if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
+	{
+		fprintf(debug_log,"\nNUMERO DI SLOT NEL BUFFER CICLICO : %d\n\n",num_unit);
+		fclose(debug_log);
+		debug_log = NULL;
+	}
 	/* DEBUG END */
 
     if (online==0)
@@ -947,22 +1005,26 @@ void initialize(char *dev, UINT promisc)
 		/* Open Capture File */
 		response = NmOpenCaptureFile((LPCWSTR)fileName, &inputHandle);
 		if(response != ERROR_SUCCESS)
-		{sprintf_s(err_str,sizeof(err_str),"Error opening input file: 0x%X\n",response);err_flag=-1;return;}
+		{sprintf_s(err_str,sizeof(err_str),"Error opening input file: 0x%X",response);err_flag=-1;return;}
 		
 		response = NmGetFrameCount(inputHandle, &(stats.pkt_tot));
 		if(response != ERROR_SUCCESS)
-		{sprintf_s(err_str,sizeof(err_str),"Error counting packet in file: 0x%X\n",response);err_flag=-1;return;}
+		{sprintf_s(err_str,sizeof(err_str),"Error counting packet in file: 0x%X",response);err_flag=-1;return;}
 
 		/* DEBUG BEGIN */
-		if(DEBUG_MODE)
-		{fprintf(debug_log,"\n[ OFFLINE MODE ]    [ File Name: %S ]    [ Packet in File: %u ]\n",fileName,stats.pkt_tot);}
+		if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
+		{
+			fprintf(debug_log,"\n[ OFFLINE MODE ]    [ File Name: %S ]    [ Packet in File: %u ]\n",fileName,stats.pkt_tot);
+			fclose(debug_log);
+			debug_log = NULL;
+		}
 		/* DEBUG END */
 
 		for(i = 0; i < stats.pkt_tot; i++)
 		{
 			response = NmGetFrame(inputHandle, i, &rawFrame);
 			if(response != ERROR_SUCCESS)
-			{sprintf_s(err_str,sizeof(err_str),"Error getting packet from file: 0x%X\n",response);err_flag=-1;return;}
+			{sprintf_s(err_str,sizeof(err_str),"Error getting packet from file: 0x%X",response);err_flag=-1;return;}
 			theCallback(inputHandle, adapterIndex, outputHandle, rawFrame);
 			NmCloseHandle(rawFrame);
 			rawFrame = NULL;
@@ -977,16 +1039,18 @@ void initialize(char *dev, UINT promisc)
         if(err_flag != 0) {return;}
 
 		adapterIndex = device[num_dev].index;
+		if(adapterIndex == -1)
+		{sprintf_s(err_str,sizeof(err_str),"Can't find adapter in Network Monitor");err_flag=-1;return;}
 
 		/* Get the adapter info */
 		response = NmGetAdapter(inputHandle, adapterIndex, &AdapterInfo);
 		if(response != ERROR_SUCCESS)
-		{sprintf_s(err_str,sizeof(err_str),"Error getting adapter info: 0x%X\n",response);err_flag=-1;return;}
+		{sprintf_s(err_str,sizeof(err_str),"Error getting adapter info: 0x%X",response);err_flag=-1;return;}
 
 		/* Configure the adapter */
 		response = NmConfigAdapter(inputHandle, adapterIndex, theCallback, outputHandle, NmReturnRemainFrames);
 		if(response != ERROR_SUCCESS)
-		{sprintf_s(err_str,sizeof(err_str),"Error configuring the adapter: 0x%X\n",response);err_flag=-1;return;}
+		{sprintf_s(err_str,sizeof(err_str),"Error configuring the adapter: 0x%X",response);err_flag=-1;return;}
 
 		/* Start Capture */
 		if ((promisc == 1) && (AdapterInfo.PModeEnabled))
@@ -999,16 +1063,19 @@ void initialize(char *dev, UINT promisc)
 		}
 		
 		if(response != ERROR_SUCCESS)
-		{sprintf_s(err_str,sizeof(err_str),"Error starting capture: 0x%X\n",response);err_flag=-1;return;}
+		{sprintf_s(err_str,sizeof(err_str),"Error starting capture: 0x%X",response);err_flag=-1;return;}
 
         /* DEBUG BEGIN */
-        if(DEBUG_MODE)
+        if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
         {
             if(num_dev>0)
             {
                 fprintf(debug_log,"\nInitialize Device: %s\n",device[num_dev].description);
                 fprintf(debug_log,"\nPromiscous: %i\tTimeout: %i\tMax Snap Length: %i\tMax Buffer Size: %i\n",promisc,timeout,maxSnapLen,maxBufferSize);
             }
+
+			//fclose(debug_log);
+			//debug_log = NULL;
         }
         /* DEBUG END */
     }
@@ -1028,10 +1095,15 @@ extern "C"
 	{
 		PyArg_ParseTuple(args, "i", &DEBUG_MODE);
 
-		//if(DEBUG_MODE==0) {DEBUG_MODE=1;}
+		/* if(DEBUG_MODE==0) {DEBUG_MODE=1;} */
 
 		/* DEBUG BEGIN */
-		if(DEBUG_MODE) {err_flag = fopen_s(&debug_log,"pktman.txt","w");}
+		if(DEBUG_MODE)
+		{
+			err_flag = fopen_s(&debug_log,"pktman.txt","w");
+			fclose(debug_log);
+			debug_log = NULL;
+		}
 		/* DEBUG END */
 
 		return Py_BuildValue("i",DEBUG_MODE);
@@ -1226,11 +1298,15 @@ extern "C"
 			FREE(bufferTot);
 
 			/* DEBUG BEGIN */
-			if(DEBUG_MODE) {fclose(debug_log);}
+			if(DEBUG_MODE && (debug_log != NULL))
+			{
+				fclose(debug_log);
+				debug_log = NULL;
+			}
 			/* DEBUG END */
 		}
 		else
-		{sprintf_s(err_str,sizeof(err_str),"Error stopping capture: 0x%X\n",response);err_flag=-1;}
+		{sprintf_s(err_str,sizeof(err_str),"Error stopping capture: 0x%X",response);err_flag=-1;}
 
 		PyGILState_Release(gil_state);
 		Py_END_ALLOW_THREADS;
