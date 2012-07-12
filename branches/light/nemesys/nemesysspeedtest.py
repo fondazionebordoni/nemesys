@@ -71,6 +71,7 @@ class _Checker(Thread):
     self._gui = gui
     self._type = type
     self._checkable_set = checkable_set
+    self._available_check = {RES_OS:1, RES_CPU:2, RES_RAM:3, RES_WIFI:4, RES_HOSTS:5, RES_TRAFFIC:6}
 
     self._events = {}
     self._results = {}
@@ -96,15 +97,17 @@ class _Checker(Thread):
       if (self._software_ok or self._type == 'software'):
         self._traffic_wait_hosts.clear()
 
-        for res in self._checkable_set:
-          res_flag = Event()
-          self._events[res] = res_flag
-          self._events[res].clear()
-          res_check = Thread(target = self._check_resource, args = (res,))
-          res_check.start()
+        for res in sorted(self._available_check, key = lambda res: self._available_check[res]):
+          if res in self._checkable_set:
+            res_flag = Event()
+            self._events[res] = res_flag
+            self._events[res].clear()
+            self._check_resource(res)
+            #res_check = Thread(target = self._check_resource, args = (res,))
+            #res_check.start()
 
-        while (len(self._events) > 0):
-          for res in self._events.keys():
+        # while (len(self._events) > 0):
+          # for res in self._events.keys():
             if self._events[res].isSet():
               del self._events[res]
               if (self._type == 'tester'):
@@ -129,13 +132,13 @@ class _Checker(Thread):
     self._checkable_set = checkable_set
 
   def _check_resource(self, resource):
-    if resource == RES_TRAFFIC:
-      self._traffic_wait_hosts.wait()
+    # if resource == RES_TRAFFIC:
+      # self._traffic_wait_hosts.wait()
     result = checkset(set([resource]))
     self._results.update(result)
     self._events[resource].set()
-    if resource == RES_HOSTS:
-      self._traffic_wait_hosts.set()
+    # if resource == RES_HOSTS:
+      # self._traffic_wait_hosts.set()
 
   def get_results(self):
     self._results_flag.wait()
@@ -278,7 +281,7 @@ class _Tester(Thread):
         return continue_testing
     else:
       info = 'Errore durante la misura, impossibile analizzare i dati di test'
-      wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': value1})
+      wx.CallAfter(self._gui.set_resource_info, RES_TRAFFIC, {'status': False, 'info': info, 'value': 'error'})
       return continue_testing
 
     return True
@@ -424,7 +427,7 @@ class _Tester(Thread):
     server = self._get_server()
     if server != None:
       # Scaricamento del task dallo scheduler
-      task = self._download_task(server)
+      # task = self._download_task(server)
       self._update_gauge()
       task = Task(0, '2010-01-01 10:01:00', server, '/download/1000.rnd', 'upload/1000.rnd', 4, 4, 10, 4, 4, 0, True)
 
@@ -440,6 +443,32 @@ class _Tester(Thread):
         id = start.strftime('%y%m%d%H%M')
         m = Measure(id, task.server, self._client, __version__, start.isoformat())
 
+        # Testa i ping
+        i = 1
+
+        while (i <= task.ping and self._running):
+
+          #wx.CallAfter(self._gui._update_messages, "Test %d di %d di ping." % (i, task.ping), 'blue')
+          test = t.testping()
+          self._update_gauge()
+          #wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.ping), 'blue')
+
+          if ((i + 2) % task.nicmp == 0):
+            sleep(task.delay)
+            prof = {}
+            prof = self._checker.get_results()
+
+          i = i + 1
+        
+        profiler.update(prof)
+        m.savetest(test, profiler)
+        wx.CallAfter(self._gui._update_messages, "Elaborazione dei dati")
+        if (move_on_key()):
+          wx.CallAfter(self._gui._update_messages, "Attuale tempo di risposta del server: %.1f ms" % test.value, 'green')
+          wx.CallAfter(self._gui._update_ping, test.value)
+        else:
+          raise Exception("chiave USB mancante")
+        
         # Testa gli ftp down
         (test, prof) = self._do_ftp_test(t, DOWN, task)
         profiler.update(prof)
@@ -462,35 +491,9 @@ class _Tester(Thread):
         else:
           raise Exception("chiave USB mancante")
 
-
-        # Testa i ping
-        i = 1
-
-        while (i <= task.ping and self._running):
-
-          wx.CallAfter(self._gui._update_messages, "Test %d di %d di ping." % (i, task.ping), 'blue')
-          test = t.testping()
-          self._update_gauge()
-          #wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.ping), 'blue')
-
-          if ((i + 2) % task.nicmp == 0):
-            sleep(task.delay)
-            prof = {}
-            prof = self._checker.get_results()
-
-          i = i + 1
-
         # Salvataggio dell'ultima misura
-        profiler.update(prof)
-        m.savetest(test, profiler)
         self._save_measure(m)
         self._prospect.save_measure(m)
-        wx.CallAfter(self._gui._update_messages, "Elaborazione dei dati")
-        if (move_on_key()):
-          wx.CallAfter(self._gui._update_messages, "Tempo di risposta del server %s ms" % int(round(test.value)), 'green')
-          wx.CallAfter(self._gui._update_ping, int(round(test.value)))
-        else:
-          raise Exception("chiave USB mancante")
 
         self._upload(self._prospect)
 
@@ -716,7 +719,7 @@ class Frame(wx.Frame):
       self.Layout()
 
     def _update_ping(self, rtt):
-      self.label_rr_ping.SetLabel("%d ms" % rtt)
+      self.label_rr_ping.SetLabel("%.1f ms" % rtt)
       self.Layout()
 
     def _reset_info(self):

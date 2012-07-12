@@ -36,11 +36,13 @@ import socket
 import sys
 import time
 import timeit
+import errno
 
 ftp = None
 file = None
 filepath = None
 size = 0
+max_retry = 8
 
 #Parametri Sniffer:
 BUFF = 8 * 1024 * 1024 # MegaByte
@@ -135,7 +137,7 @@ class Tester:
     return Proof(test_type, start, elapsed, size, counter_stats)
 
   def testftpdown(self, bytes, filename):
-    global ftp, file, size
+    global ftp, file, size, max_retry
     test_type = 'download'
     size = 0
     elapsed = 0
@@ -183,10 +185,16 @@ class Tester:
     except ftplib.all_errors as e:
       pcapper.stop()
       pcapper.join()
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Impossibile effettuare il test %s: %s' % (errorcode, test_type, e)
-      logger.error(error)
-      raise Exception(error)
+      if ((max_retry > 0) and (e.args[0] == errno.EWOULDBLOCK)):
+        max_retry -= 1
+        logger.debug("[%s] FTP socket error: %s [remaining retry: %d]" % (e.args[0], e, max_retry))
+        return self.testftpdown(bytes, filename)
+      else:
+        max_retry = 8
+        errorcode = errors.geterrorcode(e)
+        error = '[%s] Impossibile effettuare il test %s: %s' % (errorcode, test_type, e)
+        logger.error(error)
+        raise Exception(error)
 
     except Exception as e:
       errorcode = errors.geterrorcode(e)
@@ -195,7 +203,8 @@ class Tester:
       raise Exception(error)
 
     ftp.quit()
-
+    max_retry = 8
+    
     return Proof(test_type, start, elapsed, size, counter_stats)
 
   def testping(self):

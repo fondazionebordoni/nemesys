@@ -171,7 +171,7 @@ def _check_cpu(res = RES_CPU):
   
   CHECK_VALUES[res] = None
   
-  for check in range(5):
+  for check in range(4):
     value = _get_float_tag(tag_cpu.split('.', 1)[1], th_cpu - 1, tag_cpu.split('.', 1)[0])
     if value != None:
       tot_value += value 
