@@ -482,19 +482,20 @@ class _Tester(Thread):
         # Testa gli ftp up
         (test, prof) = self._do_ftp_test(t, UP, task)
         profiler.update(prof)
-        m.savetest(test, profiler)
+        m.savetest(test, profiler)        
         wx.CallAfter(self._gui._update_messages, "Elaborazione dei dati")
+        
+        # Salvataggio della misura
+        self._save_measure(m)
+        self._prospect.save_measure(m)
+        self._upload(self._prospect)
+        # Fine Salvataggio
+        
         if (move_on_key()):
           wx.CallAfter(self._gui._update_messages, "Upload bandwith %s kbps" % self._get_bandwith(test), 'green')
           wx.CallAfter(self._gui._update_up, self._get_bandwith(test))
         else:
           raise Exception("chiave USB mancante")
-
-        # Salvataggio dell'ultima misura
-        self._save_measure(m)
-        self._prospect.save_measure(m)
-
-        self._upload(self._prospect)
 
       except Exception as e:
         logger.warning('Misura sospesa per eccezione: %s.' % e)
