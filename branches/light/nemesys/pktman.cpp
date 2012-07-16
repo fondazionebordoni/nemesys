@@ -276,8 +276,8 @@ void writeBuffer(HANDLE rawFrame)
 	PBYTE buffer_data, buffer_mac;
 	char *pkt_data;
 
-	packet_header *pkt_header = (packet_header *)MALLOC(16);
-	packet_unit *packet = (packet_unit *)MALLOC(maxSnapLen+16);
+	packet_header *pkt_header = (packet_header *)MALLOC(sizeof(packet_header));
+	packet_unit *packet = (packet_unit *)MALLOC(sizeof(packet_unit));
 
 	/* Frame TimeStamp */
 	response = NmGetFrameTimeStamp(rawFrame, &timestamp);
@@ -364,6 +364,7 @@ void writeBuffer(HANDLE rawFrame)
 		else
 		{
 			memcpy_s(pkt_data, SnapLen, buffer_mac, 14);
+			FREE(buffer_mac);
 		}
 		
 		memcpy_s(pkt_data + 14, SnapLen, buffer_data + (14 + ExtraByte), (SnapLen - 14));
@@ -375,7 +376,7 @@ void writeBuffer(HANDLE rawFrame)
 		/* Fill PACKET with HEADER and DATA */
 		packet->header = pkt_header;
 		packet->data = pkt_data;
-	
+
 		/* WRITE BUFFER */
 		index = (stats.last_write+1) % num_unit;
 		if (bufferTot[index] == NULL)
@@ -496,10 +497,6 @@ void sniffer()
 			}
 			/* DEBUG END */
 			
-			FREE(bufferTot[index]);
-			bufferTot[index] = NULL;
-			stats.last_read++;
-
 			if (sniff_mode > 0)
 			{
 				py_pkt_header = PyString_FromStringAndSize((const char *)header,sizeof(*header));
@@ -517,6 +514,12 @@ void sniffer()
 				}
 			}
 
+			FREE(bufferTot[index]->header);
+			FREE(bufferTot[index]->data);
+			FREE(bufferTot[index]);
+			bufferTot[index] = NULL;
+			stats.last_read++;
+			
 			sprintf_s(err_str,sizeof(err_str),"One packet pulled");
 			break;
 		}
@@ -983,7 +986,7 @@ void initialize(char *dev, UINT promisc)
 	{maxBufferSize = (44*1024000);}
 
 	num_unit = maxBufferSize / (maxSnapLen + 16);
-	bufferTot = (packet_unit**)MALLOC(num_unit*(maxSnapLen + 16));
+	bufferTot = (packet_unit**)MALLOC(num_unit*(sizeof(packet_unit)));
 
 	for (i = 0; i <= num_unit; i++)
 	{bufferTot[i]=NULL;}
