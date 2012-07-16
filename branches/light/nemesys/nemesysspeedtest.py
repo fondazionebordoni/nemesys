@@ -299,41 +299,48 @@ class _Tester(Thread):
 
   def _get_server(self, servers = set([Server('NAMEX', '193.104.137.133', 'NAP di Roma'), Server('MIX', '193.104.137.4', 'NAP di Milano')])):
 
-    maxREP = 3
-    best_delay = 8000
-    best_server = None
+    maxREP = 4
+    best = {}
+    best['start'] = None
+    best['delay'] = 8000
+    best['server'] = None
     RTT = {}
 
     wx.CallAfter(self._gui._update_messages, "Scelta del server di misura in corso")
 
     for server in servers:
-      RTT[server] = best_delay
+      RTT[server.name] = best['delay']
 
     for repeat in range(maxREP):
+      wx.CallAfter(self._gui._update_messages, "Test %d di %d di ping." % (repeat+1, maxREP), 'blue')
+      self._update_gauge()
       for server in servers:
         try:
-          delay = ping.do_one("%s" % server.ip, 1)
-          if (delay < RTT[server]):
-            RTT[server] = delay
-          if (delay < best_delay):
-            best_delay = delay
-            best_server = server
+          start = None
+          delay = 0
+          start = datetime.fromtimestamp(timestampNtp())
+          delay = ping.do_one("%s" % server.ip, 1) * 1000
+          if (delay < RTT[server.name]):
+            RTT[server.name] = delay
+          if (delay < best['delay']):
+            best['start'] = start
+            best['delay'] = delay
+            best['server'] = server
         except Exception as e:
           logger.debug('Errore durante il ping dell\'host %s: %s' % (server.ip, e))
           pass
 
-    if best_server != None:
+    if best['server'] != None:
       for server in servers:
-        if (RTT[server] != 8000):
-          wx.CallAfter(self._gui._update_messages, "Distanza dal %s: %.1f ms" % (server.name, RTT[server] * 1000), 'blue')
+        if (RTT[server.name] != 8000):
+          wx.CallAfter(self._gui._update_messages, "Distanza dal %s: %.1f ms" % (server.name, RTT[server.name]), 'blue')
         else:
           wx.CallAfter(self._gui._update_messages, "Distanza dal %s: TimeOut" % (server.name), 'blue')
-      wx.CallAfter(self._gui._update_messages, "Scelto il server di misura %s" % best_server.name)
-      # return best_server
+      wx.CallAfter(self._gui._update_messages, "Scelto il server di misura %s" % best['server'].name)
     else:
       wx.CallAfter(self._gui._update_messages, "Impossibile eseguire i test poiche' i server risultano irragiungibili da questa linea. Contattare l'helpdesk del progetto Misurainternet per avere informazioni sulla risoluzione del problema.", 'red')
 
-    return best_server
+    return best
 
   def _do_ftp_test(self, tester, type, task):
     i = 1
@@ -424,7 +431,8 @@ class _Tester(Thread):
     # TODO Rimuovere dopo aver sistemato il backend
     task = None
     sleep(1)
-    server = self._get_server()
+    ping_test = self._get_server()
+    server = ping_test['server']
     if server != None:
       # Scaricamento del task dallo scheduler
       # task = self._download_task(server)
@@ -444,27 +452,18 @@ class _Tester(Thread):
         m = Measure(id, task.server, self._client, __version__, start.isoformat())
 
         # Testa i ping
-        i = 1
-
-        while (i <= task.ping and self._running):
-
-          #wx.CallAfter(self._gui._update_messages, "Test %d di %d di ping." % (i, task.ping), 'blue')
-          test = t.testping()
-          self._update_gauge()
-          #wx.CallAfter(self._gui._update_messages, "Fine del test %d di %d di ping." % (i, task.ping), 'blue')
-
-          if ((i + 2) % task.nicmp == 0):
-            sleep(task.delay)
-            prof = {}
-            prof = self._checker.get_results()
-
-          i = i + 1
+        prof = {}
+        prof = self._checker.get_results()
+        
+        test = t.testping()
+        test.start = ping_test['start']
+        test.value = ping_test['delay']
         
         profiler.update(prof)
         m.savetest(test, profiler)
         wx.CallAfter(self._gui._update_messages, "Elaborazione dei dati")
         if (move_on_key()):
-          wx.CallAfter(self._gui._update_messages, "Attuale tempo di risposta del server: %.1f ms" % test.value, 'green')
+          wx.CallAfter(self._gui._update_messages, "Tempo di risposta del server: %.1f ms" % test.value, 'green')
           wx.CallAfter(self._gui._update_ping, test.value)
         else:
           raise Exception("chiave USB mancante")
