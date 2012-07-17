@@ -625,8 +625,8 @@ def checkset(check_set = set()):
         if (info != None):
           status = True
       except Exception as e:
-        errorcode = errors.geterrorcode(e)
-        logger.error('Errore [%d]: %s' % (errorcode, e))
+        # errorcode = errors.geterrorcode(e)
+        # logger.error('Errore [%d]: %s' % (errorcode, e))
         info = e
         status = False
 

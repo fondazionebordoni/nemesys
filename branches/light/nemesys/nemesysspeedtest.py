@@ -312,6 +312,7 @@ class _Tester(Thread):
       RTT[server.name] = best['delay']
 
     for repeat in range(maxREP):
+      sleep(1)
       wx.CallAfter(self._gui._update_messages, "Test %d di %d di ping." % (repeat+1, maxREP), 'blue')
       self._update_gauge()
       for server in servers:
