@@ -95,7 +95,7 @@ class _Checker(Thread):
       else:
         self._software_ok = True
 
-      if (self._type != 'software'):
+      if (self._software_ok and self._type != 'software'):
         self._check_device()
         
       if (self._software_ok or self._type == 'software'):
