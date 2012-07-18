@@ -1,3 +1,8 @@
+/* -------------------------------- */
+/* | PKTMAN by Domenico Izzo 2012 | */
+/* |  c/o Fondazione Ugo Bordoni  | */
+/* -------------------------------- */
+
 #include <Python.h>
 
 #include <conio.h>			/* serve per getch() */
@@ -1129,9 +1134,11 @@ extern "C"
 			select_device(dev);
 			if(err_flag != 0) {return Py_BuildValue ("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);}
 
-			return Py_BuildValue ("{s:i,s:s,s:s,s:s,s:s,s:s}",
+			return Py_BuildValue ("{s:i,s:s,s:i,s:s,s:s,s:s,s:s,s:s,s:s}",
 								  "err_flag",err_flag,"err_str",err_str,
-								  "dev_name",device[num_dev].name,"dev_ip",device[num_dev].ip,
+								  "dev_index",device[num_dev].index,
+								  "dev_name",device[num_dev].name,"dev_descr",device[num_dev].description,
+								  "dev_mac",device[num_dev].mac,"dev_ip",device[num_dev].ip,
 								  "dev_net",device[num_dev].net,"dev_mask",device[num_dev].mask);
 		}
 
