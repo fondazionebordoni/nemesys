@@ -15,12 +15,12 @@ from sys import platform
 from sysmonitor import checkset, RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_TRAFFIC, RES_HOSTS
 from task import Task
 from tester import Tester
-from threading import Thread, Event
+from threading import Thread, Event, enumerate
 from time import sleep
 from timeNtp import timestampNtp
 from urlparse import urlparse
 from xmlutils import xml2task
-from usbkey import check_usb, move_on_key
+from usbkey import check_usb, move_on_key, guid_to_name
 from logger import logging
 from collections import deque
 import hashlib
@@ -46,7 +46,7 @@ TH_TRAFFIC = 0.1
 TH_TRAFFIC_INV = 0.9
 # Soglia per numero di pacchetti persi
 TH_PACKETDROP = 0.05
-MAX_TEST_ERROR = 0
+MAX_TEST_ERROR = 5
 
 TOTAL_STEPS = 12
 
@@ -79,6 +79,7 @@ class _Checker(Thread):
     self._results_flag = Event()
     self._traffic_wait_hosts = Event()
     self._software_ok = False
+    self._device = None
 
   def run(self):
 
@@ -94,6 +95,9 @@ class _Checker(Thread):
       else:
         self._software_ok = True
 
+      if (self._type != 'software'):
+        self._check_device()
+        
       if (self._software_ok or self._type == 'software'):
         self._traffic_wait_hosts.clear()
 
@@ -149,6 +153,21 @@ class _Checker(Thread):
       results = self._results
     return results
 
+  def _check_device(self):
+    ip = sysmonitor.getIp()
+    id = sysmonitor.getDev(ip)
+    if (self._device == None):
+      self._device = id
+      if (self._type != 'tester'):
+        wx.CallAfter(self._gui._update_messages, "Interfaccia di rete in esame: %s" % guid_to_name(id), 'green')
+        wx.CallAfter(self._gui._update_messages, "Indirizzo IP dell'interfaccia di rete in esame: %s" % ip, 'green')
+    elif (id != self._device):
+      self._cycle.clear()
+      self._software_ok = False
+      wx.CallAfter(self._gui._update_messages, "Test interrotto per variazione interfaccia di rete di riferimento.", 'red')
+      wx.CallAfter(self._gui.stop)
+      
+    
   def _check_software(self):
     check = False
     if (self._deadline()):
@@ -216,12 +235,13 @@ class _Tester(Thread):
     self._httptimeout = options.httptimeout
     self._md5conf = md5conf
 
-    self._running = True
+    self._running = Event()
 
   def join(self, timeout = None):
-    logger.debug("Richiesta di close")
+    self._running.clear()
+    logger.debug("Chiusura del tester")
     #wx.CallAfter(self._gui._update_messages, "Attendere la chiusura del programma...")
-    self._running = False
+    
 
   def _test_gating(self, test, testtype):
     '''
@@ -356,7 +376,7 @@ class _Tester(Thread):
     elif type == UP:
       test_number = task.upload
 
-    while (i <= test_number and self._running):
+    while (i <= test_number and self._running.isSet()):
 
       wx.CallAfter(self._gui._update_messages, "Test %d di %d di FTP %s" % (i, test_number, type), 'blue')
 
@@ -366,7 +386,7 @@ class _Tester(Thread):
       # Esecuzione del test
       test = None
       error = 0
-      while (error < MAX_TEST_ERROR or test == None):
+      while (error < MAX_TEST_ERROR and test == None):
         sleep(1)
         try:
           if type == DOWN:
@@ -378,7 +398,10 @@ class _Tester(Thread):
           else:
             logger.warn("Tipo di test da effettuare non definito!")
         except Exception as e:
-          error = error + 1
+          if (self._running.isSet()):
+            error += 1
+          else:
+            error = MAX_TEST_ERROR
           test = None
           logger.error("Errore durante l'esecuzione di un test: %s" % e)
           wx.CallAfter(self._gui._update_messages, "Errore durante l'esecuzione di un test: %s" % e, 'red')
@@ -418,6 +441,8 @@ class _Tester(Thread):
 
   def run(self):
 
+    self._running.set()
+    
     logger.debug('Inizio dei test di misura')
     wx.CallAfter(self._gui._update_messages, "Inizio dei test di misura")
     self._update_gauge()
@@ -507,7 +532,7 @@ class _Tester(Thread):
 
     self._checker.stop()
     wx.CallAfter(self._gui.stop)
-    self.join()
+    #self.join()
 
   def _upload(self, prospect):
     # TODO
@@ -581,17 +606,19 @@ class Frame(wx.Frame):
         self.__set_properties()
         self.__do_layout()
 
-        #self.Bind(wx.EVT_CLOSE, self._on_close)
+        self.Bind(wx.EVT_CLOSE, self._on_close)
         self.Bind(wx.EVT_BUTTON, self._play, self.bitmap_button_play)
         self.Bind(wx.EVT_BUTTON, self._check, self.bitmap_button_check)
         # end wxGlade
 
-    def _on_close_event(self, event):
-
+    def _on_close(self, event):
       logger.debug("Richiesta di close")
-      #if (self._tester and self._tester != None):
-      #  self._tester.join()
-      self.Destroy()
+      dlg = wx.MessageDialog(self,"Vuoi davvero chiudere Ne.Me.Sys. Speedtest?","Ne.Me.Sys. Speedtest", wx.OK|wx.CANCEL|wx.ICON_QUESTION)
+      result = dlg.ShowModal()
+      dlg.Destroy()
+      if result == wx.ID_OK:
+        self._killTester()    
+        self.Destroy()
 
     def __set_properties(self):
         # begin wxGlade: Frame.__set_properties
@@ -675,6 +702,8 @@ class Frame(wx.Frame):
 
     def stop(self):
       #self.bitmap_button_play.SetBitmapLabel(wx.Bitmap(path.join(paths.ICONS, u"play.png")))
+
+      self._killTester()
       self._checker = _Checker(self, 'software', set())
       self._checker.start()
       self._check_software = self._checker.get_results()
@@ -684,6 +713,16 @@ class Frame(wx.Frame):
 
       self.update_gauge(0)
 
+    def _killTester(self):
+      if (self._tester and self._tester != None):
+        self._tester.join()
+        for thread in enumerate():
+          if thread.isAlive():
+            try:
+              thread._Thread__stop()
+            except:
+              logger.error("%s could not be terminated" % str(thread.getName()))
+      
     def _check(self, event):
       logger.debug('Profilazione dello stato del sistema di misura.')
       self._update_messages("Profilazione dello stato del sistema di misura.")
