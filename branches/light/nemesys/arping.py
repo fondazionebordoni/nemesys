@@ -70,7 +70,6 @@ def receive_arping(MACsrc):
   while True:
 
     received = pktman.pull(1)
-    pktman.clear()
 
     if (received['err_flag'] < 1):
       logger.debug("(%s) Numero di Host trovati: %d" % (received['err_str'], len(IPtable)))

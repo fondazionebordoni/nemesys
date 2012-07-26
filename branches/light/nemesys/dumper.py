@@ -62,7 +62,6 @@ if __name__ == '__main__':
 
   while(status > 0):
     mypkt = pktman.pull(1)
-    pktman.clear()
     if (mypkt != None):
       status = mypkt['err_flag']
       if (status == 1):

@@ -143,7 +143,6 @@ class Pcapper(Thread):
     try:
       if mode != 0:
         data = pktman.pull(mode)
-        pktman.clear()
         if (data != None):
           if (data['err_flag'] == -2):
             self._status = LOOP
@@ -156,7 +155,6 @@ class Pcapper(Thread):
         remaining = self._get_remaining()
         while remaining > 0:
           data = pktman.pull(mode)
-          pktman.clear()
           remaining -= 1
         return None
     except Exception as e:

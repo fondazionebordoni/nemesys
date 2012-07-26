@@ -82,7 +82,6 @@ class Sniffer(Thread):
           while (loop > 0):
             try:
               sniffer_data = pktman.pull(sniff_mode)
-              pktman.clear()
               if (sniffer_data['err_flag']==-2):
                 break
               elif (sniffer_data['err_flag'] < 0):
