@@ -28,6 +28,71 @@
 #define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
 #define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
 
+char *MediumName[] =
+{
+	"NdisMedium802_3",
+	"NdisMedium802_5",
+	"NdisMediumFddi",
+	"NdisMediumWan",
+	"NdisMediumLocalTalk",
+	"NdisMediumDix",
+	"NdisMediumArcnetRaw",
+	"NdisMediumArcnet878_2",
+	"NdisMediumAtm",
+	"NdisMediumWirelessWan",
+	"NdisMediumIrda",
+	"NdisMediumBpc",
+	"NdisMediumCoWan",
+	"NdisMedium1394",
+	"NdisMediumInfiniBand",
+	#if ((NTDDI_VERSION >= NTDDI_VISTA) || NDIS_SUPPORT_NDIS6)
+		"NdisMediumTunnel",
+		"NdisMediumNative802_11",
+		"NdisMediumLoopback",
+		#if (NTDDI_VERSION >= NTDDI_WIN7)
+			"NdisMediumWiMAX",
+			"NdisMediumIP",
+		#endif 
+	#endif 
+	"NdisMediumMax" 
+};
+
+char *PhysicalMediumName[] = 
+{
+	"NdisPhysicalMediumUnspecified",
+	"NdisPhysicalMediumWirelessLan",
+	"NdisPhysicalMediumCableModem",
+	"NdisPhysicalMediumPhoneLine",
+	"NdisPhysicalMediumPowerLine",
+	"NdisPhysicalMediumDSL",			/* includes ADSL and UADSL (G.Lite) */
+	"NdisPhysicalMediumFibreChannel",
+	"NdisPhysicalMedium1394",
+	"NdisPhysicalMediumWirelessWan",
+	"NdisPhysicalMediumNative802_11",
+	"NdisPhysicalMediumBluetooth",
+	"NdisPhysicalMediumInfiniband",
+	"NdisPhysicalMediumWiMax",
+	"NdisPhysicalMediumUWB",
+	"NdisPhysicalMedium802_3",
+	"NdisPhysicalMedium802_5",
+	"NdisPhysicalMediumIrda",
+	"NdisPhysicalMediumWiredWAN",
+	"NdisPhysicalMediumWiredCoWan",
+	"NdisPhysicalMediumOther",
+};
+
+struct device
+{
+	int		index;
+	int		type;
+	char	*description;
+    char	*name;
+	char	*mac;
+    char	*ip;
+    char	*net;
+    char	*mask;
+};
+
 struct packet_header
 {
 	ULONG	sec;
@@ -42,15 +107,11 @@ struct packet_unit
 	char*			data;
 };
 
-struct devices
+char *sniff_error[] = 
 {
-	int		index;
-	char	*description;
-    char	*name;
-	char	*mac;
-    char	*ip;
-    char	*net;
-    char	*mask;
+	"Timeout was reached during packet receive",
+	"One packet pulled",
+	"Packet out of range",
 };
 
 struct statistics
@@ -77,8 +138,6 @@ PyObject *py_pkt_header, *py_pkt_data;
 
 time_t sniff_start = 0, sniff_stop = 0;
 
-int tot_dev=0, num_dev=0;
-
 int sniff_mode=0, online=1;
 
 UINT data_link=0, timeout = 1;
@@ -86,8 +145,8 @@ UINT data_link=0, timeout = 1;
 UINT pkt_start=0, pkt_stop=0;
 
 /* NMapi variables START */
-HANDLE inputHandle;
-HANDLE outputHandle;
+HANDLE inputHandle = NULL;
+HANDLE outputHandle = NULL;
 
 ULONG response = 0;
 ULONG adapterIndex = 0;
@@ -104,7 +163,7 @@ packet_unit **bufferTot;
 UINT num_unit = 0;
 /* Buffer Variables END */
 
-struct devices device[22];
+struct device devices[22];
 struct statistics stats;
 
 
@@ -279,10 +338,12 @@ void writeBuffer(HANDLE rawFrame)
 	UINT64 timestamp = 0;
 	
 	PBYTE buffer_data, buffer_mac;
+	packet_unit *packet;
+	packet_header *pkt_header;
 	char *pkt_data;
 
-	packet_header *pkt_header = (packet_header *)MALLOC(sizeof(packet_header));
-	packet_unit *packet = (packet_unit *)MALLOC(sizeof(packet_unit));
+	packet = (packet_unit *)MALLOC(sizeof(packet_unit));
+	pkt_header = (packet_header *)MALLOC(sizeof(packet_header));
 
 	/* Frame TimeStamp */
 	response = NmGetFrameTimeStamp(rawFrame, &timestamp);
@@ -435,13 +496,15 @@ void __stdcall theCallback(HANDLE NMhandle, ULONG NMdevice, PVOID NMcontext, HAN
 }
 
 
-void sniffer()
+int sniffer()
 {
+	int sniff_status=0;
+
 	struct tm *ts;
 	time_t timestamp;
 	char timestamp_string[44];
 
-    struct packet_header *header;
+    packet_header *header;
     char *data;
 
 	UINT index=0;
@@ -451,12 +514,11 @@ void sniffer()
 	
 	if (timeout >= 1000)
 	{
-		sprintf_s(err_str,sizeof(err_str),"Timeout was reached during packet receive");
-		err_flag=0;
-
 		sniff_start = time(NULL);
 		if (sniff_stop < sniff_start)
-		{sniff_stop = sniff_start + ((time_t)(timeout/1000)) + 1;}	
+		{sniff_stop = sniff_start + ((time_t)(timeout/1000)) + 1;}
+
+		sniff_status=0;
 	}
 	else
 	{
@@ -506,7 +568,7 @@ void sniffer()
 			{
 				py_pkt_header = PyString_FromStringAndSize((const char *)header,sizeof(*header));
 				py_pkt_data = PyString_FromStringAndSize((const char *)data,(header->caplen));
-				err_flag=1;
+				sniff_status=1;
 			}
 
 			if (pkt_stop>pkt_start && pkt_stop>0)
@@ -515,26 +577,28 @@ void sniffer()
 				{
 					py_pkt_header = Py_None;
 					py_pkt_data = Py_None;
-					err_flag=2;
+					sniff_status=2;
 				}
 			}
 
 			FREE(bufferTot[index]->header);
+			bufferTot[index]->header = NULL;
 			FREE(bufferTot[index]->data);
+			bufferTot[index]->data = NULL;
 			FREE(bufferTot[index]);
 			bufferTot[index] = NULL;
-			stats.last_read++;
 			
-			sprintf_s(err_str,sizeof(err_str),"One packet pulled");
+			stats.last_read++;
 			break;
 		}
 		else if (timeout < 1000)
 		{
-			sprintf_s(err_str,sizeof(err_str),"One packet pulled");
-			err_flag=1;
+			sniff_status=1;
 			break;
 		}
 	}
+
+	return sniff_status;
 }
 
 
@@ -559,6 +623,8 @@ void dumper(void)
 		debug_log = NULL;
 	}
     /* DEBUG END */
+
+	FREE(fileName);
 }
 
 
@@ -616,9 +682,9 @@ char *cidr_to_dot(ULONG cidr, char *mask)
 }
 
 
-void find_devices(void)
+UINT find_devices(void)
 {
-	UINT i = 0;
+	UINT i=0, tot_dev=0;
 	
 	struct in_addr addr;
 	char *guid, *ip, *net, *mask;
@@ -646,6 +712,16 @@ void find_devices(void)
     // IP_ADAPTER_DNS_SERVER_ADDRESS *pDnServer = NULL;
     PIP_ADAPTER_PREFIX pPrefix = NULL;
 
+	for(i = 0; i<22; i++)
+	{
+		FREE(devices[i].name);  devices[i].name = NULL;
+		FREE(devices[i].description);  devices[i].description = NULL;
+		FREE(devices[i].mac);  devices[i].mac = NULL;
+		FREE(devices[i].ip);  devices[i].ip = NULL;
+		FREE(devices[i].net);  devices[i].net = NULL;
+		FREE(devices[i].mask);  devices[i].mask = NULL;
+	}
+
 	/* DEBUG BEGIN */
 	if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
 	{
@@ -658,25 +734,58 @@ void find_devices(void)
     outBufLen = 40000;	/* Allocate a 40 KB buffer to start with. */
 
 	/* Capture Engime using NMapi */
-	response = NmOpenCaptureEngine(&inputHandle);
-	if(response != ERROR_SUCCESS)
+	if(inputHandle == NULL)
 	{
-		configNMapi();
 		response = NmOpenCaptureEngine(&inputHandle);
 		if(response != ERROR_SUCCESS)
-		{sprintf_s(err_str,sizeof(err_str),"Error opening input handle: 0x%X",response);err_flag=-1;return;}
+		{
+			configNMapi();
+			response = NmOpenCaptureEngine(&inputHandle);
+			if(response != ERROR_SUCCESS)
+			{sprintf_s(err_str,sizeof(err_str),"Error opening input handle: 0x%X",response);err_flag=-1;return tot_dev;}
+		}
 	}
 
 	response = NmGetAdapterCount(inputHandle, &adapterCount);
 	if(response != ERROR_SUCCESS)
-	{sprintf_s(err_str,sizeof(err_str),"No Sniffable Device or User Without Root Permissions");err_flag=-1;return;}
+	{sprintf_s(err_str,sizeof(err_str),"No Sniffable Device or User Without Root Permissions");err_flag=-1;return tot_dev;}
+
+	/* DEBUG BEGIN */
+	for(i = 0; i < adapterCount; i++)
+	{
+		response = NmGetAdapter(inputHandle, i, &AdapterInfo);
+		if(response != ERROR_SUCCESS)
+		{/* sprintf_s(err_str,sizeof(err_str),"Error getting adapter info: 0x%X",response);err_flag=-1;return tot_dev */;}
+		else if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
+		{
+			fprintf(debug_log,"\t----====[Network Monitor Device N.%02d]====----\n",i);
+			fprintf(debug_log,"\tGUID : %S\n", AdapterInfo.Guid);
+			fprintf(debug_log,"\tMediumType : %s [%i]\n", MediumName[AdapterInfo.MediumType], (int)AdapterInfo.MediumType);
+			fprintf(debug_log,"\tPhysicalMediumType : %s [%i]\n", PhysicalMediumName[AdapterInfo.PhysicalMediumType], (int)AdapterInfo.PhysicalMediumType);
+			fprintf(debug_log,"\tFriendlyName : %S\n", AdapterInfo.FriendlyName);
+			fprintf(debug_log,"\tConnectionName : %S\n", AdapterInfo.ConnectionName);
+			fprintf(debug_log,"\tPermanentAddr : %02X:%02X:%02X:%02X:%02X:%02X\n"
+					,AdapterInfo.PermanentAddr[0],AdapterInfo.PermanentAddr[1],AdapterInfo.PermanentAddr[2]
+					,AdapterInfo.PermanentAddr[3],AdapterInfo.PermanentAddr[4],AdapterInfo.PermanentAddr[5]
+					);
+			fprintf(debug_log,"\tCurrentAddr : %02X:%02X:%02X:%02X:%02X:%02X\n"
+					,AdapterInfo.CurrentAddr[0],AdapterInfo.CurrentAddr[1],AdapterInfo.CurrentAddr[2]
+					,AdapterInfo.CurrentAddr[3],AdapterInfo.CurrentAddr[4],AdapterInfo.CurrentAddr[5]
+					);
+			fprintf(debug_log,"\t\n");
+
+			fclose(debug_log);
+			debug_log = NULL;
+		}
+	}
+	/* DEBUG END */
 	/* -------------------------- */
 
 	do
 	{
 		pAddresses = (IP_ADAPTER_ADDRESSES *) MALLOC(outBufLen);
         if (pAddresses == NULL)
-		{sprintf_s(err_str,sizeof(err_str),"Memory allocation failed for IP_ADAPTER_ADDRESSES struct");err_flag=-1;return;}
+		{sprintf_s(err_str,sizeof(err_str),"Memory allocation failed for IP_ADAPTER_ADDRESSES struct");err_flag=-1;return tot_dev;}
 
         dwRetVal = GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen);
 		if (dwRetVal == ERROR_BUFFER_OVERFLOW)
@@ -690,7 +799,7 @@ void find_devices(void)
 	while ((dwRetVal == ERROR_BUFFER_OVERFLOW) && (nRetries < 4));
 
 	if (dwRetVal != NO_ERROR)
-	{sprintf_s(err_str,sizeof(err_str),"No Sniffable Device or User Without Root Permissions");err_flag=-1;return;}
+	{sprintf_s(err_str,sizeof(err_str),"No Sniffable Device or User Without Root Permissions");err_flag=-1;return tot_dev;}
 	else
 	{
 		tot_dev=0;
@@ -701,47 +810,63 @@ void find_devices(void)
 			tot_dev++;
 
 			/* Device Name */
-			device[tot_dev].name=(char *)MALLOC(strlen(pCurrAddresses->AdapterName)+1);
-			memcpy(device[tot_dev].name,pCurrAddresses->AdapterName,strlen(pCurrAddresses->AdapterName)+1);
+			devices[tot_dev].name=(char *)MALLOC(strlen(pCurrAddresses->AdapterName)+1);
+			memcpy(devices[tot_dev].name,pCurrAddresses->AdapterName,strlen(pCurrAddresses->AdapterName)+1);
 
 			/* Info from NMapi */
-			device[tot_dev].index = -1;
+			devices[tot_dev].index = -1;
 
-			device[tot_dev].mac = (char *)MALLOC(18*sizeof(char));
-			sprintf_s(device[tot_dev].mac,18,"00:00:00:00:00:00");
+			devices[tot_dev].mac = (char *)MALLOC(18*sizeof(char));
+			if ((int)(pCurrAddresses->PhysicalAddressLength) >= 6)
+			{
+				sprintf_s(devices[tot_dev].mac,18,"%02X:%02X:%02X:%02X:%02X:%02X"
+						,pCurrAddresses->PhysicalAddress[0],pCurrAddresses->PhysicalAddress[1],pCurrAddresses->PhysicalAddress[2]
+						,pCurrAddresses->PhysicalAddress[3],pCurrAddresses->PhysicalAddress[4],pCurrAddresses->PhysicalAddress[5]
+						);
+			}
+			else
+			{
+				sprintf_s(devices[tot_dev].mac,18,"--:--:--:--:--:--");
+			}
 
 			for(i = 0; i < adapterCount; i++)
 			{
 				response = NmGetAdapter(inputHandle, i, &AdapterInfo);
 				if(response != ERROR_SUCCESS)
-				{/* sprintf_s(err_str,sizeof(err_str),"Error getting adapter info: 0x%X",response);err_flag=-1;return */;}
+				{/* sprintf_s(err_str,sizeof(err_str),"Error getting adapter info: 0x%X",response);err_flag=-1;return tot_dev */;}
 				else
 				{
 					sizeBuff = wcslen(AdapterInfo.Guid)+1;
 					guid = (char *)MALLOC(sizeBuff);
 					sprintf_s(guid, sizeBuff, "%S", AdapterInfo.Guid);
 
-					if (strcmp(guid,device[tot_dev].name)==0)
+					if (strcmp(guid,devices[tot_dev].name)==0)
 					{
 						/* Device Index */
-						device[tot_dev].index = i;
+						devices[tot_dev].index = i;
+						/* Device Type */
+						devices[tot_dev].type = ((int)AdapterInfo.MediumType + (int)AdapterInfo.PhysicalMediumType);
 
 						/* Device Mac Address */
-						sprintf_s(device[tot_dev].mac,18,"%02X:%02X:%02X:%02X:%02X:%02X"
-								,AdapterInfo.PermanentAddr[0],AdapterInfo.PermanentAddr[1],AdapterInfo.PermanentAddr[2]
-								,AdapterInfo.PermanentAddr[3],AdapterInfo.PermanentAddr[4],AdapterInfo.PermanentAddr[5]
-								);
+						if (strcmp(devices[tot_dev].mac,"--:--:--:--:--:--")==0)
+						{
+							sprintf_s(devices[tot_dev].mac,18,"%02X:%02X:%02X:%02X:%02X:%02X"
+									,AdapterInfo.PermanentAddr[0],AdapterInfo.PermanentAddr[1],AdapterInfo.PermanentAddr[2]
+									,AdapterInfo.PermanentAddr[3],AdapterInfo.PermanentAddr[4],AdapterInfo.PermanentAddr[5]
+									);
+						}
 						break;
 					}
 
 					FREE(guid);
+					guid = NULL;
 				}
 			}
 
 			/* Device Description */
-			sizeBuff = wcslen(pCurrAddresses->Description)+1;
-			device[tot_dev].description=(char *)MALLOC(sizeBuff);
-			sprintf_s(device[tot_dev].description, sizeBuff, "%wS", pCurrAddresses->Description);
+			sizeBuff = wcslen(pCurrAddresses->FriendlyName)+1;
+			devices[tot_dev].description=(char *)MALLOC(sizeBuff);
+			sprintf_s(devices[tot_dev].description, sizeBuff, "%wS", pCurrAddresses->FriendlyName);
 
 			/* Device IP */
 			pUnicast = pCurrAddresses->FirstUnicastAddress;
@@ -754,8 +879,8 @@ void find_devices(void)
                     {
 						addr = ((struct sockaddr_in *)pUnicast->Address.lpSockaddr)->sin_addr;
 						ip = inet_ntoa(addr);
-						device[tot_dev].ip=(char *)MALLOC(strlen(ip)+1);
-						memcpy(device[tot_dev].ip,ip,strlen(ip)+1);
+						devices[tot_dev].ip=(char *)MALLOC(strlen(ip)+1);
+						memcpy(devices[tot_dev].ip,ip,strlen(ip)+1);
 						break;
                     }
 
@@ -763,11 +888,15 @@ void find_devices(void)
 				}
 
 				if (pUnicast == NULL)
-				{device[tot_dev].ip="0.0.0.0";}
+				{
+					devices[tot_dev].ip=(char *)MALLOC(8*sizeof(char));
+					sprintf_s(devices[tot_dev].ip,8,"-.-.-.-");
+				}
             }
 			else
 			{
-				device[tot_dev].ip="0.0.0.0";
+				devices[tot_dev].ip=(char *)MALLOC(8*sizeof(char));
+				sprintf_s(devices[tot_dev].ip,8,"-.-.-.-");
 			}
 
 			/* Device NET & MASK */
@@ -782,16 +911,17 @@ void find_devices(void)
 						addr = ((struct sockaddr_in *)pPrefix->Address.lpSockaddr)->sin_addr;
 						
 						net = inet_ntoa(addr);
-						device[tot_dev].net=(char *)MALLOC(strlen(net)+1);
-						memcpy(device[tot_dev].net,net,strlen(net)+1);
+						devices[tot_dev].net=(char *)MALLOC(strlen(net)+1);
+						memcpy(devices[tot_dev].net,net,strlen(net)+1);
 						
 						mask = (char *)MALLOC(16*sizeof(char));
 						
 						mask = cidr_to_dot(pPrefix->PrefixLength, mask);
-						device[tot_dev].mask=(char *)MALLOC(strlen(mask)+1);
-						memcpy(device[tot_dev].mask,mask,strlen(mask)+1);
+						devices[tot_dev].mask=(char *)MALLOC(strlen(mask)+1);
+						memcpy(devices[tot_dev].mask,mask,strlen(mask)+1);
 
 						FREE(mask);
+						mask = NULL;
 
 						break;
                     }
@@ -800,23 +930,27 @@ void find_devices(void)
 
 				if (pPrefix == NULL)
 				{
-					device[tot_dev].net="0.0.0.0";
-					device[tot_dev].mask="255.255.255.255";
+					devices[tot_dev].net=(char *)MALLOC(8*sizeof(char));
+					sprintf_s(devices[tot_dev].net,8,"-.-.-.-");
+					devices[tot_dev].mask=(char *)MALLOC(8*sizeof(char));
+					sprintf_s(devices[tot_dev].mask,8,"-.-.-.-");
 				}
             }
 			else
 			{
-				device[tot_dev].net="0.0.0.0";
-				device[tot_dev].mask="255.255.255.255";
+				devices[tot_dev].net=(char *)MALLOC(8*sizeof(char));
+				sprintf_s(devices[tot_dev].net,8,"-.-.-.-");
+				devices[tot_dev].mask=(char *)MALLOC(8*sizeof(char));
+				sprintf_s(devices[tot_dev].mask,8,"-.-.-.-");
 			}
 
-			if ((device[tot_dev].index==-1) && (strcmp(device[tot_dev].net,device[tot_dev].mask)==0))
+			if ((devices[tot_dev].index==-1) && (strcmp(devices[tot_dev].net,devices[tot_dev].mask)==0))
 			{
 				for(i = 0; i < adapterCount; i++)
 				{
 					response = NmGetAdapter(inputHandle, i, &AdapterInfo);
 					if(response != ERROR_SUCCESS)
-					{/* sprintf_s(err_str,sizeof(err_str),"Error getting adapter info: 0x%X",response);err_flag=-1;return */;}
+					{/* sprintf_s(err_str,sizeof(err_str),"Error getting adapter info: 0x%X",response);err_flag=-1;return tot_dev */;}
 					else
 					{
 						sizeBuff = wcslen(AdapterInfo.FriendlyName)+1;
@@ -826,17 +960,23 @@ void find_devices(void)
 						if (strstr(guid,"NDISWAN")!=NULL)
 						{
 							/* Device Index */
-							device[tot_dev].index = i;
+							devices[tot_dev].index = i;
+							/* Device Type */
+							devices[tot_dev].type = ((int)AdapterInfo.MediumType + (int)AdapterInfo.PhysicalMediumType);
 
 							/* Device Mac Address */
-							sprintf_s(device[tot_dev].mac,18,"%02X:%02X:%02X:%02X:%02X:%02X"
-									,AdapterInfo.PermanentAddr[0],AdapterInfo.PermanentAddr[1],AdapterInfo.PermanentAddr[2]
-									,AdapterInfo.PermanentAddr[3],AdapterInfo.PermanentAddr[4],AdapterInfo.PermanentAddr[5]
-									);
+							if (strcmp(devices[tot_dev].mac,"--:--:--:--:--:--")==0)
+							{
+								sprintf_s(devices[tot_dev].mac,18,"%02X:%02X:%02X:%02X:%02X:%02X"
+										,AdapterInfo.PermanentAddr[0],AdapterInfo.PermanentAddr[1],AdapterInfo.PermanentAddr[2]
+										,AdapterInfo.PermanentAddr[3],AdapterInfo.PermanentAddr[4],AdapterInfo.PermanentAddr[5]
+										);
+							}
 							break;
 						}
 
 						FREE(guid);
+						guid = NULL;
 					}
 				}
 			}
@@ -845,14 +985,15 @@ void find_devices(void)
 			if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
 			{
 				fprintf(debug_log,"\t----====[DEVICE N.%02d]====----\n",tot_dev);
-				fprintf(debug_log,"\tINDEX:\t%d\n",device[tot_dev].index);
-				fprintf(debug_log,"\tNAME:\t%s\n",device[tot_dev].name);
-				fprintf(debug_log,"\tDESCR:\t%s\n",device[tot_dev].description);
-				fprintf(debug_log,"\tMAC:\t%s\n",device[tot_dev].mac);
-				fprintf(debug_log,"\tIP:\t%s\n",device[tot_dev].ip);
-				fprintf(debug_log,"\tNET:\t%s\n",device[tot_dev].net);
-				fprintf(debug_log,"\tMASK:\t%s\n",device[tot_dev].mask);
-				fprintf(debug_log,"\t\n",tot_dev);
+				fprintf(debug_log,"\tNAME:\t%s\n",devices[tot_dev].name);
+				fprintf(debug_log,"\tDESCR:\t%s\n",devices[tot_dev].description);
+				fprintf(debug_log,"\tMAC:\t%s\n",devices[tot_dev].mac);
+				fprintf(debug_log,"\tIP:\t%s\n",devices[tot_dev].ip);
+				fprintf(debug_log,"\tNET:\t%s\n",devices[tot_dev].net);
+				fprintf(debug_log,"\tMASK:\t%s\n",devices[tot_dev].mask);
+				fprintf(debug_log,"\tINDEX:\t%d\n",devices[tot_dev].index);
+				fprintf(debug_log,"\tMEDIUM:\t%d\n",devices[tot_dev].type);
+				fprintf(debug_log,"\t\n");
 
 				fclose(debug_log);
 				debug_log = NULL;
@@ -864,7 +1005,10 @@ void find_devices(void)
 	}
 
 	if (pAddresses)
-	{FREE(pAddresses);}
+	{
+		FREE(pAddresses);
+		pAddresses = NULL;
+	}
 
 	//NmCloseHandle(inputHandle);
 	//inputHandle = NULL;
@@ -877,6 +1021,8 @@ void find_devices(void)
 		debug_log = NULL;
 	}
 	/* DEBUG END */
+
+	return tot_dev;
 }
 
 
@@ -900,16 +1046,17 @@ int ip_in_net(const char *ip, const char *net, const char *mask)
 }
 
 
-void select_device(char *dev)
+UINT select_device(char *dev)
 {
-	UINT indice=0, IpInNet=0;
+	UINT tot_dev=0, sel_dev=0, indice=0, IpInNet=0;
 
     int find[22];
 
-    find_devices();
-    if(err_flag != 0) {return;}
+    tot_dev = find_devices();
 
-    num_dev=0;
+    if(err_flag != 0) {return sel_dev;}
+
+    sel_dev=0;
 
 	/* DEBUG BEGIN */
 	if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
@@ -920,27 +1067,27 @@ void select_device(char *dev)
 	}
     /* DEBUG END */
 
-    for(num_dev=1; num_dev<=tot_dev; num_dev++)
+    for(sel_dev=1; sel_dev<=tot_dev; sel_dev++)
     {
-        IpInNet = ip_in_net(dev,device[num_dev].net,device[num_dev].mask);
+        IpInNet = ip_in_net(dev,devices[sel_dev].net,devices[sel_dev].mask);
 
         /* DEBUG BEGIN */
         if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
         {
-            fprintf(debug_log,"\nNAME: %s\nIP: %s\nNET: %s\nMASK: %s\nIpInNet: %i\n",device[num_dev].name,device[num_dev].ip,device[num_dev].net,device[num_dev].mask,IpInNet);
+            fprintf(debug_log,"\nNAME: %s\nIP: %s\nNET: %s\nMASK: %s\nIpInNet: %i\n",devices[sel_dev].name,devices[sel_dev].ip,devices[sel_dev].net,devices[sel_dev].mask,IpInNet);
 			fclose(debug_log);
 			debug_log = NULL;
         }
         /* DEBUG END */
 
-        if (strstr(device[num_dev].name,dev)!=NULL||(strcmp(dev,device[num_dev].name)==0)||(strcmp(dev,device[num_dev].ip)==0))
+        if (strstr(devices[sel_dev].name,dev)!=NULL||(strcmp(dev,devices[sel_dev].name)==0)||(strcmp(dev,devices[sel_dev].ip)==0))
         {
             indice++;
-            find[indice]=num_dev;
+            find[indice]=sel_dev;
 			/* DEBUG BEGIN */
 			if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
 			{
-				fprintf(debug_log,"\n[%i] Trovato Device n°%i [%s]\n",indice,num_dev,device[num_dev].name);
+				fprintf(debug_log,"\n[%i] Trovato Device n°%i [%s]\n",indice,sel_dev,devices[sel_dev].name);
 				fclose(debug_log);
 				debug_log = NULL;
 			}
@@ -948,15 +1095,15 @@ void select_device(char *dev)
         }
     }
 
-    num_dev=0;
+    sel_dev=0;
 
     while (indice!=0)
     {
-        num_dev=find[indice];
+        sel_dev=find[indice];
 		/* DEBUG BEGIN */
         if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
         {
-			fprintf(debug_log,"\n[%i] Scelto Device n°%i [%s]\n",indice,num_dev,device[num_dev].name);
+			fprintf(debug_log,"\n[%i] Scelto Device n°%i [%s]\n",indice,sel_dev,devices[sel_dev].name);
 			fclose(debug_log);
 			debug_log = NULL;
 		}
@@ -966,18 +1113,23 @@ void select_device(char *dev)
 
         if (indice>0)
         {
-			{sprintf_s(err_str,sizeof(err_str),"Ambiguity in the choice of the device");err_flag=-1;return;}
+			sel_dev=0;
+			err_flag=-1;
+			sprintf_s(err_str,sizeof(err_str),"Ambiguity in the choice of the device");
+			return sel_dev;
         }
     }
 
-    if (num_dev==0)
-    {sprintf_s(err_str,sizeof(err_str),"Device Not Found or Not Initialized");err_flag=-1;return;}
+    if (sel_dev==0)
+    {sprintf_s(err_str,sizeof(err_str),"Device Not Found or Not Initialized");err_flag=-1;return sel_dev;}
+
+	return sel_dev;
 }
 
 
 void initialize(char *dev, UINT promisc)
 {
-    UINT i = 0;
+    UINT i=0, sel_dev=0;
 	WCHAR *fileName;
 	size_t filenameSize = strlen(dump_file)+1;
 	HANDLE rawFrame = NULL;
@@ -1043,10 +1195,10 @@ void initialize(char *dev, UINT promisc)
     }
     else
     {		
-        select_device(dev);
+        sel_dev = select_device(dev);
         if(err_flag != 0) {return;}
 
-		adapterIndex = device[num_dev].index;
+		adapterIndex = devices[sel_dev].index;
 		if(adapterIndex == -1)
 		{sprintf_s(err_str,sizeof(err_str),"Can't find adapter in Network Monitor");err_flag=-1;return;}
 
@@ -1076,9 +1228,9 @@ void initialize(char *dev, UINT promisc)
         /* DEBUG BEGIN */
         if(DEBUG_MODE && (fopen_s(&debug_log,"pktman.txt","a") == 0))
         {
-            if(num_dev>0)
+            if(sel_dev>0)
             {
-                fprintf(debug_log,"\nInitialize Device: %s\n",device[num_dev].description);
+                fprintf(debug_log,"\nInitialize Device: %s\n",devices[sel_dev].description);
                 fprintf(debug_log,"\nPromiscous: %i\tTimeout: %i\tMax Snap Length: %i\tMax Buffer Size: %i\n",promisc,timeout,maxSnapLen,maxBufferSize);
             }
 
@@ -1119,9 +1271,9 @@ extern "C"
 
 	static PyObject *pktman_getdev(PyObject *self, PyObject *args)
 	{
-		int i=0;
-
-		char build_string[202];
+		PyObject *key, *val, *devs = PyDict_New();
+		
+		UINT i=0, tot_dev=0, sel_dev=0;
 
 		char *dev=NULL;
 
@@ -1131,41 +1283,53 @@ extern "C"
 
 		if (dev!=NULL)
 		{
-			select_device(dev);
-			if(err_flag != 0) {return Py_BuildValue ("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);}
-
-			return Py_BuildValue ("{s:i,s:s,s:i,s:s,s:s,s:s,s:s,s:s,s:s}",
-								  "err_flag",err_flag,"err_str",err_str,
-								  "dev_index",device[num_dev].index,
-								  "dev_name",device[num_dev].name,"dev_descr",device[num_dev].description,
-								  "dev_mac",device[num_dev].mac,"dev_ip",device[num_dev].ip,
-								  "dev_net",device[num_dev].net,"dev_mask",device[num_dev].mask);
+			sel_dev = select_device(dev);
+			if(err_flag != 0)
+			{devs = Py_BuildValue ("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);}
+			else
+			{devs = Py_BuildValue ("{s:i,s:s,s:i,s:i,s:s,s:s,s:s,s:s,s:s,s:s}"
+									,"err_flag",err_flag,"err_str",err_str
+									,"index",devices[sel_dev].index,"type",devices[sel_dev].type
+									,"name",devices[sel_dev].name,"descr",devices[sel_dev].description
+									,"mac",devices[sel_dev].mac,"ip",devices[sel_dev].ip
+									,"net",devices[sel_dev].net,"mask",devices[sel_dev].mask
+									);
+			}
 		}
-
-		find_devices();
-		if(err_flag != 0) {return Py_BuildValue ("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);}
-
-		strcpy_s(build_string,"{s:i,s:s,s:i");
-
-		for(i=1; i<=tot_dev; i++)
+		else
 		{
-			strcat_s(build_string,",s:s,s:s");
+			tot_dev = find_devices();
+			if(err_flag != 0)
+			{devs = Py_BuildValue ("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);}
+			else
+			{
+				val = Py_BuildValue("i",err_flag);
+				PyDict_SetItemString(devs,"err_flag",val);
+				val = Py_BuildValue("s",err_str);
+				PyDict_SetItemString(devs,"err_str",val);
+				val = Py_BuildValue("i",tot_dev);
+				PyDict_SetItemString(devs,"tot_dev",val);
+
+				for(i=1; i<=tot_dev; i++)
+				{
+					key = Py_BuildValue("i",i);
+					val = Py_BuildValue ("{s:i,s:i,s:s,s:s,s:s,s:s,s:s,s:s}"
+										,"index",devices[i].index,"type",devices[i].type
+										,"name",devices[i].name,"descr",devices[i].description
+										,"mac",devices[i].mac,"ip",devices[i].ip
+										,"net",devices[i].net,"mask",devices[i].mask
+										);
+					PyDict_SetItem(devs,key,val);
+				}
+		
+				if (key != Py_None)
+				{Py_CLEAR(key);}
+				if (val != Py_None)
+				{Py_CLEAR(val);}
+			}
 		}
 
-		strcat_s(build_string,"}");
-
-		return Py_BuildValue (build_string,
-							  "err_flag",err_flag,"err_str",err_str,"tot_dev",tot_dev,
-							  "dev1_name",device[1].name,"dev1_ip",device[1].ip,"dev2_name",device[2].name,"dev2_ip",device[2].ip,
-							  "dev3_name",device[3].name,"dev3_ip",device[3].ip,"dev4_name",device[4].name,"dev4_ip",device[4].ip,
-							  "dev5_name",device[5].name,"dev5_ip",device[5].ip,"dev6_name",device[6].name,"dev6_ip",device[6].ip,
-							  "dev7_name",device[7].name,"dev7_ip",device[7].ip,"dev8_name",device[8].name,"dev8_ip",device[8].ip,
-							  "dev9_name",device[9].name,"dev9_ip",device[9].ip,"dev10_name",device[10].name,"dev10_ip",device[10].ip,
-							  "dev11_name",device[11].name,"dev11_ip",device[11].ip,"dev12_name",device[12].name,"dev12_ip",device[12].ip,
-							  "dev13_name",device[13].name,"dev13_ip",device[13].ip,"dev14_name",device[14].name,"dev14_ip",device[14].ip,
-							  "dev15_name",device[15].name,"dev15_ip",device[15].ip,"dev16_name",device[16].name,"dev16_ip",device[16].ip,
-							  "dev17_name",device[17].name,"dev17_ip",device[17].ip,"dev18_name",device[18].name,"dev18_ip",device[18].ip,
-							  "dev19_name",device[19].name,"dev19_ip",device[19].ip,"dev20_name",device[20].name,"dev20_ip",device[20].ip);
+		return devs;
 	}
 
 	static PyObject *pktman_initialize(PyObject *self, PyObject *args)
@@ -1244,21 +1408,26 @@ extern "C"
 
 	static PyObject *pktman_pull(PyObject *self, PyObject *args)
 	{
-		err_flag=0; strcpy_s(err_str,"No Error");
+		int sniff_status=0;
 
 		PyArg_ParseTuple(args, "|i", &sniff_mode);
 
 		if (sniff_mode >= 0)
 		{
+			if (py_pkt_header != Py_None)
+			{Py_CLEAR(py_pkt_header);}
+			if (py_pkt_data != Py_None)
+			{Py_CLEAR(py_pkt_data);}
+			
 			Py_BEGIN_ALLOW_THREADS;
 			gil_state = PyGILState_Ensure();
 
-			sniffer();
+			sniff_status = sniffer();
 
 			PyGILState_Release(gil_state);
 			Py_END_ALLOW_THREADS;
 
-			return Py_BuildValue("{s:i,s:s,s:i,s:S,s:S}","err_flag",err_flag,"err_str",err_str,"datalink",data_link,"py_pcap_hdr",py_pkt_header,"py_pcap_data",py_pkt_data);
+			return Py_BuildValue("{s:i,s:s,s:i,s:S,s:S}","err_flag",sniff_status,"err_str",sniff_error[sniff_status],"datalink",data_link,"py_pcap_hdr",py_pkt_header,"py_pcap_data",py_pkt_data);
 		}
 		else
 		{
@@ -1274,18 +1443,6 @@ extern "C"
 
 			return Py_BuildValue("{s:i,s:s,s:i,s:s}","err_flag",err_flag,"err_str",err_str,"datalink",data_link,"dumpfile",dump_file);
 		}
-	}
-
-	static PyObject *pktman_clear(PyObject *self)
-	{
-		err_flag=0; strcpy_s(err_str,"No Error");
-
-		if (py_pkt_header != Py_None)
-		{Py_CLEAR(py_pkt_header);}
-		if (py_pkt_data != Py_None)
-		{Py_CLEAR(py_pkt_data);}
-
-		return Py_BuildValue("{s:i,s:s}","err_flag",err_flag,"err_str",err_str);
 	}
 
 	static PyObject *pktman_close(PyObject *self)
@@ -1306,6 +1463,7 @@ extern "C"
 
 			//NmApiClose();
 			FREE(bufferTot);
+			bufferTot = NULL;
 
 			/* DEBUG BEGIN */
 			if(DEBUG_MODE && (debug_log != NULL))
@@ -1370,7 +1528,6 @@ extern "C"
 		{ "setfilter", (PyCFunction)pktman_setfilter, METH_VARARGS, NULL},
 		{ "push", (PyCFunction)pktman_push, METH_VARARGS, NULL},
 		{ "pull", (PyCFunction)pktman_pull, METH_VARARGS, NULL},
-		{ "clear", (PyCFunction)pktman_clear, METH_NOARGS, NULL},
 		{ "close", (PyCFunction)pktman_close, METH_NOARGS, NULL},
 		{ "getstat", (PyCFunction)pktman_getstat, METH_NOARGS, NULL},
 		{ NULL, NULL, 0, NULL }
