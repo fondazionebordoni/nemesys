@@ -67,7 +67,7 @@ OVERMEM = SysmonitorException('OVERMEM', 'Memoria occupata. Per limitare l\'uso 
 #Warning firewall is activated
 WARNFW = SysmonitorException('WARNFW', 'Firewall attivo.')
 #Warning Wireless is activated
-WARNWLAN = SysmonitorException('WARNWLAN', 'Wireless LAN attiva. Se possibile, disattivare l\'interfaccia di rete wireless')
+WARNWLAN = SysmonitorException('WARNWLAN', "Wireless LAN attiva. La misura verra' effettuata su tale interfaccia.")
 #Error while retrieving the number of online Host
 BADHOST = SysmonitorException('BADHOST', 'Impossibile determinare il numero di host in rete.')
 #Warning because of the presence of other hosts online
@@ -85,4 +85,8 @@ UNKIP = SysmonitorException('UNKIP', 'Impossibile ottenere il dettaglio dell\'in
 #Error retrieving Device Name
 UNKDEV = SysmonitorException('UNKDEV', 'Impossibile ottenere il nome del device associato all\'indirizzo IP')
 #Warning for HSPA or other USB modem
-WARNHSPA = SysmonitorException('WARNHSPA', 'Rilevato dispositivo HSPA o altro USB modem connesso al computer. Se possibile, disconnetterlo e rimuoverlo')
+WARNHSPA = SysmonitorException('WARNHSPA', "HSPA attiva. La misura verra' effettuata su tale interfaccia.")
+#Warning for absent ETHERNET
+WARNETH = SysmonitorException('WARNETH', "Ethernet inattiva. Interfaccia Ethernet inattiva o scollegata.")
+#Warning for absent Connection
+WARNLINK = SysmonitorException('WARNLINK', "Connessione internet temporaneamente o totalmente assente")

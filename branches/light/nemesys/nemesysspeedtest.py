@@ -12,7 +12,7 @@ from os import path
 from profile import Profile
 from server import Server
 from sys import platform
-from sysmonitor import checkset, RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_TRAFFIC, RES_HOSTS
+from sysmonitor import checkset, RES_OS, RES_CPU, RES_RAM, RES_ETH, RES_WIFI, RES_HSPA, RES_TRAFFIC, RES_HOSTS
 from task import Task
 from tester import Tester
 from threading import Thread, Event, enumerate
@@ -20,7 +20,7 @@ from time import sleep
 from timeNtp import timestampNtp
 from urlparse import urlparse
 from xmlutils import xml2task
-from usbkey import check_usb, move_on_key, guid_to_name
+from usbkey import check_usb, move_on_key
 from logger import logging
 from collections import deque
 import hashlib
@@ -32,7 +32,7 @@ import time
 import wx
 from prospect import Prospect
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 #Data di scadenza
 dead_date = 20120930
@@ -65,13 +65,13 @@ class OptionParser(OptionParser):
 
 class _Checker(Thread):
 
-  def __init__(self, gui, type = 'check', checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
+  def __init__(self, gui, type = 'check', checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_ETH, RES_WIFI, RES_HSPA, RES_HOSTS, RES_TRAFFIC])):
     Thread.__init__(self)
 
     self._gui = gui
     self._type = type
     self._checkable_set = checkable_set
-    self._available_check = {RES_OS:1, RES_CPU:2, RES_RAM:3, RES_WIFI:4, RES_HOSTS:5, RES_TRAFFIC:6}
+    self._available_check = {RES_OS:1, RES_CPU:2, RES_RAM:3, RES_ETH:4, RES_WIFI:5, RES_HSPA:6, RES_HOSTS:7, RES_TRAFFIC:8}
 
     self._events = {}
     self._results = {}
@@ -132,7 +132,7 @@ class _Checker(Thread):
   def stop(self):
     self._cycle.clear()
 
-  def set_check(self, checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])):
+  def set_check(self, checkable_set = set([RES_OS, RES_CPU, RES_RAM, RES_ETH, RES_WIFI, RES_HSPA, RES_HOSTS, RES_TRAFFIC])):
     self._checkable_set = checkable_set
 
   def _check_resource(self, resource):
@@ -154,13 +154,31 @@ class _Checker(Thread):
     return results
 
   def _check_device(self):
-    ip = sysmonitor.getIp()
-    id = sysmonitor.getDev(ip)
+    try:
+      ip = sysmonitor.getIp()
+      id = sysmonitor.getDev(ip)
+    except Exception as e:
+      info = {'status':False, 'value':'Not Present', 'info':e}
+      wx.CallAfter(self._gui.set_resource_info, RES_ETH, info, False)
+      wx.CallAfter(self._gui.set_resource_info, RES_WIFI, info, False)
+      wx.CallAfter(self._gui.set_resource_info, RES_HSPA, info, True)
+      
     if (self._device == None):
       self._device = id
       if (self._type != 'tester'):
-        wx.CallAfter(self._gui._update_messages, "Interfaccia di rete in esame: %s" % guid_to_name(id), 'green')
+        dev_info = sysmonitor.getDevInfo(id)
+        dev_type = dev_info['type']
+        if (dev_type == 14):
+          dev_descr = "Rete locale via cavo Ethernet"
+        elif (dev_type == 25):
+          dev_descr = "Rete locale Wireless"
+        elif (dev_type == 3 or dev_type == 17):
+          dev_descr = "Connessione di rete mobile HSPA"
+        else:
+          dev_descr = "Tipo di rete sconosciuto"
+        wx.CallAfter(self._gui._update_messages, "Interfaccia di rete in esame: %s" % dev_info['descr'], 'green')
         wx.CallAfter(self._gui._update_messages, "Indirizzo IP dell'interfaccia di rete in esame: %s" % ip, 'green')
+        wx.CallAfter(self._gui._update_interface, dev_descr, ip)
     elif (id != self._device):
       self._cycle.clear()
       self._software_ok = False
@@ -450,7 +468,7 @@ class _Tester(Thread):
     # Profilazione
     profiler = {}
     profiler = self._checker.get_results()
-    self._checker.set_check(set([RES_CPU, RES_RAM, RES_WIFI]))
+    self._checker.set_check(set([RES_CPU, RES_RAM, RES_ETH, RES_WIFI, RES_HSPA]))
 
     # TODO Il server deve essere indicato dal backend che è a conoscenza dell'occupazione della banda!
 
@@ -576,20 +594,26 @@ class Frame(wx.Frame):
         # begin wxGlade: Frame.__init__
         wx.Frame.__init__(self, *args, **kwds)
 
+        self.sizer_1_staticbox = wx.StaticBox(self, -1, "Risultati")
+        self.sizer_2_staticbox = wx.StaticBox(self, -1, "Indicatori di stato del sistema")
         self.sizer_3_staticbox = wx.StaticBox(self, -1, "Messaggi")
         self.bitmap_button_play = wx.BitmapButton(self, -1, wx.Bitmap(path.join(paths.ICONS, u"play.png"), wx.BITMAP_TYPE_ANY))
         self.bitmap_button_check = wx.BitmapButton(self, -1, wx.Bitmap(path.join(paths.ICONS, u"check.png"), wx.BITMAP_TYPE_ANY))
         self.bitmap_5 = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"logo_nemesys.png"), wx.BITMAP_TYPE_ANY))
-        self.label_5 = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE)
+        self.label_5 = wx.StaticText(self, -1, "Versione %s" % __version__, style = wx.ALIGN_CENTRE)
         self.label_6 = wx.StaticText(self, -1, "Ne.Me.Sys.", style = wx.ALIGN_CENTRE)
         self.bitmap_cpu = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_CPU.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_ram = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_RAM.lower()), wx.BITMAP_TYPE_ANY))
+        self.bitmap_eth = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_ETH.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_wifi = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_WIFI.lower()), wx.BITMAP_TYPE_ANY))
+        self.bitmap_hspa = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_HSPA.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_hosts = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_HOSTS.lower()), wx.BITMAP_TYPE_ANY))
         self.bitmap_traffic = wx.StaticBitmap(self, -1, wx.Bitmap(path.join(paths.ICONS, u"%s_gray.png" % RES_TRAFFIC.lower()), wx.BITMAP_TYPE_ANY))
         self.label_cpu = wx.StaticText(self, -1, "%s\n- - - -" % RES_CPU, style = wx.ALIGN_CENTRE)
         self.label_ram = wx.StaticText(self, -1, "%s\n- - - -" % RES_RAM, style = wx.ALIGN_CENTRE)
+        self.label_eth = wx.StaticText(self, -1, "%s\n- - - -" % RES_ETH, style = wx.ALIGN_CENTRE)
         self.label_wifi = wx.StaticText(self, -1, "%s\n- - - -" % RES_WIFI, style = wx.ALIGN_CENTRE)
+        self.label_hspa = wx.StaticText(self, -1, "%s\n- - - -" % RES_HSPA, style = wx.ALIGN_CENTRE)
         self.label_hosts = wx.StaticText(self, -1, "%s\n- - - -" % RES_HOSTS, style = wx.ALIGN_CENTRE)
         self.label_traffic = wx.StaticText(self, -1, "%s\n- - - -" % RES_TRAFFIC, style = wx.ALIGN_CENTRE)
         self.gauge_1 = wx.Gauge(self, -1, TOTAL_STEPS, style = wx.GA_HORIZONTAL | wx.GA_SMOOTH)
@@ -600,9 +624,18 @@ class Frame(wx.Frame):
         self.label_rr_down = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
         self.label_rr_up = wx.StaticText(self, -1, "- - - -", style = wx.ALIGN_CENTRE)
         self.messages_area = wx.TextCtrl(self, -1, "Ne.Me.Sys. Speedtest v.%s" % __version__, style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2 | wx.TE_WORDWRAP)
-        self.grid_sizer_1 = wx.GridSizer(2, 5, 0, 0)
-        self.grid_sizer_2 = wx.GridSizer(2, 3, 0, 0)
+        self.label_interface = wx.StaticText(self, -1, "", style = wx.ALIGN_CENTRE)
+        self.grid_sizer_1 = wx.FlexGridSizer(2, 7, 0, 0)
+        self.grid_sizer_2 = wx.FlexGridSizer(2, 3, 0, 0)
 
+        self.sizer_1 = wx.BoxSizer(wx.VERTICAL)
+        self.sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_3 = wx.BoxSizer(wx.VERTICAL)
+        self.sizer_4 = wx.BoxSizer(wx.VERTICAL)
+        self.sizer_5 = wx.StaticBoxSizer(self.sizer_1_staticbox, wx.VERTICAL)
+        self.sizer_6 = wx.StaticBoxSizer(self.sizer_3_staticbox, wx.VERTICAL)
+        self.sizer_7 = wx.StaticBoxSizer(self.sizer_2_staticbox, wx.VERTICAL)
+        
         self.__set_properties()
         self.__do_layout()
 
@@ -610,6 +643,99 @@ class Frame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self._play, self.bitmap_button_play)
         self.Bind(wx.EVT_BUTTON, self._check, self.bitmap_button_check)
         # end wxGlade
+
+    def __set_properties(self):
+        # begin wxGlade: Frame.__set_properties
+        self.SetTitle("Ne.Me.Sys Speedtest")
+        self.SetSize((750, 500))
+        self.bitmap_button_play.SetMinSize((120, 120))
+        self.bitmap_button_check.SetMinSize((40, 120))
+        self.bitmap_5.SetMinSize((95, 70))
+        self.label_5.SetFont(wx.Font(10, wx.ROMAN, wx.ITALIC, wx.NORMAL, 0, ""))
+        self.label_6.SetFont(wx.Font(14, wx.ROMAN, wx.ITALIC, wx.NORMAL, 0, ""))
+        self.bitmap_cpu.SetMinSize((60, 60))
+        self.bitmap_ram.SetMinSize((60, 60))
+        self.bitmap_wifi.SetMinSize((60, 60))
+        self.bitmap_hosts.SetMinSize((60, 60))
+        self.bitmap_traffic.SetMinSize((60, 60))
+        self.gauge_1.SetMinSize((730, 22))
+        self.label_r_1.SetFont(wx.Font(12, wx.ROMAN, wx.ITALIC, wx.BOLD, 0, ""))
+        self.label_r_2.SetFont(wx.Font(12, wx.ROMAN, wx.ITALIC, wx.BOLD, 0, ""))
+        self.label_r_3.SetFont(wx.Font(12, wx.ROMAN, wx.ITALIC, wx.BOLD, 0, ""))
+        self.label_rr_ping.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
+        self.label_rr_down.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
+        self.label_rr_up.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
+        self.label_interface.SetFont(wx.Font(12, wx.ROMAN, wx.ITALIC, wx.NORMAL, 0, ""))
+        
+        self.messages_area.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL, 0, ""))
+        self.messages_area.SetMinSize((710, 150))
+        self.sizer_5.SetMinSize((410, 120))
+        self.sizer_6.SetMinSize((730, 100))
+        self.sizer_7.SetMinSize((730, 100))
+
+        #self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
+        self.SetBackgroundColour(wx.Colour(242, 242, 242))
+
+        # end wxGlade
+
+    def __do_layout(self):
+        # begin wxGlade: Frame.__do_layout   
+        self.grid_sizer_1.Add(self.bitmap_cpu, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 20)
+        self.grid_sizer_1.Add(self.bitmap_ram, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 20)
+        self.grid_sizer_1.Add(self.bitmap_eth, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 20)
+        self.grid_sizer_1.Add(self.bitmap_wifi, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 20)
+        self.grid_sizer_1.Add(self.bitmap_hspa, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 20)
+        self.grid_sizer_1.Add(self.bitmap_hosts, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 20)
+        self.grid_sizer_1.Add(self.bitmap_traffic, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 20)
+        
+        self.grid_sizer_1.Add(self.label_cpu, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_1.Add(self.label_ram, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_1.Add(self.label_eth, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_1.Add(self.label_wifi, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_1.Add(self.label_hspa, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_1.Add(self.label_hosts, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_1.Add(self.label_traffic, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        
+        self.grid_sizer_2.Add(self.label_r_1, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 44)
+        self.grid_sizer_2.Add(self.label_r_2, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 44)
+        self.grid_sizer_2.Add(self.label_r_3, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 44)
+        
+        self.grid_sizer_2.Add(self.label_rr_ping, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_2.Add(self.label_rr_down, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.grid_sizer_2.Add(self.label_rr_up, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
+        
+        self.sizer_3.Add(self.grid_sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        self.sizer_3.Add(self.label_interface, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        #self.sizer_3.Add(self.label_alert_area, 0, wx.TOP | wx.DOWN | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        #self.sizer_3.Add(self.grid_sizer_1, 0, wx.DOWN | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 8)
+        #self.sizer_3.Add(wx.StaticLine(self, -1), 0, wx.ALL | wx.EXPAND, 0)
+        #self.sizer_5.Add(wx.StaticLine(self, -1, style = wx.LI_VERTICAL), 0, wx.RIGHT | wx.EXPAND, 4)
+        
+        self.sizer_5.Add(self.sizer_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        
+        self.sizer_4.Add(self.bitmap_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        self.sizer_4.Add(self.label_6, 0, wx.TOP | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        self.sizer_4.Add(self.label_5, 0, wx.LEFT | wx.ALIGN_LEFT | wx.ALIGN_CENTER_VERTICAL, 8)
+        
+        self.sizer_2.Add(self.bitmap_button_play, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        self.sizer_2.Add(self.bitmap_button_check, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        self.sizer_2.Add(self.sizer_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        self.sizer_2.Add(self.sizer_4, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        
+        self.sizer_6.Add(self.messages_area, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        
+        self.sizer_7.Add(self.grid_sizer_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 8)
+
+        self.sizer_1.Add(self.sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        self.sizer_1.Add(self.gauge_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        self.sizer_1.Add(self.sizer_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+        self.sizer_1.Add(self.sizer_7, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
+
+        self.SetSizer(self.sizer_1)
+        self.Layout()
+        # end wxGlade
+
+        #self._check(None)
 
     def _on_close(self, event):
       logger.debug("Richiesta di close")
@@ -619,82 +745,7 @@ class Frame(wx.Frame):
       if result == wx.ID_OK:
         self._killTester()    
         self.Destroy()
-
-    def __set_properties(self):
-        # begin wxGlade: Frame.__set_properties
-        self.SetTitle("Ne.Me.Sys Speedtest")
-        self.SetSize((720, 440))
-        self.bitmap_button_play.SetMinSize((120, 120))
-        self.bitmap_button_check.SetMinSize((40, 120))
-        self.bitmap_5.SetMinSize((95, 70))
-        #self.label_5.SetFont(wx.Font(18, wx.ROMAN, wx.NORMAL, wx.NORMAL, 0, ""))
-        self.label_6.SetFont(wx.Font(14, wx.ROMAN, wx.ITALIC, wx.NORMAL, 0, ""))
-        self.bitmap_cpu.SetMinSize((60, 60))
-        self.bitmap_ram.SetMinSize((60, 60))
-        self.bitmap_wifi.SetMinSize((60, 60))
-        self.bitmap_hosts.SetMinSize((60, 60))
-        self.bitmap_traffic.SetMinSize((60, 60))
-        self.gauge_1.SetMinSize((700, 24))
-        self.label_rr_ping.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
-        self.label_rr_down.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
-        self.label_rr_up.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, 0, ""))
-
-        self.messages_area.SetMinSize((700, 150))
-        self.messages_area.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL, 0, ""))
-        self.grid_sizer_2.SetMinSize((700, 60))
-
-        #self.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
-        self.SetBackgroundColour(wx.Colour(242, 242, 242))
-
-        # end wxGlade
-
-    def __do_layout(self):
-        # begin wxGlade: Frame.__do_layout   
-        self.grid_sizer_1.Add(self.bitmap_cpu, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
-        self.grid_sizer_1.Add(self.bitmap_ram, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
-        self.grid_sizer_1.Add(self.bitmap_wifi, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
-        self.grid_sizer_1.Add(self.bitmap_hosts, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
-        self.grid_sizer_1.Add(self.bitmap_traffic, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 12)
-        self.grid_sizer_1.Add(self.label_cpu, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        self.grid_sizer_1.Add(self.label_ram, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        self.grid_sizer_1.Add(self.label_wifi, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        self.grid_sizer_1.Add(self.label_hosts, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        self.grid_sizer_1.Add(self.label_traffic, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-
-        self.grid_sizer_2.Add(self.label_r_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        self.grid_sizer_2.Add(self.label_r_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        self.grid_sizer_2.Add(self.label_r_3, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        self.grid_sizer_2.Add(self.label_rr_ping, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_TOP, 2)
-        self.grid_sizer_2.Add(self.label_rr_down, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_TOP, 2)
-        self.grid_sizer_2.Add(self.label_rr_up, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_TOP, 2)
-
-        sizer_1 = wx.BoxSizer(wx.VERTICAL)
-        sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_4 = wx.BoxSizer(wx.VERTICAL)
-        sizer_6 = wx.StaticBoxSizer(self.sizer_3_staticbox, wx.VERTICAL)
-
-        sizer_4.Add(self.bitmap_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        #sizer_4.Add(self.label_5, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-        sizer_4.Add(self.label_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 2)
-
-        sizer_2.Add(self.bitmap_button_play, 0, wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_TOP, 4)
-        sizer_2.Add(self.bitmap_button_check, 0, wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_TOP, 4)
-        sizer_2.Add(self.grid_sizer_1, 0, wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 10)
-        sizer_2.Add(sizer_4, 0, wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 4)
-
-        sizer_6.Add(self.messages_area, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-
-        sizer_1.Add(sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 6)
-        sizer_1.Add(self.gauge_1, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        sizer_1.Add(sizer_6, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 6)
-        sizer_1.Add(self.grid_sizer_2, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-
-        self.SetSizer(sizer_1)
-        self.Layout()
-        # end wxGlade
-
-        self._check(None)
-
+        
     def _play(self, event):
       self._button_play = True
       self._check(None)
@@ -762,9 +813,12 @@ class Frame(wx.Frame):
       self.label_rr_ping.SetLabel("%.1f ms" % rtt)
       self.Layout()
 
+    def _update_interface(self, interface, ip):
+      self.label_interface.SetLabel("Interfaccia di test: %s\nIndirizzo di rete: %s" % (interface,ip))
+      self.Layout()
+    
     def _reset_info(self):
-
-      checkable_set = set([RES_CPU, RES_RAM, RES_WIFI, RES_HOSTS, RES_TRAFFIC])
+      checkable_set = set([RES_CPU, RES_RAM, RES_ETH, RES_WIFI, RES_HSPA, RES_HOSTS, RES_TRAFFIC])
 
       for resource in checkable_set:
         self.set_resource_info(resource, {'status': None, 'info': None, 'value': None})
@@ -772,6 +826,7 @@ class Frame(wx.Frame):
       self.label_rr_down.SetLabel("- - - -")
       self.label_rr_up.SetLabel("- - - -")
       self.label_rr_ping.SetLabel("- - - -")
+      self.label_interface.SetLabel("")
 
       self.messages_area.Clear()
       self.update_gauge(0)
@@ -780,7 +835,6 @@ class Frame(wx.Frame):
     def update_gauge(self, value):
       # logger.debug("Gauge value %d" % value)
       self.gauge_1.SetValue(value)
-
 
     def set_resource_info(self, resource, info, message_flag = True):
       res_bitmap = None
@@ -799,9 +853,15 @@ class Frame(wx.Frame):
       elif resource == RES_RAM:
         res_bitmap = self.bitmap_ram
         res_label = self.label_ram
+      elif resource == RES_ETH:
+        res_bitmap = self.bitmap_eth
+        res_label = self.label_eth
       elif resource == RES_WIFI:
         res_bitmap = self.bitmap_wifi
         res_label = self.label_wifi
+      elif resource == RES_HSPA:
+        res_bitmap = self.bitmap_hspa
+        res_label = self.label_hspa
       elif resource == RES_HOSTS:
         res_bitmap = self.bitmap_hosts
         res_label = self.label_hosts

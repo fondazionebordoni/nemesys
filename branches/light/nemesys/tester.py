@@ -43,6 +43,7 @@ file = None
 filepath = None
 size = 0
 max_retry = 8
+max_time = 240000
 
 #Parametri Sniffer:
 BUFF = 8 * 1024 * 1024 # MegaByte
@@ -58,7 +59,72 @@ def totalsize(data):
   global size
   size += len(data)
 
-
+def _ftp_down(ftp, file):
+  
+  global size
+    
+  ftp.voidcmd('TYPE I')
+  conn = ftp.transfercmd('RETR %s' % file, rest=None)
+  
+  size = 0
+  start = datetime.now()
+  while True:
+    data = conn.recv(8192)
+    stop = datetime.now()
+    elapsed = (((stop-start).seconds)*1000)+(((stop-start).microseconds)/1000)
+    size += len(data)
+    if (elapsed > max_time):
+      break
+    elif not data:
+      break
+  
+  #logger.debug("Elapsed: %s" % (stop-start))
+  try:
+    conn.close()
+    ftp.voidresp()
+    ftp.close()
+  except ftplib.all_errors as e:
+    if (e.args[0][:3] == '426'):
+      pass
+    else:
+      raise e
+    
+  return elapsed
+  
+def _ftp_up(ftp, file, path):
+  
+  global size
+    
+  ftp.voidcmd('TYPE I')
+  conn = ftp.transfercmd('STOR %s' % path, rest=None)
+  
+  size = 0
+  start = datetime.now()
+  while True:
+    data = file.read(8192*4)
+    if (data == None):
+      break
+    conn.sendall(data)
+    stop = datetime.now()
+    elapsed = (((stop-start).seconds)*1000)+(((stop-start).microseconds)/1000)
+    size += len(data)
+    if (elapsed > max_time):
+      break
+  
+  #logger.debug("Elapsed: %s" % (stop-start))
+  try:
+    conn.close()
+    ftp.voidresp()
+    ftp.close()
+  except ftplib.all_errors as e:
+    if (e.args[0][:3] == '426'):
+      pass
+    else:
+      raise e
+  
+  return elapsed
+  
+  
 class Tester:
 
   def __init__(self, if_ip, host, username = 'anonymous', password = 'anonymous@', timeout = 60):
@@ -92,9 +158,9 @@ class Tester:
       raise Exception(error)
 
     # TODO Se la connessione FTP viene invocata con timeout, il socket è non-blocking e il sistema può terminare i buffer di rete: http://bugs.python.org/issue8493
-    function = '''ftp.storbinary('STOR %s' % filepath, file, callback=totalsize)'''
-    setup = 'from %s import file, ftp, totalsize, filepath' % __name__
-    timer = timeit.Timer(function, setup)
+    #function = '''ftp.storbinary('STOR %s' % filepath, file, callback=totalsize)'''
+    #setup = 'from %s import file, ftp, totalsize, filepath' % __name__
+    #timer = timeit.Timer(function, setup)
 
     try:
       logger.debug('Test initializing...')
@@ -107,8 +173,9 @@ class Tester:
       pcapper.sniff(Contabyte(self._if_ip, self._host.ip))
 
       # Il risultato deve essere espresso in millisecondi
-      elapsed = timer.timeit(1) * 1000
-
+      elapsed = _ftp_up(ftp, file, filepath)#timer.timeit(1) * 1000
+      logger.debug("Banda: %s/%s = %s Kbps" % ((size*8),elapsed,(size*8)/elapsed))
+      
       pcapper.stop_sniff()
       counter_stats = pcapper.get_stats()
 
@@ -132,7 +199,7 @@ class Tester:
       logger.error(error)
       raise Exception(error)
 
-    ftp.quit()
+    #ftp.quit()
 
     return Proof(test_type, start, elapsed, size, counter_stats)
 
@@ -156,9 +223,9 @@ class Tester:
       logger.error(error)
       raise Exception(error)
 
-    function = '''ftp.retrbinary('RETR %s' % file, totalsize)'''
-    setup = 'from %s import ftp, file, totalsize' % __name__
-    timer = timeit.Timer(function, setup)
+    #function = '''ftp.retrbinary('RETR %s' % file, totalsize)'''
+    #setup = 'from %s import ftp, file, totalsize' % __name__
+    #timer = timeit.Timer(function, setup)
 
     try:
       logger.debug('Test initializing...')
@@ -171,8 +238,9 @@ class Tester:
       pcapper.sniff(Contabyte(self._if_ip, self._host.ip))
 
       # Il risultato deve essere espresso in millisecondi
-      elapsed = timer.timeit(1) * 1000
-
+      elapsed = _ftp_down(ftp, file) #timer.timeit(1) * 1000
+      logger.debug("Banda: %s/%s = %s Kbps" % ((size*8),elapsed,(size*8)/elapsed))
+      
       pcapper.stop_sniff()
       counter_stats = pcapper.get_stats()
 
@@ -202,7 +270,7 @@ class Tester:
       logger.error(error)
       raise Exception(error)
 
-    ftp.quit()
+    #ftp.quit()
     max_retry = 8
     
     return Proof(test_type, start, elapsed, size, counter_stats)

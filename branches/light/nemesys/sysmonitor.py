@@ -25,6 +25,7 @@ from contabyte import Contabyte
 from pcapper import Pcapper
 
 import checkhost
+import pktman
 import netifaces
 import paths
 import platform
@@ -49,7 +50,9 @@ CHECK_MEDIUM = "MEDIUM"
 
 RES_CPU = 'CPU'
 RES_RAM = 'RAM'
-RES_WIFI = 'Wifi'
+RES_WIFI = 'Wireless'
+RES_HSPA = 'Mobile'
+RES_ETH = 'Ethernet'
 RES_HOSTS = 'Hosts'
 RES_MAC = 'MAC'
 RES_IP = 'IP'
@@ -227,48 +230,121 @@ def _check_mem(res = RES_RAM):
 
   return check_info
 
+def _check_ethernet(res = RES_ETH):
 
+  global CHECK_VALUES
+
+  CHECK_VALUES[res] = 'Not Present'
+
+  check_info = 'Dispositivi Ethernet non presenti.'
+  profiler = LocalProfilerFactory.getProfiler()
+  data = profiler.profile(set(['rete']))
+  
+  for device in data.findall('rete/NetworkDevice'):
+    #logger.debug(ET.tostring(device))
+    type = device.find('Type').text
+    if (type == 'Ethernet 802.3'):
+      guid = device.find('GUID').text
+      dev_info = getDevInfo(guid)
+      if (dev_info != None):
+        dev_type = dev_info['type']
+        if (dev_type == 14):
+          status = int(device.find('Status').text)
+          if (status == 7):
+            CHECK_VALUES[res] = 'Off Line'
+            check_info = 'Dispositivi Ethernet non attivi.'
+            raise sysmonitorexception.WARNETH
+          elif (status == 2):
+            CHECK_VALUES[res] = 'On Line'
+            check_info = 'Dispositivi Ethernet attivi.'
+            
+  if (CHECK_VALUES[res] == 'Not Present'):
+    raise sysmonitorexception.WARNETH
+            
+  return check_info
+  
 def _check_wireless(res = RES_WIFI):
 
   global CHECK_VALUES
 
-  CHECK_VALUES[res] = None
+  CHECK_VALUES[res] = 'Not Present'
 
-  check_info = 'Wireless LAN inattiva.'
+  check_info = 'Dispositivi wireless non presenti.'
   profiler = LocalProfilerFactory.getProfiler()
   data = profiler.profile(set(['rete']))
-
+  
   for device in data.findall('rete/NetworkDevice'):
     #logger.debug(ET.tostring(device))
     type = device.find('Type').text
     if (type == 'Wireless'):
-      status = device.find('Status').text
-      if (status == 'Enabled'):
-        CHECK_VALUES[res] = 'On'
-        raise sysmonitorexception.WARNWLAN
-    elif (type == 'External Modem'):
-      dev_id = device.find('ID').text
-      if re.search('USB',dev_id):
-        CHECK_VALUES[res] = 'HSPA'
-        raise sysmonitorexception.WARNHSPA
-
-  CHECK_VALUES[res] = 'Off'
-
+      guid = device.find('GUID').text
+      dev_info = getDevInfo(guid)
+      if (dev_info != None):
+        dev_type = dev_info['type']
+        if (dev_type == 25):
+          status = int(device.find('Status').text)
+          if (status == 7):
+            CHECK_VALUES[res] = 'Off Line'
+            check_info = 'Dispositivi wireless non attivi.'
+          elif (status == 2):
+            CHECK_VALUES[res] = 'On Line'
+            raise sysmonitorexception.WARNWLAN
+            
   return check_info
 
+def _check_hspa(res = RES_HSPA):
 
+  global CHECK_VALUES
+
+  CHECK_VALUES[res] = 'Not Present'
+
+  check_info = 'Dispositivi HSPA non presenti.'
+  profiler = LocalProfilerFactory.getProfiler()
+  data = profiler.profile(set(['rete']))
+  
+  for device in data.findall('rete/NetworkDevice'):
+    #logger.debug(ET.tostring(device))
+    type = device.find('Type').text
+    
+    if (type == 'External Modem'):
+      dev_id = device.find('ID').text
+      if (re.search('USB',dev_id)):
+        CHECK_VALUES[res] = 'Off Line'
+        dev_info = getDevInfo()
+        if (dev_info != None):
+          dev_type = dev_info['type']
+          if (dev_type == 3 or dev_type == 17):
+            CHECK_VALUES[res] = 'On Line'
+            raise sysmonitorexception.WARNHSPA
+    
+    elif (type == 'Wireless'):
+      guid = device.find('GUID').text
+      dev_info = getDevInfo(guid)
+      if (dev_info != None):
+        dev_type = dev_info['type']
+        if (dev_type == 17):
+          status = int(device.find('Status').text)
+          if (status == 7):
+            CHECK_VALUES[res] = 'Off Line'
+            check_info = 'Dispositivi HSPA non attivi.'
+          elif (status == 2):
+            CHECK_VALUES[res] = 'On Line'
+            raise sysmonitorexception.WARNWLAN
+
+  return check_info
+  
 def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1, res = RES_HOSTS):
 
   global CHECK_VALUES
 
   CHECK_VALUES[res] = None
-
+  
   netIF = _get_NetIF()
-  for key in netIF:
-    logger.debug('%s : %s' % (key,netIF[key]))
-
-  ip = getIp();
-  dev = getDev()
+  # for key in netIF:
+    # logger.debug('%s : %s' % (key,netIF[key]))
+    
+  ip = getIp()
+  dev = getDev(ip)
   mac = _get_mac(ip)
   mask = _get_mask(ip)
 
@@ -318,7 +394,7 @@ def _check_traffic(sec = 2, res = RES_TRAFFIC):
   CHECK_VALUES[res] = None
 
   traffic = None
-  ip = _get_ActiveIp()
+  ip = getIp()
   dev = getDev(ip)
   buff = 8 * 1024 * 1024
 
@@ -437,11 +513,13 @@ def _get_NetIF():
 def _get_ActiveIp(host = 'finaluser.agcom244.fub.it', port = 443):
 
   #logger.debug('Determinazione dell\'IP attivo verso Internet')
-
-  s = socket.socket(socket.AF_INET)
-  s.connect((host, port))
-  value = s.getsockname()[0]
-
+  try:
+    s = socket.socket(socket.AF_INET)
+    s.connect((host, port))
+    value = s.getsockname()[0]
+  except socket.gaierror:
+    raise sysmonitorexception.WARNLINK
+    
   if not _check_ip_syntax(value):
     raise sysmonitorexception.UNKIP
 
@@ -508,6 +586,12 @@ def _get_mask(ip = None, res = RES_MASK):
 
   cidrMask = 0
   dotMask = None
+
+  profiler = LocalProfilerFactory.getProfiler()
+  data = profiler.profile(set(['rete']))
+  for device in data.findall('rete/NetworkDevice'):
+    logger.debug(ET.tostring(device))
+
   netIF = _get_NetIF()
 
   for interface in netIF:
@@ -518,8 +602,9 @@ def _get_mask(ip = None, res = RES_MASK):
       cidrMask = _mask_conversion(dotMask)
 
   if (cidrMask <= 0):
-    logger.error('Impossibile recuperare il valore della maschera dell\'IP %s' % ip)
-    raise sysmonitorexception.BADMASK
+    cidrMask = 32
+    logger.error('Maschera forzata a 32. Impossibile recuperare il valore della maschera dell\'IP %s' % ip)
+    #raise sysmonitorexception.BADMASK
 
   return cidrMask
 
@@ -530,7 +615,7 @@ def getDev(ip = None, res = RES_DEV):
 
   CHECK_VALUES[res] = None
 
-  Dev = None
+  dev = None
 
   if ip == None:
     ip = _get_ActiveIp()
@@ -540,15 +625,29 @@ def getDev(ip = None, res = RES_DEV):
   for interface in netIF:
     if (netIF[interface]['ip'][0] == ip):
       #logger.debug('| Ip: %s | Find on Dev: %s |' % (ip,interface))
-      Dev = interface
+      dev = interface
 
-  if (Dev == None):
+  if (dev == None):
     logger.error('Impossibile recuperare il nome del Device associato all\'IP %s' % ip)
     raise sysmonitorexception.UNKDEV
 
-  CHECK_VALUES[res] = Dev
+  CHECK_VALUES[res] = dev
 
-  return Dev
+  return dev
+
+
+def getDevInfo(dev = None):
+  
+  dev_info = None
+  
+  if dev == None:
+    dev = _get_ActiveIp()
+
+  dev_info = pktman.getdev(dev)
+  if (dev_info['err_flag'] != 0):
+    dev_info = None
+
+  return dev_info
 
 
 def _get_os(res = RES_OS):
@@ -588,14 +687,16 @@ def checkset(check_set = set()):
    RES_OS:{'prio':1, 'meth':_get_os}, \
    RES_CPU:{'prio':2, 'meth':_check_cpu}, \
    RES_RAM:{'prio':3, 'meth':_check_mem}, \
-   RES_WIFI:{'prio':4, 'meth':_check_wireless}, \
-   RES_HOSTS:{'prio':5, 'meth':_check_hosts}, \
-   RES_TRAFFIC:{'prio':6, 'meth':_check_traffic}, \
-   RES_MAC:{'prio':7, 'meth':_get_mac}, \
-   RES_IP:{'prio':8, 'meth':getIp}, \
-   RES_MASK:{'prio':9, 'meth':_get_mask}, \
-   RES_DEV:{'prio':10, 'meth':getDev}, \
-   #'sys':{'prio':11,'meth':_get_Sys} \
+   RES_ETH:{'prio':4, 'meth':_check_ethernet}, \
+   RES_WIFI:{'prio':5, 'meth':_check_wireless}, \
+   RES_HSPA:{'prio':6, 'meth':_check_hspa}, \
+   RES_HOSTS:{'prio':7, 'meth':_check_hosts}, \
+   RES_TRAFFIC:{'prio':8, 'meth':_check_traffic}, \
+   RES_MAC:{'prio':9, 'meth':_get_mac}, \
+   RES_IP:{'prio':10, 'meth':getIp}, \
+   RES_MASK:{'prio':11, 'meth':_get_mask}, \
+   RES_DEV:{'prio':12, 'meth':getDev}, \
+   #'sys':{'prio':13,'meth':_get_Sys} \
    }
 
   system_profile = {}
