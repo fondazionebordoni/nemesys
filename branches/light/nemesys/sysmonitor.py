@@ -310,6 +310,7 @@ def _check_hspa(res = RES_HSPA):
       dev_id = device.find('ID').text
       if (re.search('USB',dev_id)):
         CHECK_VALUES[res] = 'Off Line'
+        check_info = 'Dispositivi HSPA non attivi.'
         dev_info = getDevInfo()
         if (dev_info != None):
           dev_type = dev_info['type']
