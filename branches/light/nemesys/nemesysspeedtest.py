@@ -735,7 +735,7 @@ class Frame(wx.Frame):
         self.Layout()
         # end wxGlade
 
-        #self._check(None)
+        self._check(None)
 
     def _on_close(self, event):
       logger.debug("Richiesta di close")
