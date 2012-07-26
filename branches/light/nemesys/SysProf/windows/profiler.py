@@ -16,6 +16,23 @@ from ctypes.wintypes import DWORD, ULONG
 import struct
 import pythoncom
 
+NIC_TYPE = { \
+0:'Ethernet 802.3', \
+1:'Token Ring 802.5', \
+2:'Fiber Distributed Data Interface (FDDI)', \
+3:'Wide Area Network (WAN)', \
+4:'LocalTalk', \
+5:'Ethernet using DIX header format', \
+6:'ARCNET', \
+7:'ARCNET (878.2)', \
+8:'ATM', \
+9:'Wireless', \
+10:'Infrared Wireless', \
+11:'Bpc', \
+12:'CoWan', \
+13:'1394' \
+}
+
 def executeQuery(wmi_class, whereCondition=""):   
     try: 
         objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
@@ -184,44 +201,8 @@ class rete(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
         self._params = {'Win32_NetworkAdapter':['profileDevice'],'Win32_POTSModem':['profileModem']}
-        self.ipaddr = ""
         self.whereCondition = {'Win32_NetworkAdapter':" WHERE Manufacturer != 'Microsoft' "} # " AND NOT PNPDeviceID LIKE 'ROOT\\*' "
-        self._activeMAC = None
-        self._checked = False
-        self.ipenabdic={}
-           
-    def getipaddr(self):
-        if self.ipaddr == "":
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                s.connect(("www.fub.it", 80))
-                self.ipaddr = s.getsockname()[0]
-            except socket.gaierror:
-                pass
-                #raise RisorsaException("Connessione Assente")
-        else:
-            pass
-        return self.ipaddr
-    
-    def findActiveInterface(self):
-        items = executeQuery('Win32_NetworkAdapterConfiguration', "")
-        ipaddr = self.getipaddr()
-        if (items):
-            try:
-                for obj in items:
-                    ipaddrlist = self.getSingleInfo(obj, 'IPAddress')
-                    if ipaddrlist:
-                        ris = self.getSingleInfo(obj, 'MACAddress')
-                        self.ipenabdic[ris]=self.getSingleInfo(obj,'IPEnabled')
-                        if ipaddr in ipaddrlist:
-                            self._activeMAC = ris
-            except:
-                raise RisorsaException("Impossibile specificare l'interfaccia attiva") 
-            finally:
-                return True
-        else:
-            raise RisorsaException("E' impossibile interrogare le risorse di rete")
-    
+      
     def _is_wireless_text(self,text):
       keywords = ['wireless', 'wlan', 'wifi', 'wi-fi','fili']
       ltext=text.lower()
@@ -232,49 +213,67 @@ class rete(RisorsaWin):
             return True
       return False
       
+    def InterfaceInfo(self, index):
+        features = {'MACAddress':'', 'IpAddress':'', 'DefaultIPGateway':'', 'IpSubnet':''}
+        info = {'MAC':'unknown', 'IP':'unknown', 'Gateway':'unknown', 'Mask':'unknown'}
+        items = executeQuery('Win32_NetworkAdapterConfiguration', " WHERE index = %s" % index)
+        if (items):
+            try:
+                for obj in items:
+                    keys = features.keys()
+                    for key in keys:
+                        features[key] = self.getSingleInfo(obj, key)
+            except:
+                raise RisorsaException("Impossibile ritrovare le informazioni sul dispositivo di rete") 
+            finally:
+                if (features['MACAddress']):
+                    info['MAC'] = features['MACAddress']
+                if (features['IpAddress']):
+                    info['IP'] = features['IpAddress'][0]
+                if (features['DefaultIPGateway']):
+                    info['Gateway'] = features['DefaultIPGateway'][0]
+                if (features['IpSubnet']):
+                    info['Mask'] = features['IpSubnet'][0]
+                return info
+        else:
+            raise RisorsaException("E' impossibile interrogare le risorse di rete")
+      
     def profileDevice(self, obj):
         running = 0X3 #running Net Interface CODE
-        features = {'Name':'', 'AdapterType':'', 'MACAddress':'','NetConnectionID':''}
-        devName = 'unknown'
-        devType = 'unknown'
-        devMac = 'unknown'
-        devIsActive = 'False'
-        devStatus = 'Disabled'
-        devNetConnID = 'unknown'
-        if (not self._checked):
-            try:
-                self._checked = self.findActiveInterface()
-            except RisorsaException as e:
-                raise RisorsaException(e) 
+        features = {'Name':None, 'NetConnectionID':None, 'AdapterTypeId':None, 'GUID':None, 'NetConnectionStatus':None}
+        dev = {'Name':'unknown', 'Descr':'unknown', 'Type':'unknown', 'GUID':'unknown', 'Status':0}
+        
+        try:
+            devIndex = self.getSingleInfo(obj, 'Index')
+            devInfo = self.InterfaceInfo(devIndex)
+            dev.update(devInfo)
+        except RisorsaException as e:
+            raise RisorsaException(e)
+        
         try:
             keys = features.keys()
             for key in keys:
                 features[key] = self.getSingleInfo(obj, key)
         finally:
-            if (features['Name']):
-                devName = features['Name']
-            if (features['AdapterType']):
-                devType = features['AdapterType']
-            if (features['NetConnectionID']):
+            if (features['Name'] != None):
+                dev['Name'] = features['Name']
+            if (features['NetConnectionID'] != None):
+                dev['Descr'] = features['NetConnectionID']
                 devNetConnID = features['NetConnectionID']
-                if self._is_wireless_text(devNetConnID):
-                    devType = 'Wireless' #type is forced according to the NetConnectionID
-            if (features['MACAddress']):
-                devMac = features['MACAddress']
-                if devMac == self._activeMAC:
-                    devIsActive = 'True'
-            if devMac in self.ipenabdic.keys():
-                statnet=str(self.ipenabdic[devMac])
-            else:
-                statnet = 'false'
-            if ( statnet.lower() == 'true' ):
-                devStatus = 'Enabled'   
+                if(self._is_wireless_text(devNetConnID) and features['AdapterTypeId'] != 9):
+                    features['AdapterTypeId'] = 9
+            if (features['AdapterTypeId'] != None):
+                devType = features['AdapterTypeId']  
+                dev['Type'] = NIC_TYPE[devType]
+            if (features['GUID'] != None):
+                dev['GUID'] = features['GUID']
+            if (features['NetConnectionStatus'] != None):
+                dev['Status'] = features['NetConnectionStatus']
+            
             devxml = ET.Element('NetworkDevice')
-            devxml.append(self.xmlFormat('Name', devName))
-            devxml.append(self.xmlFormat('Type', devType))
-            devxml.append(self.xmlFormat('MACAddress', devMac))
-            devxml.append(self.xmlFormat('isActive', devIsActive))
-            devxml.append(self.xmlFormat('Status', devStatus))
+            keys = dev.keys()
+            for key in keys:
+              devxml.append(self.xmlFormat(key, dev[key]))
             return devxml
             
     def profileModem(self, obj):
