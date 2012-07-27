@@ -248,9 +248,9 @@ def _check_ethernet(res = RES_ETH):
       dev_info = getDevInfo(guid)
       if (dev_info != None):
         dev_type = dev_info['type']
-        if (dev_type == 14):
+        if (dev_type == 0 or dev_type == 14):
           status = int(device.find('Status').text)
-          if (status == 7):
+          if (status == 7 and CHECK_VALUES[res] != 'On Line'):
             CHECK_VALUES[res] = 'Off Line'
             check_info = 'Dispositivi Ethernet non attivi.'
             raise sysmonitorexception.WARNETH
@@ -283,7 +283,7 @@ def _check_wireless(res = RES_WIFI):
         dev_type = dev_info['type']
         if (dev_type == 25):
           status = int(device.find('Status').text)
-          if (status == 7):
+          if (status == 7 and CHECK_VALUES[res] != 'On Line'):
             CHECK_VALUES[res] = 'Off Line'
             check_info = 'Dispositivi wireless non attivi.'
           elif (status == 2):
@@ -325,7 +325,7 @@ def _check_hspa(res = RES_HSPA):
         dev_type = dev_info['type']
         if (dev_type == 17):
           status = int(device.find('Status').text)
-          if (status == 7):
+          if (status == 7 and CHECK_VALUES[res] != 'On Line'):
             CHECK_VALUES[res] = 'Off Line'
             check_info = 'Dispositivi HSPA non attivi.'
           elif (status == 2):
