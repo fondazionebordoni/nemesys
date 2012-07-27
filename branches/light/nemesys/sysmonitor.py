@@ -315,7 +315,8 @@ def _check_hspa(res = RES_HSPA):
         dev_info = getDevInfo()
         if (dev_info != None):
           dev_type = dev_info['type']
-          if (dev_type == 3 or dev_type == 17):
+          dev_mask = dev_info['mask']
+          if (dev_type == 3 or dev_type == 17 or dev_mask == '255.255.255.255'):
             CHECK_VALUES[res] = 'On Line'
             check_info = 'Dispositivi HSPA attivi.'
             raise sysmonitorexception.WARNHSPA
@@ -325,7 +326,7 @@ def _check_hspa(res = RES_HSPA):
       dev_info = getDevInfo(guid)
       if (dev_info != None):
         dev_type = dev_info['type']
-        if (dev_type == 17):
+        if (dev_type == 0 or dev_type == 17):
           status = int(device.find('Status').text)
           if (status == 7 and CHECK_VALUES[res] != 'On Line'):
             CHECK_VALUES[res] = 'Off Line'

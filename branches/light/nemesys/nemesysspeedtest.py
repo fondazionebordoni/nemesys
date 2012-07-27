@@ -37,6 +37,8 @@ __version__ = '1.0.3'
 #Data di scadenza
 dead_date = 20120930
 
+TASK_FILE = '/download/1000.rnd'
+
 # Tempo di attesa tra una misura e la successiva in caso di misura fallita
 TIME_LAG = 5
 DOWN = 'down'
@@ -158,10 +160,12 @@ class _Checker(Thread):
       ip = sysmonitor.getIp()
       id = sysmonitor.getDev(ip)
     except Exception as e:
-      info = {'status':False, 'value':'Not Present', 'info':e}
+      info = {'status':False, 'value':'Not Present', 'info':''}
       wx.CallAfter(self._gui.set_resource_info, RES_ETH, info, False)
       wx.CallAfter(self._gui.set_resource_info, RES_WIFI, info, False)
-      wx.CallAfter(self._gui.set_resource_info, RES_HSPA, info, True)
+      wx.CallAfter(self._gui.set_resource_info, RES_HSPA, info, False)
+      wx.CallAfter(self._gui._update_messages, e, 'red')
+      return
       
     if (self._device == None):
       self._device = id
@@ -481,7 +485,7 @@ class _Tester(Thread):
       # Scaricamento del task dallo scheduler
       # task = self._download_task(server)
       self._update_gauge()
-      task = Task(0, '2010-01-01 10:01:00', server, '/download/1000.rnd', 'upload/1000.rnd', 4, 4, 10, 4, 4, 0, True)
+      task = Task(0, '2010-01-01 10:01:00', server, TASK_FILE, TASK_FILE, 4, 4, 10, 4, 4, 0, True)
 
     if task != None:
 
