@@ -214,8 +214,8 @@ class rete(RisorsaWin):
       return False
       
     def InterfaceInfo(self, index):
-        features = {'MACAddress':'', 'IpAddress':'', 'DefaultIPGateway':'', 'IpSubnet':''}
-        info = {'MAC':'unknown', 'IP':'unknown', 'Gateway':'unknown', 'Mask':'unknown'}
+        features = {'SettingID':'', 'MACAddress':'', 'IpAddress':'', 'DefaultIPGateway':'', 'IpSubnet':''}
+        info = {'GUID':'unknown', 'MAC':'unknown', 'IP':'unknown', 'Gateway':'unknown', 'Mask':'unknown'}
         items = executeQuery('Win32_NetworkAdapterConfiguration', " WHERE index = %s" % index)
         if (items):
             try:
@@ -226,6 +226,8 @@ class rete(RisorsaWin):
             except:
                 raise RisorsaException("Impossibile ritrovare le informazioni sul dispositivo di rete") 
             finally:
+                if (features['SettingID']):
+                    info['GUID'] = features['SettingID']
                 if (features['MACAddress']):
                     info['MAC'] = features['MACAddress']
                 if (features['IpAddress']):
@@ -246,7 +248,6 @@ class rete(RisorsaWin):
         try:
             devIndex = self.getSingleInfo(obj, 'Index')
             devInfo = self.InterfaceInfo(devIndex)
-            dev.update(devInfo)
         except RisorsaException as e:
             raise RisorsaException(e)
         
@@ -269,6 +270,8 @@ class rete(RisorsaWin):
                 dev['GUID'] = features['GUID']
             if (features['NetConnectionStatus'] != None):
                 dev['Status'] = features['NetConnectionStatus']
+            
+            dev.update(devInfo)
             
             devxml = ET.Element('NetworkDevice')
             keys = dev.keys()
