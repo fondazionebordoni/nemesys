@@ -169,13 +169,13 @@ class _Checker(Thread):
         dev_info = sysmonitor.getDevInfo(id)
         dev_type = dev_info['type']
         if (dev_type == 14):
-          dev_descr = "Rete locale via cavo Ethernet"
+          dev_descr = "rete locale via cavo ethernet"
         elif (dev_type == 25):
-          dev_descr = "Rete locale Wireless"
+          dev_descr = "rete locale wireless"
         elif (dev_type == 3 or dev_type == 17):
-          dev_descr = "Connessione di rete mobile HSPA"
+          dev_descr = "rete mobile su dispositivo hspa"
         else:
-          dev_descr = "Tipo di rete sconosciuto"
+          dev_descr = dev_info['descr']
         wx.CallAfter(self._gui._update_messages, "Interfaccia di rete in esame: %s" % dev_info['descr'], 'green')
         wx.CallAfter(self._gui._update_messages, "Indirizzo IP dell'interfaccia di rete in esame: %s" % ip, 'green')
         wx.CallAfter(self._gui._update_interface, dev_descr, ip)
@@ -814,7 +814,7 @@ class Frame(wx.Frame):
       self.Layout()
 
     def _update_interface(self, interface, ip):
-      self.label_interface.SetLabel("Interfaccia di test: %s\nIndirizzo di rete: %s" % (interface,ip))
+      self.label_interface.SetLabel("Interfaccia di test: %s\nIndirizzo IP di rete: %s" % (interface,ip))
       self.Layout()
     
     def _reset_info(self):

@@ -815,6 +815,7 @@ UINT find_devices(void)
 
 			/* Info from NMapi */
 			devices[tot_dev].index = -1;
+			devices[tot_dev].type = -1;
 
 			devices[tot_dev].mac = (char *)MALLOC(18*sizeof(char));
 			if ((int)(pCurrAddresses->PhysicalAddressLength) >= 6)
@@ -944,7 +945,7 @@ UINT find_devices(void)
 				sprintf_s(devices[tot_dev].mask,8,"-.-.-.-");
 			}
 
-			if ((devices[tot_dev].index==-1) && (strcmp(devices[tot_dev].net,devices[tot_dev].mask)==0))
+			if (devices[tot_dev].index==-1) //&& (strcmp(devices[tot_dev].net,devices[tot_dev].mask)==0)
 			{
 				for(i = 0; i < adapterCount; i++)
 				{
@@ -957,7 +958,7 @@ UINT find_devices(void)
 						guid = (char *)MALLOC(sizeBuff);
 						sprintf_s(guid, sizeBuff, "%S", AdapterInfo.FriendlyName);
 
-						if (strstr(guid,"NDISWAN")!=NULL)
+						if (strstr(guid,"WAN")!=NULL)
 						{
 							/* Device Index */
 							devices[tot_dev].index = i;

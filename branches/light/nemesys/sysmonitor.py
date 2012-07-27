@@ -236,7 +236,7 @@ def _check_ethernet(res = RES_ETH):
 
   CHECK_VALUES[res] = 'Not Present'
 
-  check_info = 'Dispositivi Ethernet non presenti.'
+  check_info = 'Dispositivi ethernet non presenti.'
   profiler = LocalProfilerFactory.getProfiler()
   data = profiler.profile(set(['rete']))
   
@@ -252,11 +252,11 @@ def _check_ethernet(res = RES_ETH):
           status = int(device.find('Status').text)
           if (status == 7 and CHECK_VALUES[res] != 'On Line'):
             CHECK_VALUES[res] = 'Off Line'
-            check_info = 'Dispositivi Ethernet non attivi.'
+            check_info = 'Dispositivi ethernet non attivi.'
             raise sysmonitorexception.WARNETH
           elif (status == 2):
             CHECK_VALUES[res] = 'On Line'
-            check_info = 'Dispositivi Ethernet attivi.'
+            check_info = 'Dispositivi ethernet attivi.'
             
   if (CHECK_VALUES[res] == 'Not Present'):
     raise sysmonitorexception.WARNETH
@@ -288,6 +288,7 @@ def _check_wireless(res = RES_WIFI):
             check_info = 'Dispositivi wireless non attivi.'
           elif (status == 2):
             CHECK_VALUES[res] = 'On Line'
+            check_info = 'Dispositivi wireless attivi.'
             raise sysmonitorexception.WARNWLAN
             
   return check_info
@@ -316,6 +317,7 @@ def _check_hspa(res = RES_HSPA):
           dev_type = dev_info['type']
           if (dev_type == 3 or dev_type == 17):
             CHECK_VALUES[res] = 'On Line'
+            check_info = 'Dispositivi HSPA attivi.'
             raise sysmonitorexception.WARNHSPA
     
     elif (type == 'Wireless'):
