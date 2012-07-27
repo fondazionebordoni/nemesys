@@ -213,6 +213,16 @@ class rete(RisorsaWin):
             return True
       return False
       
+    def _is_hspa_text(self,text):
+      keywords = ['mobile', 'hspa', '3g']
+      ltext=text.lower()
+      words=ltext.split(' ')
+      for w in words:
+        for key in keywords:
+          if w==key:
+            return True
+      return False
+      
     def InterfaceInfo(self, index):
         features = {'SettingID':'', 'MACAddress':'', 'IpAddress':'', 'DefaultIPGateway':'', 'IpSubnet':''}
         info = {'GUID':'unknown', 'MAC':'unknown', 'IP':'unknown', 'Gateway':'unknown', 'Mask':'unknown'}
@@ -242,8 +252,8 @@ class rete(RisorsaWin):
       
     def profileDevice(self, obj):
         running = 0X3 #running Net Interface CODE
-        features = {'Name':None, 'NetConnectionID':None, 'AdapterTypeId':None, 'GUID':None, 'NetConnectionStatus':None}
-        dev = {'Name':'unknown', 'Descr':'unknown', 'Type':'unknown', 'GUID':'unknown', 'Status':0}
+        features = {'Name':None, 'NetConnectionID':None, 'AdapterTypeId':None, 'NetConnectionStatus':None}
+        dev = {'Name':'unknown', 'Descr':'unknown', 'Type':'unknown', 'Status':0}
         
         try:
             devIndex = self.getSingleInfo(obj, 'Index')
@@ -255,9 +265,13 @@ class rete(RisorsaWin):
             keys = features.keys()
             for key in keys:
                 features[key] = self.getSingleInfo(obj, key)
+        
         finally:
             if (features['Name'] != None):
                 dev['Name'] = features['Name']
+                devName = features['Name']
+                if(self._is_hspa_text(devName) and features['AdapterTypeId'] != 9):
+                    features['AdapterTypeId'] = 9
             if (features['NetConnectionID'] != None):
                 dev['Descr'] = features['NetConnectionID']
                 devNetConnID = features['NetConnectionID']
@@ -266,8 +280,6 @@ class rete(RisorsaWin):
             if (features['AdapterTypeId'] != None):
                 devType = features['AdapterTypeId']  
                 dev['Type'] = NIC_TYPE[devType]
-            if (features['GUID'] != None):
-                dev['GUID'] = features['GUID']
             if (features['NetConnectionStatus'] != None):
                 dev['Status'] = features['NetConnectionStatus']
             
