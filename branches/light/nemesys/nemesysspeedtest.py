@@ -37,7 +37,7 @@ __version__ = '1.0.3'
 #Data di scadenza
 dead_date = 20120930
 
-TASK_FILE = '/download/1000.rnd'
+TASK_FILE = '1000.rnd'
 
 # Tempo di attesa tra una misura e la successiva in caso di misura fallita
 TIME_LAG = 5
@@ -485,7 +485,7 @@ class _Tester(Thread):
       # Scaricamento del task dallo scheduler
       # task = self._download_task(server)
       self._update_gauge()
-      task = Task(0, '2010-01-01 10:01:00', server, TASK_FILE, TASK_FILE, 4, 4, 10, 4, 4, 0, True)
+      task = Task(0, '2010-01-01 10:01:00', server, '/download/%s' % TASK_FILE, 'upload/%s' % TASK_FILE, 4, 4, 10, 4, 4, 0, True)
 
     if task != None:
 
