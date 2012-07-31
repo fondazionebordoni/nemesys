@@ -63,6 +63,10 @@ RES_DEV = 'Device'
 
 CHECK_VALUES = {}
 
+NETIF_TIME = None
+NETIF_1 = None
+NETIF_2 = None
+
 tag_results = 'SystemProfilerResults'
 tag_threshold = 'SystemProfilerThreshold'
 tag_avMem = 'RAM.totalPhysicalMemory'
@@ -176,9 +180,11 @@ def _check_cpu(res = RES_CPU):
   
   for check in range(4):
     value = _get_float_tag(tag_cpu.split('.', 1)[1], th_cpu - 1, tag_cpu.split('.', 1)[0])
-    if value != None:
+    if value != None:  
       tot_value += value 
       num_check += 1
+      if value < th_cpu:
+        break
   
   value = tot_value / float(num_check)  
   CHECK_VALUES[res] = value
@@ -237,8 +243,7 @@ def _check_ethernet(res = RES_ETH):
   CHECK_VALUES[res] = 'Not Present'
 
   check_info = 'Dispositivi ethernet non presenti.'
-  profiler = LocalProfilerFactory.getProfiler()
-  data = profiler.profile(set(['rete']))
+  data = _get_NetIF(1)
   
   for device in data.findall('rete/NetworkDevice'):
     #logger.debug(ET.tostring(device))
@@ -270,8 +275,7 @@ def _check_wireless(res = RES_WIFI):
   CHECK_VALUES[res] = 'Not Present'
 
   check_info = 'Dispositivi wireless non presenti.'
-  profiler = LocalProfilerFactory.getProfiler()
-  data = profiler.profile(set(['rete']))
+  data = _get_NetIF(1)
   
   for device in data.findall('rete/NetworkDevice'):
     #logger.debug(ET.tostring(device))
@@ -300,8 +304,7 @@ def _check_hspa(res = RES_HSPA):
   CHECK_VALUES[res] = 'Not Present'
 
   check_info = 'Dispositivi HSPA non presenti.'
-  profiler = LocalProfilerFactory.getProfiler()
-  data = profiler.profile(set(['rete']))
+  data = _get_NetIF(1)
   
   for device in data.findall('rete/NetworkDevice'):
     #logger.debug(ET.tostring(device))
@@ -343,7 +346,7 @@ def _check_hosts(up = 2048, down = 2048, ispid = 'tlc003', arping = 1, res = RES
 
   CHECK_VALUES[res] = None
   
-  netIF = _get_NetIF()
+  #netIF = _get_NetIF()
   # for key in netIF:
     # logger.debug('%s : %s' % (key,netIF[key]))
     
@@ -411,13 +414,13 @@ def _check_traffic(sec = 2, res = RES_TRAFFIC):
     time.sleep(sec)
     pcapper.stop_sniff()
     stats = pcapper.get_stats()
-    total_time = time.time() - start_time
-    logger.debug('Total Time: %s' % total_time)
+    total_time = int((time.time() - start_time) * 1000)
+    logger.debug('Checked Traffic for %s ms' % total_time)
     pcapper.stop()
     pcapper.join()
     
-    UP_kbps = stats.byte_up_all * 8 / (1000 * total_time)
-    DOWN_kbps = stats.byte_down_all * 8 / (1000 * total_time)
+    UP_kbps = stats.byte_up_all * 8 / total_time
+    DOWN_kbps = stats.byte_down_all * 8 / total_time
     
     if (int(UP_kbps) < 20 and int(DOWN_kbps) < 200):
       traffic = 'LOW'
@@ -496,22 +499,38 @@ def _mask_conversion(dotMask):
   return maskcidr
 
 
-def _get_NetIF():
+def _get_NetIF(type = 0):
 
-  netIF = {}
+  global NETIF_TIME, NETIF_1, NETIF_2
 
-  for ifName in netifaces.interfaces():
-    #logger.debug((ifName,netifaces.ifaddresses(ifName)))
-    mac = [i.setdefault('addr', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_LINK, [{'addr':''}])]
-    ip = [i.setdefault('addr', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'addr':''}])]
-    mask = [i.setdefault('netmask', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'netmask':''}])]
-    if mask[0] == '0.0.0.0':
-      mask = [i.setdefault('broadcast', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'broadcast':''}])]
-    netIF[ifName] = {'mac':mac, 'ip':ip, 'mask':mask}
+  age = 20 #seconds
+  now = time.time()
+  
+  if ( NETIF_TIME == None ):
+    NETIF_TIME = now
+  
+  if ( (now-NETIF_TIME)>age or (NETIF_1 == None) or (NETIF_2 == None) ):
+     
+    NETIF_TIME = now
+    
+    profiler = LocalProfilerFactory.getProfiler()
+    NETIF_1 = profiler.profile(set(['rete']))
+      
+    NETIF_2 = {}
+    for ifName in netifaces.interfaces():
+      #logger.debug((ifName,netifaces.ifaddresses(ifName)))
+      mac = [i.setdefault('addr', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_LINK, [{'addr':''}])]
+      ip = [i.setdefault('addr', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'addr':''}])]
+      mask = [i.setdefault('netmask', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'netmask':''}])]
+      if mask[0] == '0.0.0.0':
+        mask = [i.setdefault('broadcast', '') for i in netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'broadcast':''}])]
+      NETIF_2[ifName] = {'mac':mac, 'ip':ip, 'mask':mask}
+    #logger.debug('Network Interfaces:\n %s' %NETIF_2)
 
-  #logger.debug('Network Interfaces:\n %s' %netIF)
-
-  return netIF
+  if (type != 0):
+    return NETIF_1
+  else:
+    return NETIF_2
 
 
 def _get_ActiveIp(host = 'finaluser.agcom244.fub.it', port = 443):
@@ -739,7 +758,7 @@ def checkset(check_set = set()):
       system_profile[check]['status'] = status
       system_profile[check]['value'] = CHECK_VALUES[check]
       system_profile[check]['info'] = str(info)
-      logger.info('%s: %s' % (check, system_profile[check]))
+      #logger.info('%s: %s' % (check, system_profile[check]))
       #logger.debug(CHECK_VALUES)
 
   return system_profile

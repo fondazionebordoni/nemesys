@@ -67,11 +67,11 @@ def _ftp_down(ftp, file):
   conn = ftp.transfercmd('RETR %s' % file, rest=None)
   
   size = 0
-  start = datetime.now()
+  start = time.time()
   while True:
     data = conn.recv(8192)
-    stop = datetime.now()
-    elapsed = (((stop-start).seconds)*1000)+(((stop-start).microseconds)/1000)
+    stop = time.time()
+    elapsed = int((stop-start)*1000)
     size += len(data)
     if (elapsed > max_time):
       break
@@ -99,14 +99,14 @@ def _ftp_up(ftp, file, path):
   conn = ftp.transfercmd('STOR %s' % path, rest=None)
   
   size = 0
-  start = datetime.now()
+  start = time.time()
   while True:
     data = file.read(8192*4)
     if (data == None):
       break
     conn.sendall(data)
-    stop = datetime.now()
-    elapsed = (((stop-start).seconds)*1000)+(((stop-start).microseconds)/1000)
+    stop = time.time()
+    elapsed = int((stop-start)*1000)
     size += len(data)
     if (elapsed > max_time):
       break
@@ -174,7 +174,7 @@ class Tester:
 
       # Il risultato deve essere espresso in millisecondi
       elapsed = _ftp_up(ftp, file, filepath)#timer.timeit(1) * 1000
-      logger.debug("Banda: %s/%s = %s Kbps" % ((size*8),elapsed,(size*8)/elapsed))
+      logger.debug("Banda: (%s*8)/%s = %s Kbps" % (size,elapsed,(size*8)/elapsed))
       
       pcapper.stop_sniff()
       counter_stats = pcapper.get_stats()
@@ -239,7 +239,7 @@ class Tester:
 
       # Il risultato deve essere espresso in millisecondi
       elapsed = _ftp_down(ftp, file) #timer.timeit(1) * 1000
-      logger.debug("Banda: %s/%s = %s Kbps" % ((size*8),elapsed,(size*8)/elapsed))
+      logger.debug("Banda: (%s*8)/%s = %s Kbps" % (size,elapsed,(size*8)/elapsed))
       
       pcapper.stop_sniff()
       counter_stats = pcapper.get_stats()

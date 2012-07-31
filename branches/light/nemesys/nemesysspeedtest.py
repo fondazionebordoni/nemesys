@@ -434,10 +434,10 @@ class _Tester(Thread):
         bandwidth = self._get_bandwith(test)
 
         if type == DOWN:
-          self._client.profile.download = min(bandwidth, (40000 / 8) * 10)
+          self._client.profile.download = min(bandwidth, 40000)
           task.update_ftpdownpath(bandwidth)
         elif type == UP:
-          self._client.profile.upload = min(bandwidth, (40000 / 8) * 10)
+          self._client.profile.upload = min(bandwidth, 40000)
         else:
           logger.warn("Tipo di test effettuato non definito!")
 
