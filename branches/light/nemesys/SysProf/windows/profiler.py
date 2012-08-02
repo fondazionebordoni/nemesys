@@ -30,7 +30,8 @@ NIC_TYPE = { \
 10:'Infrared Wireless', \
 11:'Bpc', \
 12:'CoWan', \
-13:'1394' \
+13:'1394', \
+14:'WWAN' \
 }
 
 def executeQuery(wmi_class, whereCondition=""):   
@@ -64,16 +65,17 @@ class RisorsaWin(Risorsa):
                 if wmi_class in self.whereCondition:
                     classCondition = self.whereCondition[wmi_class]
                 items = executeQuery(wmi_class, classCondition)
-                if len(items) == 0 and (wmi_class != 'Win32_NetworkAdapter') and (wmi_class != 'Win32_POTSModem'):
-                    raise RisorsaException("La risorsa con le caratteristiche richieste non e' presente nel server")
-                else:
-                    for obj in items:
-                        for val in self._params[wmi_class]:
-                            tag = val
-                            cmd = getattr(self, tag)
-                            xmlres = cmd(obj)
-                            if (xmlres is not None):
-                              root.append(xmlres)
+                for obj in items:
+                    for val in self._params[wmi_class]:
+                        tag = val
+                        cmd = getattr(self, tag)
+                        xmlres = cmd(obj)
+                        if (xmlres is not None):
+                          root.append(xmlres)
+                          
+            if len(items) == 0 and ((wmi_class != 'Win32_NetworkAdapter') or (wmi_class != 'Win32_POTSModem')):
+                raise RisorsaException("La risorsa con le caratteristiche richieste non e' presente nel server")
+                
         except AttributeError as e:
             raise RisorsaException("errore get status info")
         except RisorsaException as e:
@@ -270,8 +272,8 @@ class rete(RisorsaWin):
             if (features['Name'] != None):
                 dev['Name'] = features['Name']
                 devName = features['Name']
-                if(self._is_hspa_text(devName) and features['AdapterTypeId'] != 9):
-                    features['AdapterTypeId'] = 9
+                if(self._is_hspa_text(devName) and features['AdapterTypeId'] != 14):
+                    features['AdapterTypeId'] = 14
             if (features['NetConnectionID'] != None):
                 dev['Descr'] = features['NetConnectionID']
                 devNetConnID = features['NetConnectionID']
