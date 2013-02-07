@@ -205,7 +205,7 @@ def getActivationFile(appresult,path):
           return True
 
     except Exception as e:
-      nemesys.error('Cannot download the configuration file: %' % str(e))
+      nemesys.error('Cannot download the configuration file: %s' % str(e))
       Downloadmain()
       return False
 
@@ -269,13 +269,8 @@ class aservice(win32serviceutil.ServiceFramework):
    
 
    def __init__(self,args):
-      #servicemanager.LogWarningMsg('type(arg) = '+ str(type(args)))
-      #servicemanager.LogWarningMsg(str(args))
-      #nemesys.info("args: "+str(args))
-      #servicemanager.LogWarningMsg(str(args))
       win32serviceutil.ServiceFramework.__init__(self,args)
       self.isAlive = True
-      #self.hWaitStop = win32event.CreateEvent(None, 0, 0, None)
 
    def SvcDoRun(self):
       servicemanager.LogInfoMsg("NeMeSys Service - started")
@@ -298,13 +293,6 @@ class aservice(win32serviceutil.ServiceFramework):
           #ex.couni()
           os.popen('taskkill /pid '+str(pid))
 
-         #fileOutputName = str(_PATH+os.sep+'results.xml')
-         #executer.main()
-         #SystemProfiler(fileOutputName,diction)
-         #win32api.SleepEx(120000, True)
-         #i+=1
-         #servicemanager.LogInfoMsg("LucianoSrvc - Stopped")
-
    def SvcStop(self):
       servicemanager.LogInfoMsg("Stopping NeMeSys Service - stop signal received ")
       self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
@@ -317,7 +305,7 @@ def ctrlHandler(ctrlType):
    return True
 
 def mainArg(argv):
-    if len(argv)== 1:
+    if len(argv) == 1:
         start = 'start'
         sys.argv.append(start)
         es = os.popen('Net START EventSystem').read()
