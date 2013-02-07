@@ -2,11 +2,12 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Nemesys"
-#define MyAppVersion "2.1.1"
+#define MyAppVersion "2.1.3"
 #define MyAppPublisher "Fondazione Ugo Bordoni"
 #define MyAppURL "http://www.misurainternet.it/"
 #define MyAppExeName "Nemesys.exe"
-#define MyAppDir "C:\Documents and Settings\Fondazione\Desktop\nemesys\trunk"
+#define MyRoot "C:\[work]"
+#define MyAppDir MyRoot + "\nemesys-qos\trunk"
 
 ; Read the previuos build number. If there is none take 0 instead.
 #define BuildNum Int(ReadIni(SourcePath	+ "\\buildinfo.ini","Info","Build","1"))
