@@ -66,7 +66,6 @@ nemesys.addHandler(fh1)
 nemesys.info('PATH: '+ _PATH)
 
 
-
 ### Executer Thread ###
 class execThread (Thread):
     def __init__(self):
@@ -76,34 +75,46 @@ class execThread (Thread):
     def run(self):
         executer.main()
 
+
 class GetCodeGui(Frame):
     """
     finestra di codice licenza
     """
     
     def sendMsg(self):
-        self.result = self.code.get()
+        self.result = "%s|%s" % (self.username.get(), self.password.get())
         self.quit()
 
     def createWidgets(self):
-        self.Title = Label(self)
-        self.Title["text"] = "\nInserire codice di licenza per NeMeSys.\nIl codice licenza e' riportato nella propria area privata sul sito www.misurainternet.it,\nnella sezione Licenze e PDF misure."
-        self.Title.pack({"side": "top"})
+        self.Title = Label(self, padx=60, pady=8)
+        self.Title["text"] = "Inserire username e password\nper accedere a Misurainternet.it"
+        self.Title.grid(column=0, row=0, columnspan=2)
+
+        username_label = Label(self, text="username:")
+        username_label.grid(column=0, row=1)
+
+        self.username = Entry(self, width=30)
+        self.username.grid(column=1, row=1)
+
+        password_label = Label(self, text="password:")
+        password_label.grid(column=0, row=2)
+
+        self.password = Entry(self, width=30)
+        self.password["show"] = "*"
+        self.password.grid(column=1, row=2)
 
         self.invio = Button(self)
-        self.invio["text"] = "invio",
+        self.invio["text"] = " Accedi ",
         self.invio["command"] = self.sendMsg
-        self.invio.pack({"side": "bottom"})        
-
-        self.code = Entry(self)
-        self.code.pack({"side": "bottom"})
-        
+        self.invio.grid(column=0, row=3, columnspan=2, pady=8)
 
     def __init__(self, master=None):
         Frame.__init__(self, master)
+        self.config(width="800")
         self.master.wm_iconbitmap('..\\Nemesys.ico')
-        self.pack(side=BOTTOM)
+        self.pack()
         self.createWidgets()
+
 
 def GCGmain():
     """
@@ -111,7 +122,7 @@ def GCGmain():
     """
     rootGCG = Tk()
     appGCG = GetCodeGui(master=rootGCG)
-    appGCG.master.title("Codice licenza Nemesys")
+    appGCG.master.title("Attivazione Ne.Me.Sys")
     appGCG.mainloop()
     appresult = str(appGCG.result)
     rootGCG.destroy()
@@ -121,7 +132,7 @@ def ErrorDialog(message):
     root = Tk()
     root.wm_iconbitmap('..\\Nemesys.ico')
     root.withdraw()
-    title = 'Nemesys Error'
+    title = 'Errore'
     tkMessageBox.showerror(title, message, parent=root)
     root.destroy()
 
@@ -129,39 +140,36 @@ def ACEmain():
     """
     Errore in caso di Codice errato
     """
-    message = "Errore nella lettura del codice di attivazione.\nControllare il file di configurazione cfg.properties."
+    message = "Errore di accesso.\nControllare il file di configurazione cfg.properties."
     ErrorDialog(message)
 
 def Downloadmain():
     """
     Errore in caso di Download errato
     """
-    message = "Impossibile installare Ne.Me.Sys., errore nel download del file di configurazione o codice licenza non corretto."
+    message = "Impossibile installare Ne.Me.Sys., errore nel download del file di configurazione o credenziali di autenticazione non corrette."
     ErrorDialog(message)
 
 def CodeError():
     """
-    Errore in caso di codice di attivazione non attivo
+    Errore in caso di credenziali errate
     """
-    message = "Codice di attivazione inserito errato.\nControllare il codice nella propria area personale del sito www.misurainternet.it"
+    message = "Credenziali di autenticazione non riconosciute.\nControllare i dati di accesso al sito www.misurainternet.it"
     ErrorDialog(message)
-
 
 def FinalError():
     """
     Errore in caso di terzo tentativo di download non andato a buon fine
     """
-    message = "Il download del file di configurazione non è andato a buon fine.\nVerificare la correttezza del codice di licenza e di avere accesso alla rete.\n\nDopo 5 tentativi falliti, sarà necessario disinttallare Ne.Me.Sys. e reinstallarlo nuovamente."
+    message = "Il download del file di configurazione non è andato a buon fine.\nVerificare la correttezza dei dati di autenticazione inseriti e di avere accesso alla rete.\n\nDopo 5 tentativi falliti, sarà necessario disinttallare Ne.Me.Sys. e reinstallarlo nuovamente."
     ErrorDialog(message)
-
 
 def MaxError():
     """
     Errore in caso di quinto inserimento errato di codice licenza
     """
-    message = "Il file di configurazione non è stato scaricato dopo 5 tentativi.\nProcedere con la procedura di disinstallazione e reinstallare nuovamente per inserire il corretto codice di licenza."
+    message = "Il file di configurazione non è stato scaricato dopo 5 tentativi.\nProcedere con la procedura di disinstallazione e reinstallare nuovamente Ne.Me.Sys."
     ErrorDialog(message)
-    
     
 def OkDialog():
     root = Tk()
@@ -172,8 +180,6 @@ def OkDialog():
     tkMessageBox.showinfo(title, message, parent=root)
     root.destroy()
 
-           
-
 ### Function to Download Configuration File ###
 def getActivationFile(appresult,path):
     '''
@@ -182,7 +188,7 @@ def getActivationFile(appresult,path):
     nemesys.info('getActivationFile function')
     
     ac = appresult 
-    nemesys.info('Activation Code found: %s' % ac)
+    nemesys.info('Codice ricevuto: %s' % ac)
     
     try:
       download = getconf(ac, path, _clientConfigurationFile, _configurationServer)
@@ -199,7 +205,7 @@ def getActivationFile(appresult,path):
           return True
 
     except Exception as e:
-      nemesys.error('Cannot download the configuration file: ' + str(e))
+      nemesys.error('Cannot download the configuration file: %' % str(e))
       Downloadmain()
       return False
 
@@ -213,19 +219,19 @@ def getCode():
   try:
     root = Tk()
     app = GetCodeGui(master=root)
-    app.master.title("Codice licenza Nemesys")
+    app.master.title("Attivazione Ne.Me.Sys")
     app.mainloop()
     appresult = str(app.result)
     nemesys.info(appresult)
 
-    if appresult == '' or len(appresult) != 32:
+    if appresult == '' or len(appresult) < 4:
       appresult = None
       nemesys.error('Exit: wrong activation code')
       CodeError()
-      raise Exception('Wrong activation code')
+      raise Exception('Wrong username/password')
 
   except Exception as e:
-      nemesys.error('Exception at activation code: ' + str(e))
+      nemesys.error('Exception at activation code: %s' % str(e))
       
   finally:
     root.destroy()
@@ -250,7 +256,7 @@ def isNotFirstExec():
             else:
                 # Il servizio non può partire
                 nemesys.error('Configuration file download previously failed. File not present.')
-                nemesys.error('Exiting from NeMeSys')
+                nemesys.error('Exiting from Ne.Me.Sys.')
                 sys.exit(1)
     else:
         return False
