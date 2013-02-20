@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import hashlib
 import pythoncom
 import win32serviceutil
 import win32service
@@ -82,12 +83,12 @@ class GetCodeGui(Frame):
     """
     
     def sendMsg(self):
-        self.result = "%s|%s" % (self.username.get(), self.password.get())
+        self.result = "%s|%s" % (self.username.get(), hashlib.sha1(self.password.get()).hexdigest())
         self.quit()
 
     def createWidgets(self):
         self.Title = Label(self, padx=60, pady=8)
-        self.Title["text"] = "Inserire username e password\nper accedere a Misurainternet.it"
+        self.Title["text"] = "Inserisci i codici di accesso (username e password)\nche hai usato per accedere all'area personale"
         self.Title.grid(column=0, row=0, columnspan=2)
 
         username_label = Label(self, text="username:")
@@ -104,7 +105,7 @@ class GetCodeGui(Frame):
         self.password.grid(column=1, row=2)
 
         self.invio = Button(self)
-        self.invio["text"] = " Accedi ",
+        self.invio["text"] = "Accedi",
         self.invio["command"] = self.sendMsg
         self.invio.grid(column=0, row=3, columnspan=2, pady=8)
 
@@ -175,8 +176,8 @@ def OkDialog():
     root = Tk()
     root.wm_iconbitmap('..\\nemesys.ico')
     root.withdraw()
-    title = 'Nemesys codice corretto'
-    message = 'Codice licenza corretto e verificato'
+    title = 'Ne.Me.Sys autenticazione corretta'
+    message = 'Username e password corrette e verificate'
     tkMessageBox.showinfo(title, message, parent=root)
     root.destroy()
 
@@ -188,7 +189,7 @@ def getActivationFile(appresult,path):
     nemesys.info('getActivationFile function')
     
     ac = appresult 
-    nemesys.info('Codice ricevuto: %s' % ac)
+    nemesys.info('Codici ricevuti: %s' % ac)
     
     try:
       download = getconf(ac, path, _clientConfigurationFile, _configurationServer)
