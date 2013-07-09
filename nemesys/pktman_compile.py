@@ -2,7 +2,7 @@ from distutils.core import setup, Extension
 
 import platform
 
-if (platform.python_version_tuple()[1] == 7):
+if (platform.python_version_tuple()[1] == '7'):
   module = Extension('pktman',
     define_macros = [('MAJOR_VERSION', '1'),
                      ('MINOR_VERSION', '0')],
