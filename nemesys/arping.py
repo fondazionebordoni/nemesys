@@ -23,12 +23,15 @@ import ipcalc
 import socket
 import string
 import struct
+import re
 
 logger = logging.getLogger()
 
 ETH_P_IP = 0x0800
 ETH_P_ARP = 0x0806
 ARP_REPLY = 0x0002
+TECHNICOLOR_MACS = ['^A..B1.E9'] 
+TECHNICOLOR_IPS = ['192.168.1.253']
 
 MAX = 128
 
@@ -53,6 +56,19 @@ def send_arping(IPsrc, IPdst, MACsrc, MACdst):
   if (sended['err_flag'] != 0):
     logger.debug("%s" % sended['err_str'])
 
+def _is_technicolor(ip, mac):
+  if (not re.match("([0-9A-F]{2}:){5}[0-9A-F]", mac, re.I)):
+    logger.warn("Errore nell'utilizzo della funzione _is_technicolor: formato MAC non corretto (%s)" % mac)
+  
+  for ip_technicolor in TECHNICOLOR_IPS:
+    if (ip == ip_technicolor):
+      logger.debug("Trovato possibile IP spurio di router Technicolor: %s" % ip)
+      for mac_technicolor in TECHNICOLOR_MACS:
+        if re.search(mac_technicolor, mac, re.I):
+          logger.info("Trovato IP spurio di router Technicolor: %s [%s]" % (ip, mac))
+          return True
+      
+  return False
 
 def receive_arping(MACsrc):
 
@@ -89,19 +105,22 @@ def receive_arping(MACsrc):
           IPsrc_arp = socket.inet_ntoa(psrc_arp)
           IPdst_arp = socket.inet_ntoa(pdst_arp)
           if (IPsrc_arp not in IPtable):
-            IPtable[IPsrc_arp] = display_mac(hwsrc_arp)
-            logger.debug('Trovato Host %s con indirizzo fisico %s' % (IPsrc_arp, display_mac(hwsrc_arp)))
+            
+            if (not _is_technicolor(IPsrc_arp, display_mac(hwsrc_arp))):
+              IPtable[IPsrc_arp] = display_mac(hwsrc_arp)
+              logger.info('Trovato Host %s con indirizzo fisico %s' % (IPsrc_arp, display_mac(hwsrc_arp)))
+            
 
   return len(IPtable)
 
 
-def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 2):
-
+def do_arping(IPsrc, NETmask, realSubnet=True, timeout=1, mac=None, threshold=2):
   nHosts = 0
 
   if (mac):
     MACsrc = "".join(chr(int(macEL, 16)) for macEL in mac.split(':'))
   else:
+    logger.warn("Richiesta esecuzione di arping senza la specifica del MAC address.")
     return 0
   MACdst = "\xFF"*6
   
@@ -119,11 +138,13 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, thresh
   if (dev['err_flag'] != 0):
     raise Exception (dev['err_str'])
   else:
-    dev_name=dev['dev_name']
-
-  rec_init = pktman.initialize(dev_name, 1024000, 150, timeout*1000)
+    dev_name = dev['dev_name']
+    
+  logger.debug("Richiesta inizializzazione sniffer (%s, %s)" % (dev_name, pcap_filter))
+  rec_init = pktman.initialize(dev_name, 1024000, 150, timeout * 1000)
   if (rec_init['err_flag'] != 0):
     raise Exception (rec_init['err_str'])
+  
   rec_init = pktman.setfilter(pcap_filter)
   logger.debug("Inizializzato sniffer (%s, %s)" % (dev_name, pcap_filter))
   if (rec_init['err_flag'] != 0):
@@ -139,7 +160,7 @@ def do_arping(IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, thresh
       elif(IPdst.dq == IPsrc):
         logger.debug("Salto il mio ip %s" % IPdst)
       else:
-        #logger.debug('Arping host %s' % IPdst)
+        # logger.debug('Arping host %s' % IPdst)
         send_arping(IPsrc, IPdst, MACsrc, MACdst)
         i += 1
 
@@ -167,10 +188,10 @@ if __name__ == '__main__':
   s.connect(('www.fub.it', 80))
   ip = s.getsockname()[0]
   s.close()
-  mymac='F0:4D:A2:53:AD:AE'
-  print mymac.split(':')
+  mymac = '78:2B:CB:96:52:51'
 
   if ip != None:
-    #print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
-    print("Trovati: %d host" % do_arping(ip, 24, True, 1, 'F0:4D:A2:53:AD:AE', 15))
+    logger.debug('Inizio check degli host su %s (%s)' % (ip, mymac))
+    print("Trovati: %d host" % do_arping(IPsrc=ip, NETmask=24, mac=mymac))
+    # print("Trovati: %d host" % do_arping(ip, 24, True, 1, mymac, 3))
 
