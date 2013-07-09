@@ -46,6 +46,7 @@ class sendit(Thread):
       pass
 
 def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, threshold = 4, arping = 0, mac = None):
+  
   realSubnet = True
   if(provider == "fst001" and not bool(re.search('^192\.168\.', ipAddress))):
     realSubnet = False
@@ -67,6 +68,12 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, 
 
   n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold, arping, mac)
   return n_host
+
+
+def _is_technicolor(ip):
+  # TODO Occorre trovare il MAC dell'IP da controllare e verificare se Technicolor
+  pass
+
 
 def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping = 0, mac = None):
   '''
@@ -109,7 +116,8 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
 
           if(pingle.status):
             logger.debug("Trovato host: %s (in %.2f ms)" % (pingle.ip, pingle.elapsed * 1000))
-            nHosts = nHosts + 1
+            if (not _is_technicolor(pingle.ip)):
+              nHosts = nHosts + 1
 
         pinglist = []
 
@@ -125,5 +133,5 @@ if __name__ == '__main__':
   ip = s.getsockname()[0]
   s.close()
 
-  print countHosts(ip, 24, 200, 2000, 'fst001', 4, 1, None)
+  print countHosts(ip, 24, 200, 2000, 'fub001', 4, 0, '78:2B:CB:96:52:51')
 
