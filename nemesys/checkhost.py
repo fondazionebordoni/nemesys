@@ -45,8 +45,7 @@ class sendit(Thread):
       self.status = 0
       pass
 
-def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, threshold = 4, arping = 0, mac = None):
-  
+def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, threshold = 4, arping = 0, mac = None, dev = None):
   realSubnet = True
   if(provider == "fst001" and not bool(re.search('^192\.168\.', ipAddress))):
     realSubnet = False
@@ -66,16 +65,10 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, 
 
   logger.info("Indirizzo: %s/%d; Realsubnet: %s; Threshold: %d" % (ipAddress, netMask, realSubnet, threshold))
 
-  n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold, arping, mac)
+  n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold, arping, mac, dev)
   return n_host
 
-
-def _is_technicolor(ip):
-  # TODO Occorre trovare il MAC dell'IP da controllare e verificare se Technicolor
-  pass
-
-
-def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping = 0, mac = None):
+def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping = 0, mac = None, dev = None):
   '''
   Ritorna il numero di host che rispondono al ping nella sottorete ipAddress/net_mask.
   Di default effettua i ping dei soli host appartenenti alla sottorete indicata (escludendo il 
@@ -89,7 +82,7 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
 
   if (arping == 1):
     try:
-      nHosts = do_arping(ipAddress, netMask, realSubnet, 1, mac, threshold)
+      nHosts = do_arping(dev, ipAddress, netMask, realSubnet, 1, mac, threshold)
     except Exception as e:
       logger.debug('Errore durante l\'arping: %s' % e)
       status = 0
@@ -102,6 +95,8 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
       lasting -= 1
       if ((ip.hex() == net.hex() or ip.hex() == bcast.hex()) and realSubnet):
         logger.debug("Saltato ip %s" % ip)
+      elif(ip.dq == ipAddress):
+        logger.debug("Salto il mio ip %s" % ipAddress)
       else:
         logger.debug('Ping host %s' % ip)
         current = sendit(ip)
@@ -116,14 +111,13 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
 
           if(pingle.status):
             logger.debug("Trovato host: %s (in %.2f ms)" % (pingle.ip, pingle.elapsed * 1000))
-            if (not _is_technicolor(pingle.ip)):
-              nHosts = nHosts + 1
+            nHosts = nHosts + 1
 
         pinglist = []
 
       if(nHosts > threshold):
         break
-
+      
   return nHosts
 
 
