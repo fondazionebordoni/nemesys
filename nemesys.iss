@@ -2,12 +2,12 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Nemesys"
-#define MyAppVersion "2.1.3"
+#define MyAppVersion "2.1.4"
 #define MyAppPublisher "Fondazione Ugo Bordoni"
 #define MyAppURL "http://www.misurainternet.it/"
 #define MyAppExeName "Nemesys.exe"
 #define MyRoot "C:\[work]"
-#define MyAppDir MyRoot + "\nemesys-qos\trunk"
+#define MyAppDir MyRoot + "\nemesys\trunk"
 
 ; Read the previuos build number. If there is none take 0 instead.
 #define BuildNum Int(ReadIni(SourcePath	+ "\\buildinfo.ini","Info","Build","1"))
@@ -26,19 +26,21 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={pf}\{#MyAppName}
-DefaultGroupName=Nemesys
+DefaultGroupName={#MyAppName}
 AllowNoIcons=true
 InfoBeforeFile={#MyAppDir}\EULA
 LicenseFile={#MyAppDir}\LICENSE
 OutputDir={#MyAppDir}
 OutputBaseFilename={#MyAppName}_v.{#myAppVersion}-{#BuildNum}
 SolidCompression=true
-VersionInfoCopyright=(c) 2010-2011 Fondazione Ugo Bordoni
+VersionInfoCopyright=(c) 2010-2013 Fondazione Ugo Bordoni
 PrivilegesRequired=admin
 SetupIconFile={#MyAppDir}\nemesys.ico
 WizardSmallImageFile={#MyAppDir}\nemesys_55.bmp
 WizardImageFile={#MyAppDir}\nemesys_164.bmp
 AppCopyright=Fondazione Ugo Bordoni
+AlwaysRestart=True
+RestartIfNeededByRun=False
 
 [Messages]
 italian.AdminPrivilegesRequired=Errore nell'installazione.%nSono necessarie le credenziali di amministratore per poter procedere.
@@ -50,7 +52,7 @@ Name: italian; MessagesFile: compiler:Languages\Italian.isl
 Name: quicklaunchicon; Description: {cm:CreateQuickLaunchIcon}; GroupDescription: {cm:AdditionalIcons}; Flags: unchecked; OnlyBelowVersion: 0,6.1
 
 [Files]
-Source: {#MyAppDir}\nemesys\winpcap\WinPcap.exe; Flags: dontcopy
+Source: {#MyAppDir}\nemesys\MNM34\netmon.msi; Flags: dontcopy
 Source: {#MyAppDir}\nemesys\dist\*; DestDir: {app}\dist; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: {#MyAppDir}\nemesys\cfg\*; DestDir: {app}\dist\cfg; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: {#MyAppDir}\ABOUT; DestDir: {app}; Flags: ignoreversion
@@ -126,30 +128,35 @@ procedure WinPcapInst();
 var
   ResultCode: Integer;
 begin
-  ExtractTemporaryFile(ExpandConstant('WinPcap.exe'));
-  Exec(ExpandConstant('{tmp}\WinPcap.exe'),'', '', SW_SHOW,ewWaitUntilTerminated, ResultCode);
-  if not RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\NPF','Start')
-  then
+  ExtractTemporaryFile(ExpandConstant('netmon.msi'));
+  ShellExec('', 'msiexec', ExpandConstant('/I "{tmp}\netmon.msi"'),'', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+  if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm3','Start') then
     begin
-      MsgBox('Installazione del software NeMeSys terminata poichè si è scelto di non installare WinPcap',mbInformation, MB_OK);
-      WizardForm.Close;
+      RegWriteDWordValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm3','Start', 1);
+    end
+  else if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm','Start') then
+    begin
+      RegWriteDWordValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm','Start', 3);
+      RegWriteStringValue(HKEY_CLASSES_ROOT, 'CLSID\{425882B0-B0BF-11CE-B59F-00AA006CB37D}\InProcServer32','ThreadingModel','Both');
     end
   else
     begin
-      RegWriteDWordValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\NPF','Start', 2);
+      MsgBox('Installazione del software NeMeSys terminata poichè si è scelto di non installare le Microsoft Network Monitor',mbInformation, MB_OK);
+      WizardForm.Close;
     end;
 end;
 
 procedure WinPcapRem();
 var
   ResultCode: Integer;
-  uninstallPath: String;
 begin
-  if RegValueExists(HKEY_LOCAL_MACHINE,'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinPcapInst','UninstallString')
-  then
+  if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm3','Start') then
     begin
-      RegQueryStringValue(HKEY_LOCAL_MACHINE,'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinPcapInst','UninstallString',uninstallPath);
-      Exec(RemoveQuotes(uninstallPath),'', '', SW_SHOW,ewWaitUntilTerminated, ResultCode);
+      ShellExec('', 'msiexec', '/I{8C5B5A11-CBF8-451B-B201-77FAB0D0B77D}','', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+    end
+  else if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm','Start') then
+    begin
+      ShellExec('', 'msiexec', '/I{A2F2C44A-869E-4C32-9CEC-E22B1CC91F06}','', SW_SHOW, ewWaitUntilTerminated, ResultCode);
     end;
 end;
 
