@@ -39,7 +39,7 @@ def getconf(serial, dir, filename, url):
    else:
       raise Exception('Error in configuration file')
 
-   return os.path.exists(filename)
+   return os.path.exists(file.name)
 
 if __name__ == '__main__':
    filetmp = 'client.conf'
