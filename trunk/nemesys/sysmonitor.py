@@ -352,8 +352,8 @@ def getNetworkMask(ip):
   inames = netifaces.interfaces()
   netmask = '255.255.255.255'
   for i in inames:
-    addrs = netifaces.ifaddresses(i)
     try:
+      addrs = netifaces.ifaddresses(i)
       ipinfo = addrs[socket.AF_INET][0]
       address = ipinfo['addr']
       if (address == ip):
@@ -361,7 +361,8 @@ def getNetworkMask(ip):
         return _maskConversion(netmask)
       else:
         pass
-    except Exception:
+    except Exception as e:
+      logger.warning("Errore durante il controllo dell'interfaccia %s. %s" % (i, e))
       pass
 
   return _maskConversion(netmask)
