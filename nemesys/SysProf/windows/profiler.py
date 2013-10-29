@@ -68,7 +68,6 @@ class CPU(RisorsaWin):
         RisorsaWin.__init__(self)
         self._params = {'Win32_Processor':['processor', 'cores', 'cpuLoad']}
         
-        
     def processor(self, obj):
         infos = ['Name', 'Description', 'Manufacturer']
         proc = []

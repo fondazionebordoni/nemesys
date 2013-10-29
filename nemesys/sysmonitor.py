@@ -118,6 +118,10 @@ def getfloattag(tag, value, res):
     raise SysmonitorException(sysmonitorexception.FAILREADPARAM, 'Errore in lettura del paramentro "%s" di SystemProfiler.' % tag)
 
   try:
+    if (values[tag] == None):
+      logger.warning('Errore durante la lettura del parametro "%s" di "%s": valore nullo (impostato d\'ufficio a 0)' % (tag, res))
+      value = 0
+
     value = float(values[tag])
   except Exception as e:
     logger.error('Errore in lettura del paramentro "%s" di SystemProfiler: %s' % (tag, e))
