@@ -355,21 +355,21 @@ def getNetworkMask(ip):
   '''
   netmask = '255.255.255.0'
   
-  try
+  try:
     inames = netifaces.interfaces()
     for i in inames:
-    try:
-      addrs = netifaces.ifaddresses(i)
-      ipinfo = addrs[socket.AF_INET][0]
-      address = ipinfo['addr']
-      if (address == ip):
-        netmask = ipinfo['netmask']
-        return _maskConversion(netmask)
-      else:
+      try:
+        addrs = netifaces.ifaddresses(i)
+        ipinfo = addrs[socket.AF_INET][0]
+        address = ipinfo['addr']
+        if (address == ip):
+          netmask = ipinfo['netmask']
+          return _maskConversion(netmask)
+        else:
+          pass
+      except Exception as e:
+        logger.warning("Errore durante il controllo dell'interfaccia %s. %s" % (i, e))
         pass
-    except Exception as e:
-      logger.warning("Errore durante il controllo dell'interfaccia %s. %s" % (i, e))
-      pass
   except Exception as e:
     logger.warning("Errore durante il controllo della maschera per l'IP %s (assumo maschera: /24). %s" % (ip, e))
     pass
