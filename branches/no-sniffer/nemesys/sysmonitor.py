@@ -217,7 +217,9 @@ def checkhosts(up, down, ispid, arping = 1):
 
   ip = getIp();
   mask = getNetworkMask(ip)
-  logger.info("Indirizzo ip/mask: %s/%d" % (ip, mask))
+  dev = getDev(ip)
+
+  logger.info("Indirizzo ip/mask: %s/%d, device: %s" % (ip, mask, dev))
 
   if (arping == 0):
     thres = th_host + 1
@@ -233,7 +235,7 @@ def checkhosts(up, down, ispid, arping = 1):
     except:
         pass
 
-    value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac)
+    value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac, dev)
     logger.info('Trovati %d host in rete.' % value)
 
     if value < 0:
@@ -347,6 +349,30 @@ def getIp(host = 'finaluser.agcom244.fub.it', port = 443):
     #raise Exception('Impossibile ottenere il dettaglio dell\'indirizzo IP')
     raise sysmonitorexception.UNKIP
   return value
+
+def getDev(ip = None, host = 'finaluser.agcom244.fub.it', port = 443):
+  '''
+  restituisce scheda attiva (guid della scheda su Windows 
+  '''
+  if not ip:
+    local_ip_address = getIp(host, port)
+  else:
+    local_ip_address = ip
+      
+
+  ''' Now get the associated device '''
+  found = False
+  for ifName in netifaces.interfaces():
+      addresses = netifaces.ifaddresses(ifName)[netifaces.AF_INET]
+      for address in addresses:
+          if address['addr'] == local_ip_address:
+              found = True
+              break
+      if found:
+          break
+  if not found:
+    raise sysmonitorexception.UNKDEV
+  return ifName
 
 def getNetworkMask(ip):
   '''
