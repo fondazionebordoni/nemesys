@@ -258,7 +258,9 @@ if __name__ == '__main__':
 
     TOT = 10
 
-    t1 = Tester('eth0', Host(ip = nap), 'nemesys', '4gc0m244')
+    import sysmonitor
+    dev = sysmonitor.getDev()
+    t1 = Tester(dev, Host(ip = nap), 'nemesys', '4gc0m244')
 
     for i in range(1, TOT + 1):
       logger.info('Test Download %d/%d' % (i, TOT))
