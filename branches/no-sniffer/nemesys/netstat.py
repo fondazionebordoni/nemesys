@@ -55,73 +55,13 @@ class NetstatWindows(Netstat):
 		# use LIKE with "%" where not alfanumeric character
 		whereCondition = " WHERE SettingId = \"" + guid + "\""
 		entry_name = "Description"
-		result = self._execute_query("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
-		if (result):
-			try:
-				for obj in result:
-					if not entry_value:
-						entry_value = self._getSingleInfo(obj, entry_name)
-					else:
-						raise NetstatException("Found more than one entry for interface " + self.if_device)
-			except Exception as e:
-				print("Caught exception %s" % e)
-				raise NetstatException("Could not get " + entry_name + " from result")
-		else:
-			raise NetstatException("Query for " + entry_name + " returned empty result")
-		return entry_value
-
-	def _get_entry(self, entry_name):
-		entry_value = None
-		# Name of interface can be slightly different,
-		# use LIKE with "%" where not alfanumeric character
-#		whereCondition = " WHERE Name Like \"%" + self.if_device + "%\""
-		whereCondition = " WHERE Name Like \"" + self.if_device_search_string + "%\""
-		result = self._execute_query("Win32_PerfRawData_Tcpip_NetworkInterface", whereCondition, entry_name)
-		if (result):
-			try:
-				for obj in result:
-					if not entry_value:
-						entry_value = self._getSingleInfo(obj, entry_name)
-					else:
-						raise NetstatException("Found more than one entry for interface " + self.if_device)
-			except:
-				raise NetstatException("Could not get " + entry_name + " from result")
-		else:
-			raise NetstatException("Query for " + entry_name + " returned empty result")
-		return entry_value
-
+		return self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
 
 	def get_rx_bytes(self):
-		return self._get_entry("BytesReceivedPerSec")
+		return self._get_entry_generic(entry_name = "BytesReceivedPerSec")
 
 	def get_tx_bytes(self):
-		return self._get_entry("BytesSentPerSec")
-
-	def _execute_query(self, wmi_class, whereCondition="", param="*"):
-		queryString = None
-		try:
-    		 import win32com.client
-    		 import pythoncom
-		except ImportError:
-		     raise NetstatException("Missing WMI library")
-		pythoncom.CoInitialize()
-		try:
-			objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
-			objSWbemServices = objWMIService.ConnectServer(".", "root\cimv2")
-			queryString = "SELECT " + param + " FROM " + wmi_class + whereCondition
-			colItems = objSWbemServices.ExecQuery(queryString)
-		except Exception as e:
-			raise NetstatException("Impossibile eseguire query al server root\cimv2: ")
-		finally:
-			pythoncom.CoInitialize()
-		return colItems
-
-	def _getSingleInfo(self, obj, attr):
-		val = obj.__getattr__(attr)
-		if val != None:
-			return val
-		else:
-			return None
+		return self._get_entry_generic(entry_name = "BytesSentPerSec")
 
 	def get_device_name(self, ip_address):
 		all_devices = netifaces.interfaces()
@@ -142,24 +82,57 @@ class NetstatWindows(Netstat):
 		entry_value = None
 		where_condition = " WHERE SettingID = \"" + if_dev_name + "\""
 		entry_name = "Description"
-		result = self._execute_query("Win32_NetworkAdapterConfiguration", where_condition, entry_name)
-		if (result):
-			try:
-				for obj in result:
-					if not entry_value:
-						entry_value = self._getSingleInfo(obj, entry_name)
-					else:
-						raise NetstatException("Found more than one entry for interface " + if_dev_name)
-			except:
-				raise NetstatException("Could not get " + entry_name + " from result")
-		else:
-			raise NetstatException("Query for " + entry_name + " returned empty result")
+		entry_value = self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
 		return entry_value
 
 	def get_timestamp(self):
-		timestamp = float(self._get_entry("Timestamp_Perftime"))
-		frequency = float(self._get_entry("Frequency_Perftime"))
+		timestamp = float(self._get_entry_generic(entry_name = "Timestamp_Perftime"))
+		frequency = float(self._get_entry_generic(entry_name = "Frequency_Perftime"))
 		return timestamp/frequency
+
+	def _get_entry_generic(self, wmi_class=None,
+						whereCondition=None,
+						entry_name="*"):
+		entry_value = None
+		''' TODO: more intelligent search?'''
+		if not whereCondition:
+		    whereCondition=" WHERE Name Like \"" + self.if_device_search_string + "%\""
+		if not wmi_class:
+		    wmi_class="Win32_PerfRawData_Tcpip_NetworkInterface"
+		queryString = None
+		try:
+    		 import win32com.client
+    		 import pythoncom
+		except ImportError:
+		     raise NetstatException("Missing WMI library")
+		pythoncom.CoInitialize()
+		try:
+			objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
+			objSWbemServices = objWMIService.ConnectServer(".", "root\cimv2")
+			queryString = "SELECT " + entry_name + " FROM " + wmi_class + whereCondition
+			result = objSWbemServices.ExecQuery(queryString)
+		except Exception as e:
+			pythoncom.CoUninitialize()
+			raise NetstatException("Impossibile eseguire query al server root\cimv2: ")
+		if (result):
+			try:
+				found = False
+				for obj in result:
+					value = obj.__getattr__(entry_name)
+					if value:
+						if found:
+							pythoncom.CoUninitialize()
+							raise NetstatException("Found more than one entry for interface " + self.if_device)
+						else:
+							found = True
+							entry_value = value
+			except:
+				raise NetstatException("Could not get " + entry_name + " from result")
+			finally:
+				pythoncom.CoUninitialize()
+		else:
+			raise NetstatException("Query for " + entry_name + " returned empty result")
+		return entry_value
 
 class NetstatLinux(Netstat):
 	'''
