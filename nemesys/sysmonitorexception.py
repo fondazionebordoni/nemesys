@@ -78,5 +78,7 @@ UNKDISKLOAD = SysmonitorException('UNKDISKLOAD', 'Impossibile detereminare il ca
 DISKOVERLOAD = SysmonitorException('DISKOVERLOAD', 'Eccessivo carico in scrittura del disco.')   
 #Error retrieving IP address
 UNKIP = SysmonitorException('UNKIP', 'Impossibile ottenere il dettaglio dell\'indirizzo IP')         
+#Error retrieving network device
+UNKDEV = SysmonitorException('UNKDEV', 'Impossibile ottenere il dettaglio dell\'interfaccia di rete')         
 #Error retrieving the Profile Status (reading params)
 FAILSTATUS = SysmonitorException('FAILSTATUS', 'Errore durante il recupero dello stato del computer.')

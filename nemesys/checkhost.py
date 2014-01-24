@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from arping import do_arping
+from arp import do_arping
 from logger import logging
 from threading import Thread
 import ipcalc
