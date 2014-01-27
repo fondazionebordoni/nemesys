@@ -93,6 +93,20 @@ class NetstatWindows(Netstat):
 	def _get_entry_generic(self, wmi_class=None,
 						whereCondition=None,
 						entry_name="*"):
+		try:
+    		 import pythoncom
+		except ImportError:
+		     raise NetstatException("Missing WMI library")
+		pythoncom.CoInitialize()
+		try:
+    		 return self._get_entry_generic_wrapped(wmi_class, whereCondition, entry_name)
+		finally:
+		     pythoncom.CoUninitialize()
+
+
+	def _get_entry_generic_wrapped(self, wmi_class=None,
+						whereCondition=None,
+						entry_name="*"):
 		entry_value = None
 		''' TODO: more intelligent search?'''
 		if not whereCondition:
@@ -105,14 +119,12 @@ class NetstatWindows(Netstat):
     		 import pythoncom
 		except ImportError:
 		     raise NetstatException("Missing WMI library")
-		pythoncom.CoInitialize()
 		try:
 			objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
 			objSWbemServices = objWMIService.ConnectServer(".", "root\cimv2")
 			queryString = "SELECT " + entry_name + " FROM " + wmi_class + whereCondition
 			result = objSWbemServices.ExecQuery(queryString)
 		except Exception as e:
-			pythoncom.CoUninitialize()
 			raise NetstatException("Impossibile eseguire query al server root\cimv2: ")
 		if (result):
 			try:
@@ -121,15 +133,12 @@ class NetstatWindows(Netstat):
 					value = obj.__getattr__(entry_name)
 					if value:
 						if found:
-							pythoncom.CoUninitialize()
 							raise NetstatException("Found more than one entry for interface " + self.if_device)
 						else:
 							found = True
 							entry_value = value
 			except:
 				raise NetstatException("Could not get " + entry_name + " from result")
-			finally:
-				pythoncom.CoUninitialize()
 		else:
 			raise NetstatException("Query for " + entry_name + " returned empty result")
 		return entry_value
