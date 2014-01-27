@@ -16,7 +16,7 @@ def get_netstat(if_device):
 	if "win" in platform_name:
 		return NetstatWindows(if_device)
 	elif "linux" in platform_name:
-		return NetstatLinux(if_device)
+ 		return NetstatLinux(if_device)
 	elif "darwin" in platform_name:
 		return NetstatDarwin(if_device)
 
@@ -176,7 +176,7 @@ class NetstatLinux(Netstat):
 
 
 
-class NetstatDarwin(object):
+class NetstatDarwin(NetstatLinux):
 	'''
     Netstat funcions on MacOS platforms
     '''
