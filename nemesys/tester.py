@@ -126,7 +126,7 @@ class Tester:
     ftp.quit()
 
     ''' TODO: get packet drop from netstat '''
-    counter_stats = Statistics(payload_up_nem = size, byte_up_all = end_total_bytes - start_total_bytes, packet_drop = 0, packet_tot_all = 100)
+    counter_stats = Statistics(byte_up_nem = size, byte_up_all = end_total_bytes - start_total_bytes, packet_drop = 0, packet_tot_all = 100)
 #     return Proof(test_type, start, elapsed, size, counter_stats)
     return Proof(test_type, start, elapsed, size, counter_stats)
 
@@ -182,7 +182,7 @@ class Tester:
     ftp.quit()
 
     ''' TODO: get packet drop from netstat '''
-    counter_stats = Statistics(payload_down_nem = size, byte_down_all = end_total_bytes - start_total_bytes, packet_drop = 0, packet_tot_all = 100)
+    counter_stats = Statistics(byte_down_nem = size, byte_down_all = end_total_bytes - start_total_bytes, packet_drop = 0, packet_tot_all = 100)
     return Proof(test_type, start, elapsed, size, counter_stats)
 
   def testping(self):

@@ -217,7 +217,7 @@ def checkhosts(up, down, ispid, arping = 1):
 
   ip = getIp();
   mask = getNetworkMask(ip)
-  dev = getDev(ip)
+  dev = getDev(ip = ip)
 
   logger.info("Indirizzo ip/mask: %s/%d, device: %s" % (ip, mask, dev))
 
@@ -350,7 +350,7 @@ def getIp(host = 'finaluser.agcom244.fub.it', port = 443):
     raise sysmonitorexception.UNKIP
   return value
 
-def getDev(ip = None, host = 'finaluser.agcom244.fub.it', port = 443):
+def getDev(host = 'finaluser.agcom244.fub.it', port = 443, ip = None):
   '''
   restituisce scheda attiva (guid della scheda su Windows 
   '''
@@ -463,6 +463,7 @@ def getSys():
   return r
 
 def _getvalues(xmlresult, tag, tagrisorsa):
+    
   '''
   Estrae informazioni dal SystemProfiler 
   '''

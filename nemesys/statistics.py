@@ -19,18 +19,18 @@
 class Statistics:
 
   def __init__(self, packet_up_all = 0, packet_down_all = 0, packet_tot_all = 0, 
-               payload_up_nem = 0, byte_up_all = 0, 
-               payload_down_nem = 0, byte_down_all = 0,  
+               byte_up_nem = 0, byte_up_all = 0, 
+               byte_down_nem = 0, byte_down_all = 0,  
                packet_drop = 0):
 
     self._packet_up_all = packet_up_all
     self._packet_down_all = packet_down_all
     self._packet_tot_all = packet_tot_all
 
-    self._payload_up_nem = payload_up_nem
+    self._byte_up_nem = byte_up_nem
     self._byte_up_all = byte_up_all
     
-    self._payload_down_nem = payload_down_nem
+    self._byte_down_nem = byte_down_nem
     self._byte_down_all = byte_down_all
     
     self._packet_drop = packet_drop
