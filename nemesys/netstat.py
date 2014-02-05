@@ -58,10 +58,12 @@ class NetstatWindows(Netstat):
 		return self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
 
 	def get_rx_bytes(self):
-		return self._get_entry_generic(entry_name = "BytesReceivedPerSec")
+		rx_bytes = self._get_entry_generic(entry_name = "BytesReceivedPerSec")
+		return int(rx_bytes)
 
 	def get_tx_bytes(self):
-		return self._get_entry_generic(entry_name = "BytesSentPerSec")
+		tx_bytes = self._get_entry_generic(entry_name = "BytesSentPerSec")
+		return int(tx_bytes)
 
 	def get_device_name(self, ip_address):
 		all_devices = netifaces.interfaces()
