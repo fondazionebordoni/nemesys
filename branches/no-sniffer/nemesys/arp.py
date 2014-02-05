@@ -316,7 +316,7 @@ def _send_one_win_arp(IPdst, result_queue):
     error = iphlpapi.SendARP(dest_ip, src_ip, byref(mac_addr), byref(addr_len))
 
     if error:
-        if (int(error) != 31):
+        if (int(error) != 31) and (int(error) != 67):
             logger.error("Warning: SendARP failed! Error code: %d", int(error))
     else:
         mac_str = mac_straddr(mac_addr, True, ":")
