@@ -190,10 +190,10 @@ def _read_number_from_file(filename):
 
 if __name__ == '__main__':
 	import time
-# 	my_netstat = get_netstat("eth0")
-#TODO: get if name
-	my_netstat = get_netstat("eth0")
-	print my_netstat.get_device_name('192.168.112.24')
+	import sysmonitor
+	dev = sysmonitor.getDev()
+	my_netstat = get_netstat(dev)
+#	print my_netstat.get_device_name('192.168.112.24')
 # 	ifdev = my_netstat.get_if_device()
 # 	print ifdev
 #    timestamp,frequency =
