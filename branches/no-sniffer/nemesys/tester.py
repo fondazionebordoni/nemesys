@@ -78,9 +78,7 @@ class Tester:
     start = datetime.fromtimestamp(timestampNtp())
 
     try:
-      # TODO Il timeout non viene onorato in Python 2.6: http://bugs.python.org/issue8493
-      #ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
-      ftp = FTP(self._host.ip, self._username, self._password)
+      ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
     except ftplib.all_errors as e:
       errorcode = errors.geterrorcode(e)
       error = '[%s] Impossibile aprire la connessione FTP: %s' % (errorcode, e)
@@ -141,9 +139,7 @@ class Tester:
     start = datetime.fromtimestamp(timestampNtp())
 
     try:
-      # TODO Il timeout non viene onorato in Python 2.6: http://bugs.python.org/issue8493
-      #ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
-      ftp = FTP(self._host.ip, self._username, self._password)
+      ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
     except ftplib.all_errors as e:
       errorcode = errors.geterrorcode(e)
       error = '[%s] Impossibile aprire la connessione FTP: %s' % (errorcode, e)
