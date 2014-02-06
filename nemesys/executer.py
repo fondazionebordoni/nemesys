@@ -424,7 +424,7 @@ class Executer:
         # Dato da salvare sulla misura
         test.bytes = byte_all
       else:
-        raise Exception('Eccessiva presenza di traffico internet non legato alla misura: percentuali %d%%/%d%%.' % (round(traffic_ratio * 100), round(packet_ratio_inv * 100)))
+        raise Exception('Eccessiva presenza di traffico internet non legato alla misura: percentuali %d%%.' % (round(traffic_ratio * 100)))
     else:
       raise Exception('Errore durante la misura, impossibile analizzare i dati di test')
 
