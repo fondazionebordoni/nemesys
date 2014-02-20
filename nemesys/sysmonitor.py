@@ -363,13 +363,15 @@ def getDev(host = 'finaluser.agcom244.fub.it', port = 443, ip = None):
   ''' Now get the associated device '''
   found = False
   for ifName in netifaces.interfaces():
-      addresses = netifaces.ifaddresses(ifName)[netifaces.AF_INET]
-      for address in addresses:
-          if address['addr'] == local_ip_address:
-              found = True
+      all_addresses = netifaces.ifaddresses(ifName)
+      if (netifaces.AF_INET in all_addresses):
+          ip_addresses = all_addresses[netifaces.AF_INET]
+          for address in ip_addresses:
+              if ('addr' in address) and (address['addr'] == local_ip_address):
+                  found = True
+                  break
+          if found:
               break
-      if found:
-          break
   if not found:
     raise sysmonitorexception.UNKDEV
   return ifName
