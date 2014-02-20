@@ -13,12 +13,12 @@ LINUX_RESOURCE_PATH="/sys/class/net"
 
 def get_netstat(if_device):
 	platform_name = platform.system().lower()
-	if "win" in platform_name:
-		return NetstatWindows(if_device)
+	if "darwin" in platform_name:
+		return NetstatDarwin(if_device)
 	elif "linux" in platform_name:
  		return NetstatLinux(if_device)
-	elif "darwin" in platform_name:
-		return NetstatDarwin(if_device)
+	elif "win" in platform_name:
+		return NetstatWindows(if_device)
 
 '''
 Eccezione istanzazione Risorsa
