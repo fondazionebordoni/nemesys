@@ -132,7 +132,7 @@ class NetstatWindows(Netstat):
 		if not whereCondition:
 		    whereCondition=" WHERE Name Like \"" + self.if_device_search_string + "%\""
 		if not wmi_class:
-		    wmi_class="Win32_PerfRawData_Tcpip_NetworkInterface"
+		    wmi_class="Win32_PerfRawData_Tcpip_NetworkAdapter"
 		queryString = None
 		try:
     		 import win32com.client
