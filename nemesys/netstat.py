@@ -7,6 +7,7 @@ Created on 13/nov/2013
 import platform
 import re
 import netifaces
+import psutil
 
 LINUX_RESOURCE_PATH="/sys/class/net"
 
@@ -36,6 +37,23 @@ class Netstat(object):
 
 	def get_if_device(self):
 		return self.if_device
+
+	def get_rx_bytes(self):
+		counters_per_nic = psutil.network_io_counters(pernic=True)
+		if self.if_device in counters_per_nic:
+			rx_bytes = counters_per_nic[self.if_device].bytes_recv
+		else:
+			raise NetstatException("Could not find counters for device %d" % self.if_device)
+		return long(rx_bytes)
+
+	def get_tx_bytes(self):
+		counters_per_nic = psutil.network_io_counters(pernic=True)
+		if self.if_device in counters_per_nic:
+			tx_bytes = counters_per_nic[self.if_device].bytes_sent
+		else:
+			raise NetstatException("Could not find counters for device %d" % self.if_device)
+		return long(tx_bytes)
+
 
 class NetstatWindows(Netstat):
 	'''
@@ -153,14 +171,6 @@ class NetstatLinux(Netstat):
 	def __init__(self, if_device):
 		# TODO Check if interface exists
 		super(NetstatLinux, self).__init__(if_device)
-		self.rx_bytes_file=LINUX_RESOURCE_PATH + "/"  + if_device + "/statistics/rx_bytes"
-		self.tx_bytes_file=LINUX_RESOURCE_PATH + "/"  + if_device + "/statistics/tx_bytes"
-
-	def get_rx_bytes(self):
-		return _read_number_from_file(self.rx_bytes_file)
-
-	def get_tx_bytes(self):
-		return _read_number_from_file(self.tx_bytes_file)
 
 	def get_device_name(self, ip_address):
 		all_devices = netifaces.interfaces()
@@ -182,6 +192,10 @@ class NetstatDarwin(NetstatLinux):
 	'''
     Netstat funcions on MacOS platforms
     '''
+
+	def __init__(self, if_device):
+		# TODO Check if interface exists
+		super(NetstatLinux, self).__init__(if_device)
 
 def _read_number_from_file(filename):
 	with open(filename) as f:
