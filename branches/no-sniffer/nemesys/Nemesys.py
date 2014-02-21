@@ -238,7 +238,7 @@ def getCode():
     root.destroy()
     return appresult
 
-def isNotFirstExec():
+def isFirstExec():
     """
     Controlla se NON siamo alla prima esecuzione
     """
@@ -253,14 +253,14 @@ def isNotFirstExec():
                 # Allora posso continuare lo start del servizio
                 nemesys.debug('Status of registered is Ok')
                 nemesys.info('Configuration file already downloaded')
-                return True
+                return False
             else:
                 # Il servizio non può partire
                 nemesys.error('Configuration file download previously failed. File not present.')
                 nemesys.error('Exiting from Ne.Me.Sys.')
                 sys.exit(1)
     else:
-        return False
+        return True
           
 ### Service Running ###
 class aservice(win32serviceutil.ServiceFramework):
@@ -318,7 +318,7 @@ def mainArg(argv):
         es = os.popen('Net START EventSystem').read()
         nemesys.info('Starting EventSystem - %s' % es)
 
-if not isNotFirstExec():
+if isFirstExec():
     result = False
     j=0
     # Al massimo faccio fare 5 tentativi di inserimento codice di licenza
@@ -333,12 +333,12 @@ if not isNotFirstExec():
         result = getActivationFile(appresult, paths._CONF_DIR)
         if result==False and j<4:
             FinalError()
-            nemesys.warning('Final Error occurred at attemp number %d' %j)
+            nemesys.warning('Final Error occurred at attempt number %d' %j)
         j+=1
 
     if result == False:
         MaxError()
-        nemesys.warning('MaxError occurred at attemp number 5')
+        nemesys.warning('MaxError occurred at attempt number 5')
         myProp.writeProps(_PATH+"cfg"+os.sep+"cfg.properties",'\ncode',appresult)
         _prop=myProp.readProps(_PATH+"cfg"+os.sep+"cfg.properties")
         myProp.writeProps(_PATH+"cfg"+os.sep+"cfg.properties",'\nregistered','nok')
