@@ -61,27 +61,29 @@ class NetstatWindows(Netstat):
     '''
 
 	def __init__(self, if_device_guid=None):
+		super(NetstatWindows, self).__init__(if_device_guid)
 		if (if_device_guid != None):
-   		 	self.if_device = self._get_device_from_guid(if_device_guid)
-			self.if_device_search_string = re.sub('[^0-9a-zA-Z]+', '%', self.if_device)
-			print("Found if device: %s" % self.if_device)
+			self.if_device = self._get_psutil_device_from_guid(if_device_guid)
+		else:
+			raise NetstatException("No device given!")
 
 
-	def _get_device_from_guid(self, guid):
+	def _get_psutil_device_from_guid(self, guid):
 		entry_value = None
 		# Name of interface can be slightly different,
 		# use LIKE with "%" where not alfanumeric character
-		whereCondition = " WHERE SettingId = \"" + guid + "\""
-		entry_name = "Description"
-		return self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
+		whereCondition = " WHERE GUID = \"" + guid + "\""
+		entry_name = "NetConnectionID"
+		return self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
 
-	def get_rx_bytes(self):
-		rx_bytes = self._get_entry_generic(entry_name = "BytesReceivedPerSec")
-		return int(rx_bytes)
 
-	def get_tx_bytes(self):
-		tx_bytes = self._get_entry_generic(entry_name = "BytesSentPerSec")
-		return int(tx_bytes)
+# 	def get_rx_bytes(self):
+# 		rx_bytes = self._get_entry_generic(entry_name = "BytesReceivedPerSec")
+# 		return int(rx_bytes)
+# 
+# 	def get_tx_bytes(self):
+# 		tx_bytes = self._get_entry_generic(entry_name = "BytesSentPerSec")
+# 		return int(tx_bytes)
 
 	def get_device_name(self, ip_address):
 		all_devices = netifaces.interfaces()
@@ -162,6 +164,7 @@ class NetstatWindows(Netstat):
 		else:
 			raise NetstatException("Query for " + entry_name + " returned empty result")
 		return entry_value
+
 
 class NetstatLinux(Netstat):
 	'''
