@@ -69,21 +69,20 @@ class NetstatWindows(Netstat):
 
 
 	def _get_psutil_device_from_guid(self, guid):
-		entry_value = None
-		# Name of interface can be slightly different,
-		# use LIKE with "%" where not alfanumeric character
-		whereCondition = " WHERE GUID = \"" + guid + "\""
-		entry_name = "NetConnectionID"
-		return self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
+		# Since Win32_NetworkAdapter does not have GUID on windows XP
+		# We need to get the NetConnectionID in two phases
+		# 1. get the id of the interface from Win32_NetworkAdapterConfiguration
+		try:
+			whereCondition = " WHERE SettingID = \"" + guid + "\""
+			entry_name = "Index"
+			index = self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
+			# 2. Now get NetConnectionID from Win32_NetworkAdapter
+			whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
+			entry_name = "NetConnectionID"
+			return self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
+		except Exception as e:
+			raise NetstatException("Could not find device with GUID %d" % str(guid))
 
-
-# 	def get_rx_bytes(self):
-# 		rx_bytes = self._get_entry_generic(entry_name = "BytesReceivedPerSec")
-# 		return int(rx_bytes)
-# 
-# 	def get_tx_bytes(self):
-# 		tx_bytes = self._get_entry_generic(entry_name = "BytesSentPerSec")
-# 		return int(tx_bytes)
 
 	def get_device_name(self, ip_address):
 		all_devices = netifaces.interfaces()
@@ -172,7 +171,6 @@ class NetstatLinux(Netstat):
     '''
 
 	def __init__(self, if_device):
-		# TODO Check if interface exists
 		super(NetstatLinux, self).__init__(if_device)
 
 	def get_device_name(self, ip_address):
@@ -189,15 +187,12 @@ class NetstatLinux(Netstat):
 			if found: break
 		return if_dev_name
 
-
-
 class NetstatDarwin(NetstatLinux):
 	'''
     Netstat funcions on MacOS platforms
     '''
 
 	def __init__(self, if_device):
-		# TODO Check if interface exists
 		super(NetstatLinux, self).__init__(if_device)
 
 def _read_number_from_file(filename):
@@ -210,17 +205,5 @@ if __name__ == '__main__':
 	import sysmonitor
 	dev = sysmonitor.getDev()
 	my_netstat = get_netstat(dev)
-#	print my_netstat.get_device_name('192.168.112.24')
-# 	ifdev = my_netstat.get_if_device()
-# 	print ifdev
-#    timestamp,frequency =
-# 	timestamp1 = my_netstat.get_timestamp()
-# 	print "Time1, frequency: %f" % (timestamp1)
-# 	time.sleep(5)
-# 	timestamp2 = my_netstat.get_timestamp()
-# 	print "Time2, frequency: %f" % (timestamp2)
-	#time_passed = (timestamp2-timestamp2)/frequency
-# 	print "Time passed: %f" % (timestamp2 - timestamp1)
-# 	print "Timestamp", my_netstat.get_timestamp()
 	print "RX bytes", my_netstat.get_rx_bytes()
 	print "TX bytes", my_netstat.get_tx_bytes()
