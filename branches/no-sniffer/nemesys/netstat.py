@@ -14,12 +14,12 @@ LINUX_RESOURCE_PATH="/sys/class/net"
 
 def get_netstat(if_device):
 	platform_name = platform.system().lower()
-	if "darwin" in platform_name:
-		return NetstatDarwin(if_device)
-	elif "linux" in platform_name:
- 		return NetstatLinux(if_device)
-	elif "win" in platform_name:
+	if platform_name.startswith('win'):
 		return NetstatWindows(if_device)
+	elif platform_name.startswith('lin'):
+ 		return NetstatLinux(if_device)
+	elif platform_name.startswith('darwin'):
+		return NetstatDarwin(if_device)
 
 '''
 Eccezione istanzazione Risorsa
@@ -39,7 +39,11 @@ class Netstat(object):
 		return self.if_device
 
 	def get_rx_bytes(self):
-		counters_per_nic = psutil.network_io_counters(pernic=True)
+		# Handle different versions of psutil
+		try:
+			counters_per_nic = psutil.network_io_counters(pernic=True)
+		except AttributeError:
+			counters_per_nic = psutil.net_io_counters(pernic=True)
 		if self.if_device in counters_per_nic:
 			rx_bytes = counters_per_nic[self.if_device].bytes_recv
 		else:
@@ -47,7 +51,11 @@ class Netstat(object):
 		return long(rx_bytes)
 
 	def get_tx_bytes(self):
-		counters_per_nic = psutil.network_io_counters(pernic=True)
+		# Handle different versions of psutil
+		try:
+			counters_per_nic = psutil.network_io_counters(pernic=True)
+		except AttributeError:
+			counters_per_nic = psutil.net_io_counters(pernic=True)
 		if self.if_device in counters_per_nic:
 			tx_bytes = counters_per_nic[self.if_device].bytes_sent
 		else:
@@ -62,10 +70,27 @@ class NetstatWindows(Netstat):
 
 	def __init__(self, if_device_guid=None):
 		super(NetstatWindows, self).__init__(if_device_guid)
+		self._device_guid = if_device_guid
 		if (if_device_guid != None):
-			self.if_device = self._get_psutil_device_from_guid(if_device_guid)
+			self.device_id,self.if_device = self._get_psutil_device_from_guid(if_device_guid)
 		else:
 			raise NetstatException("No device given!")
+
+
+	def is_device_active(self, if_device_guid=None):
+		is_active = False
+		if if_device_guid:
+			whereCondition = " WHERE SettingID = \"" + if_device_guid + "\""
+			entry_name = "Index"
+			index = self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
+		else:
+			index = self.device_id
+		whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
+		entry_name = "NetConnectionStatus"
+		status = self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
+		if (status and (int(status) == 2 or int(status) == 9)):
+			is_active = True
+		return is_active
 
 
 	def _get_psutil_device_from_guid(self, guid):
@@ -76,12 +101,18 @@ class NetstatWindows(Netstat):
 			whereCondition = " WHERE SettingID = \"" + guid + "\""
 			entry_name = "Index"
 			index = self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
-			# 2. Now get NetConnectionID from Win32_NetworkAdapter
-			whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
-			entry_name = "NetConnectionID"
-			return self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
 		except Exception as e:
-			raise NetstatException("Could not find device with GUID %d" % str(guid))
+			raise NetstatException("Could not get index for device with GUID %s" % str(guid))
+		if index != None:
+# 			# 2. Now get NetConnectionID from Win32_NetworkAdapter
+			try:
+				whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
+				entry_name = "NetConnectionID"
+				return index,self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
+			except Exception as e:
+				raise NetstatException("Could not find device with GUID %s and index %d" % (str(guid),int(index)))
+		else:
+			raise NetstatException("No index found for device with GUID %s" % str(guid))
 
 
 	def get_device_name(self, ip_address):
@@ -152,9 +183,9 @@ class NetstatWindows(Netstat):
 				found = False
 				for obj in result:
 					value = obj.__getattr__(entry_name)
-					if value:
+					if value != None:
 						if found:
-							raise NetstatException("Found more than one entry for interface " + self.if_device)
+							raise NetstatException("Found more than one entry for search string " + whereCondition)
 						else:
 							found = True
 							entry_value = value
@@ -198,7 +229,6 @@ class NetstatDarwin(NetstatLinux):
 def _read_number_from_file(filename):
 	with open(filename) as f:
 		return int(f.readline())
-
 
 if __name__ == '__main__':
 	import time
