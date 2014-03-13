@@ -35,7 +35,7 @@ class CPU(Risorsa):
 
     def cpuLoad(self):
         # WARN interval parameter available from v.0.2
-        val = psutil.cpu_percent()
+        val = psutil.cpu_percent(0.5)
         return self.xmlFormat('cpuLoad', val)
 
 class RAM(Risorsa):
