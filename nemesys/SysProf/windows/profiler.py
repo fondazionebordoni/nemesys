@@ -15,6 +15,7 @@ from ctypes import *
 from ctypes.wintypes import DWORD, ULONG
 import struct
 import pythoncom
+import psutil
 
 def executeQuery(wmi_class, whereCondition=""):   
     try: 
