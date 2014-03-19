@@ -56,7 +56,7 @@ class RisorsaWin(Risorsa):
                             if (xmlres is not None):
                               root.append(xmlres)
         except AttributeError as e:
-            raise RisorsaException("errore get status info")
+            raise RisorsaException("errore get status info - %s" % e)
         except RisorsaException as e:
             raise RisorsaException(e)
         except:
