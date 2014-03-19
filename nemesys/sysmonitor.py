@@ -82,7 +82,7 @@ def getstatus(res):
     logger.error ("Problema nel tentativo di istanziare la classe: %s" % e)
     raise sysmonitorexception.FAILPROF
   except RisorsaException as e:
-    logger.error ("Problema nel tentativo di istanziare la risorsa: %s" % e)
+    logger.error ("Problema nel tentativo di istanziare la risorsa %s: %s" % (str(res), e))
     raise sysmonitorexception.FAILPROF
   except LocalProfilerException as e:
     logger.error ("Problema nel tentativo di istanziare il profiler: %s" % e)
