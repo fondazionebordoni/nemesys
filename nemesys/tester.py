@@ -41,12 +41,6 @@ file = None
 filepath = None
 size = 0
 
-#Parametri Sniffer:
-BUFF = 16 * 1024 * 1024 # MegaByte
-SNAPLEN = 150           # Byte
-TIMEOUT = 1             # MilliSeconds
-PROMISC = 1             # Promisc Mode ON/OFF
-
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 
@@ -74,7 +68,7 @@ class Tester:
     elapsed = 0
 
     file = Fakefile(bytes)
-    timeout = max(self._timeout, 1)
+    timeout = max(self._timeout, 12)
     start = datetime.fromtimestamp(timestampNtp())
 
     try:
@@ -135,7 +129,7 @@ class Tester:
     elapsed = 0
 
     file = filename
-    timeout = max(self._timeout, 1)
+    timeout = max(self._timeout, 12)
     start = datetime.fromtimestamp(timestampNtp())
 
     try:
