@@ -67,7 +67,7 @@ class CPU(RisorsaWin):
    
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params = {'Win32_Processor':['processor', 'cores', 'cpuLoad']}
+        self._params = {'Win32_Processor':['processor', 'cpuLoad']}
         
     def processor(self, obj):
         infos = ['Name', 'Description', 'Manufacturer']
@@ -90,13 +90,6 @@ class CPU(RisorsaWin):
         val = psutil.cpu_percent(0.5)
         return self.xmlFormat('cpuLoad', val)
 
-    def cores(self, obj):
-        try:
-            val = self.getSingleInfo(obj, 'NumberOfCores')
-        except AttributeError as e:
-            raise AttributeError(e)
-        return self.xmlFormat("cores", val)
-    
 class RAM(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)

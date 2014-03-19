@@ -22,16 +22,12 @@ class CPU(Risorsa):
     def __init__(self):
         Risorsa.__init__(self)
         self._chisono = "sono una CPU"
-        self._params = ['processor', 'cores', 'cpuLoad']
+        self._params = ['processor', 'cpuLoad']
         #print psutil.__version__
 
     def processor(self):
         val = dmidecode.processor().values()
         return self.xmlFormat('processor', val[0]['data']['Version'])
-
-    def cores(self):
-        val = dmidecode.processor().values()
-        return self.xmlFormat('cores', val[0]['data']['Core Enabled'])
 
     def cpuLoad(self):
         # WARN interval parameter available from v.0.2

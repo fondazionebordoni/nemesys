@@ -26,7 +26,7 @@ class CPU(Risorsa):
     def __init__(self):
         Risorsa.__init__(self)
         self._chisono = "sono una CPU"
-        self._params = ['processor', 'cores', 'cpuLoad']
+        self._params = ['processor', 'cpuLoad']
 
     def processor(self):
         cmdline = 'system_profiler SPHardwareDataType -xml'
@@ -47,26 +47,6 @@ class CPU(Risorsa):
             if feat.tag == 'key' and feat.text == 'cpu_type':
                 capture = 1
         return self.xmlFormat('processor', val)
-
-    def cores(self):
-        cmdline = 'system_profiler SPHardwareDataType -xml'
-        try:
-            spxml = ET.parse(os.popen(cmdline))
-            info = spxml.find('array/dict/array/dict')
-        except:
-            raise Error('errore in darwin system_profiler')
-        spxml._setroot(info)
-        elem = spxml.getiterator()
-        capture = 0
-        val = 'Unknown'
-        for feat in elem:
-            if capture:
-                val = feat.text
-                capture = 0
-                return self.xmlFormat('cores', val)
-            if feat.tag == 'key' and feat.text == 'number_processors':
-                capture = 1
-        return self.xmlFormat('cores', val)
 
     def cpuLoad(self):
         # WARN interval parameter available from v.0.2
