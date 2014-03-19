@@ -54,7 +54,6 @@ tag_sys = 'sistemaOperativo.OperatingSystem'
 tag_cpu = 'CPU.cpuLoad'
 tag_mac = 'rete.NetworkDevice/MACAddress'
 tag_activeNic = 'rete.NetworkDevice/isActive'
-tag_cores = 'CPU.cores'
 tag_proc = 'CPU.processor'
 tag_hosts = 'hostNumber'
 
@@ -455,7 +454,7 @@ def getSys():
   '''
   Restituisce array con informazioni sul sistema utilizzato per il test
   '''
-  d = {tag_sys:'', tag_cores:'', tag_proc:''}
+  d = {tag_sys:'', tag_proc:''}
   r = []
 
   for keys in d:
