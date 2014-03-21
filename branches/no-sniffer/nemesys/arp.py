@@ -306,17 +306,22 @@ def _send_one_mac_arp(IPdst, timeout=0.01):
         ping.do_one("%s" % IPdst, timeout)
     except:
         pass # Timeout
-    pid = Popen(["arp", "-n", IPdst], stdout=PIPE)
+    pid = Popen(["arp", "-n", IPdst], stdout=PIPE, stderr=PIPE)
     s = pid.communicate()[0]
-    my_match = re.search(r"(([a-fA-F\d]{1,2}\:){5}[a-f\d]{1,2})", s)
+    my_match = re.search(r"(([a-fA-F\d]{1,2}\:){5}[a-fA-F\d]{1,2})", s)
     if my_match:
-        mac_str = my_match.groups()[0]
+        mac_str = _pad_mac_string(my_match.groups()[0])
         if (not _is_technicolor(IPdst, mac_str)):
             logger.info('Trovato Host %s con indirizzo fisico %s' % (IPdst, mac_str))
             return mac_str
         else :
             logger.debug("Found response from Technicolor")
             
+def _pad_mac_string(mac_str):
+    parts = mac_str.split(':')
+    padded_mac_str =  ":".join('%02x' % int(n,16) for n in parts)
+    return padded_mac_str
+
 ###########################
 ## Parte windows
 ###########################
