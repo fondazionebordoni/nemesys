@@ -55,7 +55,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-__version__ = '2.1.5'
+__version__ = '2.2.0'
 
 # Non eseguire i test del profiler
 BYPASS_PROFILER = False
