@@ -27,6 +27,10 @@ import re
 from logger import logging
 import socket
 import platform
+import ping
+import re
+from subprocess import Popen, PIPE
+
 is_windows = (platform.system().startswith("Windows"))
 logger = logging.getLogger()
 
@@ -107,7 +111,7 @@ def do_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1, mac =
     if is_windows:
         IPTable = do_win_arping(IPsrc, NETmask, realSubnet)
     else:
-        IPTable = do_unix_arping(if_dev_name, IPsrc, NETmask, realSubnet, timeout, mac, threshold)
+        IPTable = do_unix_arping(if_dev_name, IPsrc, NETmask, realSubnet)
 
     hosts = "HOSTS: "
     for key in IPTable:
@@ -116,8 +120,13 @@ def do_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1, mac =
     nHosts = len(IPTable)
     return nHosts
 
+###########################
+## Parte linux-only
+## This will only work on linux, since raw sockets are not 
+## supported on Windows and *BSD (including Darwin)
+###########################
 
-def do_unix_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 1):
+def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 1):
 
     # Initialize a raw socket (requires super-user access
     my_socket = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.SOCK_RAW)
@@ -212,8 +221,8 @@ def receive_arp_response(mac_addr, my_socket, timeout):
     IPtable = {}
 
     '''Wait for response'''
-    timeLeft = timeout
-    stopTime = time.time() + timeout;
+    timeLeft = timeout*1000
+    stopTime = time.time() + timeout*1;
 
     while True:
 #         startTime = time.time()
@@ -262,6 +271,52 @@ def receive_arp_response(mac_addr, my_socket, timeout):
     return IPtable
 
 
+###########################
+## Parte Darwin, woks also for linux
+##
+## Not very pretty, but works...
+###########################
+
+def do_unix_arping(if_dev_name, IPsrc = None, NETmask=24, realSubnet=True, timeout=0.01):
+    logger.debug("IP source = %s" % IPsrc)
+    IPnet = ipcalc.Network('%s/%d' % (IPsrc, NETmask))
+    net = IPnet.network()
+    bcast = IPnet.broadcast()
+    logger.debug("network = %s" % net)
+    mytable = {}
+    for IPdst in IPnet:
+        if ((IPdst.hex() == net.hex() or IPdst.hex() == bcast.hex()) and realSubnet):
+            logger.debug("Saltato ip \'%s\'" % IPdst)
+        elif(IPdst.dq == IPsrc):
+            logger.debug("Salto il mio ip \'%s\'" % IPdst)
+        else:
+            mac = _send_one_mac_arp(str(IPdst), timeout)
+            if mac:
+                mytable[str(IPdst)] = mac
+    return mytable
+
+
+def _send_one_mac_arp(IPdst, timeout=0.01):
+    # Remove any existing entry
+    pid = Popen(["arp", "-d", IPdst], stdout=PIPE)
+    s = pid.communicate()[0]
+    # Check output? should be none
+    # Now ping the destination
+    try: 
+        ping.do_one("%s" % IPdst, timeout)
+    except:
+        pass # Timeout
+    pid = Popen(["arp", "-n", IPdst], stdout=PIPE)
+    s = pid.communicate()[0]
+    my_match = re.search(r"(([a-fA-F\d]{1,2}\:){5}[a-f\d]{1,2})", s)
+    if my_match:
+        mac_str = my_match.groups()[0]
+        if (not _is_technicolor(IPdst, mac_str)):
+            logger.info('Trovato Host %s con indirizzo fisico %s' % (IPdst, mac_str))
+            return mac_str
+        else :
+            logger.debug("Found response from Technicolor")
+            
 ###########################
 ## Parte windows
 ###########################
@@ -325,11 +380,13 @@ def _send_one_win_arp(IPdst, result_queue):
         else :
             logger.debug("Found response from Technicolor")
 
+
 if __name__ == '__main__':
     #from arprequest import ArpRequest
 #     ar = ArpRequest('192.168.112.2', 'eth0', '192.168.112.24')
 #     result = ar.request()
     print do_arping('eth0', '192.168.112.24', 24, True, 1, '78:2b:cb:96:55:3e', 1)
+    #print do_unix_arping('eth0', '192.168.112.24', 24, True)
     
 #    print do_arping(None, '192.168.208.4', 24, True)
 #    print do_arping('{5FC94950-68BA-417F-97DC-47B0722814F5}', '172.16.141.128', 24, True, 1, '00:0c:29:cb:5f:e7', 1)
