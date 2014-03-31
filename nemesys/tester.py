@@ -102,8 +102,6 @@ class Tester:
       logger.debug('Test done!')
 
     except ftplib.all_errors as e:
-      pcapper.stop()
-      pcapper.join()
       errorcode = errors.geterrorcode(e)
       error = '[%s] Impossibile effettuare il test %s: %s' % (errorcode, test_type, e)
       logger.error(error)
