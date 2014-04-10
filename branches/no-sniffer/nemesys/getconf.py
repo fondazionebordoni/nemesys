@@ -31,11 +31,13 @@ def getconf(serial, dir, filename, url):
 
    connection.request('GET', '%s?clientid=%s' % (url.path, serial))
    data = connection.getresponse().read()
-  
+   print "Got response: %s" % str(data)
    # Controllo stupido sul contenuto del file
    if ("clientid" in str(data)):
       with open('%s/%s' % (dir, filename), 'w') as file:
          file.write(data)
+   elif ("non valido" in str(data)):
+       return False
    else:
       raise Exception('Error in configuration file')
 

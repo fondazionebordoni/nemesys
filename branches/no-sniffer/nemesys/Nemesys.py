@@ -240,11 +240,11 @@ def getCode():
 
 def isFirstExec():
     """
-    Controlla se NON siamo alla prima esecuzione
+    Controlla se siamo alla prima esecuzione
     """
     if 'code' in _prop:
-        # NON siamo alla prima esecuzione
-        nemesys.debug('Activation Code not found')
+        #  siamo alla prima esecuzione
+        nemesys.debug('Activation Code found')
         if 'registered' in _prop:
             #Ho tentato almeno una volta il download
             nemesys.debug('Registered in _prop')
