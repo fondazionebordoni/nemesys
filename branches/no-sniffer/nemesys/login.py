@@ -180,7 +180,7 @@ class LoginGui(Frame):
         Frame.__init__(self, master)
         self.config(width="800")
         if utils.is_windows():
-            self.master.wm_iconbitmap(os.path.join('..', 'nemesys.gif'))
+            self.master.wm_iconbitmap(os.path.join('..', 'nemesys.ico'))
         self.pack()
         self.createWidgets()
         self.result = None
