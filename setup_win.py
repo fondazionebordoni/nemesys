@@ -19,7 +19,7 @@ class Target:
     def __init__(self, **kw):
         self.__dict__.update(kw)
         # for the versioninfo resources
-        self.version = "2.1.5"
+        self.version = "2.2.1"
         self.company_name = "Fondazione Ugo Bordoni"
         self.copyright = "(c)2010-2013 Fondazione Ugo Bordoni"
         self.name = "Nemesys"
@@ -36,17 +36,18 @@ myservice = Target(
 
 setup(
         data_files=data_files,
-	options = {
-		'py2exe': {
-			'packages': 'encodings',
-      'optimize': 2,
-		}
-	},
-	name = 'Nemesys',
-	version = '2.1.5',
-	service = [myservice],
-	windows = [
-		{"script": "gui.py", 'uac_info': "requireAdministrator", "icon_resources": [(1, "..\\nemesys.ico")]},
-	],
-	#packages = ['nemesys'],
+    options = {
+        'py2exe': {
+            'packages': 'encodings',
+            'optimize': 2,
+        }
+    },
+    name = 'Nemesys',
+    version = '2.1.5',
+    service = [myservice],
+    windows = [
+        {"script": "gui.py", 'uac_info': "requireAdministrator", "icon_resources": [(1, "..\\nemesys.ico")]},
+        {"script": "login.py", 'uac_info': "requireAdministrator", "icon_resources": [(1, "..\\nemesys.ico")]},
+    ],
+    #packages = ['nemesys'],
 )
