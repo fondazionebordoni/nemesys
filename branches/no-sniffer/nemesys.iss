@@ -2,12 +2,12 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Nemesys"
-#define MyAppVersion "2.1.5"
+#define MyAppVersion "2.2.1"
 #define MyAppPublisher "Fondazione Ugo Bordoni"
 #define MyAppURL "http://www.misurainternet.it/"
-#define MyAppExeName "Nemesys.exe"
+#define MyAppExeName "winservice.exe"
 #define MyRoot "C:\[work]"
-#define MyAppDir MyRoot + "\nemesys\trunk"
+#define MyAppDir MyRoot + "\nemesys\branches\no-sniffer"
 
 ; Read the previuos build number. If there is none take 0 instead.
 #define BuildNum Int(ReadIni(SourcePath	+ "\\buildinfo.ini","Info","Build","1"))
@@ -52,7 +52,6 @@ Name: italian; MessagesFile: compiler:Languages\Italian.isl
 Name: quicklaunchicon; Description: {cm:CreateQuickLaunchIcon}; GroupDescription: {cm:AdditionalIcons}; Flags: unchecked; OnlyBelowVersion: 0,6.1
 
 [Files]
-Source: {#MyAppDir}\nemesys\MNM34\netmon.msi; Flags: dontcopy
 Source: {#MyAppDir}\nemesys\dist\*; DestDir: {app}\dist; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: {#MyAppDir}\nemesys\cfg\*; DestDir: {app}\dist\cfg; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: {#MyAppDir}\ABOUT; DestDir: {app}; Flags: ignoreversion
@@ -78,14 +77,17 @@ Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Nemesys GUI; Filena
 
 [Run]
 Filename: {sys}\netsh.exe; Parameters: " int ip set global taskoffload=disabled"; Description: "Disable TCP Task Offload"; Flags: RunHidden RunAsCurrentUser; 
-Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\Nemesys.exe"" ""Nemesys"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable Nemesys traffic"; Flags: RunHidden RunAsCurrentUser; 
+Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\winservice.exe"" ""Nemesys"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable Nemesys traffic"; Flags: RunHidden RunAsCurrentUser; 
+Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\login.exe"" ""Nemesys"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable Nemesys login"; Flags: RunHidden RunAsCurrentUser; 
 ;Filename: {sys}\netsh.exe; Parameters: " advfirewall firewall add rule name=""Nemesys"" dir=out action=allow program=""{app}\dist\Nemesys.exe"" enable=yes"; Description: "Enable Nemesys traffic"; Flags: RunHidden RunAsCurrentUser; MinVersion: ,6.1.7600; 
+Filename: {app}\dist\login.exe; Parameters: ""; Description: "Autenticazione per il servizio Nemesys."; StatusMsg: "Autenticazione per il servizio Nemesys"; Flags: RunHidden RunAsCurrentUser; 
 Filename: {app}\dist\Nemesys.exe; Parameters: "--startup auto install"; Description: "Installazione del servizio Nemesys."; StatusMsg: "Installazione del servizio Nemesys"; Flags: RunHidden RunAsCurrentUser; 
 Filename: {app}\dist\Nemesys.exe; Parameters: start; Description: "Avvia il servizio Nemesys"; Flags: PostInstall RunHidden RunAsCurrentUser; StatusMsg: "Avvia il servizio Nemesys"; 
  
 [UninstallRun]
 Filename: taskkill; Parameters: /f /im gui.exe; WorkingDir: {sys}; Flags: runminimized RunAsCurrentUser
 Filename: {sys}\netsh.exe; Parameters: " firewall delete allowedprogram program=""{app}\dist\Nemesys.exe"""; Flags: RunHidden RunAsCurrentUser; 
+Filename: {sys}\netsh.exe; Parameters: " firewall delete allowedprogram program=""{app}\dist\login.exe"""; Flags: RunHidden RunAsCurrentUser; 
 Filename: {app}\dist\Nemesys.exe; Parameters: " --wait 25 stop"; Flags: runminimized RunAsCurrentUser
 Filename: {app}\dist\Nemesys.exe; Parameters: " remove"; Flags: runminimized RunAsCurrentUser
 
@@ -124,60 +126,6 @@ begin
   Confirm := false;
 end;
 
-procedure WinPcapInst();
-var
-  ResultCode: Integer;
-begin
-  ExtractTemporaryFile(ExpandConstant('netmon.msi'));
-  ShellExec('', 'msiexec', ExpandConstant('/I "{tmp}\netmon.msi"'),'', SW_SHOW, ewWaitUntilTerminated, ResultCode);
-  if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm3','Start') then
-    begin
-      RegWriteDWordValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm3','Start', 1);
-    end
-  else if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm','Start') then
-    begin
-      RegWriteDWordValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm','Start', 3);
-      RegWriteStringValue(HKEY_CLASSES_ROOT, 'CLSID\{425882B0-B0BF-11CE-B59F-00AA006CB37D}\InProcServer32','ThreadingModel','Both');
-    end
-  else
-    begin
-      MsgBox('Installazione del software NeMeSys terminata poichè si è scelto di non installare le Microsoft Network Monitor',mbInformation, MB_OK);
-      WizardForm.Close;
-    end;
-end;
-
-procedure WinPcapRem();
-var
-  ResultCode: Integer;
-begin
-  if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm3','Start') then
-    begin
-      ShellExec('', 'msiexec', '/I{8C5B5A11-CBF8-451B-B201-77FAB0D0B77D}','', SW_SHOW, ewWaitUntilTerminated, ResultCode);
-    end
-  else if RegValueExists(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Services\nm','Start') then
-    begin
-      ShellExec('', 'msiexec', '/I{A2F2C44A-869E-4C32-9CEC-E22B1CC91F06}','', SW_SHOW, ewWaitUntilTerminated, ResultCode);
-    end;
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-begin
-  if CurStep = ssInstall
-  then 
-    begin
-      WinPcapInst();
-    end;
-end;
-
-procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
-begin
-    if CurUninstallStep = usPostUninstall
-    then
-      begin
-        WinPcapRem();
-      end;
-end;
-
 var
   WarningPage: TOutputMsgWizardPage;
 
@@ -201,4 +149,3 @@ begin
     'Controlla di aver verificato che tutte le condizioni siano rispettate, poi procedi pure con l''installazione.');
 
 end;
-
