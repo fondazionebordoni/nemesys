@@ -120,6 +120,22 @@
 											<key>UID</key>
 											<integer>0</integer>
 										</dict>
+										<dict>
+											<key>Children</key>
+											<array/>
+											<key>GID</key>
+											<integer>80</integer>
+											<key>Path</key>
+											<string>/Users/domenico/nemesys-no-sniffer/iceberg/uninstall.sh</string>
+											<key>Path Type</key>
+											<integer>1</integer>
+											<key>Privileges</key>
+											<integer>493</integer>
+											<key>Type</key>
+											<integer>3</integer>
+											<key>UID</key>
+											<integer>0</integer>
+										</dict>
 									</array>
 									<key>GID</key>
 									<integer>80</integer>
