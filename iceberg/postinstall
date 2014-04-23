@@ -13,7 +13,7 @@ ln -s ${DIR}executer.app/Contents/Resources/cfg /Applications/Nemesys/license.ap
 touch ${DIR}executer.app/Contents/logs/nemesys.log
 chmod 666 ${DIR}executer.app/Contents/logs/nemesys.log
 
-${DIR}license.app/Contents/MacOS/lnemesys
+${DIR}license.app/Contents/MacOS/license
 
 cat << EOF > /Library/LaunchDaemons/it.fub.nemesys.plist
 <?xml version="1.0" encoding="UTF-8"?>
