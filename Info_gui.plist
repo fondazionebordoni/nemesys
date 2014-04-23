@@ -72,17 +72,16 @@
 	<array/>
 	<key>PyRuntimeLocations</key>
 	<array>
-		<string>@executable_path/../Frameworks/Python.framework/Versions/2.6/Python</string>
+		<string>@executable_path/../Frameworks/Python.framework/Versions/2.7/Python</string>
 	</array>
 	<key>PythonInfoDict</key>
 	<dict>
 		<key>PythonExecutable</key>
 		<string>/Library/Frameworks/Python.framework/Versions/2.6/Resources/Python.app/Contents/MacOS/Python</string>
 		<key>PythonLongVersion</key>
-		<string>2.6.1 (r261:67515, Jun 24 2010, 21:47:49) 
-[GCC 4.2.1 (Apple Inc. build 5646)]</string>
+		<string>2.7.6</string>
 		<key>PythonShortVersion</key>
-		<string>2.6</string>
+		<string>2.7</string>
 		<key>py2app</key>
 		<dict>
 			<key>alias</key>

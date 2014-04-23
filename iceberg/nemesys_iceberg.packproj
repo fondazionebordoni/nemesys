@@ -550,13 +550,13 @@
 						<key>IFPkgDescriptionTitle</key>
 						<string>Nemesys</string>
 						<key>IFPkgDescriptionVersion</key>
-						<string>2.1.2</string>
+						<string>2.2.0</string>
 					</dict>
 				</dict>
 				<key>Display Information</key>
 				<dict>
 					<key>CFBundleGetInfoString</key>
-					<string>Nemesys 1.7.1 Copyrights © 2011 Fondazione Ugo Bordoni</string>
+					<string>Nemesys 2.2.0 Copyrights © 2011 Fondazione Ugo Bordoni</string>
 					<key>CFBundleIconFile</key>
 					<string>nemesys_logo.icns</string>
 					<key>CFBundleIconFile Path Type</key>
@@ -566,7 +566,7 @@
 					<key>CFBundleName</key>
 					<string>Nemesys</string>
 					<key>CFBundleShortVersionString</key>
-					<string>2.1.2</string>
+					<string>2.2.0</string>
 				</dict>
 				<key>Options</key>
 				<dict>
@@ -583,7 +583,7 @@
 					<key>IFPkgFlagRelocatable</key>
 					<false/>
 					<key>IFPkgFlagRestartAction</key>
-					<integer>2</integer>
+					<integer>0</integer>
 					<key>IFPkgFlagRootVolumeOnly</key>
 					<false/>
 					<key>IFPkgFlagUpdateInstalledLanguages</key>
