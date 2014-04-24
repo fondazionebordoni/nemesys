@@ -34,7 +34,7 @@ cat << EOF > /Library/LaunchDaemons/it.fub.nemesys.plist
 EOF
 
 launchctl load it.fub.nemesys
-launchctl start it.fub.nemesys
+#launchctl start it.fub.nemesys
 
 exit 0
 

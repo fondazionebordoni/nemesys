@@ -583,7 +583,7 @@
 					<key>IFPkgFlagRelocatable</key>
 					<false/>
 					<key>IFPkgFlagRestartAction</key>
-					<integer>0</integer>
+					<integer>2</integer>
 					<key>IFPkgFlagRootVolumeOnly</key>
 					<false/>
 					<key>IFPkgFlagUpdateInstalledLanguages</key>
