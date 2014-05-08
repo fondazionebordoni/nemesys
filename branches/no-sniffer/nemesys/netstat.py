@@ -13,6 +13,8 @@ LINUX_RESOURCE_PATH="/sys/class/net"
 
 
 def get_netstat(if_device):
+	if not if_device:
+		raise NetstatException("No device identified")
 	platform_name = platform.system().lower()
 	if platform_name.startswith('win'):
 		return NetstatWindows(if_device)
@@ -39,6 +41,8 @@ class Netstat(object):
 		return self.if_device
 
 	def get_rx_bytes(self):
+		if not self.if_device:
+			raise NetstatException("No device identified")
 		# Handle different versions of psutil
 		try:
 			counters_per_nic = psutil.network_io_counters(pernic=True)
@@ -47,10 +51,12 @@ class Netstat(object):
 		if self.if_device in counters_per_nic:
 			rx_bytes = counters_per_nic[self.if_device].bytes_recv
 		else:
-			raise NetstatException("Could not find counters for device %d" % self.if_device)
+			raise NetstatException("Could not find counters for device %s" % str(self.if_device))
 		return long(rx_bytes)
 
 	def get_tx_bytes(self):
+		if not self.if_device:
+			raise NetstatException("No device identified")
 		# Handle different versions of psutil
 		try:
 			counters_per_nic = psutil.network_io_counters(pernic=True)
@@ -59,7 +65,7 @@ class Netstat(object):
 		if self.if_device in counters_per_nic:
 			tx_bytes = counters_per_nic[self.if_device].bytes_sent
 		else:
-			raise NetstatException("Could not find counters for device %d" % self.if_device)
+			raise NetstatException("Could not find counters for device %s" % str(self.if_device))
 		return long(tx_bytes)
 
 
@@ -108,7 +114,10 @@ class NetstatWindows(Netstat):
 			try:
 				whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
 				entry_name = "NetConnectionID"
-				return index,self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
+				device = self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
+				if not device:
+					raise Exception
+				return index,device
 			except Exception as e:
 				raise NetstatException("Could not find device with GUID %s and index %d" % (str(guid),int(index)))
 		else:
