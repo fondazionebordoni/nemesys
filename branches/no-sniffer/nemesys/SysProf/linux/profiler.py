@@ -14,6 +14,7 @@ from ..NemesysException import RisorsaException
 import xml.etree.ElementTree as ET
 import psutil, os
 import netifaces
+import re
 import socket
 
 class CPU(Risorsa):
