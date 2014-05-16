@@ -80,7 +80,7 @@ def FinalError():
     """
     Errore in caso di tentativo di download non andato a buon fine
     """
-    message = "Si è verificato un errore. Controllare:\n\n\t- di avere accesso alla rete,\n\t- di aver digitato correttamente le credenziali di accesso,\n\t- di avere una licenza attiva,\n\t- di non aver ottenuto un certificato con Ne.Me.Sys. meno di 45 giorni antecedenti ad oggi.\n\nDopo 5 tentativi di accesso falliti, sarà necessario disinstallare Ne.Me.Sys e reinstallarlo nuovamente."
+    message = "Si è verificato un errore. Controllare:\n\n- di avere accesso alla rete,\n- di aver digitato correttamente le credenziali di accesso,\n- di avere una licenza attiva,\n- di non aver ottenuto un certificato con Ne.Me.Sys. meno di 45 giorni antecedenti ad oggi.\n\nDopo 5 tentativi di accesso falliti, sarà necessario disinstallare Ne.Me.Sys e reinstallarlo nuovamente."
     ErrorDialog(message)
     
 
