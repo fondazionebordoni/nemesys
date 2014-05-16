@@ -80,7 +80,7 @@ def FinalError():
     """
     Errore in caso di tentativo di download non andato a buon fine
     """
-    message = "Si è verificato un errore durante la configurazione: o le credenziali inserite non sono corrette o la licenza non è più valida.\n\nTi invitiamo a controllare user-id e password che ti sono state invitate in fase di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it, senza uscire dall’installazione.\n\nAl quinto tentativo fallito sarà necessario procedere alla disinstallazione e reinstallazione del programma."
+    message = "Si è verificato un errore. Controllare:\n\n\t- di avere accesso alla rete,\n\t- di aver digitato correttamente le credenziali di accesso,\n\t- di avere una licenza attiva,\n\t- di non aver ottenuto un certificato con Ne.Me.Sys. meno di 45 giorni antecedenti ad oggi.\n\nDopo 5 tentativi di accesso falliti, sarà necessario disinstallare Ne.Me.Sys e reinstallarlo nuovamente."
     ErrorDialog(message)
     
 
