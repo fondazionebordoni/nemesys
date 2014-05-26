@@ -121,7 +121,7 @@ class rete(Risorsa):
 
     def profileDevice(self):
         maindevxml = ET.Element('rete')
-        descriptors = {'InterfaceName':'Unknown', 'MAC Address': 'Unknown', 'hardware': 'Unknown', 'ip_assigned': 'Unknown'}
+        descriptors = {'InterfaceName':'Unknown', 'MAC Address': 'Unknown', 'hardware': 'Unknown', 'ip_assigned': 'Unknown', 'ip_address': 'Unknown'}
         self.ipaddr = self.getipaddr()
         cmdline = 'system_profiler SPNetworkDataType -xml'
         try:
@@ -138,7 +138,7 @@ class rete(Risorsa):
             allnodes = app.getiterator()
             capture = 0
             for n in allnodes:
-                if capture:
+                if capture and n.tag == 'string':
                     descriptors[prev_key] = n.text
                     capture = 0
                 if n.tag == 'key':
@@ -146,7 +146,7 @@ class rete(Risorsa):
                         if n.text == des:
                             capture = 1
                             prev_key = des
-            if descriptors['ip_assigned'] == 'yes':
+            if (descriptors['ip_assigned'] == 'yes') or (descriptors['ip_address'] != 'Unknown'):
                 devStatus = 'Enabled'
                 ipdev = self.get_if_ipaddress(descriptors['InterfaceName'])
                 if (ipdev == self.ipaddr):
