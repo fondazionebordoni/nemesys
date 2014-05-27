@@ -121,47 +121,56 @@ class rete(Risorsa):
 
     def profileDevice(self):
         maindevxml = ET.Element('rete')
+        descriptors = {}
         self.ipaddr = self.getipaddr()
-        cmdline = 'system_profiler SPNetworkDataType -xml'
+        cmdline = 'system_profiler SPNetworkDataType -xml -detailLevel full'
         try:
             spxml = ET.parse(os.popen(cmdline))
             devices = spxml.findall('array/dict/array/dict')
         except:
-            raise Error('errore in darwin system_profiler')
+            raise RisorsaException('errore in darwin system_profiler')
+          
         for dev in devices:
-            descriptors = {'InterfaceName':'Unknown', 'MAC Address': 'Unknown', 'hardware': 'Unknown', 'ip_assigned': 'Unknown', 'ip_address': 'Unknown'}
             devxml = ET.Element('NetworkDevice')
+            descriptors = {}
             devIsAct = 'False' # by def
             devStatus = 'Disabled'
             app = spxml
             app._setroot(dev)
-            allnodes = app.getiterator()
-            capture = 0
+            allnodes = list(app.iter())
             for n in allnodes:
-                if capture and n.tag == 'string':
-                    descriptors[prev_key] = n.text
-                    capture = 0
+                capture = 1
                 if n.tag == 'key':
-                    for des in descriptors:
-                        if n.text == des:
-                            capture = 1
-                            prev_key = des
-            if (descriptors['ip_assigned'] == 'yes') or (descriptors['ip_address'] != 'Unknown'):
+                    capture = 0
+                    elem_num = 0
+                    prev_key = n.text     
+                if capture and (n.tag == 'string' or n.tag == 'integer'):
+                    descriptors[prev_key] = n.text
+                            
+            if 'Addresses' in descriptors:
                 devStatus = 'Enabled'
-                ipdev = self.get_if_ipaddress(descriptors['InterfaceName'])
-                if (ipdev == self.ipaddr):
-                    devIsAct = 'True'
-            devxml.append(self.xmlFormat('Name', descriptors['InterfaceName']))
-            devxml.append(self.xmlFormat('Status', devStatus))
-            if descriptors['hardware'].lower() == 'ethernet':
+            if 'NetworkSignature' in descriptors:
+                devIsAct = 'True'
+
+            if descriptors['type'].lower() == 'ethernet':
                 devType = 'Ethernet 802.3'
-            elif descriptors['hardware'].lower() == 'airport':
+                if descriptors['_name'].lower() == 'mbbethernet':
+                    devType = 'WWAN'
+            elif descriptors['type'].lower() == 'airport':
                 devType = 'Wireless'
+            elif descriptors['type'].lower() == 'ppp (pppserial)':
+                devType = 'WWAN'
             else:
                 devType = 'Other'
-            devxml.append(self.xmlFormat('Type', devType))
-            devxml.append(self.xmlFormat('MACAddress', descriptors['MAC Address']))
+                
+            devxml.append(self.xmlFormat('Name', descriptors['_name']))
+            devxml.append(self.xmlFormat('Device', descriptors['interface']))
+            devxml.append(self.xmlFormat('Status', devStatus))
             devxml.append(self.xmlFormat('isActive', devIsAct))
+            devxml.append(self.xmlFormat('Type', devType))
+            devxml.append(self.xmlFormat('IPaddress', descriptors.get('Addresses','unknown')))
+            devxml.append(self.xmlFormat('MACaddress', descriptors.get('MAC Address','unknown')))
+            
             maindevxml.append(devxml)
             del devxml
 
