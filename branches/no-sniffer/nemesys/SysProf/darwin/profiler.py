@@ -121,7 +121,6 @@ class rete(Risorsa):
 
     def profileDevice(self):
         maindevxml = ET.Element('rete')
-        descriptors = {'InterfaceName':'Unknown', 'MAC Address': 'Unknown', 'hardware': 'Unknown', 'ip_assigned': 'Unknown', 'ip_address': 'Unknown'}
         self.ipaddr = self.getipaddr()
         cmdline = 'system_profiler SPNetworkDataType -xml'
         try:
@@ -130,6 +129,7 @@ class rete(Risorsa):
         except:
             raise Error('errore in darwin system_profiler')
         for dev in devices:
+            descriptors = {'InterfaceName':'Unknown', 'MAC Address': 'Unknown', 'hardware': 'Unknown', 'ip_assigned': 'Unknown', 'ip_address': 'Unknown'}
             devxml = ET.Element('NetworkDevice')
             devIsAct = 'False' # by def
             devStatus = 'Disabled'
