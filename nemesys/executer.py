@@ -196,7 +196,7 @@ class Executer:
     if self._isprobe:
       logger.info('Inizializzato software per sonda.')
     else:
-      logger.info('Inizializzato software per misure d\'utente')
+      logger.info('Inizializzato software per misure d\'utente con ISP id = %s' % client.isp.id)
 
   def test(self, taskfile = None):
 

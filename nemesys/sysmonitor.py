@@ -218,7 +218,7 @@ def checkhosts(up, down, ispid, arping = 1):
   mask = getNetworkMask(ip)
   dev = getDev(ip = ip)
 
-  logger.info("Indirizzo ip/mask: %s/%d, device: %s" % (ip, mask, dev))
+  logger.info("Indirizzo ip/mask: %s/%d, device: %s, provider: %s" % (ip, mask, dev, ispid))
 
   if (arping == 0):
     thres = th_host + 1

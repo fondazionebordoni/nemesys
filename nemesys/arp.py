@@ -107,6 +107,35 @@ def _is_technicolor(ip, mac):
 
   return False
 
+'''
+
+This check makes is needed to ignore routers that respond to ARP and ping with two
+addresses, typically this happens with routers from Technicolor/Technico
+
+If the MAC address is the same, except for the first byte, then it is considered
+Technicolor and ignored
+'''
+def _filter_out_technicolor(IPTable):
+    n_hosts = len(IPTable)
+    if (n_hosts < 2):
+        logger.debug("No check for technicolor, num hosts = %d" % n_hosts)
+        return n_hosts
+    
+    temp_table = []
+    for ip_addr in IPTable:
+        temp_table.append(IPTable[ip_addr][2:])
+    
+    unique_addresses = set(temp_table)
+    n_hosts_technicolor_removed = len(unique_addresses)
+    if (n_hosts_technicolor_removed <= 0):
+        logger.error("Check for technicolor FAILED")
+        pass
+    elif (n_hosts_technicolor_removed < n_hosts):
+        logger.info("Probable technicolor router detected")
+        n_hosts = n_hosts_technicolor_removed
+    return n_hosts
+
+
 def do_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 1):
     if is_windows:
         IPTable = do_win_arping(IPsrc, NETmask, realSubnet)
@@ -117,7 +146,9 @@ def do_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1, mac =
     for key in IPTable:
         hosts = hosts+"[%s|%s] " % (IPTable[key], key)
     logger.info(hosts)
-    nHosts = len(IPTable)
+    # Check for router that responds with 2 IP addresses
+    # with slightly different Ethernet addresses
+    nHosts = _filter_out_technicolor(IPTable)
     return nHosts
 
 ###########################
@@ -128,12 +159,10 @@ def do_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1, mac =
 
 def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 1):
 
-    # Initialize a raw socket (requires super-user access
+    # Initialize a raw socket (requires super-user access)
     my_socket = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.SOCK_RAW)
     HOST = socket.gethostbyname(socket.gethostname())
-#    my_socket.bind((HOST, socket.SOCK_RAW))
     my_socket.bind((if_dev_name, socket.SOCK_RAW))
-#    my_socket.bind((if_dev_name, 0))
 
     if (mac):
         MACsrc = "".join(chr(int(macEL, 16)) for macEL in mac.split(':'))
@@ -159,11 +188,9 @@ def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1,
         elif(IPdst.dq == IPsrc):
             logger.debug("Salto il mio ip %s" % IPdst)
         else:
-            # Send ARP reuqest
+            # Send ARP request
             IPdst = str(IPdst)
             # logger.debug('Arping host %s' % IPdst)
-#             send = Thread(target=send_arp_request, args=(IPsrc, IPdst, if_dev_name, my_socket))
-#             send.start()
             send_arp_request(IPsrc, IPdst, if_dev_name, my_socket)
             index += 1
 
@@ -185,7 +212,6 @@ def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1,
     return IPtable
 
 
-# dev, ipAddress, netMask, realSubnet, 1, mac, threshold
 def send_arp_request(src_ip, dest_ip, if_dev_name, my_socket):
     '''Send ARP request'''
 
@@ -225,7 +251,6 @@ def receive_arp_response(mac_addr, my_socket, timeout):
     stopTime = time.time() + timeout*1;
 
     while True:
-#         startTime = time.time()
         timeLeft = stopTime - time.time()
         whatReady = select.select([my_socket], [], [], timeLeft)
         if whatReady[0] == []:  # Timeout
@@ -364,7 +389,7 @@ def do_win_arping(IPsrc = None, NETmask=24, realSubnet=True):
 
 
 def _send_one_win_arp(IPdst, result_queue):
-    # Send ARP reuqest
+    # Send ARP request
     logger.debug("Sending ARP to \'%s\'" % IPdst)
     IPdst = str(IPdst)
     mac_addr = (c_ulong*2)()
@@ -386,14 +411,8 @@ def _send_one_win_arp(IPdst, result_queue):
             logger.debug("Found response from Technicolor")
 
 
+def main():
+    pass
+
 if __name__ == '__main__':
-    #from arprequest import ArpRequest
-#     ar = ArpRequest('192.168.112.2', 'eth0', '192.168.112.24')
-#     result = ar.request()
-    print do_arping('eth0', '192.168.112.24', 24, True, 1, '78:2b:cb:96:55:3e', 1)
-    #print do_unix_arping('eth0', '192.168.112.24', 24, True)
-    
-#    print do_arping(None, '192.168.208.4', 24, True)
-#    print do_arping('{5FC94950-68BA-417F-97DC-47B0722814F5}', '172.16.141.128', 24, True, 1, '00:0c:29:cb:5f:e7', 1)
-#    print do_win_arping('192.168.208.4', 24)
-#     print(result)
+    main()
