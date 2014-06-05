@@ -52,11 +52,11 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, 
     if bandwidthup == bandwidthdown and not bool(re.search('^10\.', ipAddress)):
       #profilo fibra
       netMask = 29
-      logger.debug("Profilo Fastweb in Fibra. Modificata sottorete in %d" % netMask)
+      logger.info("Profilo Fastweb in Fibra. Modificata sottorete in %d" % netMask)
     else:
       #profilo ADSL
       netMask = 30
-      logger.debug("Profilo Fastweb ADSL o Fibra con indirizzo 10.*. Modificata sottorete in %d" % netMask)
+      logger.info("Profilo Fastweb ADSL o Fibra con indirizzo 10.*. Modificata sottorete in %d" % netMask)
 
   # Controllo che non siano indirizzi pubblici, in quel caso ritorno 1, effettuo la misura
   elif not bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ipAddress)):
@@ -117,7 +117,12 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
 
       if(nHosts > threshold):
         break
-      
+  
+  # When not real subnet, router is excluded
+  # so we need to fake it
+  if not realSubnet:
+      nHosts += 1
+  
   return nHosts
 
 

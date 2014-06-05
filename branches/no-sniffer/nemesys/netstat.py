@@ -3,25 +3,27 @@ Created on 13/nov/2013
 
 @author: ewedlund
 '''
-
+from logger import logging
 import platform
 import re
 import netifaces
 import psutil
 
+logger = logging.getLogger()
+
 LINUX_RESOURCE_PATH="/sys/class/net"
 
 
 def get_netstat(if_device):
-	if not if_device:
-		raise NetstatException("No device identified")
-	platform_name = platform.system().lower()
-	if platform_name.startswith('win'):
-		return NetstatWindows(if_device)
-	elif platform_name.startswith('lin'):
- 		return NetstatLinux(if_device)
-	elif platform_name.startswith('darwin'):
-		return NetstatDarwin(if_device)
+    if not if_device:
+    	raise NetstatException("No device identified")
+    platform_name = platform.system().lower()
+    if platform_name.startswith('win'):
+    	return NetstatWindows(if_device)
+    elif platform_name.startswith('lin'):
+    		return NetstatLinux(if_device)
+    elif platform_name.startswith('darwin'):
+    	return NetstatDarwin(if_device)
 
 '''
 Eccezione istanzazione Risorsa
@@ -103,25 +105,29 @@ class NetstatWindows(Netstat):
 		# Since Win32_NetworkAdapter does not have GUID on windows XP
 		# We need to get the NetConnectionID in two phases
 		# 1. get the id of the interface from Win32_NetworkAdapterConfiguration
+		index = None
+		device = None
 		try:
 			whereCondition = " WHERE SettingID = \"" + guid + "\""
 			entry_name = "Index"
 			index = self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
 		except Exception as e:
-			raise NetstatException("Could not get index for device with GUID %s" % str(guid))
-		if index != None:
+			logger.error("Eccezione durante la ricerca dell'indice per l'interfaccia con guid = %s" % str(guid))
+			logger.error("Eccezione = %s" % str(e))
+		if index:
 # 			# 2. Now get NetConnectionID from Win32_NetworkAdapter
 			try:
 				whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
 				entry_name = "NetConnectionID"
 				device = self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
-				if not device:
-					raise Exception
-				return index,device
 			except Exception as e:
-				raise NetstatException("Could not find device with GUID %s and index %d" % (str(guid),int(index)))
+				logger.error("Eccezione durante la ricerca dell''interfaccia con GUID %s e indice %d" % (str(guid), int(index)))
+				logger.error("Eccezione = %s" % str(e))
+				raise NetstatException("impossibile ottenere il dettaglio dell'interfaccia di rete")
+		if not index or not device:
+			raise NetstatException("impossibile ottenere il dettaglio dell'interfaccia di rete")
 		else:
-			raise NetstatException("No index found for device with GUID %s" % str(guid))
+			return index,device
 
 
 	def get_device_name(self, ip_address):
