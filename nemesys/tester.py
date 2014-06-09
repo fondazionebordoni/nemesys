@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from contabyte import Contabyte
 from datetime import datetime
 from errorcoder import Errorcoder
 from fakefile import Fakefile
@@ -24,11 +23,11 @@ from ftplib import FTP
 from host import Host
 from logger import logging
 from optparse import OptionParser
-from pcapper import Pcapper
 from proof import Proof
 from statistics import Statistics
 from timeNtp import timestampNtp
 import ftplib
+import netstat
 import paths
 import ping
 import socket
@@ -42,12 +41,6 @@ file = None
 filepath = None
 size = 0
 
-#Parametri Sniffer:
-BUFF = 16 * 1024 * 1024 # MegaByte
-SNAPLEN = 150           # Byte
-TIMEOUT = 1             # MilliSeconds
-PROMISC = 1             # Promisc Mode ON/OFF
-
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 
@@ -59,8 +52,8 @@ def totalsize(data):
 
 class Tester:
 
-  def __init__(self, if_ip, host, username = 'anonymous', password = 'anonymous@', timeout = 60):
-    self._if_ip = if_ip
+  def __init__(self, dev, host, username = 'anonymous', password = 'anonymous@', timeout = 60):
+    self._netstat = netstat.get_netstat(dev)
     self._host = host
     self._username = username
     self._password = password
@@ -75,13 +68,11 @@ class Tester:
     elapsed = 0
 
     file = Fakefile(bytes)
-    timeout = max(self._timeout, 1)
+    timeout = max(self._timeout, 12)
     start = datetime.fromtimestamp(timestampNtp())
 
     try:
-      # TODO Il timeout non viene onorato in Python 2.6: http://bugs.python.org/issue8493
-      #ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
-      ftp = FTP(self._host.ip, self._username, self._password)
+      ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
     except ftplib.all_errors as e:
       errorcode = errors.geterrorcode(e)
       error = '[%s] Impossibile aprire la connessione FTP: %s' % (errorcode, e)
@@ -95,27 +86,22 @@ class Tester:
 
     try:
       logger.debug('Test initializing...')
-      pcapper = Pcapper(self._if_ip, BUFF, SNAPLEN, TIMEOUT, PROMISC)
-      pcapper.start()
+      start_total_bytes = self._netstat.get_tx_bytes()
 
       logger.debug('Testing... ')
-      pcapper.sniff(Contabyte(self._if_ip, self._host.ip))
+#       pcapper.sniff(Contabyte(self._if_ip, self._host.ip))
 
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
 
-      pcapper.stop_sniff()
-      counter_stats = pcapper.get_stats()
+#       pcapper.stop_sniff()
+#       counter_stats = pcapper.get_stats()
 
       logger.debug('Test stopping... ')
-      pcapper.stop()
-      pcapper.join()
-
+      end_total_bytes = self._netstat.get_tx_bytes()
       logger.debug('Test done!')
 
     except ftplib.all_errors as e:
-      pcapper.stop()
-      pcapper.join()
       errorcode = errors.geterrorcode(e)
       error = '[%s] Impossibile effettuare il test %s: %s' % (errorcode, test_type, e)
       logger.error(error)
@@ -129,6 +115,9 @@ class Tester:
 
     ftp.quit()
 
+    ''' TODO: get packet drop from netstat '''
+    counter_stats = Statistics(byte_up_nem = size, byte_up_all = end_total_bytes - start_total_bytes, packet_drop = 0, packet_tot_all = 100)
+#     return Proof(test_type, start, elapsed, size, counter_stats)
     return Proof(test_type, start, elapsed, size, counter_stats)
 
   def testftpdown(self, filename):
@@ -138,13 +127,11 @@ class Tester:
     elapsed = 0
 
     file = filename
-    timeout = max(self._timeout, 1)
+    timeout = max(self._timeout, 12)
     start = datetime.fromtimestamp(timestampNtp())
 
     try:
-      # TODO Il timeout non viene onorato in Python 2.6: http://bugs.python.org/issue8493
-      #ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
-      ftp = FTP(self._host.ip, self._username, self._password)
+      ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
     except ftplib.all_errors as e:
       errorcode = errors.geterrorcode(e)
       error = '[%s] Impossibile aprire la connessione FTP: %s' % (errorcode, e)
@@ -157,27 +144,18 @@ class Tester:
 
     try:
       logger.debug('Test initializing...')
-      pcapper = Pcapper(self._if_ip, BUFF, SNAPLEN, TIMEOUT, PROMISC)
-      pcapper.start()
-
+      start_total_bytes = self._netstat.get_rx_bytes()
       logger.debug('Testing... ')
-      pcapper.sniff(Contabyte(self._if_ip, self._host.ip))
 
       # Il risultato deve essere espresso in millisecondi
       elapsed = timer.timeit(1) * 1000
 
-      pcapper.stop_sniff()
-      counter_stats = pcapper.get_stats()
-
       logger.debug('Test stopping... ')
-      pcapper.stop()
-      pcapper.join()
+      end_total_bytes = self._netstat.get_rx_bytes()
 
       logger.debug('Test done!')
 
     except ftplib.all_errors as e:
-      pcapper.stop()
-      pcapper.join()
       errorcode = errors.geterrorcode(e)
       error = '[%s] Impossibile effettuare il test %s: %s' % (errorcode, test_type, e)
       logger.error(error)
@@ -191,6 +169,8 @@ class Tester:
 
     ftp.quit()
 
+    ''' TODO: get packet drop from netstat '''
+    counter_stats = Statistics(byte_down_nem = size, byte_down_all = end_total_bytes - start_total_bytes, packet_drop = 0, packet_tot_all = 100)
     return Proof(test_type, start, elapsed, size, counter_stats)
 
   def testping(self):
@@ -266,7 +246,9 @@ if __name__ == '__main__':
 
     TOT = 10
 
-    t1 = Tester(ip, Host(ip = nap), 'nemesys', '4gc0m244')
+    import sysmonitor
+    dev = sysmonitor.getDev()
+    t1 = Tester(dev, Host(ip = nap), 'nemesys', '4gc0m244')
 
     for i in range(1, TOT + 1):
       logger.info('Test Download %d/%d' % (i, TOT))

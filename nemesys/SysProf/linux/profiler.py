@@ -13,8 +13,8 @@ from ..RisorsaFactory import Risorsa
 from ..NemesysException import RisorsaException
 import xml.etree.ElementTree as ET
 import psutil, os
-import dmidecode
 import netifaces
+import re
 import socket
 
 class CPU(Risorsa):
@@ -22,20 +22,21 @@ class CPU(Risorsa):
     def __init__(self):
         Risorsa.__init__(self)
         self._chisono = "sono una CPU"
-        self._params = ['processor', 'cores', 'cpuLoad']
+        self._params = ['processor', 'cpuLoad']
         #print psutil.__version__
 
     def processor(self):
-        val = dmidecode.processor().values()
-        return self.xmlFormat('processor', val[0]['data']['Version'])
-
-    def cores(self):
-        val = dmidecode.processor().values()
-        return self.xmlFormat('cores', val[0]['data']['Core Enabled'])
+        cpu_string = "Unknown"
+        cpu_file_name = "/proc/cpuinfo"
+        with open(cpu_file_name) as f:
+            for line in f:
+                if "model name" in line:
+                    cpu_string =  re.sub( ".*model name.*:", "", line,1).strip()
+        return self.xmlFormat('processor', cpu_string)
 
     def cpuLoad(self):
         # WARN interval parameter available from v.0.2
-        val = psutil.cpu_percent()
+        val = psutil.cpu_percent(0.5)
         return self.xmlFormat('cpuLoad', val)
 
 class RAM(Risorsa):
