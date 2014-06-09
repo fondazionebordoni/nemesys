@@ -1,1 +1,0 @@
-gcc pktman.c -O3 -shared -I . -I C:\Python27\include -I C:\winpcap-dev\Include -I C:\winpcap-dev\Include\pcap -L C:\MinGW\lib -L C:\Python27\libs -L C:\winpcap-dev\Lib -o pktman.pyd -lpython27 -lwpcap -lwsock32

@@ -54,7 +54,6 @@ tag_sys = 'sistemaOperativo.OperatingSystem'
 tag_cpu = 'CPU.cpuLoad'
 tag_mac = 'rete.NetworkDevice/MACAddress'
 tag_activeNic = 'rete.NetworkDevice/isActive'
-tag_cores = 'CPU.cores'
 tag_proc = 'CPU.processor'
 tag_hosts = 'hostNumber'
 
@@ -82,7 +81,7 @@ def getstatus(res):
     logger.error ("Problema nel tentativo di istanziare la classe: %s" % e)
     raise sysmonitorexception.FAILPROF
   except RisorsaException as e:
-    logger.error ("Problema nel tentativo di istanziare la risorsa: %s" % e)
+    logger.error ("Problema nel tentativo di istanziare la risorsa %s: %s" % (str(res), e))
     raise sysmonitorexception.FAILPROF
   except LocalProfilerException as e:
     logger.error ("Problema nel tentativo di istanziare il profiler: %s" % e)
@@ -217,7 +216,9 @@ def checkhosts(up, down, ispid, arping = 1):
 
   ip = getIp();
   mask = getNetworkMask(ip)
-  logger.info("Indirizzo ip/mask: %s/%d" % (ip, mask))
+  dev = getDev(ip = ip)
+
+  logger.info("Indirizzo ip/mask: %s/%d, device: %s, provider: %s" % (ip, mask, dev, ispid))
 
   if (arping == 0):
     thres = th_host + 1
@@ -233,7 +234,7 @@ def checkhosts(up, down, ispid, arping = 1):
     except:
         pass
 
-    value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac)
+    value = checkhost.countHosts(ip, mask, up, down, ispid, thres, arping, mac, dev)
     logger.info('Trovati %d host in rete.' % value)
 
     if value < 0:
@@ -348,6 +349,32 @@ def getIp(host = 'finaluser.agcom244.fub.it', port = 443):
     raise sysmonitorexception.UNKIP
   return value
 
+def getDev(host = 'finaluser.agcom244.fub.it', port = 443, ip = None):
+  '''
+  restituisce scheda attiva (guid della scheda su Windows 
+  '''
+  if not ip:
+    local_ip_address = getIp(host, port)
+  else:
+    local_ip_address = ip
+      
+
+  ''' Now get the associated device '''
+  found = False
+  for ifName in netifaces.interfaces():
+      all_addresses = netifaces.ifaddresses(ifName)
+      if (netifaces.AF_INET in all_addresses):
+          ip_addresses = all_addresses[netifaces.AF_INET]
+          for address in ip_addresses:
+              if ('addr' in address) and (address['addr'] == local_ip_address):
+                  found = True
+                  break
+          if found:
+              break
+  if not found:
+    raise sysmonitorexception.UNKDEV
+  return ifName
+
 def getNetworkMask(ip):
   '''
   Restituisce un intero rappresentante la maschera di rete, in formato CIDR, 
@@ -432,7 +459,7 @@ def getSys():
   '''
   Restituisce array con informazioni sul sistema utilizzato per il test
   '''
-  d = {tag_sys:'', tag_cores:'', tag_proc:''}
+  d = {tag_sys:'', tag_proc:''}
   r = []
 
   for keys in d:
@@ -442,6 +469,7 @@ def getSys():
   return r
 
 def _getvalues(xmlresult, tag, tagrisorsa):
+    
   '''
   Estrae informazioni dal SystemProfiler 
   '''

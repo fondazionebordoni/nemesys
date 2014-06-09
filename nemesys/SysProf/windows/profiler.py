@@ -15,6 +15,7 @@ from ctypes import *
 from ctypes.wintypes import DWORD, ULONG
 import struct
 import pythoncom
+import psutil
 
 def executeQuery(wmi_class, whereCondition=""):   
     try: 
@@ -55,7 +56,7 @@ class RisorsaWin(Risorsa):
                             if (xmlres is not None):
                               root.append(xmlres)
         except AttributeError as e:
-            raise RisorsaException("errore get status info")
+            raise RisorsaException("errore get status info - %s" % e)
         except RisorsaException as e:
             raise RisorsaException(e)
         except:
@@ -66,7 +67,7 @@ class CPU(RisorsaWin):
    
     def __init__(self):
         RisorsaWin.__init__(self)
-        self._params = {'Win32_Processor':['processor', 'cores', 'cpuLoad']}
+        self._params = {'Win32_Processor':['processor', 'cpuLoad']}
         
     def processor(self, obj):
         infos = ['Name', 'Description', 'Manufacturer']
@@ -81,19 +82,14 @@ class CPU(RisorsaWin):
         return self.xmlFormat("processor", ris)    
     
     def cpuLoad(self, obj):
-        try:
-            val = self.getSingleInfo(obj, 'LoadPercentage')
-        except AttributeError as e:
-            raise AttributeError(e)
-        return self.xmlFormat("cpuLoad", val)
+#         try:
+#             val = self.getSingleInfo(obj, 'LoadPercentage')
+#         except AttributeError as e:
+#             raise AttributeError(e)
+#         return self.xmlFormat("cpuLoad", val)
+        val = psutil.cpu_percent(0.5)
+        return self.xmlFormat('cpuLoad', val)
 
-    def cores(self, obj):
-        try:
-            val = self.getSingleInfo(obj, 'NumberOfCores')
-        except AttributeError as e:
-            raise AttributeError(e)
-        return self.xmlFormat("cores", val)
-    
 class RAM(RisorsaWin):
     def __init__(self):
         RisorsaWin.__init__(self)
