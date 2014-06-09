@@ -55,7 +55,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-__version__ = '2.1.5'
+__version__ = '2.2.0'
 
 # Non eseguire i test del profiler
 BYPASS_PROFILER = False
@@ -196,7 +196,7 @@ class Executer:
     if self._isprobe:
       logger.info('Inizializzato software per sonda.')
     else:
-      logger.info('Inizializzato software per misure d\'utente')
+      logger.info('Inizializzato software per misure d\'utente con ISP id = %s' % client.isp.id)
 
   def test(self, taskfile = None):
 
@@ -389,39 +389,42 @@ class Executer:
 
     logger.debug('Analisi della percentuale dei pacchetti persi')
     packet_drop = stats.packet_drop
-    packet_tot = stats.packet_tot_all
-    if (packet_tot > 0):
-      packet_ratio = float(packet_drop) / float(packet_tot)
-      logger.debug('Percentuale di pacchetti persi: %.2f%%' % (packet_ratio * 100))
-      if (packet_tot > 0 and packet_ratio > TH_PACKETDROP):
-        raise Exception('Eccessiva presenza di traffico di rete, impossibile analizzare i dati di test')
-    else:
-      raise Exception('Errore durante la misura, impossibile analizzare i dati di test')
-
+#     packet_tot = stats.packet_tot_all
+#     if (packet_tot > 0):
+#       packet_ratio = float(packet_drop) / float(packet_tot)
+#       logger.debug('Percentuale di pacchetti persi: %.2f%%' % (packet_ratio * 100))
+#       if (packet_tot > 0 and packet_ratio > TH_PACKETDROP):
+#         raise Exception('Eccessiva presenza di traffico di rete, impossibile analizzare i dati di test')
+#     else:
+#       raise Exception('Errore durante la misura, impossibile analizzare i dati di test')
     if (testtype == DOWN):
-      byte_nem = stats.payload_down_nem_net
-      byte_all = byte_nem + stats.byte_down_oth_net
-      packet_nem_inv = stats.packet_up_nem_net
-      packet_all_inv = packet_nem_inv + stats.packet_up_oth_net
+      byte_nem = stats.byte_down_nem
+      byte_all = stats.byte_down_all
+#       packet_nem_inv = stats.packet_up_nem_net
+#       packet_all_inv = packet_nem_inv + stats.packet_up_oth_net
     else:
-      byte_nem = stats.payload_up_nem_net
-      byte_all = byte_nem + stats.byte_up_oth_net
-      packet_nem_inv = stats.packet_down_nem_net
-      packet_all_inv = packet_nem_inv + stats.packet_down_oth_net
+      byte_nem = stats.byte_up_nem
+      byte_all = stats.byte_up_all
+#       packet_nem_inv = stats.packet_down_nem_net
+#       packet_all_inv = packet_nem_inv + stats.packet_down_oth_net
 
     logger.debug('Analisi dei rapporti di traffico')
-    if byte_all > 0 and packet_all_inv > 0:
+#     if byte_all > 0 and packet_all_inv > 0:
+    if byte_all > 0:
       traffic_ratio = float(byte_all - byte_nem) / float(byte_all)
-      packet_ratio_inv = float(packet_all_inv - packet_nem_inv) / float(packet_all_inv)
-      logger.info('kbyte_nem: %.1f; kbyte_all %.1f; packet_nem_inv: %d; packet_all_inv: %d' % (byte_nem / 1024.0, byte_all / 1024.0, packet_nem_inv, packet_all_inv))
-      logger.debug('Percentuale di traffico spurio: %.2f%%/%.2f%%' % (traffic_ratio * 100, packet_ratio_inv * 100))
+#       packet_ratio_inv = float(packet_all_inv - packet_nem_inv) / float(packet_all_inv)
+#       logger.info('kbyte_nem: %.1f; kbyte_all %.1f; packet_nem_inv: %d; packet_all_inv: %d' % (byte_nem / 1024.0, byte_all / 1024.0, packet_nem_inv, packet_all_inv))
+      logger.info('kbyte_nem: %.1f; kbyte_all %.1f' % (byte_nem / 1024.0, byte_all / 1024.0))
+      logger.debug('Percentuale di traffico spurio: %.2f%%' % (traffic_ratio * 100))
+#       logger.debug('Percentuale di traffico spurio: %.2f%%/%.2f%%' % (traffic_ratio * 100, packet_ratio_inv * 100))
       if traffic_ratio < 0:
         raise Exception('Errore durante la verifica del traffico di misura: impossibile salvare i dati.')
-      if traffic_ratio < TH_TRAFFIC and packet_ratio_inv < TH_TRAFFIC_INV:
+#       if traffic_ratio < TH_TRAFFIC and packet_ratio_inv < TH_TRAFFIC_INV:
+      if traffic_ratio < TH_TRAFFIC:
         # Dato da salvare sulla misura
         test.bytes = byte_all
       else:
-        raise Exception('Eccessiva presenza di traffico internet non legato alla misura: percentuali %d%%/%d%%.' % (round(traffic_ratio * 100), round(packet_ratio_inv * 100)))
+        raise Exception('Eccessiva presenza di traffico internet non legato alla misura: percentuali %d%%.' % (round(traffic_ratio * 100)))
     else:
       raise Exception('Errore durante la misura, impossibile analizzare i dati di test')
 
@@ -485,8 +488,9 @@ class Executer:
       if self._profile_system() != 0:
         base_error = 50000
 
-      ip = sysmonitor.getIp(task.server.ip, 21)
-      t = Tester(if_ip = ip, host = task.server, timeout = self._testtimeout,
+#       ip = sysmonitor.getIp(task.server.ip, 21)
+      dev = sysmonitor.getDev(task.server.ip, 21)
+      t = Tester(dev = dev, host = task.server, timeout = self._testtimeout,
                  username = self._client.username, password = self._client.password)
 
       # TODO Pensare ad un'altra soluzione per la generazione del progressivo di misura

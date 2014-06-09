@@ -1,7 +1,7 @@
-# analyzer.py
-# -*- coding: utf8 -*-
+# utils.py
+# -*- coding: utf-8 -*-
 
-# Copyright (c) 2011 Fondazione Ugo Bordoni.
+# Copyright (c) 2014 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,23 +16,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from statistics import Statistics
+import platform
 
-class Analyzer():
+def is_windows():
+    if platform.system().lower().startswith('win'):
+        return True
+    else:
+        return False
 
-  def __init__(self, ip, nap):
-    self._ip = ip
-    self._nap = nap
-    self._statistics = Statistics()
-    self._packet_table = {}
+def is_linux():
+    if platform.system().lower().startswith('lin'):
+         return True
+    else:
+        return False
 
-  def reset(self):
-    self._statistics = Statistics()
-    self._packet_table = {}
-
-  def analyze(self, pcap_header, pcap_data):
-    pass
-
-  @property
-  def statistics(self):
-    return self._statistics
+def is_darwin():
+    if platform.system().lower().startswith('darwin'):
+        return True
+    else:
+        return False

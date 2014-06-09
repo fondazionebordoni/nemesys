@@ -7,8 +7,8 @@ Usage:
 
 from setuptools import setup
 
-APP = ['nemesys/lnemesys.py']
-DATA_FILES = ['nemesys/lnemesys.py']
+APP = ['nemesys/login.py']
+DATA_FILES = ['nemesys/login.py']
 OPTIONS = {'argv_emulation': True,
  'plist': 'Info_license.plist',
  'iconfile': 'nemesys.icns',
