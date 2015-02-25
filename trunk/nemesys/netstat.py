@@ -86,7 +86,7 @@ class NetstatWindows(Netstat):
 		if (if_device_guid != None):
 			self.device_id,self.if_device = self._get_psutil_device_from_guid(if_device_guid)
 		else:
-			raise NetstatException("No device given!")
+			raise NetstatException("Nessun device identificato!")
 
 
 	def is_device_active(self, if_device_guid=None):
@@ -97,6 +97,8 @@ class NetstatWindows(Netstat):
 			index = self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
 		else:
 			index = self.device_id
+		if index == None:
+			raise NetstatException("Non trovo l'indice dell'interfaccia, impossibile verificare lo stato")
 		whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
 		entry_name = "NetConnectionStatus"
 		status = self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
@@ -118,17 +120,17 @@ class NetstatWindows(Netstat):
 		except Exception as e:
 			logger.error("Eccezione durante la ricerca dell'indice per l'interfaccia con guid = %s" % str(guid))
 			logger.error("Eccezione = %s" % str(e))
-		if index:
+		if index != None:
 #			 # 2. Now get NetConnectionID from Win32_NetworkAdapter
 			try:
 				whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
 				entry_name = "NetConnectionID"
 				device = self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
 			except Exception as e:
-				logger.error("Eccezione durante la ricerca dell''interfaccia con GUID %s e indice %d" % (str(guid), int(index)))
+				logger.error("Eccezione durante la ricerca dell'interfaccia con GUID %s e indice %d" % (str(guid), int(index)))
 				logger.error("Eccezione = %s" % str(e))
 				raise NetstatException("impossibile ottenere il dettaglio dell'interfaccia di rete")
-		if not index or not device:
+		if index == None or not device:
 			raise NetstatException("impossibile ottenere il dettaglio dell'interfaccia di rete")
 		else:
 			return index,device
@@ -192,6 +194,7 @@ class NetstatWindows(Netstat):
 			 import pythoncom
 		except ImportError:
 			 raise NetstatException("Missing WMI library")
+		result = None
 		try:
 			objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
 			objSWbemServices = objWMIService.ConnectServer(".", "root\cimv2")
@@ -199,7 +202,7 @@ class NetstatWindows(Netstat):
 			result = objSWbemServices.ExecQuery(queryString)
 		except Exception as e:
 			raise NetstatException("Impossibile eseguire query al server root\cimv2: ")
-		if (result):
+		if result:
 			try:
 				found = False
 				for obj in result:
