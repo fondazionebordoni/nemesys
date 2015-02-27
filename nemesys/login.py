@@ -25,6 +25,7 @@ import tkMessageBox
 import os
 import myProp
 import paths
+import sys
 from getconf import getconf
 import utils
 
@@ -37,14 +38,41 @@ _clientConfigurationFile = 'client.conf'
 _configurationServer = 'https://finaluser.agcom244.fub.it/Config'
 
 
+class LoginException(Exception):
+
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
+class LoginAuthenticationException(LoginException):
+
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+class LoginConnectionException(LoginException):
+
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+class LoginCancelledException(LoginException):
+
+    def __init__(self, message = ""):
+        Exception.__init__(self, message)
+
+class LoginOtherException(LoginException):
+
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
+
 ### Activation code ###
 def getCode():
-  '''
-  Apre una finestra che chiede il codice licenza. Resituisce il codice licenza e chiude la finestra.
-  '''
-  appresult = None
-  root = None
-  try:
+    '''
+    Apre una finestra che chiede il codice licenza. Resituisce il codice licenza e chiude la finestra.
+    '''
+    appresult = None
+    root = None
     root = Tk()
     if utils.is_windows():
         root.wm_iconbitmap('../Nemesys.ico')
@@ -53,26 +81,34 @@ def getCode():
     app.mainloop()
     appresult = str(app.result)
     logger.info(appresult)
-
+    
+    if appresult == 'Cancel':
+        logger.info("User pressed Cancel button, exiting")
+        raise LoginCancelledException()
+    
     if appresult == '' or len(appresult) < 4:
-      appresult = None
-      logger.error('Exit: wrong activation code')
-      CodeError()
-      raise Exception('Wrong username/password')
+        appresult = None
+        logger.error('Exit: wrong activation code')
+        CodeError()
+        raise LoginAuthenticationException('Wrong username/password')
 
-  except Exception as e:
-      logger.error('Exception at activation code: %s' % str(e))
-      
-  finally:
-      if root:
-          root.destroy()
-      return appresult
+    if root:
+        root.destroy()
+    return appresult
 
 def CodeError():
     """
     Errore in caso di credenziali errate
     """
-    message = "Credenziali di autenticazione non riconosciute.\nControllare i dati di accesso al sito www.misurainternet.it"
+    message = "Autenticazione fallita o licenza non attiva.\nControllare i dati di accesso al sito www.misurainternet.it"
+    ErrorDialog(message)
+    
+
+def ConnectionError():
+    """
+    Errore in caso di connessione fallita
+    """
+    message = "Connessione fallita.\nControllare di avere accesso alla rete."
     ErrorDialog(message)
     
 
@@ -88,9 +124,16 @@ def MaxError():
     """
     Errore in caso di quinto inserimento errato di credenziali
     """
-    message = "Le credenziali non sono corrette o la licenza non è più valida..\nProcedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. dopo aver controllato user-id e password che ti sono state invitate in fase di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it."
+    message = "Le credenziali non sono corrette o la licenza non è più valida.\nProcedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. dopo aver controllato user-id e password che ti sono state invitate in fase di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it."
     ErrorDialog(message)
     
+def CancelError():
+    """
+    Utente e' uscito
+    """
+    message = "L'autenticazione non e' andata a buon fine.\nProcedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. dopo aver controllato user-id e password che ti sono state invitate in fase di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it."
+    ErrorDialog(message)
+    sys.exit()
     
 def ErrorDialog(message):
     root = Tk()
@@ -114,12 +157,12 @@ def OkDialog():
 
 
 ### Function to Download Configuration File ###
-def getActivationFile(appresult,path, config_path):
+def getActivationFile(appresult, path, config_path):
     '''
       Scarica il file di configurazione. Ritorna True se tutto è andato bene
     '''
     logger.info('getActivationFile function')
-    
+
     ac = appresult 
     logger.info('Codici ricevuti: %s' % ac)
     
@@ -129,10 +172,10 @@ def getActivationFile(appresult,path, config_path):
         logger.info('download = %s' % str(download))
     except Exception as e:
         logger.error('Cannot download the configuration file: %s' % str(e))
+        raise LoginConnectionException(str(e))
     if download != True:
         logger.info('Received error from server, wrong credentials or license not active')
-          #ACEmain()
-        return False
+        raise LoginAuthenticationException("")
     else:
         logger.info('Configuration file successfully downloaded')
         myProp.writeProps(config_path,'\nregistered','ok')
@@ -151,6 +194,10 @@ class LoginGui(Frame):
         inserted_password = self.password.get()
         if (inserted_username and inserted_password):
             self.result = "%s|%s" % (self.username.get(), hashlib.sha1(self.password.get()).hexdigest())
+        self.quit()
+        
+    def cancel(self):
+        self.result = 'Cancel'
         self.quit()
 
     def createWidgets(self):
@@ -171,10 +218,18 @@ class LoginGui(Frame):
         self.password["show"] = "*"
         self.password.grid(column=1, row=2)
 
-        self.invio = Button(self)
+        self.button_frame = Frame(self)
+        self.button_frame.grid(column=1, row=3, columnspan=2, pady=8)
+        
+        self.invio = Button(self.button_frame)
         self.invio["text"] = "Accedi",
         self.invio["command"] = self.sendMsg
-        self.invio.grid(column=0, row=3, columnspan=2, pady=8)
+        self.invio.grid(column=0, row=0, padx = 4)
+        
+        self.cancl = Button(self.button_frame)
+        self.cancl["text"] = "Cancel",
+        self.cancl["command"] = self.cancel
+        self.cancl.grid(column=1, row=0, padx = 4)
 
     def __init__(self, master=None):
         Frame.__init__(self, master)
@@ -210,27 +265,41 @@ def main():
     if not 'code' in _prop:
         result = False
         j=0
+        has_canceled = False
         # Al massimo faccio fare 5 tentativi di inserimento codice di licenza
-        while not result and j<5:    
+        while not result and j<5 and not has_canceled:    
                 # Prendo un codice licenza valido sintatticamente
             appresult = None
-            #TODO: Do not continue forever, and make last dialog
-#            while not appresult:
-            appresult = getCode()
-                # Prendo il file di configurazione
-            i = 0
+            errorfunc = None
             try:
+                appresult = getCode()
                 result = getActivationFile(appresult, paths._CONF_DIR, config_path)
+            except LoginAuthenticationException as e:
+                logger.warning("Authentication failure n. %d" % j)
+                errorfunc = CodeError
+            except LoginConnectionException as e:
+                logger.warning("Authentication connection problem: %s" % str(e))
+                errorfunc = ConnectionError
+            except LoginCancelledException:
+                has_canceled = True
+            except LoginOtherException as e:
+                logger.warning("Other login problem: %s" % str(e))
+                errorfunc = OtherError
             except Exception as e:
                 logger.error("Caught exception while downloading configuration file: %s" % str(e) )
-                
-#            TODO:
-            if result==False and j<4:
-                FinalError()
-                logger.warning('Final Error occurred at attempt number %d' %j)
+
+            if result == False and not has_canceled and j<4:
+                if errorfunc:
+                    errorfunc()
+                else:
+                    logger.warning('Final Error occurred at attempt number %d' %j)
+                    FinalError()
             j+=1
     
-        if result == False:
+        if has_canceled:
+            CancelError()
+            sys.exit(0)
+        elif result == False:
             MaxError()
             logger.warning('MaxError occurred at attempt number 5')
             myProp.writeProps(config_path,'\ncode',appresult)
