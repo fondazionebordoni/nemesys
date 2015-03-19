@@ -133,7 +133,6 @@ class MyFrame (wx.Frame):
   def __init__(self):
 
     # Base e gestione stato
-    setlocale(LC_ALL, '')
     self._status = Status(status.ERROR, "error")
     xmldoc = Progress(True)
     #da qui modifico la dimensione della finestra FRAME
@@ -358,7 +357,7 @@ def getdate():
   return datetime.fromtimestamp(timestampNtp())
 
 if __name__ == '__main__':
-  app = wx.PySimpleApp()
+  app = wx.App(False)
   if platform == 'win32':
     wx.CallLater(200, sleeper)
   frame = MyFrame()
