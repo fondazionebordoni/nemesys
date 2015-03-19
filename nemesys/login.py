@@ -100,7 +100,7 @@ def CodeError():
     """
     Errore in caso di credenziali errate
     """
-    message = "Autenticazione fallita o licenza non attiva.\nControllare i dati di accesso al sito www.misurainternet.it"
+    message = "Autenticazione fallita o licenza non attiva.\nControllare i dati di accesso e la presenza di una licenza attiva al sito www.misurainternet.it"
     ErrorDialog(message)
     
 
