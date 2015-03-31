@@ -2,12 +2,12 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Nemesys"
-#define MyAppVersion "2.2.1"
+#define MyAppVersion "2.2.2"
 #define MyAppPublisher "Fondazione Ugo Bordoni"
 #define MyAppURL "http://www.misurainternet.it/"
 #define MyAppExeName "winservice.exe"
-#define MyRoot "C:\[work]"
-#define MyAppDir MyRoot + "\nemesys\trunk"
+#define MyRoot "."
+#define MyAppDir MyRoot + ""
 
 ; Read the previuos build number. If there is none take 0 instead.
 #define BuildNum Int(ReadIni(SourcePath	+ "\\buildinfo.ini","Info","Build","1"))
@@ -33,7 +33,7 @@ LicenseFile={#MyAppDir}\LICENSE
 OutputDir={#MyAppDir}
 OutputBaseFilename={#MyAppName}_v.{#myAppVersion}-{#BuildNum}
 SolidCompression=true
-VersionInfoCopyright=(c) 2010-2014 Fondazione Ugo Bordoni
+VersionInfoCopyright=(c) 2010-2015 Fondazione Ugo Bordoni
 PrivilegesRequired=admin
 SetupIconFile={#MyAppDir}\nemesys.ico
 WizardSmallImageFile={#MyAppDir}\nemesys_55.bmp
