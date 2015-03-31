@@ -19,9 +19,9 @@ class Target:
     def __init__(self, **kw):
         self.__dict__.update(kw)
         # for the versioninfo resources
-        self.version = "2.2.1"
+        self.version = "2.2.2"
         self.company_name = "Fondazione Ugo Bordoni"
-        self.copyright = "(c)2010-2013 Fondazione Ugo Bordoni"
+        self.copyright = "(c)2010-2015 Fondazione Ugo Bordoni"
         self.name = "Nemesys"
 
 myservice = Target(
@@ -43,7 +43,7 @@ setup(
         }
     },
     name = 'Nemesys',
-    version = '2.1.5',
+    version = '2.2.2',
     service = [myservice],
     windows = [
         {"script": "gui.py", 'uac_info': "requireAdministrator", "icon_resources": [(1, "..\\nemesys.ico")]},
