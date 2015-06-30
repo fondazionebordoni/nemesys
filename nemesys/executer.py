@@ -1,7 +1,7 @@
 # executer.py
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2010 Fondazione Ugo Bordoni.
+# Copyright (c) 2015 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -55,7 +55,7 @@ status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-__version__ = '2.2.0'
+__version__ = '2.2.2'
 
 # Non eseguire i test del profiler
 BYPASS_PROFILER = False
