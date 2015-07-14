@@ -18,7 +18,6 @@
 
 import hashlib
 from Tkinter import *
-import tkFont
 from threading import Thread
 import time
 import tkMessageBox
