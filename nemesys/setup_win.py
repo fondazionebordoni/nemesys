@@ -19,12 +19,28 @@ def get_version():
         f = open("_generated_version.py")
     except EnvironmentError:
         return None
+    ver = None
     for line in f.readlines():
         mo = re.match("__version__ = '([^']+)'", line)
         if mo:
             ver = mo.group(1)
-            return ver
-    return None
+            break
+
+    # Fix version in Inno Setup file too!
+    filedata = None
+    with open('../nemesys.iss', 'r') as file :
+      filedata = file.read()
+    
+    # Replace the target string
+    if '@version@' in filedata:
+        filedata = filedata.replace('@version@', ver)
+    
+    # Write the file out again
+    with open('../nemesys.iss', 'w') as file:
+      file.write(filedata)
+
+    return ver
+
 
 class Target:
     def __init__(self, **kw):

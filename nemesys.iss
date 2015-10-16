@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Nemesys"
-#define MyAppVersion "2.2.2"
+#define MyAppVersion "@version@"
 #define MyAppPublisher "Fondazione Ugo Bordoni"
 #define MyAppURL "http://www.misurainternet.it/"
 #define MyAppExeName "winservice.exe"
