@@ -49,9 +49,21 @@ def getverifiedconnection(url, certificate=None, timeout=60):
       connection = httplib.HTTPConnection(host=url.hostname, timeout=timeout)
     elif verifypeer(url):
       if (certificate != None):
-        connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout)
+        try:
+          '''python >= 2.7.9'''
+          context = ssl.create_default_context()
+          connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout, context=context)
+        except AttributeError:
+          '''python < 2.7.9'''
+          connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout)
       else:
-        connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout)
+        try:
+          '''python >= 2.7.9'''
+          context = ssl.create_default_context()
+          connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout, context=context)
+        except AttributeError:
+          '''python < 2.7.9'''
+          connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout)
 
     return connection
 
