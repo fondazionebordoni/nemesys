@@ -39,6 +39,8 @@ def update_version_py():
     full_version = stdout[len(TAG_PREFIX):].strip()
     if '-' in full_version:
         strict_version = full_version[:full_version.find('-')] 
+    else:
+        strict_version = full_version
     f = open(VERSION_FILE, "w")
     f.write(GENERATED_VERSION_PY % (strict_version, full_version))
     f.close()
