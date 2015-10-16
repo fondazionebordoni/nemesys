@@ -1,6 +1,6 @@
 from distutils.core import setup
 import py2exe
-import sys, os
+import re, sys, os
 from SysProf.windows import profiler
 from xml.etree import ElementTree as ET
 import modulefinder
