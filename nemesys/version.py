@@ -9,14 +9,18 @@ STRICT_VERSION="2.2.2"
 '''
 import os
 import subprocess
+import time
 
 TAG_PREFIX = "release-"
 GENERATED_VERSION_PY = """
-# This file is originally generated from Git information by running 'setup.py
-# version'. Distribution tarballs contain a pre-generated copy of this file.
+# This file is originally generated from Git information by running 'version.py
 
 __version__ = '%s'
 FULL_VERSION = '%s'
+__updated__ = '%s'
+
+if __name__ == '__main__':
+    print __version__
 """
 VERSION_FILE="_generated_version.py"
 def update_version_py():
@@ -42,7 +46,7 @@ def update_version_py():
     else:
         strict_version = full_version
     f = open(VERSION_FILE, "w")
-    f.write(GENERATED_VERSION_PY % (strict_version, full_version))
+    f.write(GENERATED_VERSION_PY % (strict_version, full_version, time.strftime("%c")))
     f.close()
     print "updated _generated_version.py to '%s'" % strict_version
 
