@@ -1,7 +1,7 @@
 # executer.py
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2010 Fondazione Ugo Bordoni.
+# Copyright (c) 2015 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -50,12 +50,13 @@ import status
 import sysmonitor
 import sysmonitorexception
 
+from _generated_version import __version__, FULL_VERSION
+
 bandwidth_sem = Semaphore()
 status_sem = Semaphore()
 logger = logging.getLogger()
 errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
-__version__ = '2.2.0'
 
 # Non eseguire i test del profiler
 BYPASS_PROFILER = False
@@ -759,7 +760,7 @@ class Executer:
     return (code, message)
 
 def main():
-  logger.info('Starting Nemesys v.%s' % __version__)
+  logger.info('Starting Nemesys v.%s' % FULL_VERSION)
   paths.check_paths()
   (options, args, md5conf) = parse()
 

@@ -15,15 +15,15 @@ LINUX_RESOURCE_PATH="/sys/class/net"
 
 
 def get_netstat(if_device):
-    if not if_device:
-    	raise NetstatException("No device identified")
-    platform_name = platform.system().lower()
-    if platform_name.startswith('win'):
-    	return NetstatWindows(if_device)
-    elif platform_name.startswith('lin'):
-    		return NetstatLinux(if_device)
-    elif platform_name.startswith('darwin'):
-    	return NetstatDarwin(if_device)
+	if not if_device:
+		raise NetstatException("Nessun identificatore di device.")
+	platform_name = platform.system().lower()
+	if platform_name.startswith('win'):
+		return NetstatWindows(if_device)
+	elif platform_name.startswith('lin'):
+		return NetstatLinux(if_device)
+	elif platform_name.startswith('darwin'):
+		return NetstatDarwin(if_device)
 
 '''
 Eccezione istanzazione Risorsa
@@ -44,7 +44,7 @@ class Netstat(object):
 
 	def get_rx_bytes(self):
 		if not self.if_device:
-			raise NetstatException("No device identified")
+			raise NetstatException("Nessun identificatore di device")
 		# Handle different versions of psutil
 		try:
 			counters_per_nic = psutil.network_io_counters(pernic=True)
@@ -52,13 +52,15 @@ class Netstat(object):
 			counters_per_nic = psutil.net_io_counters(pernic=True)
 		if self.if_device in counters_per_nic:
 			rx_bytes = counters_per_nic[self.if_device].bytes_recv
+			if rx_bytes == None:
+				raise NetstatException("Ottenuto contatore vuoto per il device %d" % self.if_device)
 		else:
-			raise NetstatException("Could not find counters for device %s" % str(self.if_device))
+			raise NetstatException("Contatore non trovato per il device %s" % str(self.if_device))
 		return long(rx_bytes)
 
 	def get_tx_bytes(self):
 		if not self.if_device:
-			raise NetstatException("No device identified")
+			raise NetstatException("Nessun identificatore di device")
 		# Handle different versions of psutil
 		try:
 			counters_per_nic = psutil.network_io_counters(pernic=True)
@@ -66,15 +68,17 @@ class Netstat(object):
 			counters_per_nic = psutil.net_io_counters(pernic=True)
 		if self.if_device in counters_per_nic:
 			tx_bytes = counters_per_nic[self.if_device].bytes_sent
+			if tx_bytes == None:
+				raise NetstatException("Ottenuto contatore vuoto per il device %s" % str(self.if_device))
 		else:
-			raise NetstatException("Could not find counters for device %s" % str(self.if_device))
+			raise NetstatException("Contatore non trovato per il device %s" % str(self.if_device))
 		return long(tx_bytes)
 
 
 class NetstatWindows(Netstat):
 	'''
-    Netstat funcions on Windows platforms
-    '''
+	Netstat funcions on Windows platforms
+	'''
 
 	def __init__(self, if_device_guid=None):
 		super(NetstatWindows, self).__init__(if_device_guid)
@@ -82,7 +86,7 @@ class NetstatWindows(Netstat):
 		if (if_device_guid != None):
 			self.device_id,self.if_device = self._get_psutil_device_from_guid(if_device_guid)
 		else:
-			raise NetstatException("No device given!")
+			raise NetstatException("Nessun device identificato!")
 
 
 	def is_device_active(self, if_device_guid=None):
@@ -93,6 +97,8 @@ class NetstatWindows(Netstat):
 			index = self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
 		else:
 			index = self.device_id
+		if index == None:
+			raise NetstatException("Non trovo l'indice dell'interfaccia, impossibile verificare lo stato")
 		whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
 		entry_name = "NetConnectionStatus"
 		status = self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
@@ -114,17 +120,17 @@ class NetstatWindows(Netstat):
 		except Exception as e:
 			logger.error("Eccezione durante la ricerca dell'indice per l'interfaccia con guid = %s" % str(guid))
 			logger.error("Eccezione = %s" % str(e))
-		if index:
-# 			# 2. Now get NetConnectionID from Win32_NetworkAdapter
+		if index != None:
+#			 # 2. Now get NetConnectionID from Win32_NetworkAdapter
 			try:
 				whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
 				entry_name = "NetConnectionID"
 				device = self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
 			except Exception as e:
-				logger.error("Eccezione durante la ricerca dell''interfaccia con GUID %s e indice %d" % (str(guid), int(index)))
+				logger.error("Eccezione durante la ricerca dell'interfaccia con GUID %s e indice %d" % (str(guid), int(index)))
 				logger.error("Eccezione = %s" % str(e))
 				raise NetstatException("impossibile ottenere il dettaglio dell'interfaccia di rete")
-		if not index or not device:
+		if index == None or not device:
 			raise NetstatException("impossibile ottenere il dettaglio dell'interfaccia di rete")
 		else:
 			return index,device
@@ -135,17 +141,19 @@ class NetstatWindows(Netstat):
 		if_dev_name = None
 		found = False
 		for if_dev in all_devices:
-			if_ip_addresses = netifaces.ifaddresses(if_dev)[netifaces.AF_INET]
+			if_all_addresses = netifaces.ifaddresses(if_dev)
+			if netifaces.AF_INET in if_all_addresses:
+				if_ip_addresses = if_all_addresses[netifaces.AF_INET]
 			for if_ip_address in if_ip_addresses:
 				if (if_ip_address['addr'] == ip_address):
 					if_dev_name = if_dev
 					found = True
 					break
 			if found: break
-	    # Now we have the "Setting ID" for the interface
-	    # in class Wind32_NetworkAdapterConfiguration
-	    # We now need to get the value of "Description"
-	    # in the same class
+		# Now we have the "Setting ID" for the interface
+		# in class Wind32_NetworkAdapterConfiguration
+		# We now need to get the value of "Description"
+		# in the same class
 		entry_value = None
 		where_condition = " WHERE SettingID = \"" + if_dev_name + "\""
 		entry_name = "Description"
@@ -161,14 +169,14 @@ class NetstatWindows(Netstat):
 						whereCondition=None,
 						entry_name="*"):
 		try:
-    		 import pythoncom
+			 import pythoncom
 		except ImportError:
-		     raise NetstatException("Missing WMI library")
+			 raise NetstatException("Missing WMI library")
 		pythoncom.CoInitialize()
 		try:
-    		 return self._get_entry_generic_wrapped(wmi_class, whereCondition, entry_name)
+			 return self._get_entry_generic_wrapped(wmi_class, whereCondition, entry_name)
 		finally:
-		     pythoncom.CoUninitialize()
+			 pythoncom.CoUninitialize()
 
 
 	def _get_entry_generic_wrapped(self, wmi_class=None,
@@ -177,15 +185,16 @@ class NetstatWindows(Netstat):
 		entry_value = None
 		''' TODO: more intelligent search?'''
 		if not whereCondition:
-		    whereCondition=" WHERE Name Like \"" + self.if_device_search_string + "%\""
+			whereCondition=" WHERE Name Like \"" + self.if_device_search_string + "%\""
 		if not wmi_class:
-		    wmi_class="Win32_PerfRawData_Tcpip_NetworkAdapter"
+			wmi_class="Win32_PerfRawData_Tcpip_NetworkAdapter"
 		queryString = None
 		try:
-    		 import win32com.client
-    		 import pythoncom
+			 import win32com.client
+			 import pythoncom
 		except ImportError:
-		     raise NetstatException("Missing WMI library")
+			 raise NetstatException("Missing WMI library")
+		result = None
 		try:
 			objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
 			objSWbemServices = objWMIService.ConnectServer(".", "root\cimv2")
@@ -193,7 +202,7 @@ class NetstatWindows(Netstat):
 			result = objSWbemServices.ExecQuery(queryString)
 		except Exception as e:
 			raise NetstatException("Impossibile eseguire query al server root\cimv2: ")
-		if (result):
+		if result:
 			try:
 				found = False
 				for obj in result:
@@ -213,8 +222,8 @@ class NetstatWindows(Netstat):
 
 class NetstatLinux(Netstat):
 	'''
-    Netstat funcions on Linux platforms
-    '''
+	Netstat funcions on Linux platforms
+	'''
 
 	def __init__(self, if_device):
 		super(NetstatLinux, self).__init__(if_device)
@@ -224,7 +233,9 @@ class NetstatLinux(Netstat):
 		if_dev_name = None
 		found = False
 		for if_dev in all_devices:
-			if_ip_addresses = netifaces.ifaddresses(if_dev)[netifaces.AF_INET]
+			if_all_addresses = netifaces.ifaddresses(if_dev)
+			if netifaces.AF_INET in if_all_addresses:
+				if_ip_addresses = if_all_addresses[netifaces.AF_INET]
 			for if_ip_address in if_ip_addresses:
 				if (if_ip_address['addr'] == ip_address):
 					if_dev_name = if_dev
@@ -235,8 +246,8 @@ class NetstatLinux(Netstat):
 
 class NetstatDarwin(NetstatLinux):
 	'''
-    Netstat funcions on MacOS platforms
-    '''
+	Netstat funcions on MacOS platforms
+	'''
 
 	def __init__(self, if_device):
 		super(NetstatLinux, self).__init__(if_device)

@@ -19,6 +19,7 @@
 import httplib
 import urlparse
 import os
+import ssl
 
 def getconf(serial, dir, filename, url):
    '''
@@ -26,7 +27,13 @@ def getconf(serial, dir, filename, url):
    Solleva eccezioni in caso di problemi o file ricevuto non corretto.
    '''
    url = urlparse.urlparse(url)
-   connection = httplib.HTTPSConnection(host=url.hostname)
+   try:
+    '''python >= 2.7.9'''
+    context = ssl.create_default_context()
+    connection = httplib.HTTPSConnection(host=url.hostname, context=context)
+   except AttributeError:
+    '''python < 2.7.9'''
+    connection = httplib.HTTPSConnection(host=url.hostname)
    # Warning This does not do any verification of the server’s certificate.
 
    connection.request('GET', '%s?clientid=%s' % (url.path, serial))

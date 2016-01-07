@@ -133,7 +133,6 @@ class MyFrame (wx.Frame):
   def __init__(self):
 
     # Base e gestione stato
-    setlocale(LC_ALL, '')
     self._status = Status(status.ERROR, "error")
     xmldoc = Progress(True)
     #da qui modifico la dimensione della finestra FRAME
@@ -153,7 +152,7 @@ class MyFrame (wx.Frame):
 
     self.label_nemesys = wx.StaticText(self, wx.ID_ANY, u"Nemesys", wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
     self.label_nemesys.Wrap(-1)
-    self.label_nemesys.SetFont(wx.Font(16, 74, 90, 92, False, "Sans"))
+    self.label_nemesys.SetFont(wx.Font(16, wx.SWISS, wx.NORMAL, wx.BOLD, False))
     bSizer4.Add(self.label_nemesys, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
 
     self.label_startmeasures = wx.StaticText(self, wx.ID_ANY, u"Inizio test di misura: %s" % xmldoc.start().strftime('%c'), wx.DefaultPosition, wx.DefaultSize, wx.ALIGN_CENTRE)
@@ -358,7 +357,7 @@ def getdate():
   return datetime.fromtimestamp(timestampNtp())
 
 if __name__ == '__main__':
-  app = wx.PySimpleApp()
+  app = wx.App(False)
   if platform == 'win32':
     wx.CallLater(200, sleeper)
   frame = MyFrame()
