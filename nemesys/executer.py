@@ -532,7 +532,9 @@ class Executer:
           if (test.value > 0):
             bandwidth = int(round(test.bytes * 8 / test.value))
             logger.debug('Banda ipotizzata in download: %d' % bandwidth)
-            task.update_ftpdownpath(bandwidth)
+            if not self._isprobe:
+                '''Aggiornare path solo se non e' una sonda'''
+                task.update_ftpdownpath(bandwidth)
 
           sleep(1)
 
