@@ -1,7 +1,7 @@
 # fakefile.py
 # -*- coding: utf8 -*-
 
-# Copyright (c) 2010 Fondazione Ugo Bordoni.
+# Copyright (c) 2015 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,14 +20,41 @@ import random
 
 class Fakefile:
 
-  def __init__(self, bytes):
-    self._bytes = int(bytes)
+  def __init__(self, size):
+    self._initial_bytes = int(size)
+    self._bytes = self._initial_bytes
+    self.data = None
+    self.data_len = None
   
-  def read(self, bufsize):
+  def read(self, bufsize = -1):
+      
+    if bufsize <= 0:
+        bufsize = 8192
+    
+    if (self._bytes < bufsize):
+        bufsize = self._bytes
+  
+    if bufsize <= 0:
+        bufsize = 8192
+    
+    if (self._bytes < bufsize):
+        bufsize = self._bytes
   
     if self._bytes <= 0:
-      return None    
-  
-    data = '%s' % random.getrandbits(min(bufsize, self._bytes))
-    self._bytes -= len(data)
-    return data
+        return None
+
+    if not self.data or self.data_len != bufsize:
+        # data random between 0 and FFFFF...FF, 
+        # e.g. 0-FF  in case of one byte buffer
+        data = '%x' % random.randint(0, 2 ** (8 * bufsize) - 1)
+        # if hex number is e.g. 6, pad with one 0 to 06
+        data = data.rjust(bufsize*2, '0')
+        # transform into a string
+        self.data = data.decode('hex')
+        self.data_len = len(self.data)
+    self._bytes -= self.data_len
+    return self.data
+
+
+  def get_bytes_read(self):
+      return int(self._initial_bytes - self._bytes)

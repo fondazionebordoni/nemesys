@@ -25,6 +25,8 @@ from logger import logging
 from optparse import OptionParser
 from proof import Proof
 from statistics import Statistics
+from testerftp import FtpTester
+from testerhttp import HttpTester
 from timeNtp import timestampNtp
 import ftplib
 import netstat
@@ -59,119 +61,22 @@ class Tester:
     self._password = password
     self._timeout = timeout
     socket.setdefaulttimeout(self._timeout)
+    self._ftp_tester = FtpTester(dev, host, username, password, timeout)
+    self._http_tester = HttpTester(dev)
 
   def testftpup(self, bytes, path):
-    global ftp, file, size, filepath
-    filepath = path
-    test_type = 'upload'
-    size = 0
-    elapsed = 0
-
-    file = Fakefile(bytes)
-    timeout = max(self._timeout, 12)
-    start = datetime.fromtimestamp(timestampNtp())
-
-    try:
-      ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
-    except ftplib.all_errors as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Impossibile aprire la connessione FTP: %s' % (errorcode, e)
-      logger.error(error)
-      raise Exception(error)
-
-    # TODO Se la connessione FTP viene invocata con timeout, il socket è non-blocking e il sistema può terminare i buffer di rete: http://bugs.python.org/issue8493
-    function = '''ftp.storbinary('STOR %s' % filepath, file, callback=totalsize)'''
-    setup = 'from %s import file, ftp, totalsize, filepath' % __name__
-    timer = timeit.Timer(function, setup)
-
-    try:
-      logger.debug('Test initializing...')
-      start_total_bytes = self._netstat.get_tx_bytes()
-
-      logger.debug('Testing... ')
-#       pcapper.sniff(Contabyte(self._if_ip, self._host.ip))
-
-      # Il risultato deve essere espresso in millisecondi
-      elapsed = timer.timeit(1) * 1000
-
-#       pcapper.stop_sniff()
-#       counter_stats = pcapper.get_stats()
-
-      logger.debug('Test stopping... ')
-      end_total_bytes = self._netstat.get_tx_bytes()
-      logger.debug('Test done!')
-
-    except ftplib.all_errors as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Impossibile effettuare il test %s: %s' % (errorcode, test_type, e)
-      logger.error(error)
-      raise Exception(error)
-
-    except Exception as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Errore durante la misura %s: %s' % (errorcode, test_type, e)
-      logger.error(error)
-      raise Exception(error)
-
-    ftp.quit()
-
-    ''' TODO: get packet drop from netstat '''
-    counter_stats = Statistics(byte_up_nem = size, byte_up_all = end_total_bytes - start_total_bytes, packet_drop = 0, packet_tot_all = 100)
-#     return Proof(test_type, start, elapsed, size, counter_stats)
-    return Proof(test_type, start, elapsed, size, counter_stats)
+    return self._ftp_tester.testftpup(bytes, path)
 
   def testftpdown(self, filename):
-    global ftp, file, size
-    test_type = 'download'
-    size = 0
-    elapsed = 0
+    return self._ftp_tester.testftpdown(filename)
 
-    file = filename
-    timeout = max(self._timeout, 12)
-    start = datetime.fromtimestamp(timestampNtp())
+  def testhttpdown(self, num_sessions = 7):
+    url = "http://%s/file.rnd" % self._host.ip
+    return self._http_tester.test_down(url, num_sessions = num_sessions)
 
-    try:
-      ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
-    except ftplib.all_errors as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Impossibile aprire la connessione FTP: %s' % (errorcode, e)
-      logger.error(error)
-      raise Exception(error)
-
-    function = '''ftp.retrbinary('RETR %s' % file, totalsize)'''
-    setup = 'from %s import ftp, file, totalsize' % __name__
-    timer = timeit.Timer(function, setup)
-
-    try:
-      logger.debug('Test initializing...')
-      start_total_bytes = self._netstat.get_rx_bytes()
-      logger.debug('Testing... ')
-
-      # Il risultato deve essere espresso in millisecondi
-      elapsed = timer.timeit(1) * 1000
-
-      logger.debug('Test stopping... ')
-      end_total_bytes = self._netstat.get_rx_bytes()
-
-      logger.debug('Test done!')
-
-    except ftplib.all_errors as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Impossibile effettuare il test %s: %s' % (errorcode, test_type, e)
-      logger.error(error)
-      raise Exception(error)
-
-    except Exception as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Errore durante la misura %s: %s' % (errorcode, test_type, e)
-      logger.error(error)
-      raise Exception(error)
-
-    ftp.quit()
-
-    ''' TODO: get packet drop from netstat '''
-    counter_stats = Statistics(byte_down_nem = size, byte_down_all = end_total_bytes - start_total_bytes, packet_drop = 0, packet_tot_all = 100)
-    return Proof(test_type, start, elapsed, size, counter_stats)
+  def testhttpup(self, num_sessions = 1):
+      url = "http://%s/file.rnd" % self._host.ip
+      return self._http_tester.test_up(url, num_sessions = num_sessions)    
 
   def testping(self):
     # si utilizza funzione ping.py
@@ -244,20 +149,30 @@ if __name__ == '__main__':
     s.close()
     nap = '193.104.137.133'
 
-    TOT = 10
+    TOT = 1
 
     import sysmonitor
     dev = sysmonitor.getDev()
     t1 = Tester(dev, Host(ip = nap), 'nemesys', '4gc0m244')
 
+#     for i in range(1, TOT + 1):
+#       logger.info('Test Download %d/%d' % (i, TOT))
+#       test = t1.testftpdown('/download/1000.rnd')
+#       logger.info(test)
+# 
+#     for i in range(1, TOT + 1):
+#       logger.info('Test Upload %d/%d' % (i, TOT))
+#       test = t1.testftpup(2048, '/upload/r.raw')
+#       logger.info(test)
+
     for i in range(1, TOT + 1):
       logger.info('Test Download %d/%d' % (i, TOT))
-      test = t1.testftpdown('/download/1000.rnd')
+      test = t1.testhttpdown()
       logger.info(test)
 
     for i in range(1, TOT + 1):
       logger.info('Test Upload %d/%d' % (i, TOT))
-      test = t1.testftpup(2048, '/upload/r.raw')
+      test = t1.testhttpup()
       logger.info(test)
 
     for i in range(1, TOT + 1):
