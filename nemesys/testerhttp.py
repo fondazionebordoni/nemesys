@@ -26,11 +26,9 @@ import urllib2
 import Queue
 
 from datetime import datetime
-from errorcoder import Errorcoder
 from fakefile import Fakefile
 from logger import logging
 import netstat
-import paths
 from measurementexception import MeasurementException
 from proof import Proof
 from statistics import Statistics
@@ -43,7 +41,6 @@ MAX_TRANSFERED_BYTES = 100 * 1000000 * 11 / 8 # 100 Mbps for 11 seconds
 BUF_SIZE = 8*1024
 
 logger = logging.getLogger()
-errors = Errorcoder(paths.CONF_ERRORS)
 
 '''
 NOTE: not thread-safe, make sure to only call 
@@ -86,8 +83,6 @@ class HttpTester:
         read_thread = threading.Timer(1.0, self._read_down_measure)
         read_thread.start()
         self._read_measure_threads.append(read_thread)
-#         timeout_thread = threading.Timer(self._total_measure_time + 3, self._set_timeout)
-#         timeout_thread.start()
         starttotalbytes = self._netstat.get_rx_bytes()
 
         for _ in range(0, num_sessions):
@@ -113,12 +108,10 @@ class HttpTester:
         for read_thread in self._read_measure_threads:
             read_thread.join()
             
-#         timeout_thread.join()
-
         if not error_queue.empty():
             raise MeasurementException(error_queue.get(), errorcode.CONNECTION_FAILED)
         if missing_results:
-            raise MeasurementException("Risultati mancanti da uno o piu' sessioni, impossibile calcolare la banda.", errorcode.MISSIN_SESSION)
+            raise MeasurementException("Risultati mancanti da uno o piu' sessioni, impossibile calcolare la banda.", errorcode.MISSING_SESSION)
         if not self._received_end:
             raise MeasurementException("Connessione interrotta", errorcode.BROKEN_CONNECTION)
         if (total_bytes < 0):
@@ -129,21 +122,18 @@ class HttpTester:
         logger.debug("Traffico spurio: %f" % spurio)
 
         # "Trucco" per calcolare i bytes corretti da inviare al backend basato sul traffico spurio
-        test['bytes_total'] = self._bytes_total #sum(self._measures_tot)#total_bytes
-        test['bytes'] = int(round(self._bytes_total * (1 - spurio))) #measured_bytes
+        test['bytes_total'] = self._bytes_total
+        test['bytes'] = int(round(self._bytes_total * (1 - spurio)))
         test['time'] = (self._endtime - self._starttime) * 1000.0
         test['rate_max'] = self._get_max_rate() 
         test['rate_tot_secs'] = self._measures_tot
         test['spurious'] = spurio
         test['errorcode'] = 0
 
-        counter_stats = Statistics(byte_down_nem = test['bytes'], byte_down_all = test['bytes_total'], packet_drop = 0, packet_tot_all = 100)
+        counter_stats = Statistics(byte_down_nem = test['bytes'], byte_down_all = test['bytes_total'])
         return Proof('download_http', start_timestamp, test['time'], test['bytes'], counter_stats)
 
         
-#     def _set_timeout(self):
-#         self._timeout = True
-#         
     def do_one_download(self, url, total_measure_time, file_size, result_queue, error_queue):
         filebytes = 0
 
@@ -331,7 +321,7 @@ class HttpTester:
         test['rate_tot_secs'] = [x * (1 + spurious) for x in test['rate_secs']]
         test['spurious'] = spurious
         
-        counter_stats = Statistics(byte_down_nem = test['bytes'], byte_down_all = test['bytes_total'], packet_drop = 0, packet_tot_all = 100)
+        counter_stats = Statistics(byte_up_nem = test['bytes'], byte_up_all = test['bytes_total'])
         return Proof('upload_http', start_timestamp, test['time'], test['bytes'], counter_stats)
     
 
@@ -347,7 +337,7 @@ def _init_test(testtype):
 def _test_from_server_response(response):
     '''
     Server response is a comma separated string containing:
-    <test time>, <total total_bytes received>, <total_bytes received last second>, <total_bytes received 9th second>, ... 
+    <total_bytes received 10th second>, <total_bytes received 9th second>, ... 
     '''
     logger.info("Ricevuto risposta dal server: %s" % str(response))
     test = {}

@@ -1,7 +1,7 @@
-# sysmonitorexception.py
+# measurementexception.py
 # -*- coding: utf8 -*-
 
-# Copyright (c) 2015 Fondazione Ugo Bordoni.
+# Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ class MeasurementException(Exception):
     
     @property
     def message(self):
+        'TODO: Need to xmlcharrefreplace???'
         return self._message
 
     @property

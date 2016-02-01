@@ -20,8 +20,8 @@ import random
 
 class Fakefile:
 
-  def __init__(self, size):
-    self._initial_bytes = int(size)
+  def __init__(self, file_size):
+    self._initial_bytes = int(file_size)
     self._bytes = self._initial_bytes
     self.data = None
     self.data_len = None

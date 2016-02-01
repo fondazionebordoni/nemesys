@@ -136,7 +136,7 @@ def _filter_out_technicolor(IPTable):
     return n_hosts
 
 
-def do_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 1):
+def do_arping(if_dev_name, IPsrc, NETmask, realSubnet = True):
     if is_windows:
         IPTable = do_win_arping(IPsrc, NETmask, realSubnet)
     else:

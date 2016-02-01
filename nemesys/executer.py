@@ -20,7 +20,6 @@ from ConfigParser import ConfigParser, NoOptionError
 from client import Client
 from datetime import datetime
 from deliverer import Deliverer
-from errorcoder import Errorcoder
 from isp import Isp
 from logger import logging
 from measure import Measure
@@ -38,6 +37,7 @@ from timeNtp import timestampNtp
 from urlparse import urlparse
 from xmlutils import getvalues, getstarttime, getxml, xml2task
 import asyncore
+import errorcode
 import glob
 import hashlib
 import httputils
@@ -48,14 +48,12 @@ import shutil
 import socket
 import status
 import sysmonitor
-import sysmonitorexception
 
 from _generated_version import __version__, FULL_VERSION
 
 bandwidth_sem = Semaphore()
 status_sem = Semaphore()
 logger = logging.getLogger()
-errors = Errorcoder(paths.CONF_ERRORS)
 current_status = status.LOGO
 
 # Non eseguire i test del profiler
@@ -105,7 +103,7 @@ class _Channel(asyncore.dispatcher):
     self.bind(self._url)
     self.listen(1)
 
-  def sendstatus(self, status = None):
+  def sendstatus(self):
     if self._sender:
       self._sender.write(current_status)
     else:
@@ -189,7 +187,6 @@ class Executer:
 
     self._outbox = paths.OUTBOX
     self._sent = paths.SENT
-    current_status = status.LOGO
     self._communicator = None
     self._progress = None
     self._deliverer = Deliverer(self._repository, self._client.isp.certificate, self._httptimeout)
@@ -273,7 +270,6 @@ class Executer:
 
   def loop(self):
 
-    # signal.signal(signal.SIGALRM, runtimewarning)
     t = None
 
     # Open socket for GUI dialog
@@ -371,16 +367,6 @@ class Executer:
 
     return xml2task(data)
 
-  def _evaluate_exception(self, e):
-    if isinstance (e, SysmonitorException):
-      # Inserire nel test tutte le eccezioni da bypassare
-      if e.alert_type == sysmonitorexception.WARNCONN.alert_type or e.alert_type == sysmonitorexception.WARNPROC.alert_type:
-        logger.warning('Misura in esecuzione con warning: %s' % e)
-      else:
-        raise e
-    else:
-      raise e
-
   def _test_gating(self, test, testtype):
     '''
     Funzione per l'analisi del contabit ed eventuale gating dei risultati del test
@@ -414,7 +400,7 @@ class Executer:
     '''
     Profile system and return an exception or an errorcode whether the system is not suitable for measuring. 
     '''
-    errorcode = 0
+    error = 0
     if not (self._isprobe or BYPASS_PROFILER):
 
       try:
@@ -432,12 +418,12 @@ class Executer:
         logger.error('Errore durante la verifica dello stato del sistema: %s' % e)
 
         if self._killonerror:
-          self._evaluate_exception(e)
+          raise e
         else:
           self._updatestatus(status.Status(status.ERROR, 'Misura in esecuzione ma non corretta. %s Proseguo a misurare.' % e))
-          errorcode = errors.geterrorcode(e)
+          error = errorcode.from_exception(e)
 
-    return errorcode
+    return error
 
   def _dotask(self, task):
     '''
@@ -749,7 +735,7 @@ class Executer:
 def main():
   logger.info('Starting Nemesys v.%s' % FULL_VERSION)
   paths.check_paths()
-  (options, args, md5conf) = parse()
+  (options, args, md5conf) = parse_args()
 
   client = getclient(options)
   isprobe = (client.isp.certificate != None)
@@ -777,7 +763,7 @@ def getclient(options):
                 geocode = options.geocode, username = options.username,
                 password = options.password)
 
-def parse():
+def parse_args():
   '''
   Parsing dei parametri da linea di comando
   '''
@@ -1031,9 +1017,6 @@ def parse():
     md5 = hashlib.md5(file.read()).hexdigest()
 
   return (options, args, md5)
-
-def runtimewarning(signum, frame):
-  raise RuntimeWarning()
 
 if __name__ == '__main__':
   main()

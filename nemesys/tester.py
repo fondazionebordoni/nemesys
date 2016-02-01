@@ -17,9 +17,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import datetime
-from errorcoder import Errorcoder
-from fakefile import Fakefile
-from ftplib import FTP
 from host import Host
 from logger import logging
 from optparse import OptionParser
@@ -28,15 +25,10 @@ from statistics import Statistics
 from testerftp import FtpTester
 from testerhttp import HttpTester
 from timeNtp import timestampNtp
-import ftplib
-import netstat
-import paths
+import errorcode
 import ping
 import socket
 import sys
-import sysmonitor
-import time
-import timeit
 
 ftp = None
 file = None
@@ -44,7 +36,6 @@ filepath = None
 size = 0
 
 logger = logging.getLogger()
-errors = Errorcoder(paths.CONF_ERRORS)
 
 # Calcolo dei byte totali scaricati
 def totalsize(data):
@@ -55,7 +46,6 @@ def totalsize(data):
 class Tester:
 
   def __init__(self, dev, host, username = 'anonymous', password = 'anonymous@', timeout = 60):
-    self._netstat = netstat.get_netstat(dev)
     self._host = host
     self._username = username
     self._password = password
@@ -89,10 +79,10 @@ class Tester:
       elapsed = ping.do_one(self._host.ip, self._timeout) * 1000
 
     except Exception as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Errore durante la misura %s: %s' % (errorcode, test_type, e)
-      logger.error(error)
-      raise Exception(error)
+      error = errorcode.from_exception(e)
+      error_msg = '[%s] Errore durante la misura %s: %s' % (error, test_type, e)
+      logger.error(error_msg)
+      raise Exception(error_msg)
 
     if (elapsed == None):
       elapsed = 0

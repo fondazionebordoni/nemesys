@@ -17,7 +17,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import datetime
-from errorcoder import Errorcoder
 from fakefile import Fakefile
 from ftplib import FTP
 from host import Host
@@ -26,9 +25,9 @@ from optparse import OptionParser
 from proof import Proof
 from statistics import Statistics
 from timeNtp import timestampNtp
+import errorcode
 import ftplib
 import netstat
-import paths
 import ping
 import socket
 import sys
@@ -42,7 +41,6 @@ filepath = None
 size = 0
 
 logger = logging.getLogger()
-errors = Errorcoder(paths.CONF_ERRORS)
 
 # Calcolo dei byte totali scaricati
 def totalsize(data):
@@ -73,10 +71,10 @@ class FtpTester:
     try:
       ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
     except ftplib.all_errors as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Impossibile aprire la connessione FTP: %s' % (errorcode, e)
-      logger.error(error)
-      raise Exception(error)
+      error = errorcode.from_exception(e)
+      error_msg = '[%s] Impossibile aprire la connessione FTP: %s' % (error, e)
+      logger.error(error_msg)
+      raise Exception(error_msg)
 
     # TODO Se la connessione FTP viene invocata con timeout, il socket è non-blocking e il sistema può terminare i buffer di rete: http://bugs.python.org/issue8493
     function = '''ftp.storbinary('STOR %s' % filepath, file, callback=totalsize)'''
@@ -96,21 +94,21 @@ class FtpTester:
       logger.debug('Test done!')
 
     except ftplib.all_errors as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Impossibile effettuare il test %s: %s' % (errorcode, test_type, e)
-      logger.error(error)
-      raise Exception(error)
+      error = errorcode.from_exception(e)
+      error_msg = '[%s] Impossibile effettuare il test %s: %s' % (error, test_type, e)
+      logger.error(error_msg)
+      raise Exception(error_msg)
 
     except Exception as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Errore durante la misura %s: %s' % (errorcode, test_type, e)
-      logger.error(error)
-      raise Exception(error)
+      error = errorcode.from_exception(e)
+      error_msg = '[%s] Errore durante la misura %s: %s' % (error, test_type, e)
+      logger.error(error_msg)
+      raise Exception(error_msg)
 
     ftp.quit()
 
     ''' TODO: get packet drop from netstat '''
-    counter_stats = Statistics(byte_up_nem = size, byte_up_all = end_total_bytes - start_total_bytes, packet_drop = 0, packet_tot_all = 100)
+    counter_stats = Statistics(byte_up_nem = size, byte_up_all = end_total_bytes - start_total_bytes)
     return Proof(test_type, start, elapsed, size, counter_stats)
 
   def testftpdown(self, filename):
@@ -126,10 +124,10 @@ class FtpTester:
     try:
       ftp = FTP(self._host.ip, self._username, self._password, timeout=timeout)
     except ftplib.all_errors as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Impossibile aprire la connessione FTP: %s' % (errorcode, e)
-      logger.error(error)
-      raise Exception(error)
+      error = errorcode.from_exception(e)
+      error_msg = '[%s] Impossibile aprire la connessione FTP: %s' % (error, e)
+      logger.error(error_msg)
+      raise Exception(error_msg)
 
     function = '''ftp.retrbinary('RETR %s' % file, totalsize)'''
     setup = 'from %s import ftp, file, totalsize' % __name__
@@ -149,21 +147,21 @@ class FtpTester:
       logger.debug('Test done!')
 
     except ftplib.all_errors as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Impossibile effettuare il test %s: %s' % (errorcode, test_type, e)
-      logger.error(error)
-      raise Exception(error)
+      error = errorcode.from_exception(e)
+      error_msg = '[%s] Impossibile effettuare il test %s: %s' % (error, test_type, e)
+      logger.error(error_msg)
+      raise Exception(error_msg)
 
     except Exception as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Errore durante la misura %s: %s' % (errorcode, test_type, e)
-      logger.error(error)
-      raise Exception(error)
+      error = errorcode.from_exception(e)
+      error_msg = '[%s] Errore durante la misura %s: %s' % (error, test_type, e)
+      logger.error(error_msg)
+      raise Exception(error_msg)
 
     ftp.quit()
 
     ''' TODO: get packet drop from netstat '''
-    counter_stats = Statistics(byte_down_nem = size, byte_down_all = end_total_bytes - start_total_bytes, packet_drop = 0, packet_tot_all = 100)
+    counter_stats = Statistics(byte_down_nem = size, byte_down_all = end_total_bytes - start_total_bytes)
     return Proof(test_type, start, elapsed, size, counter_stats)
 
   def testping(self):
@@ -177,10 +175,10 @@ class FtpTester:
       elapsed = ping.do_one(self._host.ip, self._timeout) * 1000
 
     except Exception as e:
-      errorcode = errors.geterrorcode(e)
-      error = '[%s] Errore durante la misura %s: %s' % (errorcode, test_type, e)
-      logger.error(error)
-      raise Exception(error)
+      error = errorcode.from_exception(e)
+      error_msg = '[%s] Errore durante la misura %s: %s' % (error, test_type, e)
+      logger.error(error_msg)
+      raise Exception(error_msg)
 
     if (elapsed == None):
       elapsed = 0
@@ -239,8 +237,8 @@ if __name__ == '__main__':
 
     TOT = 10
 
-    import sysmonitor
     dev = sysmonitor.getDev()
+    from tester import Tester
     t1 = Tester(dev, Host(ip = nap), 'nemesys', '4gc0m244')
 
     for i in range(1, TOT + 1):

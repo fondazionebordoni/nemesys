@@ -1,7 +1,7 @@
-# errorcoder.py
+# errorcode.py
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 Fondazione Ugo Bordoni.
+# Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,9 +18,8 @@
 
 
 
-INTERNAL_ERROR = 00000  # codice di errore utilizzato in presenza errori di errorcoder.py
+INTERNAL_ERROR = 00000
 UNKNOWN = 99999
-
 # Errori nella misura HTTP
 BROKEN_CONNECTION = 80001
 COUNTER_RESET = 80002
@@ -29,8 +28,8 @@ MISSING_SESSION = 80004
 ZERO_SPEED = 80005
 SERVER_ERROR = 80006
 
-
 from measurementexception import MeasurementException
+from sysmonitorexception import SysmonitorException
 
 '''
 This is a new version of error code handling. Instead of
@@ -46,6 +45,8 @@ def from_exception(exception):
     contenuto nell'exception.
     '''
     if isinstance(exception, MeasurementException):
+        return exception.errorcode
+    if isinstance(exception, SysmonitorException):
         return exception.errorcode
     try:
         error = str(exception.args[0]).replace(':', ',')
@@ -64,37 +65,6 @@ def from_exception(exception):
 These are the old codes
 '''
 CODE_MAPPING = {
-'errore durante il recupero dello stato del computer.': 5001,
-'non sono riuscito a trovare lo stato del computer con systemprofiler.': 5001,
-'errore in lettura del paramentro "cpuload" di systemprofiler.': 5010,
-'valore di occupazione della cpu non conforme.': 5011,
-'cpu occupata.': 5012,
-'errore in lettura del paramentro "availablememory" di systemprofiler.': 5020,
-'valore di memoria disponibile non conforme.': 5021,
-'memoria disponibile non sufficiente.': 5022,
-'errore in lettura del paramentro "memoryload" di systemprofiler.': 5023,
-'valore di occupazione della memoria non conforme.': 5024,
-'memoria occupata.': 5025,
-# Removed 'errore in lettura del paramentro "tasklist" di systemprofiler.': 5030,
-'errore nella determinazione dei processi attivi.': 5031,
-'sono attivi processi non desiderati.': 5032,
-# Removed 'tasklist': 5035,
-# Removed 'errore in lettura del paramentro "activeconnections" di systemprofiler.': 5040,
-'accesso ad internet da programmi non legati alla misura. se possibile, chiuderli.': 5041,
-# Removed 'errore nella determinazione delle connessioni attive.': 5041,
-'errore in lettura del paramentro "firewall" di systemprofiler.': 5050,
-'impossibile determinare il parametro "firewall".': 5051,
-'firewall attivo.': 5052,
-# Removed 'errore in lettura del paramentro "wirelesson" di systemprofiler.': 5060,
-# Removed 'impossibile determinare il parametro "wirelesson".': 5061,
-'wireless lan attiva.': 5063,
-'errore in lettura del paramentro "ipaddr" di systemprofiler.': 5070,
-'impossibile ottenere il dettaglio dell\'indirizzo ip': 5071,
-# Removed 'errore in lettura del paramentro "hostnumber" di systemprofiler.': 5080,
-'presenza altri host in rete.': 5081,
-'impossibile determinare il numero di host in rete.': 5082,
-'errore in lettura del paramentro "processor" di systemprofiler.': 5090,
-'errore inizializzazione dello sniffer': 99976,
 '10013': 99977,
 '425 security: bad ip connecting.': 99978,
 'host unreachable': 99979,

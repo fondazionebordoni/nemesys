@@ -21,6 +21,7 @@ from logger import logging
 from server import Server
 from status import Status
 from string import join
+from sysmonitorexception import SysmonitorException
 from task import Task
 from xml.dom import Node
 from xml.dom.minidom import parseString
@@ -294,6 +295,7 @@ def getstarttime(filename):
 
   return iso2datetime(start)
 
+'TODO: non viene utilizzato, rimuovere?'
 def getfinishedtime(filename):
   '''
   Ricava il tempo di chiusura da un file di misura
@@ -318,9 +320,7 @@ def getXMLvalues(string, tag):
       values.update({subelement.tag:subelement.text})
       logger.debug('Recupero valori dal file XML. %s -> %s' % (subelement.tag, subelement.text))
   except Exception as e:
-    logger.warning('Errore durante il recupero dello stato del computer. %s' % e)
-    #raise Exception('Errore durante il recupero dello stato del computer.')
-    raise sysmonitorexception.FAILSTATUS 
+    raise SysmonitorException('Errore durante il recupero dello stato del computer. %s' % e, sysmonitorexception.FAILSTATUS) 
 
   return values
 
