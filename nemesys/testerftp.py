@@ -48,7 +48,7 @@ def totalsize(data):
   size += len(data)
 
 
-class FtpTester:
+class FtpTester(object):
 
   def __init__(self, dev, host, username = 'anonymous', password = 'anonymous@', timeout = 60):
     self._netstat = netstat.get_netstat(dev)

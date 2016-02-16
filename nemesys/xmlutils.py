@@ -310,7 +310,8 @@ def getfinishedtime(filename):
         time=datetime.fromtimestamp(timestampNtp())        
     return time
 
-def getXMLvalues(string, tag):
+'TODO: non viene utilizzato, rimuovere?'
+def getXMLvalues(string):
     '''
     Estrae informazioni dal SystemProfiler 
     '''

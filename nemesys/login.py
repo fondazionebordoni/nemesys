@@ -168,7 +168,6 @@ def getActivationFile(appresult, path, config_path):
     else:
         logger.info('Configuration file successfully downloaded')
         myProp.writeProps(config_path,'\nregistered','ok')
-        _prop=myProp.readProps(config_path)
         OkDialog()
         return True
 

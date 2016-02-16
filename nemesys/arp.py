@@ -135,11 +135,11 @@ def _filter_out_technicolor(IPTable):
     return n_hosts
 
 
-def do_arping(if_dev_name, IPsrc, NETmask, realSubnet = True):
+def do_arping(IPsrc, NETmask, realSubnet = True):
     if is_windows:
         IPTable = do_win_arping(IPsrc, NETmask, realSubnet)
     else:
-        IPTable = do_unix_arping(if_dev_name, IPsrc, NETmask, realSubnet)
+        IPTable = do_unix_arping(IPsrc, NETmask, realSubnet)
 
     hosts = "HOSTS: "
     for key in IPTable:
@@ -156,7 +156,7 @@ def do_arping(if_dev_name, IPsrc, NETmask, realSubnet = True):
 ## supported on Windows and *BSD (including Darwin)
 ###########################
 
-def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None, threshold = 1):
+def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1, mac = None):
 
     # Initialize a raw socket (requires super-user access)
     my_socket = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.SOCK_RAW)
@@ -190,7 +190,7 @@ def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1,
             # Send ARP request
             IPdst = str(IPdst)
             # logger.debug('Arping host %s' % IPdst)
-            send_arp_request(IPsrc, IPdst, if_dev_name, my_socket)
+            send_arp_request(IPsrc, IPdst, my_socket)
             index += 1
 
         lasting -= 1
@@ -211,7 +211,7 @@ def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1,
     return IPtable
 
 
-def send_arp_request(src_ip, dest_ip, if_dev_name, my_socket):
+def send_arp_request(src_ip, dest_ip, my_socket):
     '''Send ARP request'''
 
     # Create packet :
@@ -299,7 +299,7 @@ def receive_arp_response(mac_addr, my_socket, timeout):
 ## Not very pretty, but works...
 ###########################
 
-def do_unix_arping(if_dev_name, IPsrc = None, NETmask=24, realSubnet=True, timeout=0.01):
+def do_unix_arping(IPsrc = None, NETmask=24, realSubnet=True, timeout=0.01):
     logger.debug("IP source = %s" % IPsrc)
     IPnet = ipcalc.Network('%s/%d' % (IPsrc, NETmask))
     net = IPnet.network()

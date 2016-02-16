@@ -18,7 +18,6 @@
 
 from logger import logging
 from sysmonitorexception import SysmonitorException
-# from xml.etree import ElementTree as ET
 import checkhost
 import netifaces
 import platform
@@ -28,7 +27,7 @@ import sysmonitorexception
 platform_name = platform.system().lower()
 import profiler
 
-# TODO Decidere se, quando non riesco a determinare i valori, sollevo eccezione
+# TODO: Decidere se, quando non riesco a determinare i valori, sollevo eccezione
 STRICT_CHECK = True
 
 CHECK_ALL = "ALL"
@@ -105,7 +104,7 @@ def checkhosts(bandwidth_up, bandwidth_down, ispid, arping = 1):
     
     if (mask != 0):
         
-        value = checkhost.countHosts(ip, mask, bandwidth_up, bandwidth_down, ispid, thres, arping, dev)
+        value = checkhost.countHosts(ip, mask, bandwidth_up, bandwidth_down, ispid, thres, arping)
         logger.info('Trovati %d host in rete.' % value)
         
         if value < 0:

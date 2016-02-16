@@ -21,7 +21,6 @@ from datetime import datetime
 from logger import logging
 from os import path
 from progress import Progress
-from status import Status
 from sys import platform
 from threading import Event, Thread
 from time import sleep
@@ -116,10 +115,10 @@ class _Channel(dispatcher):
                 current_status = xml2status(data[start:])
         except Exception as e:
                 logger.error('Errore durante la decodifica dello stato del sistema di misura: %s' % e)
-                current_status = Status(status.ERROR, '%s' % e)
+                current_status = status.Status(status.ERROR, '%s' % e)
 
         if current_status == None:
-                current_status = Status(status.ERROR, 'Errore di comunicazione con il server.')
+                current_status = status.Status(status.ERROR, 'Errore di comunicazione con il server.')
 
         logger.debug('Metto l\'aggiornamento dello stato nella coda grafica')
         try:
@@ -132,7 +131,7 @@ class MyFrame (wx.Frame):
     def __init__(self):
 
         # Base e gestione stato
-        self._status = Status(status.ERROR, "error")
+        self._status = status.Status(status.ERROR, "error")
         xmldoc = Progress(True)
         #da qui modifico la dimensione della finestra FRAME
         wx.Frame.__init__ (self, None, id = wx.ID_ANY, title = 'Nemesys', pos = wx.DefaultPosition, size = wx.Size(750, 500), style = wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX))

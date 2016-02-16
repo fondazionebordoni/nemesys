@@ -47,7 +47,7 @@ NOTE: not thread-safe, make sure to only call
 one measurement at a time!
 '''
 
-class HttpTester:
+class HttpTester(object):
 
     def __init__(self, dev, bufsize = 8 * 1024, rampup_secs = 2):
         self._num_bytes = bufsize
@@ -412,7 +412,7 @@ class UploadThread(threading.Thread):
 
 END_STRING = '_ThisIsTheEnd_'
 
-class ChunkGenerator:
+class ChunkGenerator(object):
 
     def __init__(self, fakefile, upload_sending_time_secs, recv_bufsize, num_bytes):
         self._fakefile = fakefile

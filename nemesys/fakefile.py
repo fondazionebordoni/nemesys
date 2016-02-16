@@ -18,7 +18,7 @@
 
 import random
 
-class Fakefile:
+class Fakefile(object):
 
     def __init__(self, file_size):
         self._initial_bytes = int(file_size)

@@ -34,7 +34,7 @@ class Server(Host):
 if __name__ == '__main__':
     s = Server('namexrm', '192.168.1.1', 'Namex server')
     print s
-    s = Server(id='namexrm', ip='192.168.1.1')
+    s = Server(server_id='namexrm', ip='192.168.1.1')
     print s
     s = Server('namexrm', '192.168.1.1')
     print s

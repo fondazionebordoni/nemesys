@@ -16,21 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import datetime
-import hashlib
 from httplib import HTTPException
 from httputils import post_multipart
 from logger import logging
-from os import path
-from urlparse import urlparse
-import zipfile
 from ssl import SSLError
 from timeNtp import timestampNtp
+from urlparse import urlparse
+import datetime
+import hashlib
 import os
+import zipfile
 
 logger = logging.getLogger()
 
-class Deliverer:
+class Deliverer(object):
 
     def __init__(self, url, certificate, timeout=60):
         self._url = url
@@ -48,7 +47,7 @@ class Deliverer:
                 body = myfile.read()
             
             url = urlparse(self._url)
-            response = post_multipart(url, fields=None, files=[('myfile', path.basename(filename), body)], certificate=self._certificate, timeout=self._timeout)
+            response = post_multipart(url, fields=None, files=[('myfile', os.path.basename(filename), body)], certificate=self._certificate, timeout=self._timeout)
 
         except HTTPException as e:
             os.remove(filename)
@@ -72,7 +71,7 @@ class Deliverer:
 
         # Gestione della firma del file
         sign = None
-        if self._certificate != None and path.exists(self._certificate):
+        if self._certificate != None and os.path.exists(self._certificate):
             # Crea il file della firma
             signature = self.sign(filename)
             if signature == None:
@@ -84,11 +83,11 @@ class Deliverer:
         # Creazione del file zip
         zipname = '%s.zip' % filename[0:-4]
         zip_file = zipfile.ZipFile(zipname, 'a', zipfile.ZIP_DEFLATED)
-        zip_file.write(file.name, path.basename(file.name))
+        zip_file.write(file.name, os.path.basename(file.name))
 
         # Sposto la firma nello zip
-        if sign != None and path.exists(sign.name):
-                zip_file.write(sign.name, path.basename(sign.name))
+        if sign != None and os.path.exists(sign.name):
+                zip_file.write(sign.name, os.path.basename(sign.name))
                 os.remove(sign.name)
 
         # Controllo lo zip

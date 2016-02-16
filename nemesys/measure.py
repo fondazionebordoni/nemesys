@@ -35,7 +35,7 @@ def getos():
         os = 'n.d.'
     return os
 
-class Measure:
+class Measure(object):
     def __init__(self, measure_id, server, client, version=None, start=datetime.fromtimestamp(timestampNtp()).isoformat()):    
         '''
         Costruisce un oggetto Measure utilizzando i parametri ricevuti nella

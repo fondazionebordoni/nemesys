@@ -24,11 +24,9 @@ from isp import Isp
 from logger import logging
 from measure import Measure
 from optparse import OptionParser
-from os import path
 from profile import Profile
 from progress import Progress
 from random import randint
-from status import Status
 from tester import Tester
 from threading import Semaphore, Thread, Timer
 from time import sleep
@@ -133,7 +131,7 @@ class _Sender(asyncore.dispatcher):
             self.buffer = status.getxml()
         except Exception as e:
             logger.warning('Errore durante invio del messaggio di stato: %s' % e)
-            status = Status(status.ERROR, 'Errore di decodifica unicode')
+            status = status.Status(status.ERROR, 'Errore di decodifica unicode')
             self.buffer = status.getxml()
 
         try:
@@ -166,7 +164,7 @@ class OptionParser(OptionParser):
             self.error('%s option not supplied' % option)
 
 
-class Executer:
+class Executer(object):
 
     def __init__(self, client, scheduler, repository, progressurl, polling = 300.0, tasktimeout = 60,
                              testtimeout = 30, httptimeout = 60, local = False, isprobe = True, md5conf = None, killonerror = True):
@@ -302,7 +300,7 @@ class Executer:
                     task = self._download()
                 except Exception as e:
                     logger.error('Errore durante la ricezione del task per le misure: %s' % e)
-                    self._updatestatus(Status(status.ERROR, 'Errore durante la ricezione del task per le misure: %s' % e))
+                    self._updatestatus(status.Status(status.ERROR, 'Errore durante la ricezione del task per le misure: %s' % e))
 
                 # Se ho scaricato un task imposto l'allarme
                 if (task != None):
@@ -310,7 +308,7 @@ class Executer:
 
                     if (task.message != None and len(task.message) > 0):
                         logger.debug("Trovato messaggio: %s" % task.message)
-                        self._updatestatus(Status(status.MESSAGE, task.message))
+                        self._updatestatus(status.Status(status.MESSAGE, task.message))
 
                     if (task.now):
                         # Task immediato
@@ -321,7 +319,7 @@ class Executer:
 
                     if alarm > 0 and (task.download > 0 or task.upload > 0 or task.ping > 0):
                         logger.debug('Impostazione di un nuovo task tra: %s secondi' % alarm)
-                        self._updatestatus(Status(status.READY, 'Inizio misura tra pochi secondi...'))
+                        self._updatestatus(status.Status(status.READY, 'Inizio misura tra pochi secondi...'))
                         # Imposta l'allarme che eseguirà i test quando richiesto dal task
 
                         # Prima cancella il vecchio allarme
@@ -361,7 +359,7 @@ class Executer:
             data = connection.getresponse().read()
         except Exception as e:
             logger.error('Impossibile scaricare lo scheduling. Errore: %s.' % e)
-            self._updatestatus(Status(status.ERROR, 'Impossibile dialogare con lo scheduler delle misure.'))
+            self._updatestatus(status.Status(status.ERROR, 'Impossibile dialogare con lo scheduler delle misure.'))
             return None
 
         return xmlutils.xml2task(data)
@@ -693,9 +691,9 @@ class Executer:
 
     def _movefiles(self, filename):
 
-        directory = path.dirname(filename)
+        directory = os.path.dirname(filename)
         #pattern = path.basename(filename)[0:-4]
-        pattern = path.basename(filename)
+        pattern = os.path.basename(filename)
 
         try:
             for f in os.listdir(directory):
@@ -768,7 +766,7 @@ def parse_args():
 
     config = ConfigParser()
 
-    if (path.exists(paths.CONF_MAIN)):
+    if (os.path.exists(paths.CONF_MAIN)):
         config.read(paths.CONF_MAIN)
         logger.info('Caricata configurazione da %s' % paths.CONF_MAIN)
 
@@ -972,7 +970,7 @@ def parse_args():
     value = None
     try:
         value = config.get(section, option)
-        if not path.exists(value):
+        if not os.path.exists(value):
             config.remove_option(section, option)
             logger.warning('Trovata configurazione di certificato non esistente su disco. Cambiata configurazione')
             value = None

@@ -19,7 +19,7 @@
 from datetime import datetime
 from statistics import Statistics
 
-class Proof:
+class Proof(object):
 
     def __init__(self, test_type, start, value, bytes, counter_stats = Statistics(), errorcode = 0):
         self._type = test_type

@@ -19,7 +19,7 @@
 from isp import Isp
 from profile import Profile
 
-class Client:
+class Client(object):
     
     # TODO Spostare il certificato dall'ISP al Client 
 

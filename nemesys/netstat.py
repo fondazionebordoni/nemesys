@@ -158,18 +158,20 @@ class NetstatWindows(Netstat):
 		entry_value = self._get_entry_generic("Win32_NetworkAdapterConfiguration", where_condition, entry_name)
 		return entry_value
 
-	def get_timestamp(self):
-		timestamp = float(self._get_entry_generic(entry_name = "Timestamp_Perftime"))
-		frequency = float(self._get_entry_generic(entry_name = "Frequency_Perftime"))
-		return timestamp/frequency
+# 	def get_timestamp(self):
+# 		timestamp = float(self._get_entry_generic(entry_name = "Timestamp_Perftime"))
+# 		frequency = float(self._get_entry_generic(entry_name = "Frequency_Perftime"))
+# 		return timestamp/frequency
 
-	def _get_entry_generic(self, wmi_class=None,
-						whereCondition=None,
+	def _get_entry_generic(self, wmi_class,
+						whereCondition,
 						entry_name="*"):
 		try:
 			import pythoncom
 		except ImportError:
 			raise NetstatException("Missing WMI library")
+		if wmi_class == None or whereCondition == None:
+			raise NetstatException("Need WMI class and query string!")
 		pythoncom.CoInitialize()
 		try:
 			return self._get_entry_generic_wrapped(wmi_class, whereCondition, entry_name)
@@ -177,15 +179,15 @@ class NetstatWindows(Netstat):
 			pythoncom.CoUninitialize()
 
 
-	def _get_entry_generic_wrapped(self, wmi_class=None,
-						whereCondition=None,
+	def _get_entry_generic_wrapped(self, wmi_class,
+						whereCondition,
 						entry_name="*"):
 		entry_value = None
-		''' TODO: more intelligent search?'''
-		if not whereCondition:
-			whereCondition=" WHERE Name Like \"" + self.if_device_search_string + "%\""
-		if not wmi_class:
-			wmi_class="Win32_PerfRawData_Tcpip_NetworkAdapter"
+# 		''' TODO: more intelligent search?'''
+# 		if not whereCondition:
+# 			whereCondition=" WHERE Name Like \"" + self.if_device_search_string + "%\""
+# 		if not wmi_class:
+# 			wmi_class="Win32_PerfRawData_Tcpip_NetworkAdapter"
 		queryString = None
 		try:
 			import win32com.client

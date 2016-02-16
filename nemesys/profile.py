@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-class Profile:
+class Profile(object):
 
     def __init__(self, profile_id, upload, download):
         self._id = profile_id

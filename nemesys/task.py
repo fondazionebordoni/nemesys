@@ -22,7 +22,7 @@ from logger import logging
 BANDS = [128, 256, 384, 400, 512, 640, 704, 768, 832, 1000, 1200, 1250, 1280, 1500, 1600, 1750, 2000, 2250, 2500, 2750, 3000, 3250, 3500, 4000, 4096, 4500, 5000, 5500, 6000, 6122, 6500, 7000, 7168, 7500, 8000, 8500, 8192, 9000, 9500, 10000, 11000, 12000, 13000, 14000, 15000, 16000, 17000, 18000, 19000, 20000, 20480, 22000, 24000, 26000, 28000, 30000, 32000, 34000, 36000, 38000, 40000]
 logger = logging.getLogger()
 
-class Task:
+class Task(object):
 
     def __init__(self, task_id, start, server, ftpdownpath, ftpuppath, upload=100,
                              download=100, multiplier=5, ping=100, nicmp=4, delay=1, now=False, message=None):

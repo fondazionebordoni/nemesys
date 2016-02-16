@@ -21,7 +21,7 @@ from xml.dom.minidom import parseString
 
 logger = logging.getLogger()
 
-class Status:
+class Status(object):
 
     def __init__(self, color, message):
         if isinstance (color, Status):

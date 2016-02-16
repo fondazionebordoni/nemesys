@@ -33,7 +33,7 @@ import sys
 logger = logging.getLogger()
 
 
-class Tester:
+class Tester(object):
 
     def __init__(self, dev, host, username = 'anonymous', password = 'anonymous@', timeout = 60):
         self._host = host

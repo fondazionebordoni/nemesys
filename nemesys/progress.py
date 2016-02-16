@@ -33,7 +33,7 @@ MAX_DAYS = 3
 
 # TODO Il file di progresso deve poter avere start nullo
 
-class Progress:
+class Progress(object):
     def __init__(self, clientid, progressurl=None):
         if not path.exists(paths.MEASURE_STATUS):
             logger.debug('Non trovato nessun file di progresso delle misure in %s' % paths.MEASURE_STATUS)

@@ -21,7 +21,6 @@
 # Original version:
 #	 -> http://www.g-loaded.eu/2009/10/30/python-ping/
 
-from exceptions import Exception
 import random
 import select
 import socket

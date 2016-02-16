@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-class Statistics:
+class Statistics(object):
 
     def __init__(self, byte_up_nem = 0, byte_up_all = 0, 
                              byte_down_nem = 0, byte_down_all = 0):

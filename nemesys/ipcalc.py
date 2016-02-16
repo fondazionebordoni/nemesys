@@ -29,6 +29,8 @@
 #  * Hans van Kranenburg (Knorrie)
 #
 
+'TODO: This is a copy, should use it as a library instead'
+
 __version__ = '0.2a'
 
 import types
@@ -274,7 +276,7 @@ class IP(object):
             elif long(self) & 0x20020000000000000000000000000000L:
                 return IP((long(self) - 0x20020000000000000000000000000000L) >> 80, version = 4)
             else:
-                return ValueError, "%r: IPv6 address is not IPv4 compatible, nor a 6-to-4 IP" % self.dq
+                raise ValueError, "%r: IPv6 address is not IPv4 compatible, nor a 6-to-4 IP" % self.dq
 
     def to_ipv6(self, conversion_type = '6-to-4'):
         '''

@@ -18,7 +18,7 @@
 
 import unittest
 import profiler
-import sysmonitor_new
+import sysmonitor
 from nemesys.profiler import ProfilerDarwin
 
 '''
@@ -39,12 +39,12 @@ class ProfilerTests(unittest.TestCase):
     def test_mem_total(self):
         total_mem = self.profiler.total_memory()
         self.assertGreater(total_mem, 0)
-        self.assertGreater(total_mem, sysmonitor_new.th_avMem)
+        self.assertGreater(total_mem, sysmonitor.th_avMem)
         
     def test_mem_usage(self):
         usage = self.profiler.percentage_ram_usage()
         self.assertGreater(usage, 0)
-        self.assertLess(usage, sysmonitor_new.th_memLoad)
+        self.assertLess(usage, sysmonitor.th_memLoad)
         
     def test_wireless(self):
         is_active = self.profiler.is_wireless_active()
