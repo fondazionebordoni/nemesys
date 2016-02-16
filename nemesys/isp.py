@@ -10,7 +10,7 @@
 # 
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
 # GNU General Public License for more details.
 # 
 # You should have received a copy of the GNU General Public License
@@ -18,23 +18,22 @@
 
 class Isp:
 
-  # TODO Spostare il certificato dall'ISP al Client
-  def __init__(self, id, certificate=None):
-    self._id = id
-    self._certificate = certificate
+    # TODO Spostare il certificato dall'ISP al Client
+    def __init__(self, isp_id, certificate=None):
+        self._id = isp_id
+        self._certificate = certificate
 
-  @property
-  def id(self):
-    return self._id
+    @property
+    def id(self):
+        return self._id
 
-  @property
-  def certificate(self):
-    return self._certificate
+    @property
+    def certificate(self):
+        return self._certificate
 
-  def __str__(self):
-    return 'id: %s; certificate: %s' % (self.id, self.certificate)
+    def __str__(self):
+        return 'id: %s; certificate: %s' % (self.id, self.certificate)
 
 if __name__ == '__main__':
-  i = Isp('etl005')
-  print i
-
+    i = Isp('etl005')
+    print i

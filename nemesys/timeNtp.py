@@ -10,7 +10,7 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -21,14 +21,14 @@ import time
 SERVERNTP = "tempo.cstv.to.cnr.it"
 
 def timestampNtp():
-  x = ntplib.NTPClient()
-  try:
-    TimeRX = x.request(SERVERNTP, version=3)
-    timestamp = TimeRX.tx_time
-  except Exception:
-    timestamp = time.time()
-  return timestamp
+    x = ntplib.NTPClient()
+    try:
+        TimeRX = x.request(SERVERNTP, version=3)
+        timestamp = TimeRX.tx_time
+    except Exception:
+        timestamp = time.time()
+    return timestamp
 
 if __name__ == '__main__':
-  n = timestampNtp()
-  print n
+    n = timestampNtp()
+    print n

@@ -10,7 +10,7 @@
 # 
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
 # GNU General Public License for more details.
 # 
 # You should have received a copy of the GNU General Public License
@@ -18,26 +18,26 @@
 
 class Profile:
 
-  def __init__(self, id, upload, download):
-    self._id = id
-    self._upload = upload
-    self._download = download
+    def __init__(self, profile_id, upload, download):
+        self._id = profile_id
+        self._upload = upload
+        self._download = download
 
-  @property
-  def id(self):
-    return self._id
+    @property
+    def id(self):
+        return self._id
 
-  @property
-  def upload(self):
-    return self._upload
+    @property
+    def upload(self):
+        return self._upload
 
-  @property
-  def download(self):
-    return self._download
+    @property
+    def download(self):
+        return self._download
 
-  def __str__(self):
-    return 'id: %s; up: %d; down: %d' % (self.id, self.upload, self.download)
+    def __str__(self):
+        return 'id: %s; up: %d; down: %d' % (self.id, self.upload, self.download)
 
 if __name__ == '__main__':
-  p = Profile('2mb1mb', 2048, 1024)
-  print p
+    p = Profile('2mb1mb', 2048, 1024)
+    print p

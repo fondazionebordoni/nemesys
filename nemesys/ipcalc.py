@@ -31,7 +31,7 @@
 
 __version__ = '0.2a'
 
-import types, socket
+import types
 
 class IP(object):
 
@@ -160,7 +160,7 @@ class IP(object):
         Show IANA allocation information for the current IP address.
         '''
         b = self.bin()
-        l = self.v == 4 and 32 or 128
+#         l = self.v == 4 and 32 or 128
         for i in range(len(b), 0, -1):
             if self._range[self.v].has_key(b[:i]):
                 return self._range[self.v][b[:i]]
@@ -276,15 +276,15 @@ class IP(object):
             else:
                 return ValueError, "%r: IPv6 address is not IPv4 compatible, nor a 6-to-4 IP" % self.dq
 
-    def to_ipv6(self, type = '6-to-4'):
+    def to_ipv6(self, conversion_type = '6-to-4'):
         '''
         Convert (a IPv4) IP address to an IPv6 address.
         '''
-        assert type in ['6-to-4', 'compat'], 'Conversion type not supported'
+        assert conversion_type in ['6-to-4', 'compat'], 'Conversion type not supported'
         if self.v == 4:
-            if type == '6-to-4':
+            if conversion_type == '6-to-4':
                 return IP(0x20020000000000000000000000000000L | long(self) << 80, version = 6)
-            elif type == 'compat':
+            elif conversion_type == 'compat':
                 return IP(long(self), version = 6)
         else:
             return self

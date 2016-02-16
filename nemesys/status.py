@@ -10,7 +10,7 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -23,41 +23,41 @@ logger = logging.getLogger()
 
 class Status:
 
-  def __init__(self, color, message):
-    if isinstance (color, Status):
-      self._color = color.color
-    else:
-      self._color = color.decode('utf-8')
+    def __init__(self, color, message):
+        if isinstance (color, Status):
+            self._color = color.color
+        else:
+            self._color = color.decode('utf-8')
 
-    self._message = message.decode('utf-8')
+        self._message = message.decode('utf-8')
 
-  @property
-  def color(self):
-    return self._color.encode('ascii', 'xmlcharrefreplace')
+    @property
+    def color(self):
+        return self._color.encode('ascii', 'xmlcharrefreplace')
 
-  @property
-  def message(self):
-    return self._message.encode('ascii', 'xmlcharrefreplace')
+    @property
+    def message(self):
+        return self._message.encode('ascii', 'xmlcharrefreplace')
 
-  def setmessage(self, message):
-    self._message = message.decode('utf-8')
+    def setmessage(self, message):
+        self._message = message.decode('utf-8')
 
-  def __str__(self):
-    return self.getxml()
+    def __str__(self):
+        return self.getxml()
 
-  def getxml(self):
-    xml = parseString('<status />')
-    status = xml.getElementsByTagName('status')[0]
+    def getxml(self):
+        xml = parseString('<status />')
+        status = xml.getElementsByTagName('status')[0]
 
-    color = xml.createElement('color')
-    color.appendChild(xml.createTextNode(self.color))
-    status.appendChild(color)
+        color = xml.createElement('color')
+        color.appendChild(xml.createTextNode(self.color))
+        status.appendChild(color)
 
-    message = xml.createElement('message')
-    message.appendChild(xml.createTextNode(self.message))
-    status.appendChild(message)
+        message = xml.createElement('message')
+        message.appendChild(xml.createTextNode(self.message))
+        status.appendChild(message)
 
-    return xml.toxml()
+        return xml.toxml()
 
 ERROR = Status('red', 'Impossibile contattare il sistema che effettua le misure.')
 PAUSE = Status('dark grey', 'Nemesys non deve effettuare misure nell\'ora corrente.')

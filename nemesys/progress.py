@@ -10,7 +10,7 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -34,131 +34,130 @@ MAX_DAYS = 3
 # TODO Il file di progresso deve poter avere start nullo
 
 class Progress:
-  def __init__(self, clientid, progressurl=None):
-    if not path.exists(paths.MEASURE_STATUS):
-      logger.debug('Non trovato nessun file di progresso delle misure in %s' % paths.MEASURE_STATUS)
-      if progressurl:
-        self._progressurl = progressurl
-        self._clientid = clientid
-        try:
-          self._xml = self._downloadprogress()
-        except Exception:
-          self._xml = self._newxml()
-      else:
-        self._xml = self._newxml()
-      self._saveonfile()
-    else:
-      logger.debug('Trovato file con il progresso delle misure')
-      self._xml = parse(paths.MEASURE_STATUS)
+    def __init__(self, clientid, progressurl=None):
+        if not path.exists(paths.MEASURE_STATUS):
+            logger.debug('Non trovato nessun file di progresso delle misure in %s' % paths.MEASURE_STATUS)
+            if progressurl:
+                self._progressurl = progressurl
+                self._clientid = clientid
+                try:
+                    self._xml = self._downloadprogress()
+                except Exception:
+                    self._xml = self._newxml()
+            else:
+                self._xml = self._newxml()
+            self._saveonfile()
+        else:
+            logger.debug('Trovato file con il progresso delle misure')
+            self._xml = parse(paths.MEASURE_STATUS)
 
-    logger.debug('XML con lo stato delle misure:\n%s' % self._xml.toxml())
+        logger.debug('XML con lo stato delle misure:\n%s' % self._xml.toxml())
 
-  @property
-  def id(self):
-    return self._id
+    @property
+    def id(self):
+        return self._id
 
-  def start(self):
-    '''
-    Restituisce l'orario di inizio delle misure (datetime) come ricavato dall'XML
-    '''
-    start = self._xml.documentElement.getElementsByTagName('start')[0].firstChild.data
-    return iso2datetime(start)
+    def start(self):
+        '''
+        Restituisce l'orario di inizio delle misure (datetime) come ricavato dall'XML
+        '''
+        start = self._xml.documentElement.getElementsByTagName('start')[0].firstChild.data
+        return iso2datetime(start)
 
-  def isdone(self, hour):
-    '''
-    Controlla lo stato delle misure nell'ora indicata: restituisce
-    True se per l'ora indicata sono già presenti degli "slot" validi
-    '''
+    def isdone(self, hour):
+        '''
+        Controlla lo stato delle misure nell'ora indicata: restituisce
+        True se per l'ora indicata sono già presenti degli "slot" validi
+        '''
 
-    slots = self._xml.documentElement.getElementsByTagName('slot')
-    for slot in slots:
-      slottime = iso2datetime(slot.firstChild.data)
-      if (hour == slottime.hour):
+        slots = self._xml.documentElement.getElementsByTagName('slot')
+        for slot in slots:
+            slottime = iso2datetime(slot.firstChild.data)
+            if (hour == slottime.hour):
+                return True
+
+        return False
+
+    def howmany(self, hour):
+        '''
+        Retituisce il numero di misure effettuate nell'ora indicata.
+        '''
+        n = 0
+        slots = self._xml.documentElement.getElementsByTagName('slot')
+        for slot in slots:
+            slottime = iso2datetime(slot.firstChild.data)
+            if (hour == slottime.hour):
+                n += 1
+
+        return n
+
+    def onair(self):
+        '''
+        Restituisce true se non sono trascorsi ancora MAX_DAYS dallo start delle misure
+        '''
+        start = self.start()
+        delta = datetime.fromtimestamp(timestampNtp()) - start
+        if (delta.days > MAX_DAYS):
+            return False
+
         return True
 
-    return False
+    def doneall(self):
+        '''
+        Restituisce true se ho effettuato almeno una misura per ciascuna ora
+        '''
+        for i in range(0, 24):
+            if not self.isdone(i):
+                return False
+        return True
 
-  def howmany(self, hour):
-    '''
-    Retituisce il numero di misure effettuate nell'ora indicata.
-    '''
-    n = 0
-    slots = self._xml.documentElement.getElementsByTagName('slot')
-    for slot in slots:
-      slottime = iso2datetime(slot.firstChild.data)
-      if (hour == slottime.hour):
-        n += 1
+    def _newxml(self):
+        logger.debug('Creo il file dello stato delle misure.')
+        xml = parseString('<measure />')
+        measure = xml.getElementsByTagName('measure')[0]
 
-    return n
+        start = xml.createElement('start')
+        start.appendChild(xml.createTextNode(datetime.fromtimestamp(timestampNtp()).isoformat()))
+        measure.appendChild(start)
 
-  def onair(self):
-    '''
-    Restituisce true se non sono trascorsi ancora MAX_DAYS dallo start delle misure
-    '''
-    start = self.start()
-    delta = datetime.fromtimestamp(timestampNtp()) - start
-    if (delta.days > MAX_DAYS):
-      return False
+        content = xml.createElement('content')
+        measure.appendChild(content)
 
-    return True
+        return xml
 
-  def doneall(self):
-    '''
-    Restituisce true se ho effettuato almeno una misura per ciascuna ora
-	  '''
-    for i in range(0, 24):
-      if not self.isdone(i):
-        return False
-    return True
+    def _saveonfile(self):
+        f = open(paths.MEASURE_STATUS, 'w')
+        f.write(str(self))
+        f.close()
 
-  def _newxml(self):
-    logger.debug('Creo il file dello stato delle misure.')
-    xml = parseString('<measure />')
-    measure = xml.getElementsByTagName('measure')[0]
+    def putstamp(self, time):
+        '''
+        Salva l'oggetto Test ricevuto nel file XML interno.
+        '''
+        content = self._xml.getElementsByTagName('content')[0]
+        slot = self._xml.createElement('slot')
+        slot.appendChild(self._xml.createTextNode(time.isoformat()))
+        content.appendChild(slot)
+        self._saveonfile()
 
-    start = xml.createElement('start')
-    start.appendChild(xml.createTextNode(datetime.fromtimestamp(timestampNtp()).isoformat()))
-    measure.appendChild(start)
+    def _downloadprogress(self):
+        url = urlparse(self._progressurl)
+        connection = httputils.getverifiedconnection(url=url, timeout=5)
 
-    content = xml.createElement('content')
-    measure.appendChild(content)
+        try:
+            connection.request('GET', '%s?clientid=%s' % (url.path, self._clientid))
+            data = connection.getresponse().read()
+            logger.debug('Dati di progress ricevuti: %s' % data)
+            xml = parseString(data)
+        except Exception as e:
+            logger.error('Impossibile scaricare il progress xml. Errore: %s.' % e)
+            raise Exception('Impossibile scaricare il progress xml. Errore: %s.' % e)
+        
+        return xml
 
-    return xml
-
-  def _saveonfile(self):
-    f = open(paths.MEASURE_STATUS, 'w')
-    f.write(str(self))
-    f.close()
-
-  def putstamp(self, time):
-    '''
-    Salva l'oggetto Test ricevuto nel file XML interno.
-    '''
-    content = self._xml.getElementsByTagName('content')[0]
-    slot = self._xml.createElement('slot')
-    slot.appendChild(self._xml.createTextNode(time.isoformat()))
-    content.appendChild(slot)
-    self._saveonfile()
-
-  def _downloadprogress(self):
-    url = urlparse(self._progressurl)
-    connection = httputils.getverifiedconnection(url=url, timeout=5)
-
-    try:
-      connection.request('GET', '%s?clientid=%s' % (url.path, self._clientid))
-      data = connection.getresponse().read()
-      logger.debug('Dati di progress ricevuti: %s' % data)
-      xml = parseString(data)
-    except Exception as e:
-      logger.error('Impossibile scaricare il progress xml. Errore: %s.' % e)
-      raise Exception('Impossibile scaricare il progress xml. Errore: %s.' % e)
-    
-    return xml
-
-  def __str__(self):
-    return self._xml.toxml('UTF-8')
+    def __str__(self):
+        return self._xml.toxml('UTF-8')
 
 if __name__ == '__main__':
-  t = Progress('cli00000001', 'https://finaluser.agcom244.fub.it/ProgressXML')
-  print t
-
+    t = Progress('cli00000001', 'https://finaluser.agcom244.fub.it/ProgressXML')
+    print t

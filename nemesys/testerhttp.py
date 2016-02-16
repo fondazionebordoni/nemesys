@@ -39,7 +39,7 @@ TOTAL_MEASURE_TIME = 10
 DOWNLOAD_TIMEOUT_DELAY = 5 #Wait another 5 secs in case end of file has not arrived  
 MAX_TRANSFERED_BYTES = 100 * 1000000 * 11 / 8 # 100 Mbps for 11 seconds
 BUF_SIZE = 8*1024
-
+HTTP_TIMEOUT = 10.0 # 10 seconds timeout on open and read operations
 logger = logging.getLogger()
 
 '''
@@ -76,17 +76,18 @@ class HttpTester:
         download_threads = []
         result_queue = Queue.Queue()
         error_queue = Queue.Queue()
+        measurement_id = "sess-%d" % random.randint(0, 100000)
 
         logger.debug("Starting download test...")
         self._init_counters()
-        test = _init_test('download_http')
         read_thread = threading.Timer(1.0, self._read_down_measure)
         read_thread.start()
         self._read_measure_threads.append(read_thread)
         starttotalbytes = self._netstat.get_rx_bytes()
 
         for _ in range(0, num_sessions):
-            download_thread = threading.Thread(target= self.do_one_download, args = (url, self._total_measure_time, file_size, result_queue, error_queue))
+            download_thread = threading.Thread(target= self.do_one_download, 
+                                               args = (url, self._total_measure_time, file_size, result_queue, error_queue, measurement_id))
             download_thread.start()
             download_threads.append(download_thread)
             
@@ -122,24 +123,21 @@ class HttpTester:
         logger.debug("Traffico spurio: %f" % spurio)
 
         # "Trucco" per calcolare i bytes corretti da inviare al backend basato sul traffico spurio
-        test['bytes_total'] = self._bytes_total
-        test['bytes'] = int(round(self._bytes_total * (1 - spurio)))
-        test['time'] = (self._endtime - self._starttime) * 1000.0
-        test['rate_max'] = self._get_max_rate() 
-        test['rate_tot_secs'] = self._measures_tot
-        test['spurious'] = spurio
-        test['errorcode'] = 0
+        test_time = (self._endtime - self._starttime) * 1000.0
+        test_bytes = int(round(self._bytes_total * (1 - spurio)))
 
-        counter_stats = Statistics(byte_down_nem = test['bytes'], byte_down_all = test['bytes_total'])
-        return Proof('download_http', start_timestamp, test['time'], test['bytes'], counter_stats)
+        counter_stats = Statistics(byte_down_nem = test_bytes, byte_down_all = self._bytes_total)
+        return Proof('download_http', start_timestamp, test_time, test_bytes, counter_stats)
 
         
-    def do_one_download(self, url, total_measure_time, file_size, result_queue, error_queue):
+    def do_one_download(self, url, total_measure_time, file_size, result_queue, error_queue, measurement_id):
         filebytes = 0
 
         try:
-            request = urllib2.Request(url, headers = {"X-requested-file-size" : file_size, "X-requested-measurement-time" : total_measure_time})
-            response = urllib2.urlopen(request)
+            request = urllib2.Request(url, headers = {"X-requested-file-size" : file_size, 
+                                                      "X-requested-measurement-time" : total_measure_time,
+                                                      "X-measurement-id" : measurement_id})
+            response = urllib2.urlopen(request, None, HTTP_TIMEOUT)
         except Exception as e:
             logger.error("Impossibile creare connessione: %s" % str(e))
             self._time_to_stop = True

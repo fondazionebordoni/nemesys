@@ -16,19 +16,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import hashlib
-import pythoncom
-import win32serviceutil
-import win32service
-import win32event
-import win32api
-import servicemanager
+# import hashlib
+try:
+    import win32serviceutil
+    import win32service
+    import win32api
+    import servicemanager
+except ImportError:
+    raise Exception("Missing WMI library")
+
 import executer
 import time
 import os,sys
 import logging
 import myProp
-import paths
+# import paths
 from threading import Thread
 
 ###  DISCOVERING PATH  ###
@@ -71,46 +73,46 @@ class execThread (Thread):
           
 ### Service Running ###
 class aservice(win32serviceutil.ServiceFramework):
-   _svc_name_ = "NeMeSys"
-   _svc_display_name_ = "NeMeSys Service"
-   _svc_description_ = "Sistema per la valutazione della connessione broadband"
+    _svc_name_ = "NeMeSys"
+    _svc_display_name_ = "NeMeSys Service"
+    _svc_description_ = "Sistema per la valutazione della connessione broadband"
    
 
-   def __init__(self,args):
-      win32serviceutil.ServiceFramework.__init__(self,args)
-      self.isAlive = True
-
-   def SvcDoRun(self):
-      servicemanager.LogInfoMsg("NeMeSys Service - started")
-      ex = execThread()
-      ex.start()
-      pid=ex.pid
-      servicemanager.LogInfoMsg("NeMeSys Service - executer started - "+str(pid))      
-      i = 1
-      while self.isAlive:
-         # Aspetta il segnale di stop per il tempo di timeout (30 secs)
-         #rc = win32event.WaitForSingleObject(self.hWaitStop, 30000)
-         time.sleep(1)
-         i+=0
-         #servicemanager.LogInfoMsg("NeMeSys Service Up&Running")
-         
-      if self.isAlive == False:
-          #Stop Signal received
-          servicemanager.LogInfoMsg("NeMeSys Service Stopped")
-          # disalloco la memoria COM prima di uccidere il processo
-          #ex.couni()
-          os.popen('taskkill /pid '+str(pid))
-
-   def SvcStop(self):
-      servicemanager.LogInfoMsg("Stopping NeMeSys Service - stop signal received ")
-      self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
-      self.isAlive = False
-      #win32event.SetEvent(self.hWaitStop)
-
-   SvcShutdown = SvcStop
+    def __init__(self,args):
+        win32serviceutil.ServiceFramework.__init__(self,args)
+        self.isAlive = True
+    
+    def SvcDoRun(self):
+        servicemanager.LogInfoMsg("NeMeSys Service - started")
+        ex = execThread()
+        ex.start()
+        pid=ex.pid
+        servicemanager.LogInfoMsg("NeMeSys Service - executer started - "+str(pid))      
+        i = 1
+        while self.isAlive:
+            # Aspetta il segnale di stop per il tempo di timeout (30 secs)
+            #rc = win32event.WaitForSingleObject(self.hWaitStop, 30000)
+            time.sleep(1)
+            i+=0
+            #servicemanager.LogInfoMsg("NeMeSys Service Up&Running")
+           
+        if self.isAlive == False:
+            #Stop Signal received
+            servicemanager.LogInfoMsg("NeMeSys Service Stopped")
+            # disalloco la memoria COM prima di uccidere il processo
+            #ex.couni()
+            os.popen('taskkill /pid '+str(pid))
+    
+    def SvcStop(self):
+        servicemanager.LogInfoMsg("Stopping NeMeSys Service - stop signal received ")
+        self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
+        self.isAlive = False
+        #win32event.SetEvent(self.hWaitStop)
+    
+    SvcShutdown = SvcStop
    
 def ctrlHandler(ctrlType):
-   return True
+    return True
 
 def mainArg(argv):
     if len(argv) == 1:

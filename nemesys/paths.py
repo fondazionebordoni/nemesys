@@ -20,10 +20,10 @@ from os import mkdir, path, sep
 import sys
 
 if hasattr(sys, 'frozen'):
-  # Dovrebbe darmi il percorso in cui sta eseguendo l'applicazione
-  _APP_PATH = path.dirname(sys.executable) + sep + '..'
+    # Dovrebbe darmi il percorso in cui sta eseguendo l'applicazione
+    _APP_PATH = path.dirname(sys.executable) + sep + '..'
 else:
-  _APP_PATH = path.abspath(path.dirname(__file__)) + sep + '..'
+    _APP_PATH = path.abspath(path.dirname(__file__)) + sep + '..'
 
 _APP_PATH = path.normpath(_APP_PATH)
 
@@ -45,17 +45,17 @@ MEASURE_STATUS = path.join(_CONF_DIR, 'progress.xml')
 
 from logger import logging
 def check_paths():
-  logger = logging.getLogger()
-
-  if not path.exists(_CONF_DIR):
-    mkdir(_CONF_DIR)
-    logger.debug('Creata la cartella "%s".' % _CONF_DIR)
-
-  if not path.exists(OUTBOX):
-    mkdir(OUTBOX)
-    logger.debug('Creata la cartella "%s".' % OUTBOX)
-
-  if not path.exists(SENT):
-    mkdir(SENT)
-    logger.debug('Creata la cartella "%s".' % SENT)
+    logger = logging.getLogger()
+    
+    if not path.exists(_CONF_DIR):
+        mkdir(_CONF_DIR)
+        logger.debug('Creata la cartella "%s".' % _CONF_DIR)
+    
+    if not path.exists(OUTBOX):
+        mkdir(OUTBOX)
+        logger.debug('Creata la cartella "%s".' % OUTBOX)
+    
+    if not path.exists(SENT):
+        mkdir(SENT)
+        logger.debug('Creata la cartella "%s".' % SENT)
 

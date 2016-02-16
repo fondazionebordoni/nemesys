@@ -47,7 +47,7 @@ class IpcalcTests(unittest.TestCase):
         self.assertEqual('10.67.14.88', str(net))
         bcast = ips.broadcast()
         self.assertMultiLineEqual('10.67.14.91', str(bcast))
-        check_ping(ipaddress, netmask, ips, net, bcast, False)
+#         check_ping(ipaddress, netmask, ips, net, bcast, False)
 
     def test_fastweb_odd3(self):
         ipaddress = "10.0.0.7"

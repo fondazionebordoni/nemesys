@@ -20,22 +20,22 @@ from host import Host
 
 class Server(Host):
 
-  def __init__(self, id, ip, name=None):
-    Host.__init__(self, ip=ip, name=name)
-    self._id = id
+    def __init__(self, server_id, ip, name=None):
+        Host.__init__(self, ip=ip, name=name)
+        self._id = server_id
 
-  @property
-  def id(self):
-    return self._id
+    @property
+    def id(self):
+        return self._id
 
-  def __str__(self):
-    return 'id: %s; ip: %s; name: %s' % (self.id, self.ip, self.name)
+    def __str__(self):
+        return 'id: %s; ip: %s; name: %s' % (self.id, self.ip, self.name)
 
 if __name__ == '__main__':
-  s = Server('namexrm', '192.168.1.1', 'Namex server')
-  print s
-  s = Server(id='namexrm', ip='192.168.1.1')
-  print s
-  s = Server('namexrm', '192.168.1.1')
-  print s
+    s = Server('namexrm', '192.168.1.1', 'Namex server')
+    print s
+    s = Server(id='namexrm', ip='192.168.1.1')
+    print s
+    s = Server('namexrm', '192.168.1.1')
+    print s
 

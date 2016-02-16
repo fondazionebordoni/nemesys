@@ -26,7 +26,7 @@ def is_windows():
 
 def is_linux():
     if platform.system().lower().startswith('lin'):
-         return True
+        return True
     else:
         return False
 

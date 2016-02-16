@@ -10,7 +10,7 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -21,69 +21,67 @@ import urlparse
 import os
 import ssl
 
-def getconf(serial, dir, filename, url):
-   '''
-   Scarica il file di configurazione dalla url (HTTPS) specificata, salvandolo nel file specificato.
-   Solleva eccezioni in caso di problemi o file ricevuto non corretto.
-   '''
-   url = urlparse.urlparse(url)
-   try:
-    '''python >= 2.7.9'''
-    context = ssl.create_default_context()
-    connection = httplib.HTTPSConnection(host=url.hostname, context=context)
-   except AttributeError:
-    '''python < 2.7.9'''
-    connection = httplib.HTTPSConnection(host=url.hostname)
-   # Warning This does not do any verification of the server’s certificate.
+def getconf(serial, conf_dir, filename, url):
+    '''
+    Scarica il file di configurazione dalla url (HTTPS) specificata, salvandolo nel file specificato.
+    Solleva eccezioni in caso di problemi o file ricevuto non corretto.
+    '''
+    url = urlparse.urlparse(url)
+    try:
+        '''python >= 2.7.9'''
+        context = ssl.create_default_context()
+        connection = httplib.HTTPSConnection(host=url.hostname, context=context)
+    except AttributeError:
+        '''python < 2.7.9'''
+        connection = httplib.HTTPSConnection(host=url.hostname)
+    # Warning This does not do any verification of the server’s certificate.
 
-   connection.request('GET', '%s?clientid=%s' % (url.path, serial))
-   data = connection.getresponse().read()
-   print "Got response: %s" % str(data)
-   # Controllo stupido sul contenuto del file
-   if ("clientid" in str(data)):
-      with open('%s/%s' % (dir, filename), 'w') as file:
-         file.write(data)
-   elif ("non valido" in str(data)):
-       return False
-   else:
-      raise Exception('Error in configuration file')
+    connection.request('GET', '%s?clientid=%s' % (url.path, serial))
+    data = connection.getresponse().read()
+    print "Got response: %s" % str(data)
+    # Controllo stupido sul contenuto del file
+    if ("clientid" in str(data)):
+        with open('%s/%s' % (conf_dir, filename), 'w') as myfile:
+            myfile.write(data)
+    elif ("non valido" in str(data)):
+        return False
+    else:
+        raise Exception('Error in configuration file')
 
-   return os.path.exists(file.name)
+    return os.path.exists(file.name)
 
 if __name__ == '__main__':
-   filetmp = 'client.conf'
-   service = 'https://finaluser.agcom244.fub.it/Config'
-   
-   if (os.path.exists(filetmp)):
-      os.remove(filetmp)
-      
-   try:
-      getconf('fub00000000001', '.', filetmp, service)
-      assert False
-   except:
-      assert True
-      
-   if (os.path.exists(filetmp)):
-      os.remove(filetmp)
-      
-   try:
-      getconf('', '.', filetmp, service)
-      assert False
-   except:
-      assert True
-      
-   exit
-      
-   if (os.path.exists(filetmp)):
-      os.remove(filetmp)
+    filetmp = 'client.conf'
+    service = 'https://finaluser.agcom244.fub.it/Config'
+    
+    if (os.path.exists(filetmp)):
+        os.remove(filetmp)
+        
+    try:
+        getconf('fub00000000001', '.', filetmp, service)
+        assert False
+    except:
+        assert True
+        
+    if (os.path.exists(filetmp)):
+        os.remove(filetmp)
+        
+    try:
+        getconf('', '.', filetmp, service)
+        assert False
+    except:
+        assert True
+        
+    exit
+        
+    if (os.path.exists(filetmp)):
+        os.remove(filetmp)
 
-   try:
-      getconf('test@example.com|notaverystrongpassword', '.', filetmp, service)
-      assert False
-   except:
-      assert True
+    try:
+        getconf('test@example.com|notaverystrongpassword', '.', filetmp, service)
+        assert False
+    except:
+        assert True
 
-   if (os.path.exists(filetmp)):
-      os.remove(filetmp)
-
-
+    if (os.path.exists(filetmp)):
+        os.remove(filetmp)

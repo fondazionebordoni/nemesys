@@ -21,7 +21,7 @@ from os import mkdir
 import logging.config
 import paths
 
-configfile = paths.CONF_LOG
+config_file_name = paths.CONF_LOG
 logfile = paths.FILE_LOG
 
 default = '''
@@ -56,19 +56,19 @@ datefmt=%b %d %H:%M:%S
 '''
 
 if not path.exists(paths.LOG_DIR):
-  mkdir(paths.LOG_DIR)
+    mkdir(paths.LOG_DIR)
 
 # Se il file configurazione di log non esiste, creane uno con le impostazioni base
-if (not path.exists(configfile)):
+if (not path.exists(config_file_name)):
 
-  with open(configfile, 'w') as file:
-    s = str(default)
-    file.write(s)
+    with open(config_file_name, 'w') as config_file:
+        s = str(default)
+        config_file.write(s)
 
-logging.config.fileConfig(configfile)
+logging.config.fileConfig(config_file_name)
 
 # create logger
 class Logger(logging.getLoggerClass()):
 
-  def __init__(self):
-    pass
+    def __init__(self):
+        pass

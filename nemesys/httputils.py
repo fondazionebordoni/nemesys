@@ -23,47 +23,46 @@
 
 import httplib, mimetypes
 import ssl
-from socket import socket
 
 def verifypeer(url):
-  '''
-  # TODO Verificare il certificato del server
-  s = socket()
-  c = ssl.wrap_socket(s, cert_reqs=ssl.CERT_REQUIRED, ssl_version=ssl.PROTOCOL_SSLv3)
-  c.connect((url.hostname, 443))
-
-  # naive and incomplete check to see if cert matches host
-  cert = c.getpeercert()
-  print cert
-  #if not cert or ('commonName', u'www.google.com') not in cert['subject'][4]:
-  #    raise Exception('Danger!')
-
-  c.close()
-  '''
-  return True
+    '''
+    # TODO Verificare il certificato del server
+    s = socket()
+    c = ssl.wrap_socket(s, cert_reqs=ssl.CERT_REQUIRED, ssl_version=ssl.PROTOCOL_SSLv3)
+    c.connect((url.hostname, 443))
+    
+    # naive and incomplete check to see if cert matches host
+    cert = c.getpeercert()
+    print cert
+    #if not cert or ('commonName', u'www.google.com') not in cert['subject'][4]:
+    #    raise Exception('Danger!')
+    
+    c.close()
+    '''
+    return True
 
 def getverifiedconnection(url, certificate=None, timeout=60):
     connection = None
 
     if (url.scheme != 'https'):
-      connection = httplib.HTTPConnection(host=url.hostname, timeout=timeout)
+        connection = httplib.HTTPConnection(host=url.hostname, timeout=timeout)
     elif verifypeer(url):
-      if (certificate != None):
-        try:
-          '''python >= 2.7.9'''
-          context = ssl.create_default_context()
-          connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout, context=context)
-        except AttributeError:
-          '''python < 2.7.9'''
-          connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout)
-      else:
-        try:
-          '''python >= 2.7.9'''
-          context = ssl.create_default_context()
-          connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout, context=context)
-        except AttributeError:
-          '''python < 2.7.9'''
-          connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout)
+        if (certificate != None):
+            try:
+                '''python >= 2.7.9'''
+                context = ssl.create_default_context()
+                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout, context=context)
+            except AttributeError:
+                '''python < 2.7.9'''
+                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout)
+        else:
+            try:
+                '''python >= 2.7.9'''
+                context = ssl.create_default_context()
+                connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout, context=context)
+            except AttributeError:
+                '''python < 2.7.9'''
+                connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout)
 
     return connection
 
@@ -98,19 +97,19 @@ def encode_multipart_formdata(fields, files):
     L = []
 
     if fields != None:
-      for (key, value) in fields:
-          L.append('--' + BOUNDARY)
-          L.append('Content-Disposition: form-data; name="%s"' % key)
-          L.append('')
-          L.append(value)
+        for (key, value) in fields:
+            L.append('--' + BOUNDARY)
+            L.append('Content-Disposition: form-data; name="%s"' % key)
+            L.append('')
+            L.append(value)
 
     if files != None:
-      for (key, filename, value) in files:
-          L.append('--' + BOUNDARY)
-          L.append('Content-Disposition: form-data; name="%s"; filename="%s"' % (key, filename))
-          L.append('Content-Type: %s' % get_content_type(filename))
-          L.append('')
-          L.append(value)
+        for (key, filename, value) in files:
+            L.append('--' + BOUNDARY)
+            L.append('Content-Disposition: form-data; name="%s"; filename="%s"' % (key, filename))
+            L.append('Content-Type: %s' % get_content_type(filename))
+            L.append('')
+            L.append(value)
 
     L.append('--' + BOUNDARY + '--')
     L.append('')

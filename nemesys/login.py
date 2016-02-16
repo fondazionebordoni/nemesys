@@ -16,16 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from getconf import getconf
+import Tkinter
 import hashlib
-from Tkinter import *
-from threading import Thread
-import time
-import tkMessageBox
-import os
 import myProp
+import os
 import paths
 import sys
-from getconf import getconf
+import tkMessageBox
 import utils
 
 
@@ -42,7 +40,6 @@ class LoginException(Exception):
     def __init__(self, message):
         Exception.__init__(self, message)
 
-
 class LoginAuthenticationException(LoginException):
 
     def __init__(self, message):
@@ -58,11 +55,6 @@ class LoginCancelledException(LoginException):
     def __init__(self, message = ""):
         Exception.__init__(self, message)
 
-class LoginOtherException(LoginException):
-
-    def __init__(self, message):
-        Exception.__init__(self, message)
-
 
 
 ### Activation code ###
@@ -70,9 +62,7 @@ def getCode():
     '''
     Apre una finestra che chiede il codice licenza. Resituisce il codice licenza e chiude la finestra.
     '''
-    appresult = None
-    root = None
-    root = Tk()
+    root = Tkinter.Tk()
     if utils.is_windows():
         root.wm_iconbitmap('../Nemesys.ico')
     app = LoginGui(master=root)
@@ -135,7 +125,7 @@ def CancelError():
     sys.exit()
     
 def ErrorDialog(message):
-    root = Tk()
+    root = Tkinter.Tk()
     if utils.is_windows():
         root.wm_iconbitmap('../Nemesys.ico')
     root.withdraw()
@@ -145,7 +135,7 @@ def ErrorDialog(message):
 
 
 def OkDialog():
-    root = Tk()
+    root = Tkinter.Tk()
     if utils.is_windows():
         root.wm_iconbitmap('../Nemesys.ico')
     root.withdraw()
@@ -183,7 +173,7 @@ def getActivationFile(appresult, path, config_path):
         return True
 
     
-class LoginGui(Frame):
+class LoginGui(Tkinter.Frame):
     """
     finestra di codice licenza
     """
@@ -200,38 +190,38 @@ class LoginGui(Frame):
         self.quit()
 
     def createWidgets(self):
-        self.Title = Label(self, padx=60, pady=8)
+        self.Title = Tkinter.Label(self, padx=60, pady=8)
         self.Title["text"] = "Inserisci i codici di accesso (username e password)\nche hai usato per accedere all'area personale"
         self.Title.grid(column=0, row=0, columnspan=2)
 
-        username_label = Label(self, text="username:")
+        username_label = Tkinter.Label(self, text="username:")
         username_label.grid(column=0, row=1)
 
-        self.username = Entry(self, width=30)
+        self.username = Tkinter.Entry(self, width=30)
         self.username.grid(column=1, row=1)
 
-        password_label = Label(self, text="password:")
+        password_label = Tkinter.Label(self, text="password:")
         password_label.grid(column=0, row=2)
 
-        self.password = Entry(self, width=30)
+        self.password = Tkinter.Entry(self, width=30)
         self.password["show"] = "*"
         self.password.grid(column=1, row=2)
 
-        self.button_frame = Frame(self)
+        self.button_frame = Tkinter.Frame(self)
         self.button_frame.grid(column=1, row=3, columnspan=2, pady=8)
         
-        self.invio = Button(self.button_frame)
+        self.invio = Tkinter.Button(self.button_frame)
         self.invio["text"] = "Accedi",
         self.invio["command"] = self.sendMsg
         self.invio.grid(column=0, row=0, padx = 4)
         
-        self.cancl = Button(self.button_frame)
+        self.cancl = Tkinter.Button(self.button_frame)
         self.cancl["text"] = "Cancel",
         self.cancl["command"] = self.cancel
         self.cancl.grid(column=1, row=0, padx = 4)
 
     def __init__(self, master=None):
-        Frame.__init__(self, master)
+        Tkinter.Frame.__init__(self, master)
         self.config(width="800")
         if utils.is_windows():
             self.master.wm_iconbitmap(os.path.join('..', 'nemesys.ico'))
@@ -281,9 +271,6 @@ def main():
                 errorfunc = ConnectionError
             except LoginCancelledException:
                 has_canceled = True
-            except LoginOtherException as e:
-                logger.warning("Other login problem: %s" % str(e))
-                errorfunc = OtherError
             except Exception as e:
                 logger.error("Caught exception while downloading configuration file: %s" % str(e) )
 
