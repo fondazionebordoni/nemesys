@@ -16,20 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from getconf import getconf
 import Tkinter
 import hashlib
-import myProp
+import logging
 import os
-import paths
 import sys
 import tkMessageBox
+
+from getconf import getconf
+import myProp
+import paths
 import utils
 
 
-import logging
-
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 _clientConfigurationFile = 'client.conf'
 _configurationServer = 'https://finaluser.agcom244.fub.it/Config'
@@ -315,4 +315,6 @@ def main():
 
 
 if __name__ == '__main__':
+    import log_conf
+    log_conf.init_log()
     main()

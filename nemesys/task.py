@@ -16,24 +16,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from server import Server
-from logger import logging
+import logging
 
-BANDS = [128, 256, 384, 400, 512, 640, 704, 768, 832, 1000, 1200, 1250, 1280, 1500, 1600, 1750, 2000, 2250, 2500, 2750, 3000, 3250, 3500, 4000, 4096, 4500, 5000, 5500, 6000, 6122, 6500, 7000, 7168, 7500, 8000, 8500, 8192, 9000, 9500, 10000, 11000, 12000, 13000, 14000, 15000, 16000, 17000, 18000, 19000, 20000, 20480, 22000, 24000, 26000, 28000, 30000, 32000, 34000, 36000, 38000, 40000]
-logger = logging.getLogger()
+from server import Server
+
+
+# BANDS = [128, 256, 384, 400, 512, 640, 704, 768, 832, 1000, 1200, 1250, 1280, 1500, 1600, 1750, 2000, 2250, 2500, 2750, 3000, 3250, 3500, 4000, 4096, 4500, 5000, 5500, 6000, 6122, 6500, 7000, 7168, 7500, 8000, 8500, 8192, 9000, 9500, 10000, 11000, 12000, 13000, 14000, 15000, 16000, 17000, 18000, 19000, 20000, 20480, 22000, 24000, 26000, 28000, 30000, 32000, 34000, 36000, 38000, 40000]
+logger = logging.getLogger(__name__)
 
 class Task(object):
 
-    def __init__(self, task_id, start, server, ftpdownpath, ftpuppath, upload=100,
-                             download=100, multiplier=5, ping=100, nicmp=4, delay=1, now=False, message=None):
+    def __init__(self, task_id, start, server, upload=100,
+                 download=100, ping=100, nicmp=4, delay=1, 
+                 now=False, message=None):
         self._id = task_id
         self._start = start
         self._server = server
-        self._ftpdownpath = ftpdownpath
-        self._ftpuppath = ftpuppath
+#         self._ftpdownpath = ftpdownpath
+#         self._ftpuppath = ftpuppath
         self._upload = upload
         self._download = download
-        self._multiplier = multiplier
+#         self._multiplier = multiplier
         self._ping = ping
         self._nicmp = nicmp
         self._delay = delay
@@ -52,21 +55,21 @@ class Task(object):
     def server(self):
         return self._server
 
-    @property
-    def ftpdownpath(self):
-        return self._ftpdownpath
-
-    @property
-    def ftpuppath(self):
-        return self._ftpuppath
+#     @property
+#     def ftpdownpath(self):
+#         return self._ftpdownpath
+# 
+#     @property
+#     def ftpuppath(self):
+#         return self._ftpuppath
 
     @property
     def download(self):
         return self._download
 
-    @property
-    def multiplier(self):
-        return self._multiplier
+#     @property
+#     def multiplier(self):
+#         return self._multiplier
 
     @property
     def upload(self):
@@ -92,28 +95,30 @@ class Task(object):
     def message(self):
         return self._message
 
-    def update_ftpdownpath(self, bandwidth):
-        '''
-        Aggiorna il path del file da scaricare in modo da scaricare un file di
-        dimensioni le più vicine possibili alla banda specificata.
-        '''
-        logger.debug('Aggiornamento path per la banda in download')
-        try:
-            BANDS.sort(reverse=True)
-            for band in BANDS:
-                if (band <= bandwidth):
-                    ind = self.ftpdownpath.rfind('/')
-                    self.ftpdownpath = "%s/%d.rnd" % (self.ftpdownpath[0:ind], band)
-                    logger.debug("Aggiornato percorso del file da scaricare: %s" % self.ftpdownpath)
-                    break 
-        except Exception as e:
-            logger.warning("Errore durante la modifica del percorso del file di download da scaricare. %s" % e)
+#     def update_ftpdownpath(self, bandwidth):
+#         '''
+#         Aggiorna il path del file da scaricare in modo da scaricare un file di
+#         dimensioni le più vicine possibili alla banda specificata.
+#         '''
+#         logger.debug('Aggiornamento path per la banda in download')
+#         try:
+#             BANDS.sort(reverse=True)
+#             for band in BANDS:
+#                 if (band <= bandwidth):
+#                     ind = self.ftpdownpath.rfind('/')
+#                     self.ftpdownpath = "%s/%d.rnd" % (self.ftpdownpath[0:ind], band)
+#                     logger.debug("Aggiornato percorso del file da scaricare: %s" % self.ftpdownpath)
+#                     break 
+#         except Exception as e:
+#             logger.warning("Errore durante la modifica del percorso del file di download da scaricare. %s" % e)
 
     def __str__(self):
-        return 'id: %s; start: %s; serverip: %s; ftpdownpath: %s; ftpuppath: %s; upload: %d; download: %d; multiplier %d; ping %d; ncimp: %d; delay: %d; now %d; message: %s' % \
-            (self.id, self.start, self.server.ip, self.ftpdownpath, self.ftpuppath, self.upload, self.download, self.multiplier, self.ping, self.nicmp, self.delay, self.now, self.message)
+        return 'id: %s; start: %s; serverip: %s; upload: %d; download: %d; ping %d; ncimp: %d; delay: %d; now %d; message: %s' % \
+            (self.id, self.start, self.server.ip, self.upload, self.download, self.ping, self.nicmp, self.delay, self.now, self.message)
 
 if __name__ == '__main__':
+    import log_conf
+    log_conf.init_log()
     s = Server('s1', '127.0.0.1')
     p = Task(0, '2010-01-01 10:01:00', s, 'r.raw', 'upload/r.raw')
     print p

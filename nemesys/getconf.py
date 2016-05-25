@@ -30,6 +30,8 @@ def getconf(serial, conf_dir, filename, url):
     try:
         '''python >= 2.7.9'''
         context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
         connection = httplib.HTTPSConnection(host=url.hostname, context=context)
     except AttributeError:
         '''python < 2.7.9'''
@@ -38,7 +40,6 @@ def getconf(serial, conf_dir, filename, url):
 
     connection.request('GET', '%s?clientid=%s' % (url.path, serial))
     data = connection.getresponse().read()
-    print "Got response: %s" % str(data)
     # Controllo stupido sul contenuto del file
     if ("clientid" in str(data)):
         with open('%s/%s' % (conf_dir, filename), 'w') as myfile:
@@ -48,7 +49,7 @@ def getconf(serial, conf_dir, filename, url):
     else:
         raise Exception('Error in configuration file')
 
-    return os.path.exists(file.name)
+    return os.path.exists(myfile.name)
 
 if __name__ == '__main__':
     filetmp = 'client.conf'

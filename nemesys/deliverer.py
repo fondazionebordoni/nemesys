@@ -16,18 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from httplib import HTTPException
-from httputils import post_multipart
-from logger import logging
-from ssl import SSLError
-from timeNtp import timestampNtp
-from urlparse import urlparse
 import datetime
 import hashlib
+from httplib import HTTPException
+import logging
 import os
+from ssl import SSLError
+from urlparse import urlparse
 import zipfile
 
-logger = logging.getLogger()
+from httputils import post_multipart
+from timeNtp import timestampNtp
+
+
+logger = logging.getLogger(__name__)
 
 class Deliverer(object):
 
@@ -41,7 +43,8 @@ class Deliverer(object):
         Effettua l'upload del file. Restituisce la risposta ricevuta dal repository o None se c'è stato un problema.
         '''
         response = None
-        #logger.debug('Invio del file %s' % filename)
+        logger.info('Invio a WEB: %s' % self._url)
+        logger.info('Del file ZIP: %s' % filename)
         try:
             with open(filename, 'rb') as myfile:
                 body = myfile.read()
@@ -83,7 +86,7 @@ class Deliverer(object):
         # Creazione del file zip
         zipname = '%s.zip' % filename[0:-4]
         zip_file = zipfile.ZipFile(zipname, 'a', zipfile.ZIP_DEFLATED)
-        zip_file.write(file.name, os.path.basename(file.name))
+        zip_file.write(myfile.name, os.path.basename(myfile.name))
 
         # Sposto la firma nello zip
         if sign != None and os.path.exists(sign.name):
@@ -127,5 +130,7 @@ class Deliverer(object):
             return None
 
 if __name__ == '__main__':
+    import log_conf
+    log_conf.init_log()
     d = Deliverer('https://repository.agcom244.fub.it/Upload', 'fub000.pem')
     print ('%s' % d.upload(d.pack("outbox/measure.xml")))

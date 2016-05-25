@@ -50,15 +50,6 @@ class ProfilerTests(unittest.TestCase):
         is_active = self.profiler.is_wireless_active()
         self.assertFalse(is_active)
         
-    def test_get_ip(self):
-        ipaddr = self.profiler.getipaddr()
-        self.assertIsNotNone(ipaddr)
-
-    def test_get_mac(self):
-        mac = self.profiler.get_mac_address(None)
-        self.assertIsNotNone(mac)
-
-
     '''Platform dependent tests'''
     def test_wireless_macos(self):
         import os

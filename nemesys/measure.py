@@ -16,24 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from client import Client
 from datetime import datetime
-from isp import Isp
-from profile import Profile
-from server import Server
-from proof import Proof
 from xml.dom.minidom import parseString
 from timeNtp import timestampNtp
 import platform
 
-
-def getos():
-    
-    try:
-        os = '%s %s' % (platform.system(), platform.release())
-    except Exception:
-        os = 'n.d.'
-    return os
 
 class Measure(object):
     def __init__(self, measure_id, server, client, version=None, start=datetime.fromtimestamp(timestampNtp()).isoformat()):    
@@ -44,6 +31,10 @@ class Measure(object):
         la misura. L'id della misura viene postposto all'id del client per generare
         l'id del file di misura XML.
         '''
+        try:
+            self._os = '%s %s' % (platform.system(), platform.release())
+        except Exception:
+            self._os = 'n.d.'
         self._id = measure_id
         self._server = server
         self._client = client
@@ -58,7 +49,7 @@ class Measure(object):
         measure.setAttribute('id', str(self._client.id) + str(self._id))
         measure.setAttribute('start', str(self._start))
 
-        # TODO Aggiungere l'invio del mac address
+        # TODO: Aggiungere l'invio del mac address
 
         # Header
         # --------------------------------------------------------------------------
@@ -91,7 +82,7 @@ class Measure(object):
         client.appendChild(geocode)
 
         geocode = xml.createElement('so')
-        geocode.appendChild(xml.createTextNode(str(getos())))
+        geocode.appendChild(xml.createTextNode(str(self._os)))
         client.appendChild(geocode)
 
         geocode = xml.createElement('version')
@@ -112,24 +103,24 @@ class Measure(object):
         measure.appendChild(xml.createElement('body'))
         return xml
 
-    def savetest(self, test):
+    def savetest(self, proof):
         '''
         Salva l'oggetto Test ricevuto nel file XML interno.
         '''
-        node = self.test2node(test)
+        node = self.test2node(proof)
         body = self._xml.getElementsByTagName('body')[0]
         body.appendChild(node)
 
-    def test2node(self, test):
+    def test2node(self, proof):
         xml = self._xml
 
         t = xml.createElement('test')
-        t.setAttribute('type', str(test.type))
+        t.setAttribute('type', str(proof.type))
 
         time = xml.createElement('time')
 
         start = xml.createElement('start')
-        start.appendChild(xml.createTextNode(str(test.start.isoformat())))
+        start.appendChild(xml.createTextNode(str(proof.start.isoformat())))
         time.appendChild(start)
 
         end = xml.createElement('end')
@@ -139,14 +130,14 @@ class Measure(object):
         t.appendChild(time)
 
         value = xml.createElement('value')
-        value.appendChild(xml.createTextNode(str(test.value)))
+        value.appendChild(xml.createTextNode(str(proof.duration)))
         t.appendChild(value)
 
         bytes_element = xml.createElement('byte')
-        bytes_element.appendChild(xml.createTextNode(str(test.bytes)))
+        bytes_element.appendChild(xml.createTextNode(str(proof.bytes_tot)))
         t.appendChild(bytes_element)
 
-        error = test.errorcode
+        error = proof.errorcode
         if (error != None):
             errorcode = xml.createElement('errcode')
             errorcode.appendChild(xml.createTextNode(str(error)))
@@ -168,9 +159,3 @@ class Measure(object):
 
     def __str__(self):
         return self._xml.toxml('UTF-8')
-
-if __name__ == '__main__':
-    c = Client('fub0010000001', Profile('1mb512kb', 1024, 512), Isp('fub001'), 'geo')
-    m = Measure(1, Server(server_id ='fubsrvnmx01', ip='127.0.0.1'), c)
-    m.savetest(Proof('download_http', datetime.utcnow(), .020, 1024 * 1024))
-    print m

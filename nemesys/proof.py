@@ -1,7 +1,7 @@
 # proof.py
 # -*- coding: utf8 -*-
 
-# Copyright (c) 2010 Fondazione Ugo Bordoni.
+# Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,16 +17,16 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import datetime
-from statistics import Statistics
 
 class Proof(object):
 
-    def __init__(self, test_type, start, value, bytes, counter_stats = Statistics(), errorcode = 0):
+    def __init__(self, test_type, start_time, duration, bytes_nem=0, bytes_tot=0, spurious=0, errorcode = 0):
         self._type = test_type
-        self._start = start
-        self._value = value
-        self._bytes = bytes
-        self._counter_stats = counter_stats
+        self._start = start_time
+        self._duration = duration
+        self._bytes_nem = bytes_nem
+        self._bytes_tot = bytes_tot
+        self._spurious = spurious
         self._errorcode = errorcode
 
     @property
@@ -38,19 +38,23 @@ class Proof(object):
         return self._start
 
     @property
-    def value(self):
+    def duration(self):
         '''
         Values must be saved in milliseconds.
         '''
-        return self._value
+        return self._duration
 
     @property
-    def bytes(self):
-        return self._bytes
+    def bytes_nem(self):
+        return self._bytes_nem
 
     @property
-    def counter_stats(self):
-            return self._counter_stats
+    def bytes_tot(self):
+        return self._bytes_tot
+
+    @property
+    def spurious(self):
+        return self._spurious
 
     @property
     def errorcode(self):

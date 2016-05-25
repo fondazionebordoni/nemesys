@@ -10,7 +10,7 @@
 # 
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 # 
 # You should have received a copy of the GNU General Public License
@@ -26,11 +26,11 @@ import ssl
 
 def verifypeer(url):
     '''
-    # TODO Verificare il certificato del server
+    # TODO: Verificare il certificato del server
     s = socket()
     c = ssl.wrap_socket(s, cert_reqs=ssl.CERT_REQUIRED, ssl_version=ssl.PROTOCOL_SSLv3)
     c.connect((url.hostname, 443))
-    
+
     # naive and incomplete check to see if cert matches host
     cert = c.getpeercert()
     print cert
@@ -51,6 +51,8 @@ def getverifiedconnection(url, certificate=None, timeout=60):
             try:
                 '''python >= 2.7.9'''
                 context = ssl.create_default_context()
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
                 connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout, context=context)
             except AttributeError:
                 '''python < 2.7.9'''
@@ -59,6 +61,8 @@ def getverifiedconnection(url, certificate=None, timeout=60):
             try:
                 '''python >= 2.7.9'''
                 context = ssl.create_default_context()
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
                 connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout, context=context)
             except AttributeError:
                 '''python < 2.7.9'''

@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from logger import logging
+import logging
 from xml.dom.minidom import parseString
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 class Status(object):
 
@@ -67,5 +67,5 @@ READY = Status('dark grey', 'Nemesys pronto e in attesa di eseguire una misura.'
 OK = Status('dark green', 'Misura terminata con successo.')
 MESSAGE = Status('blue', 'Avviso dal server centrale.')
 LOGO = Status('purple', 'Nemesys (Network Measurement System). Sistema collegato e funzionante.')
-LOGOSTATOMISURA2 = Status('logo_nemesys.png', 'Nemesys (Network Measurement System).')
-LOGOSTATOMISURA1 = Status('logo_misurainternet.png', 'Misura Internet.')
+# LOGOSTATOMISURA2 = Status('logo_nemesys.png', 'Nemesys (Network Measurement System).')
+# LOGOSTATOMISURA1 = Status('logo_misurainternet.png', 'Misura Internet.')

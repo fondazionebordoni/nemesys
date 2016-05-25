@@ -16,8 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 from os import mkdir, path, sep
 import sys
+
+
+logger = logging.getLogger(__name__)
 
 if hasattr(sys, 'frozen'):
     # Dovrebbe darmi il percorso in cui sta eseguendo l'applicazione
@@ -35,7 +39,7 @@ SENT = path.join(_APP_PATH, 'sent')
 # Configuration dirs and files
 _CONF_DIR = path.join(_APP_PATH, 'config')
 LOG_DIR = path.join(_APP_PATH, 'logs')
-FILE_LOG = path.join(LOG_DIR, 'nemesys.log')
+LOG_FILE = path.join(LOG_DIR, 'nemesys.log')
 CONF_LOG = path.join(_CONF_DIR, 'log.conf')
 CONF_MAIN = path.join(_CONF_DIR, 'client.conf')
 CONF_ERRORS = path.join(_CONF_DIR, 'errorcodes.conf')
@@ -43,19 +47,9 @@ THRESHOLD = path.join(_CONF_DIR, 'threshold.xml')
 RESULTS = path.join(_CONF_DIR, 'result.xml')
 MEASURE_STATUS = path.join(_CONF_DIR, 'progress.xml')
 
-from logger import logging
 def check_paths():
-    logger = logging.getLogger()
-    
-    if not path.exists(_CONF_DIR):
-        mkdir(_CONF_DIR)
-        logger.debug('Creata la cartella "%s".' % _CONF_DIR)
-    
-    if not path.exists(OUTBOX):
-        mkdir(OUTBOX)
-        logger.debug('Creata la cartella "%s".' % OUTBOX)
-    
-    if not path.exists(SENT):
-        mkdir(SENT)
-        logger.debug('Creata la cartella "%s".' % SENT)
-
+    dirs = [LOG_DIR, OUTBOX, SENT, _CONF_DIR]
+    for d in dirs:
+        if not path.exists(d):
+            mkdir(d)
+            logger.debug('Creata la cartella "%s".' % d)

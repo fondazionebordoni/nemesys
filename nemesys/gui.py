@@ -16,27 +16,30 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import HTMLParser
 from asyncore import dispatcher, loop
 from datetime import datetime
-from logger import logging
+import logging
 from os import path
-from progress import Progress
+import re
+import socket
 from sys import platform
 from threading import Event, Thread
 from time import sleep
+import wx
+
+import paths
+from progress import Progress
+import status
 from timeNtp import timestampNtp
 from xmlutils import xml2status
-import HTMLParser
-import paths
-import re
-import socket
-import status
-import wx
+
+
+logger = logging.getLogger(__name__)
 
 LISTENING_URL = ('127.0.0.1', 21401)
 NOTIFY_COLORS = ('yellow', 'black')
 WAIT_RECONNECT = 15 # secondi
-logger = logging.getLogger()
 
 def sleeper():
         sleep(.001)
@@ -52,7 +55,7 @@ class _Controller(Thread):
 
     def run(self):
         logger.debug('Inizio loop')
-        # TODO Verificare al fattibilità di ricollegamento della gui al demone
+        # TODO: Verificare al fattibilità di ricollegamento della gui al demone
         '''
         while self._running:
             loop(1)
@@ -109,7 +112,7 @@ class _Channel(dispatcher):
         data = self.recv(2048)
         logger.debug('Received: %s' % data)
 
-        # TODO Correggere dialogo su socket
+        # TODO: Correggere dialogo su socket
         try:
                 start = max(data.rfind('<?xml'), 0)
                 current_status = xml2status(data[start:])
@@ -355,6 +358,8 @@ def getdate():
     return datetime.fromtimestamp(timestampNtp())
 
 if __name__ == '__main__':
+    import log_conf
+    log_conf.init_log()
     app = wx.App(False)
     if platform == 'win32':
         wx.CallLater(200, sleeper)

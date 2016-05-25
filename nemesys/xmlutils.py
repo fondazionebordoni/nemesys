@@ -17,24 +17,23 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import datetime
-from logger import logging
-from server import Server
-from status import Status
+import logging
 from string import join
-from sysmonitorexception import SysmonitorException
-from task import Task
 from xml.dom import Node
 from xml.dom.minidom import parseString
-from xml.etree import ElementTree as ET
 from xml.parsers.expat import ExpatError
-from timeNtp import timestampNtp
-import sysmonitorexception
-import re
+
+from server import Server
+from status import Status
+from task import Task
+
+
+logger = logging.getLogger(__name__)
 
 tag_task = 'task'
 tag_id = 'id'
 tag_upload = 'nftpup'
-att_multiplier = 'mult'
+# att_multiplier = 'mult'
 tag_download = 'nftpdown'
 tag_ping = 'nping'
 att_icmp = 'icmp'
@@ -44,12 +43,11 @@ att_now = 'now'
 tag_serverid = 'srvid'
 tag_serverip = 'srvip'
 tag_servername = 'srvname'
-tag_ftpdownpath = 'ftpdownpath'
-tag_ftpuppath = 'ftpuppath'
+# tag_ftpdownpath = 'ftpdownpath'
+# tag_ftpuppath = 'ftpuppath'
 tag_message = 'message'
 startformat = '%Y-%m-%d %H:%M:%S'
 
-logger = logging.getLogger()
 
 def iso2datetime(s):
     '''
@@ -100,7 +98,6 @@ def xml2task(data):
 
     # Considera solo il primo task
     node = nodes[0]
-    #logger.debug('Task trovato:\n%s' % nodedata(node))
 
     # Aggancio dei dati richiesti
     try:
@@ -111,8 +108,8 @@ def xml2task(data):
         start = getvalues(node, tag_start)
         serverid = getvalues(node, tag_serverid)
         serverip = getvalues(node, tag_serverip)
-        ftpdownpath = getvalues(node, tag_ftpdownpath)
-        ftpuppath = getvalues(node, tag_ftpuppath)
+#         ftpdownpath = getvalues(node, tag_ftpdownpath)
+#         ftpuppath = getvalues(node, tag_ftpuppath)
     except IndexError:
         logger.error('L\'XML ricevuto non contiene tutti i dati richiesti. XML: %s' % data)
         raise Exception('Le informazioni per la programmazione delle misure sono incomplete.')
@@ -122,7 +119,7 @@ def xml2task(data):
     message = None
     try:
         servername = getvalues(node, tag_servername)
-        multiplier = node.getElementsByTagName(tag_upload)[0].getAttribute(att_multiplier)
+#         multiplier = node.getElementsByTagName(tag_upload)[0].getAttribute(att_multiplier)
         nicmp = node.getElementsByTagName(tag_ping)[0].getAttribute(att_icmp)
         delay = node.getElementsByTagName(tag_ping)[0].getAttribute(att_delay)
         now = node.getElementsByTagName(tag_start)[0].getAttribute(att_now)
@@ -151,11 +148,11 @@ def xml2task(data):
         else:
             ping = int(ping)
 
-        if (len(multiplier) <= 0):
-            logger.info('L\'XML non contiene il multiplicatore per la grandezza del file di upload (default = 5)')
-            multiplier = 5
-        else:
-            multiplier = int(multiplier)
+#         if (len(multiplier) <= 0):
+#             logger.info('L\'XML non contiene il multiplicatore per la grandezza del file di upload (default = 5)')
+#             multiplier = 5
+#         else:
+#             multiplier = int(multiplier)
 
         if (len(nicmp) <= 0):
             logger.info('L\'XML non contiene il numero di pacchetti icmp per la prova ping da effettuare (default = 4)')
@@ -175,7 +172,7 @@ def xml2task(data):
         else:
             now = bool(now)
 
-    # TODO Testare catena di eccezioni
+    # TODO: Testare catena di eccezioni
     except TypeError:
         logger.error('Errore durante la verifica della compatibilità dei dati numerici di task')
         raise Exception()
@@ -193,10 +190,10 @@ def xml2task(data):
         raise Exception('Le informazioni orarie per la programmazione delle misure sono errate.')
 
     # Ip
-    # TODO Controllare validità dati IP
+    # TODO: Controllare validità dati IP
 
     server = Server(serverid, serverip, servername)
-    return Task(task_id=task_id, start=start, server=server, ftpdownpath=ftpdownpath, ftpuppath=ftpuppath, upload=upload, download=download, multiplier=multiplier, ping=ping, nicmp=nicmp, delay=delay, now=now, message=message)
+    return Task(task_id=task_id, start=start, server=server, upload=upload, download=download, ping=ping, nicmp=nicmp, delay=delay, now=now, message=message)
 
 def getvalues(node, tag=None):
 
@@ -213,13 +210,7 @@ def getvalues(node, tag=None):
     else:
         return getvalues(node.getElementsByTagName(tag)[0])
 
-# def nodedata(node):
-#     s = ''
-#     for child in node.childNodes:
-#         if child.nodeType != Node.TEXT_NODE:
-#             s += '%s: %s\n' % (child.nodeName, getvalues(child))
-#     return s.strip('\n')
-
+#TODO: remove with new GUI
 def xml2status(data):
 
     try:
@@ -245,26 +236,6 @@ def xml2status(data):
 
     return Status(color, message)
 
-def _getcommentvalue(filename, comment, pattern='.*'):
-    '''
-    Ricava il valore di un commento nell'XML
-    '''
-    CSTART = '<!--'
-    CEND = '-->'
-
-    with open(filename) as f:
-        data = f.read()
-
-    m = re.search('%s %s (%s) %s' % (re.escape(CSTART), re.escape(comment), pattern, re.escape(CEND)), data)
-    value = m.group(1)
-
-    return value
-
-# def file2xml(filename):
-#     with open(filename) as f:
-#         data = f.read()
-# 
-#     return getxml(data)
 
 def getstarttime(filename):
     '''
@@ -295,139 +266,4 @@ def getstarttime(filename):
 
     return iso2datetime(start)
 
-'TODO: non viene utilizzato, rimuovere?'
-def getfinishedtime(filename):
-    '''
-    Ricava il tempo di chiusura da un file di misura
-    '''
-    try:
-        pattern = '[\dT\-:\.]*'
-        # TODO Migliorare riferimenti a [finished] vedi executer.
-        comment = '[finished]'
-        time = iso2datetime(_getcommentvalue(filename, comment, pattern))
-    except Exception as e:
-        logger.error('Errore durante il recupero del valore finished della misura: %s' % e)
-        time=datetime.fromtimestamp(timestampNtp())        
-    return time
 
-'TODO: non viene utilizzato, rimuovere?'
-def getXMLvalues(string):
-    '''
-    Estrae informazioni dal SystemProfiler 
-    '''
-    values = {}
-    try:
-        for subelement in ET.XML(string):
-            values.update({subelement.tag:subelement.text})
-            logger.debug('Recupero valori dal file XML. %s -> %s' % (subelement.tag, subelement.text))
-    except Exception as e:
-        raise SysmonitorException('Errore durante il recupero dello stato del computer. %s' % e, sysmonitorexception.FAILSTATUS) 
-
-    return values
-
-if __name__ == '__main__':
-    
-    empty_xml = ''
-    fake_xml = 'pippo'
-    generic_xml = '''<?xml version="1.0" encoding="UTF-8"?>
-    <measure>
-        <content/>
-    </measure>
-    '''
-    task_xml = '''<?xml version="1.0" encoding="UTF-8"?>
- <calendar>
-    <task>
-     <id>1</id>
-     <nftpup mult="10">20</nftpup>
-     <nftpdown>20</nftpdown>
-     <nping icmp="1" delay="10">10</nping>
-     <start now="1">2010-01-01 00:01:00</start>
-     <srvid>fubsrvrmnmx03</srvid>
-     <srvip>193.104.137.133</srvip>
-     <srvname>NAMEX</srvname>
-     <ftpuppath>/upload/1.rnd</ftpuppath>
-     <ftpdownpath>/download/8000.rnd</ftpdownpath>
-    </task>
- </calendar>
-    '''
-    status_xml = '''<?xml version="1.0" encoding="UTF-8"?>
-    <status>
-        <color>orange</color>
-        <message>Nemesys sta effettuando una misura.</message>
-    </status>
-    '''
-    empty_xml_file = 'test/empty_xml_file.xml'
-    fake_xml_file = 'test/fake_xml_file.xml'
-    generic_xml_file = 'test/generic_xml_file.xml'
-    measure_xml_file = 'test/measure_xml_file.xml'
-    
-    # Test getxml(data)
-    print '(getxml) Errore dato vuoto: %s' % empty_xml
-    try:
-        print getxml(empty_xml)
-    except Exception as e:
-        print e
- 
-    print '(getxml) Errore xml non corretto: %s' % fake_xml
-    try:
-        print getxml(fake_xml)
-    except Exception as e:
-        print e
-        
-    print '(getxml) XML legittimo: %s' % generic_xml
-    try:
-        print getxml(generic_xml)
-    except Exception as e:
-        print e
-    
-    # Test xml2task
-    print '(xml2task) XML legittimo ma non task: %s' % generic_xml
-    try:
-        print xml2task(generic_xml)
-    except Exception as e:
-        print e
-
-    print '(xml2task) XML di task: %s' % task_xml
-    try:
-        print xml2task(task_xml)
-    except Exception as e:
-        print e
-    
-    # Test xml2task
-    print '(xml2status) XML legittimo ma non status: %s' % generic_xml
-    try:
-        print xml2status(generic_xml)
-    except Exception as e:
-        print e
-    
-    print '(xml2status) XML di status: %s' % status_xml
-    try:
-        print xml2status(status_xml)
-    except Exception as e:
-        print e
-
-#     print '(file2xml) Conversione file vuoto in xml: %s' % empty_xml_file    
-#     try:
-#         print file2xml(empty_xml_file)
-#     except Exception as e:
-#         print e
-#     
-#     print '(file2xml) Conversione file vuoto in xml: %s' % fake_xml_file    
-#     try:
-#         print file2xml(fake_xml_file)
-#     except Exception as e:
-#         print e
-# 
-#     print '(file2xml) Conversione file vuoto in xml: %s' % generic_xml_file    
-#     try:
-#         print file2xml(generic_xml_file)
-#     except Exception as e:
-#         print e
-#     
-    print '(getstarttime) Analisi start di misura: %s' % measure_xml_file
-    try:
-        print getstarttime(measure_xml_file)
-    except Exception as e:
-        print e
-    
-    

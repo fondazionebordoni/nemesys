@@ -16,21 +16,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from arp import do_arping
-from logger import logging
-from threading import Thread
 import ipcalc
+import logging
 import ping
 import re
-import socket
+import threading
 
-MAX = 128
+from arp import do_arping
 
-logger = logging.getLogger()
 
-class sendit(Thread):
+MAX_PING_HOSTS = 128
+
+logger = logging.getLogger(__name__)
+
+class sendit(threading.Thread):
     def __init__ (self, ip):
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
         self.ip = ip
         self.status = 0
         self.elapsed = 0
@@ -38,36 +39,38 @@ class sendit(Thread):
     def run(self):
         try:
             self.elapsed = ping.do_one("%s" % self.ip, 1)
-            if (self.elapsed > 0):
+            if self.elapsed > 0:
                 self.status = 1
         except Exception:
             self.status = 0
             pass
 
-def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, threshold = 4, arping = 0):
-    realSubnet = True
+def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, arping = 0):
+
     if(provider == "fst001" and not bool(re.search('^192\.168\.', ipAddress))):
         realSubnet = False
         if bandwidthup == bandwidthdown and not bool(re.search('^10\.', ipAddress)):
             #profilo fibra
-            netMask = 29
-            logger.info("Profilo Fastweb in Fibra. Modificata sottorete in %d" % netMask)
+            netmask_to_use = 29
+            logger.debug("Sospetto profilo Fastweb in Fibra. Modificata sottorete in %d" % netmask_to_use)
         else:
             #profilo ADSL
-            netMask = 30
-            logger.info("Profilo Fastweb ADSL o Fibra con indirizzo 10.*. Modificata sottorete in %d" % netMask)
+            netmask_to_use = 30
+            logger.debug("Sospetto profilo Fastweb ADSL o Fibra con indirizzo 10.*. Modificata sottorete in %d" % netmask_to_use)
 
-    # Controllo che non siano indirizzi pubblici, in quel caso ritorno 1, effettuo la misura
-    elif not bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ipAddress)):
-        logger.info("IP della scheda di rete di misura pubblico. Non controllo il numero degli host. Host in rete: 1")
-        return 1
-
-    logger.info("Indirizzo: %s/%d; Realsubnet: %s; Threshold: %d" % (ipAddress, netMask, realSubnet, threshold))
-
-    n_host = _countNetHosts(ipAddress, netMask, realSubnet, threshold, arping)
+        logger.info("Indirizzo: %s/%d; Realsubnet: %s" % (ipAddress, netMask, realSubnet))
+        n_host = _countNetHosts(ipAddress, netmask_to_use, realSubnet, arping)
+        if n_host > 0:
+            return n_host
+        
+    realSubnet = True
+    netmask_to_use = netMask
+    logger.info("Indirizzo: %s/%d; Realsubnet: %s" % (ipAddress, netMask, realSubnet))
+    n_host = _countNetHosts(ipAddress, netmask_to_use, realSubnet, arping)
     return n_host
 
-def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping = 0):
+
+def _countNetHosts(ipAddress, netMask, realSubnet = True, arping = 0):
     '''
     Ritorna il numero di host che rispondono al ping nella sottorete ipAddress/net_mask.
     Di default effettua i ping dei soli host appartenenti alla sottorete indicata (escludendo il 
@@ -87,35 +90,26 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
 
     else:
         i = 0
-        lasting = 2 ** (32 - netMask)
         for ip in ips:
-            lasting -= 1
             if ((ip.hex() == net.hex() or ip.hex() == bcast.hex()) and realSubnet):
                 logger.debug("Saltato ip %s" % ip)
             elif(ip.dq == ipAddress):
                 logger.debug("Salto il mio ip %s" % ipAddress)
             else:
-                current = sendit(ip)
-                pinglist.append(current)
-                current.start()
                 i += 1
-
-            if (i > MAX or lasting <= 0):
-                i = 0
-                for pingle in pinglist:
-                    pingle.join()
-
-                    if(pingle.status):
-                        logger.debug("Trovato host: %s (in %.2f ms)" % (pingle.ip, pingle.elapsed * 1000))
-                        nHosts = nHosts + 1
-
-                pinglist = []
-
-            if(nHosts > threshold):
+                ping_thread = sendit(ip)
+                pinglist.append(ping_thread)
+                ping_thread.start()
+            if i == MAX_PING_HOSTS:
                 break
-    
-    # When not real subnet, router is excluded
-    # so we need to fake it
+
+        for ping_thread in pinglist:
+            ping_thread.join()
+
+            if(ping_thread.status):
+                logger.debug("Trovato host: %s (in %.2f ms)" % (ping_thread.ip, ping_thread.elapsed * 1000))
+                nHosts = nHosts + 1
+
     if not realSubnet:
         nHosts += 1
     
@@ -123,9 +117,10 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, threshold = 4, arping 
 
 
 if __name__ == '__main__':
-    s = socket.socket(socket.AF_INET)
-    s.connect(('www.fub.it', 80))
-    ip = s.getsockname()[0]
-    s.close()
+    import log_conf
+    import iptools
+    log_conf.init_log()
+    ip = iptools.getipaddr('www.fub.it', 80)
 
-    print countHosts(ip, 24, 200, 2000, 'fub001', 4, 0)
+    print countHosts(ip, 24, 200, 2000, 'fub001', 4, 0)
+#     print countHosts(ip, 24, 2000, 2000, 'fst001', 4, 1)

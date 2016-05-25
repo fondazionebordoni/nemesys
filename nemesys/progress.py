@@ -16,22 +16,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from xmlutils import iso2datetime
 from datetime import datetime
+import logging
 from os import path
-import paths
+from urlparse import urlparse
 from xml.dom.minidom import parse
 from xml.dom.minidom import parseString
-from logger import logging
-from timeNtp import timestampNtp
-from urlparse import urlparse
-import httputils
 
-logger = logging.getLogger()
+import httputils
+import paths
+from timeNtp import timestampNtp
+from xmlutils import iso2datetime
+
+
+logger = logging.getLogger(__name__)
 
 MAX_DAYS = 3
 
-# TODO Il file di progresso deve poter avere start nullo
+# TODO: Il file di progresso deve poter avere start nullo
 
 class Progress(object):
     def __init__(self, clientid, progressurl=None):
@@ -91,13 +93,13 @@ class Progress(object):
 
         return n
 
-    def onair(self):
+    def expired(self):
         '''
-        Restituisce true se non sono trascorsi ancora MAX_DAYS dallo start delle misure
+        Restituisce true se sono trascorsi  MAX_DAYS dallo start delle misure
         '''
         start = self.start()
         delta = datetime.fromtimestamp(timestampNtp()) - start
-        if (delta.days > MAX_DAYS):
+        if (delta.days <= MAX_DAYS):
             return False
 
         return True
@@ -159,5 +161,7 @@ class Progress(object):
         return self._xml.toxml('UTF-8')
 
 if __name__ == '__main__':
+    import log_conf
+    log_conf.init_log()
     t = Progress('cli00000001', 'https://finaluser.agcom244.fub.it/ProgressXML')
     print t

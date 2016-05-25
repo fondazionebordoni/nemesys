@@ -13,12 +13,11 @@ import time
 
 TAG_PREFIX = "release-"
 GENERATED_VERSION_PY = """
-# This file is originally generated from Git information by running 'version.py
+# This file is originally generated from Git information by running 'python version.py
 
 __version__ = '%s'
 FULL_VERSION = '%s'
 __updated__ = '%s'
-
 if __name__ == '__main__':
     print __version__
 """
@@ -38,7 +37,6 @@ def update_version_py():
     if p.returncode != 0:
         print "unable to run git, leaving %s alone" % VERSION_FILE
         return
-    # we use tags like "python-ecdsa-0.5", so strip the prefix
     assert stdout.startswith(TAG_PREFIX)
     full_version = stdout[len(TAG_PREFIX):].strip()
     if '-' in full_version:

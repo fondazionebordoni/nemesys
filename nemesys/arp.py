@@ -20,26 +20,27 @@
 # Original version:
 #   -> https://pypi.python.org/pypi/arprequest
 
+import Queue
 import ipcalc
-# from threading import Thread
-import string
-from logger import logging
-import socket
-import platform
+import logging
 import ping
+import platform
 import re
+import select
+import socket
+import string
 import struct
 from subprocess import Popen, PIPE
+from threading import Thread
+import time
+
+
+logger = logging.getLogger(__name__)
 
 is_windows = (platform.system().startswith("Windows"))
-logger = logging.getLogger()
 
 if (is_windows):
-#     from ctypes import *
-#     from ctypes import windll, c_ulong, byref
     import ctypes
-    from threading import Thread
-    import Queue
     """ Loading Windows system libraries should not be a problem """
     """ Iphplpapi should work on Win 2000 and above              """
     try:
@@ -49,9 +50,6 @@ if (is_windows):
         """ Should it still fail """
         logger.error("Error loading windows system libraries!")
         raise Exception("Manca uno o più delle librerie Iphlapi.dll e ws2_32.dll")
-else:
-    import time
-    import select
 
 HW_TYPE_ETH = 0x0001
 ETH_P_IP = 0x0800
@@ -83,7 +81,7 @@ def mac_straddr(mac, printable=False, delimiter=None):
 
         return repr(mac_straddr(mac)).strip("\'")
 
-    return struct.pack("L", mac[0])+struct.pack("H", mac[1])
+    return struct.pack("L", mac[0]) + struct.pack("H", mac[1])
 
 
 def _print_ip(value):
@@ -107,10 +105,8 @@ def _is_technicolor(ip, mac):
 
     return False
 '''
-
-This check makes is needed to ignore routers that respond to ARP and ping with two
-addresses, typically this happens with routers from Technicolor/Technico
-
+This check is needed to ignore routers that respond to ARP and ping with two
+addresses, typically this happens with routers from Technicolor/Technico.
 If the MAC address is the same, except for the first byte, then it is considered
 Technicolor and ignored
 '''
@@ -126,10 +122,7 @@ def _filter_out_technicolor(IPTable):
     
     unique_addresses = set(temp_table)
     n_hosts_technicolor_removed = len(unique_addresses)
-    if (n_hosts_technicolor_removed <= 0):
-        logger.error("Check for technicolor FAILED")
-        pass
-    elif (n_hosts_technicolor_removed < n_hosts):
+    if (n_hosts_technicolor_removed < n_hosts):
         logger.info("Probable technicolor router detected")
         n_hosts = n_hosts_technicolor_removed
     return n_hosts
@@ -160,7 +153,6 @@ def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1,
 
     # Initialize a raw socket (requires super-user access)
     my_socket = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.SOCK_RAW)
-#     HOST = socket.gethostbyname(socket.gethostname())
     my_socket.bind((if_dev_name, socket.SOCK_RAW))
 
 #     if (mac):
@@ -168,8 +160,6 @@ def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1,
     if mac == None:
         logger.info("Richiesta esecuzione di arping senza la specifica del MAC address.")
         return 0
-#     MACdst = "\xFF"*6
-
     logger.debug("MAC_source = %s" % mac.upper())
     IPsrc = socket.gethostbyname(IPsrc)
     logger.debug("IP source = %s" % IPsrc)
@@ -189,7 +179,6 @@ def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1,
         else:
             # Send ARP request
             IPdst = str(IPdst)
-            # logger.debug('Arping host %s' % IPdst)
             send_arp_request(IPsrc, IPdst, my_socket)
             index += 1
 
@@ -204,9 +193,6 @@ def do_linux_arping(if_dev_name, IPsrc, NETmask, realSubnet = True, timeout = 1,
             except Exception as e:
                 logger.error("Errore durante la ricezione degli arping: %s" % e)
 
-        #TODO why this?
-#        if(nHosts > threshold):
-#            break
     my_socket.close()
     return IPtable
 
@@ -217,7 +203,7 @@ def send_arp_request(src_ip, dest_ip, my_socket):
     # Create packet :
     frame = [
         ###  ETHERNET part ###
-        # Dest MAC address (=broadcast) : TODO should be all 0???
+        # Dest MAC address (=broadcast) 
         struct.pack('!6B', *(0xFF,) * 6),
         # Source MAC address :
         my_socket.getsockname()[4],
@@ -246,7 +232,7 @@ def receive_arp_response(mac_addr, my_socket, timeout):
     IPtable = {}
 
     '''Wait for response'''
-    timeLeft = timeout*1000
+#     timeLeft = timeout*1000
     stopTime = time.time() + timeout*1;
 
     while True:
@@ -285,16 +271,17 @@ def receive_arp_response(mac_addr, my_socket, timeout):
         if (dest_mac.strip().upper() == mac_addr.strip().upper()):
             src_mac = _print_mac(src_hw)
             src_ip = _print_ip(src_pt)
-            # TODO add check if found enough to stop
+            #TODO: add check if found enough to stop
             if (src_ip not in IPtable):
                 if (not _is_technicolor(src_ip, src_mac)):
                     IPtable[src_ip] = src_mac
-                    logger.info('Trovato Host %s con indirizzo fisico %s' % (src_ip, src_mac))
+            else:
+                logger.debug("Found response from Technicolor")
     return IPtable
 
 
 ###########################
-## Parte Darwin, woks also for linux
+## Parte Darwin, works also for linux
 ##
 ## Not very pretty, but works...
 ###########################
@@ -320,8 +307,9 @@ def do_unix_arping(IPsrc = None, NETmask=24, realSubnet=True, timeout=0.01):
 
 def _send_one_mac_arp(IPdst, timeout=0.01):
     # Remove any existing entry
-    pid = Popen(["arp", "-d", IPdst], stdout=PIPE)
-    pid.communicate()[0] # Not checking output - should be None
+    pid = Popen(["arp", "-d", IPdst], stdout=PIPE, stderr=PIPE)
+    pid.communicate()[0]
+    # Check output? should be none
     # Now ping the destination
     try: 
         ping.do_one("%s" % IPdst, timeout)
@@ -333,8 +321,9 @@ def _send_one_mac_arp(IPdst, timeout=0.01):
     if my_match:
         mac_str = _pad_mac_string(my_match.groups()[0])
         if (not _is_technicolor(IPdst, mac_str)):
-            logger.info('Trovato Host %s con indirizzo fisico %s' % (IPdst, mac_str))
             return mac_str
+        else:
+            logger.debug("Found response from Technicolor")
             
 def _pad_mac_string(mac_str):
     parts = mac_str.split(':')
@@ -381,8 +370,6 @@ def do_win_arping(IPsrc = None, NETmask=24, realSubnet=True):
 
 
 def _send_one_win_arp(IPdst, result_queue):
-    # Send ARP request
-    logger.debug("Sending ARP to \'%s\'" % IPdst)
     IPdst = str(IPdst)
     mac_addr = (ctypes.c_ulong*2)()
     addr_len = ctypes.c_ulong(6)
@@ -399,10 +386,24 @@ def _send_one_win_arp(IPdst, result_queue):
         mac_str = mac_straddr(mac_addr, True, ":")
         if (not _is_technicolor(IPdst, mac_str)):
             result_queue.put((IPdst, mac_str))
+        else :
+            logger.debug("Found response from Technicolor")
 
-
-def main():
-    pass
 
 if __name__ == '__main__':
-    main()
+    import log_conf
+    log_conf.init_log()
+    #from arprequest import ArpRequest
+#     ar = ArpRequest('192.168.112.2', 'eth0', '192.168.112.24')
+#     result = ar.request()
+    import iptools
+    dev = iptools.get_dev()
+    ip = iptools.getipaddr()
+    mac = iptools.get_mac_address(ip)
+    print do_arping(dev, ip, 24, True, 1, mac, 1)
+    #print do_unix_arping('eth0', '192.168.112.24', 24, True)
+    
+#    print do_arping(None, '192.168.208.4', 24, True)
+#    print do_arping('{5FC94950-68BA-417F-97DC-47B0722814F5}', '172.16.141.128', 24, True, 1, '00:0c:29:cb:5f:e7', 1)
+#    print do_win_arping('192.168.208.4', 24)
+#     print(result)
