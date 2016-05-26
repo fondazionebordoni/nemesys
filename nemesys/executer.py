@@ -362,8 +362,9 @@ class Executer(object):
                     if error > 0 or base_error > 0:
                         test.seterrorcode(error + base_error)
                     self._test_gating(test, DOWN)
-                    logger.debug('Download result: %.3f' % test.duration)
-                    logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
+                    logger.debug('Download result: %.3f kbps' % (test.bytes_tot*8.0/test.duration))
+                    if test.errorcode != 0:
+                        logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
                     m.savetest(test)
                     i = i + 1
                     sleep(1)
@@ -388,8 +389,9 @@ class Executer(object):
                     if error > 0 or base_error > 0:
                         test.seterrorcode(error + base_error)
                     self._test_gating(test, UP)
-                    logger.debug('Upload result: %.3f' % (test.bytes_tot/test.duration/1000.0))
-                    logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
+                    logger.debug('Upload result: %.3f kbps' % (test.bytes_tot*8.0/test.duration))
+                    if test.errorcode != 0:
+                        logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
                     m.savetest(test)
                     i = i + 1
                     sleep(1)
