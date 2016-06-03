@@ -116,11 +116,11 @@ class HttpTesterDown:
         spurio = float(total_bytes - filebytes) / float(total_bytes)
         logger.info("Traffico spurio: %f" % spurio)
         test_time = (self._endtime - self._starttime) * 1000.0
-
+        bytes_nem = int(round(self._bytes_total * (1 - spurio)))
         return Proof(test_type='download_http', 
                      start_time=start_timestamp, 
                      duration=test_time, 
-                     bytes_nem=filebytes,
+                     bytes_nem=bytes_nem,
                      bytes_tot=self._bytes_total,
                      spurious=spurio)
 

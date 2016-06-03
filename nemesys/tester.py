@@ -1,7 +1,7 @@
 # tester.py
 # -*- coding: utf8 -*-
 
-# Copyright (c) 2010 Fondazione Ugo Bordoni.
+# Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -73,7 +73,11 @@ class Tester(object):
 
         try:
             # Il risultato deve essere espresso in millisecondi
-            elapsed = ping.do_one(self._host.ip, timeout) * 1000
+            RTT = ping.do_one(self._host.ip, timeout)
+            if RTT != None:
+                elapsed = RTT * 1000
+            else:
+                raise Exception("Ping timeout")
 
         except Exception as e:
             error = errorcode.from_exception(e)
@@ -146,7 +150,7 @@ def main():
         elif options.testtype == 'ping':
             try:
                 res = t.testping()
-                print("Ping: %.2f milliseconds" % res.value)
+                print("Ping: %.2f milliseconds" % res.duration)
             except Exception as e:
                 print("Error: %s" % str(e))
         else:
@@ -159,15 +163,8 @@ def main():
 
 
 def printout_http(res):
-    byte_nem = res.counter_stats.byte_down_nem
-    byte_all = res.counter_stats.byte_down_all
-    if byte_nem == byte_all == 0:
-        byte_nem = res.counter_stats.byte_up_nem
-        byte_all = res.counter_stats.byte_up_all
-
-
-    print("Medium speed: %d kbps" % (int(byte_all*8/10000.0)))
-    print("Spurious traffic: %.2f%%" % (float(byte_all - byte_nem)/byte_all*100.0))
+    print("Medium speed: %d kbps" % (int(res.bytes_tot*8/float(res.duration))))
+    print("Spurious traffic: %.2f%%" % (res.spurious*100.0))
 
 
 

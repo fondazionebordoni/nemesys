@@ -26,17 +26,14 @@ logger = logging.getLogger(__name__)
 
 class Task(object):
 
-    def __init__(self, task_id, start, server, upload=100,
-                 download=100, ping=100, nicmp=4, delay=1, 
+    def __init__(self, task_id, start, server, upload=1,
+                 download=1, ping=4, nicmp=1, delay=1, 
                  now=False, message=None):
         self._id = task_id
         self._start = start
         self._server = server
-#         self._ftpdownpath = ftpdownpath
-#         self._ftpuppath = ftpuppath
         self._upload = upload
         self._download = download
-#         self._multiplier = multiplier
         self._ping = ping
         self._nicmp = nicmp
         self._delay = delay
@@ -55,21 +52,9 @@ class Task(object):
     def server(self):
         return self._server
 
-#     @property
-#     def ftpdownpath(self):
-#         return self._ftpdownpath
-# 
-#     @property
-#     def ftpuppath(self):
-#         return self._ftpuppath
-
     @property
     def download(self):
         return self._download
-
-#     @property
-#     def multiplier(self):
-#         return self._multiplier
 
     @property
     def upload(self):
@@ -94,23 +79,6 @@ class Task(object):
     @property
     def message(self):
         return self._message
-
-#     def update_ftpdownpath(self, bandwidth):
-#         '''
-#         Aggiorna il path del file da scaricare in modo da scaricare un file di
-#         dimensioni le più vicine possibili alla banda specificata.
-#         '''
-#         logger.debug('Aggiornamento path per la banda in download')
-#         try:
-#             BANDS.sort(reverse=True)
-#             for band in BANDS:
-#                 if (band <= bandwidth):
-#                     ind = self.ftpdownpath.rfind('/')
-#                     self.ftpdownpath = "%s/%d.rnd" % (self.ftpdownpath[0:ind], band)
-#                     logger.debug("Aggiornato percorso del file da scaricare: %s" % self.ftpdownpath)
-#                     break 
-#         except Exception as e:
-#             logger.warning("Errore durante la modifica del percorso del file di download da scaricare. %s" % e)
 
     def __str__(self):
         return 'id: %s; start: %s; serverip: %s; upload: %d; download: %d; ping %d; ncimp: %d; delay: %d; now %d; message: %s' % \
