@@ -367,7 +367,7 @@ class Executer(object):
                         logger.debug('Download error: %d, %d, %d' % (base_error, error, test.errorcode))
                     m.savetest(test)
                     i = i + 1
-                    sleep(1)
+                    sleep(10)
                 except Exception as e:
                     if not datetime.fromtimestamp(timestampNtp()).hour == start.hour:
                         raise e
@@ -394,7 +394,7 @@ class Executer(object):
                         logger.debug('Upload error: %d, %d, %d' % (base_error, error, test.errorcode))
                     m.savetest(test)
                     i = i + 1
-                    sleep(1)
+                    sleep(10)
                 except Exception as e:
                     if not datetime.fromtimestamp(timestampNtp()).hour == start.hour:
                         raise e
