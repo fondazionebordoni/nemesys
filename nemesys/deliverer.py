@@ -17,12 +17,19 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import glob
 import hashlib
 from httplib import HTTPException
 import logging
 import os
+import re
+import shutil
 from ssl import SSLError
+from string import join
 from urlparse import urlparse
+from xml.dom import Node
+from xml.dom.minidom import parseString
+from xml.parsers.expat import ExpatError
 import zipfile
 
 from httputils import post_multipart
@@ -128,6 +135,130 @@ class Deliverer(object):
             return signature
         else:
             return None
+
+
+    def uploadall_and_move(self, directory, to_dir, do_remove=True):
+        '''
+        Cerca di spedire tutti i file di misura che trova nella cartella d'uscita
+        '''
+        for filename in glob.glob(os.path.join(directory, 'measure_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].xml')):
+            #logger.debug('Trovato il file %s da spedire' % filename)
+            self.upload_and_move(filename, to_dir, do_remove)
+
+    def upload_and_move(self, filename, to_dir, do_remove=True):
+        '''
+        Spedisce il filename di misura al repository entro il tempo messo a
+        disposizione secondo il parametro httptimeout
+        '''
+        response = None
+        result = False
+
+        try:
+            # Crea il Deliverer che si occuperà della spedizione
+            #logger.debug('Invio il file %s a %s' % (filename, self._repository))
+            zipname = self.pack(filename)
+            response = self.upload(zipname)
+
+            if (response != None):
+                (code, message) = self._parserepositorydata(response)
+                code = int(code)
+                logger.info('Risposta dal server di upload: [%d] %s' % (code, message))
+
+                # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
+                if (code == 0):
+                    os.remove(filename)
+                    self._movefiles(zipname, to_dir)
+
+                    result = True
+
+        except Exception as e:
+            logger.error('Errore durante la spedizione del file delle misure %s: %s' % (filename, e))
+
+        finally:
+            # Elimino lo zip del file di misura temporaneo
+            if os.path.exists(zipname):
+                os.remove(zipname)
+            # Se non sono una sonda _devo_ cancellare il file di misura 
+            if do_remove and os.path.exists(filename):
+                os.remove(filename)
+
+            return result
+        
+        
+    def _parserepositorydata(self, data):
+        '''
+        Valuta l'XML ricevuto dal repository, restituisce il codice e il messaggio ricevuto
+        '''
+        #TODO: use xmltodict instead
+        xml = getxml(data)
+        if (xml == None):
+            logger.error('Nessuna risposta ricevuta')
+            return None
+
+        nodes = xml.getElementsByTagName('response')
+        if (len(nodes) < 1):
+            logger.error('Nessuna risposta ricevuta nell\'XML:\n%s' % xml.toxml())
+            return None
+
+        node = nodes[0]
+
+        code = getvalues(node, 'code')
+        message = getvalues(node, 'message')
+        return (code, message)
+
+
+
+    def _movefiles(self, filename, to_dir):
+
+        directory = os.path.dirname(filename)
+        #pattern = path.basename(filename)[0:-4]
+        pattern = os.path.basename(filename)
+
+        try:
+            for f in os.listdir(directory):
+                # Cercare tutti i file che iniziano per pattern
+                if (re.search(pattern, f) != None):
+                    # Spostarli tutti in self._sent
+                    old = ('%s/%s' % (directory, f))
+                    new = ('%s/%s' % (to_dir, f))
+                    shutil.move(old, new)
+
+        except Exception as e:
+            logger.error('Errore durante lo spostamento dei file di misura %s' % e)
+
+def getxml(data):
+    
+    if (len(data) < 1):
+        logger.error('Nessun dato da processare')
+        raise Exception('Ricevuto un messaggio vuoto');
+
+    logger.debug('Dati da convertire in XML:\n%s' % data)
+    try:
+        xml = parseString(data)
+    except ExpatError:
+        logger.error('Il dato ricevuto non è in formato XML: %s' % data)
+        raise Exception('Errore di formattazione del messaggio');
+
+    return xml
+
+
+
+def getvalues(node, tag=None):
+
+    if (tag == None):
+        values = []
+        for child in node.childNodes:
+            if child.nodeType == Node.TEXT_NODE:
+                #logger.debug('Trovato nodo testo.')
+                values.append(child.nodeValue)
+
+        #logger.debug('Value found: %s' % join(values).strip())
+        return join(values).strip()
+
+    else:
+        return getvalues(node.getElementsByTagName(tag)[0])
+
+
 
 if __name__ == '__main__':
     import log_conf

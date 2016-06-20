@@ -12,7 +12,7 @@ import netifaces
 import re
 import socket
 
-import sysmonitorexception
+import nem_exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -77,29 +77,29 @@ def get_dev(host = 'finaluser.agcom244.fub.it', port = 443, ip = None):
             for address in ip_addresses:
                 if ('addr' in address) and (address['addr'] == local_ip_address):
                     return ifName
-    raise sysmonitorexception.SysmonitorException(sysmonitorexception.UNKDEV, 'Impossibile ottenere il dettaglio dell\'interfaccia di rete')
+    raise nem_exceptions.SysmonitorException('Impossibile ottenere il dettaglio dell\'interfaccia di rete', nem_exceptions.UNKDEV)
     
 def get_network_mask(ip):
     '''
     Restituisce un intero rappresentante la maschera di rete, in formato CIDR, 
-    dell'indirizzo IP in uso
+    dell'indirizzo IP in uso. In caso non si trova una maschera, torna 24 di default
     '''
     netmask = '255.255.255.0'
-    
-    try:
-        inames = netifaces.interfaces()
-        for i in inames:
+
+    inames = netifaces.interfaces()
+    for i in inames:
+        try:
+            addrs = netifaces.ifaddresses(i)
             try:
-                addrs = netifaces.ifaddresses(i)
                 ipinfo = addrs[socket.AF_INET][0]
                 address = ipinfo['addr']
                 if (address == ip):
                     netmask = ipinfo['netmask']
                     return _maskConversion(netmask)
-            except Exception as e:
-                logger.warning("Errore durante il controllo dell'interfaccia %s. %s" % (i, e))
-    except Exception as e:
-        logger.warning("Errore durante il controllo della maschera per l'IP %s (assumo maschera: /24). %s" % (ip, e))
+            except KeyError:
+                pass
+        except Exception as e:
+            logger.warning("Errore durante il controllo dell'interfaccia %s. %s" % (i, e), exc_info=True)
     
     return _maskConversion(netmask)
 

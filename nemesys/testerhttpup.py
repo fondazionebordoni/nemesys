@@ -25,10 +25,11 @@ import time
 
 from fakefile import Fakefile
 import httpclient
-from measurementexception import MeasurementException
-import timeNtp
-from proof import Proof
+from nem_exceptions import MeasurementException
+import nem_exceptions
 import netstat
+from proof import Proof
+import timeNtp
 
 
 TOTAL_MEASURE_TIME = 10
@@ -135,15 +136,15 @@ class HttpTesterUp:
         (duration, bytes_received) = _test_from_server_response(response_content)
         
         if duration < (total_test_time_secs * 1000) - 1:
-            raise MeasurementException("Test non risucito - tempo ritornato dal server non corrisponde al tempo richiesto.")
+            raise MeasurementException("Test non risucito - tempo ritornato dal server non corrisponde al tempo richiesto.", nem_exceptions.SERVER_ERROR)
         bytes_read = 0
         for upload_thread in upload_threads:
             bytes_read += upload_thread.get_bytes_read()
         tx_diff = self._netstat.get_tx_bytes() - start_tx_bytes
         if (tx_diff < 0):
-            raise MeasurementException("Ottenuto banda negativa, possibile azzeramento dei contatori.")
+            raise MeasurementException("Ottenuto banda negativa, possibile azzeramento dei contatori.", nem_exceptions.COUNTER_RESET)
         if (bytes_read == 0) or (tx_diff == 0):
-            raise MeasurementException("Test non risucito - connessione interrotta")
+            raise MeasurementException("Test non risucito - connessione interrotta", nem_exceptions.BROKEN_CONNECTION)
         if tx_diff > bytes_read:
             spurious = (float(tx_diff - bytes_read)/float(tx_diff))
         else:
@@ -168,12 +169,12 @@ def _test_from_server_response(response):
     '''
     logger.debug("Ricevuto risposta dal server: %s" % str(response))
     if not response or len(response) == 0:
-        MeasurementException("Ricevuto risposta vuota dal server")
+        MeasurementException("Ricevuto risposta vuota dal server", nem_exceptions.SERVER_ERROR)
     else:
         try:
             results = map(int, response.strip(']').strip('[').split(', '))
         except:
-            raise MeasurementException("Ricevuto risposta errata dal server")
+            raise MeasurementException("Ricevuto risposta errata dal server", nem_exceptions.SERVER_ERROR)
         time = len(results) * 1000
         partial_bytes = [float(x) for x in results] 
         bytes_received = int(sum(partial_bytes))

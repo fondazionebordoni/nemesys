@@ -25,10 +25,11 @@ import threading
 import time
 import urllib2
 
-from measurementexception import MeasurementException
-import timeNtp
-from proof import Proof
+from nem_exceptions import MeasurementException
+import nem_exceptions
 import netstat
+from proof import Proof
+import timeNtp
 
 
 TOTAL_MEASURE_TIME = 10
@@ -106,13 +107,13 @@ class HttpTesterDown:
         if not error_queue.empty():
             raise MeasurementException(error_queue.get())
         if missing_results:
-            raise MeasurementException("Risultati mancanti da uno o piu' sessioni, impossibile calcolare la banda.")
+            raise MeasurementException("Risultati mancanti da uno o piu' sessioni, impossibile calcolare la banda.", nem_exceptions.MISSING_SESSION)
         if not self._received_end:
-            raise MeasurementException("Connessione interrotta")
+            raise MeasurementException("Connessione interrotta", nem_exceptions.BROKEN_CONNECTION)
         if (total_bytes < 0):
-            raise MeasurementException("Ottenuto banda negativa, possibile azzeramento dei contatori.")
+            raise MeasurementException("Ottenuto banda negativa, possibile azzeramento dei contatori.", nem_exceptions.COUNTER_RESET)
         if (total_bytes == 0) or (filebytes == 0):
-            raise MeasurementException("Ottenuto banda zero")
+            raise MeasurementException("Ottenuto banda zero", nem_exceptions.ZERO_SPEED)
         spurio = float(total_bytes - filebytes) / float(total_bytes)
         logger.info("Traffico spurio: %f" % spurio)
         test_time = (self._endtime - self._starttime) * 1000.0

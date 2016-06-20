@@ -446,6 +446,7 @@ class ProfilerDarwin(Profiler):
 
         return wireless_is_active
 
+    #TODO: use xmltodict instead
     def get_all_devices_from_xml(self, xml_file):
         import xml.etree.ElementTree as ET
         descriptors = {}

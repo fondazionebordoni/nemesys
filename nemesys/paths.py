@@ -1,7 +1,7 @@
 # paths.py
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2010 Fondazione Ugo Bordoni.
+# Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -42,10 +42,7 @@ LOG_DIR = path.join(_APP_PATH, 'logs')
 LOG_FILE = path.join(LOG_DIR, 'nemesys.log')
 CONF_LOG = path.join(_CONF_DIR, 'log.conf')
 CONF_MAIN = path.join(_CONF_DIR, 'client.conf')
-CONF_ERRORS = path.join(_CONF_DIR, 'errorcodes.conf')
-THRESHOLD = path.join(_CONF_DIR, 'threshold.xml')
-RESULTS = path.join(_CONF_DIR, 'result.xml')
-MEASURE_STATUS = path.join(_CONF_DIR, 'progress.xml')
+
 
 def check_paths():
     dirs = [LOG_DIR, OUTBOX, SENT, _CONF_DIR]

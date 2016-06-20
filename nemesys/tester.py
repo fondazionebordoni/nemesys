@@ -22,13 +22,14 @@ from optparse import OptionParser
 import ping
 import socket
 
-import errorcode
 from host import Host
 import iptools
+import nem_exceptions
+from proof import Proof
 from testerhttpdown import HttpTesterDown
 from testerhttpup import HttpTesterUp
-from proof import Proof
 from timeNtp import timestampNtp
+from nem_exceptions import MeasurementException
 
 
 HTTP_BUFF = 8*1024
@@ -47,6 +48,8 @@ class Tester(object):
         socket.setdefaulttimeout(self._timeout)
         self._testerhttpup = HttpTesterUp(dev, HTTP_BUFF)
         self._testerhttpdown = HttpTesterDown(dev, HTTP_BUFF)
+        
+        
 
     def testhttpdown(self, callback_update_speed=None, num_sessions=7):
         url = "http://%s/file.rnd" % self._host.ip
@@ -69,26 +72,21 @@ class Tester(object):
         # si utilizza funzione ping.py
         test_type = 'ping'
         start = datetime.fromtimestamp(timestampNtp())
-        elapsed = 0
-
+        RTT = None
         try:
             # Il risultato deve essere espresso in millisecondi
             RTT = ping.do_one(self._host.ip, timeout)
-            if RTT != None:
-                elapsed = RTT * 1000
-            else:
-                raise Exception("Ping timeout")
-
         except Exception as e:
-            error = errorcode.from_exception(e)
-            error_msg = '[%s] Errore durante la misura %s: %s' % (error, test_type, e)
-            logger.error(error_msg)
-            raise Exception(error_msg)
+            raise MeasurementException("Impossibile effettuare il ping: %s" % e, errorcode=nem_exceptions.PING_ERROR)
+#             error = nem_exceptions.errorcode_from_exception(e)
+#             error_msg = '[%s] Errore durante la misura %s: %s' % (error, test_type, e)
+#             logger.error(error_msg)
+#             raise Exception(error_msg)
 
-        if (elapsed == None):
-            elapsed = 0
+        if RTT == None:
+            raise MeasurementException("Ping timeout", errorcode=nem_exceptions.PING_TIMEOUT)
 
-        return Proof(test_type=test_type, start_time=start, duration=elapsed, bytes_nem=0)
+        return Proof(test_type=test_type, start_time=start, duration=RTT*1000, bytes_nem=0)
 
 
 def main():
@@ -116,13 +114,18 @@ def main():
                                     help = "An ipaddress or FQDN of server host")
     
     (options, _) = parser.parse_args()
-#        This is for lab environment
-#         ip = iptools.getaddr(host=options.host, port=80)
-#         dev = iptoold.get_dev(host=options.host, port=80)
-    ip = iptools.getipaddr()
-    dev = iptools.get_dev(ip = ip)
-#     def __init__(self, dev, host, username = 'anonymous', password = 'anonymous@', timeout = 60):
-    t = Tester(dev, Host(options.host), timeout = 10.0)
+    try:
+        ip = iptools.getipaddr()
+        dev = iptools.get_dev(ip = ip)
+    except Exception:
+        try:
+            ip = iptools.getipaddr(host=options.host, port=80)
+            dev = iptools.get_dev(host=options.host, port=80)
+        except Exception:
+            print "Impossibile ottenere indirizzo e device, verificare la connessione all'host"
+            import sys
+            sys.exit(2)
+    t = Tester(dev, ip, Host(options.host), timeout = 10.0)
     if options.bandwidth.endswith("M"):
         bw = int(options.bandwidth[:-1]) * 1000000
     elif options.bandwidth.endswith("k"):
@@ -145,7 +148,7 @@ def main():
             try:
                 res = t.testhttpup(None, bw=bw)
                 printout_http(res)
-            except Exception as e:
+            except MeasurementException as e:
                 print("Error: %s" % str(e))
         elif options.testtype == 'ping':
             try:
@@ -157,7 +160,7 @@ def main():
             try:
                 res = t.testhttpdown(None)
                 printout_http(res)
-            except Exception as e:
+            except MeasurementException as e:
                 print("Error: %s" % str(e))
     print "==============================================="
 

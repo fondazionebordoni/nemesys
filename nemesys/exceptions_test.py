@@ -1,4 +1,4 @@
-# errorcode_test.py
+# nem_exceptions_test.py
 # -*- coding: utf8 -*-
 
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import errorcode
-from measurementexception import MeasurementException
+import nem_exceptions
 import unittest
 
 '''
@@ -28,25 +27,30 @@ class ErrorcodeTests(unittest.TestCase):
     
     def test_unknown(self):
         e = Exception('pippo')
-        code = errorcode.from_exception(e)
+        code = nem_exceptions.errorcode_from_exception(e)
         self.assertEqual(99999, code)
         
     def test_errno110(self):
         e = Exception('110')
-        code = errorcode.from_exception(e)
+        code = nem_exceptions.errorcode_from_exception(e)
         self.assertEqual(99984, code)
 
     def test_measurementexception_unknown(self):
-        e = MeasurementException('110')
-        code = errorcode.from_exception(e)
-        self.assertEqual(errorcode.UNKNOWN, code)
+        e = nem_exceptions.MeasurementException('110')
+        code = nem_exceptions.errorcode_from_exception(e)
+        self.assertEqual(nem_exceptions.UNKNOWN, code)
 
     def test_measurementexception(self):
-        e = MeasurementException('110', 12345)
-        code = errorcode.from_exception(e)
+        e = nem_exceptions.MeasurementException('110', 12345)
+        code = nem_exceptions.errorcode_from_exception(e)
         self.assertEqual(12345, code)
 
     def test_measurementexception_real(self):
-        e = MeasurementException("Test non risucito - tempo ritornato dal server non corrisponde al tempo richiesto.", errorcode.SERVER_ERROR)
-        code = errorcode.from_exception(e)
-        self.assertEqual(errorcode.SERVER_ERROR, code)
+        e = nem_exceptions.MeasurementException("Test non risucito - tempo ritornato dal server non corrisponde al tempo richiesto.", nem_exceptions.SERVER_ERROR)
+        code = nem_exceptions.errorcode_from_exception(e)
+        self.assertEqual(nem_exceptions.SERVER_ERROR, code)
+        
+    def test_sysmonitorexception(self):
+        e = nem_exceptions.SysmonitorException("Test", 5008)
+        code = nem_exceptions.errorcode_from_exception(e)
+        self.assertEqual(5008, code)

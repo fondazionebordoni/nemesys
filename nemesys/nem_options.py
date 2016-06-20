@@ -53,8 +53,6 @@ def parse_args(version):
         logger.info('Caricata configurazione da %s' % paths.CONF_MAIN)
 
     parser = OptionParser(version = version, description = '')
-    parser.add_option('-T', '--test', dest = 'test', action = 'store_true',
-                                        help = 'test client functionality by executing a single task')
     parser.add_option('--task', dest = 'task',
                                         help = 'path of an xml file with a task to execute (valid only if -T option is enabled)')
 
@@ -63,24 +61,6 @@ def parse_args(version):
     section = 'options'
     if (not config.has_section(section)):
         config.add_section(section)
-
-    option = 'local'
-    value = False
-    try:
-        value = config.getboolean(section, option)
-    except (ValueError, NoOptionError):
-        config.set(section, option, value)
-    parser.add_option('-L', '--local', dest = option, action = 'store_true', default = value,
-                                        help = 'perform tests without sending measure files to repository')
-
-    option = 'killonerror'
-    value = True
-    try:
-        value = config.getboolean(section, option)
-    except (ValueError, NoOptionError):
-        config.set(section, option, value)
-    parser.add_option('-K', '--killonerror', dest = option, action = 'store_true', default = value,
-                                        help = 'kill tests if an exception is raised during check')
 
     # System options
     # --------------------------------------------------------------------------
@@ -120,15 +100,6 @@ def parse_args(version):
         config.set(section, option, value)
     parser.add_option('-r', '--repository', dest = option, default = value,
                                         help = 'upload URL for deliver measures\' files [%s]' % value)
-
-    option = 'progressurl'
-    value = 'https://finaluser.agcom244.fub.it/ProgressXML'
-    try:
-        value = config.get(section, option)
-    except (ValueError, NoOptionError):
-        config.set(section, option, value)
-    parser.add_option('--progress-url', dest = option, default = value,
-                                        help = 'complete URL for progress request [%s]' % value)
 
     option = 'scheduler'
     value = 'https://finaluser.agcom244.fub.it/Scheduler'

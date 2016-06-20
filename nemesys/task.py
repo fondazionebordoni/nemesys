@@ -16,20 +16,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from collections import OrderedDict
+from datetime import datetime
 import logging
+import xmltodict
 
+from nem_exceptions import TaskException
 from server import Server
 
 
 # BANDS = [128, 256, 384, 400, 512, 640, 704, 768, 832, 1000, 1200, 1250, 1280, 1500, 1600, 1750, 2000, 2250, 2500, 2750, 3000, 3250, 3500, 4000, 4096, 4500, 5000, 5500, 6000, 6122, 6500, 7000, 7168, 7500, 8000, 8500, 8192, 9000, 9500, 10000, 11000, 12000, 13000, 14000, 15000, 16000, 17000, 18000, 19000, 20000, 20480, 22000, 24000, 26000, 28000, 30000, 32000, 34000, 36000, 38000, 40000]
 logger = logging.getLogger(__name__)
 
+DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+
 class Task(object):
 
-    def __init__(self, task_id, start, server, upload=1,
+    def __init__(self, start=None, server=None, upload=1,
                  download=1, ping=4, nicmp=1, delay=1, 
-                 now=False, message=None):
-        self._id = task_id
+                 now=False, message=None, is_wait=False):
+#         self._id = task_id
         self._start = start
         self._server = server
         self._upload = upload
@@ -37,12 +43,17 @@ class Task(object):
         self._ping = ping
         self._nicmp = nicmp
         self._delay = delay
-        self._now = now
+        if now:
+            self._now = True
+        else:
+            self._now = False
         self._message = message
+        self._is_wait = is_wait
+
 
     @property
-    def id(self):
-        return self._id
+    def is_wait(self):
+        return self._is_wait
 
     @property
     def start(self):
@@ -81,12 +92,86 @@ class Task(object):
         return self._message
 
     def __str__(self):
-        return 'id: %s; start: %s; serverip: %s; upload: %d; download: %d; ping %d; ncimp: %d; delay: %d; now %d; message: %s' % \
-            (self.id, self.start, self.server.ip, self.upload, self.download, self.ping, self.nicmp, self.delay, self.now, self.message)
+        if self.is_wait:
+            return 'delay: %s; message: %s' % (self.delay, self.message)
+        if self.server != None:
+            ip = self.server.ip
+        else:
+            ip = None
+        return 'start: %s; serverip: %s; upload: %s; download: %s; ping %s; delay: %s; now %s; message: %s' % \
+            (self.start, 
+             ip, 
+             self.upload, 
+             self.download, 
+             self.ping, 
+             self.delay, 
+             self.now, 
+             self.message)
 
+
+def new_task(start, server, upload=1, download=1, ping=4, now=False, message=None):
+    return Task(start, server, upload=upload, download=download, ping=ping, now=now, message=message)
+
+def new_wait_task(wait_secs, message=None):
+    return Task(now=True, delay=wait_secs, message=message, is_wait=True)
+
+def xml2task(xml):
+    try:
+        xml_dict = xmltodict.parse(xml)
+        logger.debug(xml_dict)
+    except Exception as e:
+        raise TaskException("Impossibile fare il parsing del task ricevuto: %s" % e)
+
+    if not xml_dict or not 'calendar' in xml_dict or not xml_dict['calendar']:
+        raise TaskException("Ricevuto task vuoto o senza sezione 'calendar'")
+    if not 'task' in xml_dict['calendar']:
+        #TODO: check how to handle this
+        return None
+    task_dict = xml_dict['calendar']['task']
+    message = task_dict.get('message') or ""
+    if '@wait' in task_dict and task_dict['@wait'].lower() == 'true':
+        '''wait task, just get delay and message'''
+        if 'delay' in task_dict:
+            delay = task_dict['delay']
+        else:
+            logger.warn("Task di attesa, ma manca il tempo di attesa, uso il default 5 minuti")
+            delay = 5*60
+        return new_wait_task(int(delay), message)
+    else:
+        nup = task_dict.get('nup') or task_dict.get('nhttpup') or task_dict.get('nftpup') or 0
+        if isinstance(nup, OrderedDict):
+            nup = nup.get('#text')
+        ndown = task_dict.get('ndown') or task_dict.get('nhttpdown') or task_dict.get('nftpdown') or 0
+        if isinstance(ndown, OrderedDict):
+            ndown = ndown.get('#text')
+        nping = task_dict.get('nping')
+        if isinstance(nping, OrderedDict):
+            nping = nping.get('#text')
+        start = task_dict.get('start')
+        now = False
+        if isinstance(start, OrderedDict):
+            if '@now' in start:
+                now = (start.get('@now') == '1') or (start.get('@now').lower() == 'true')
+            start = start.get('#text')
+        # Date
+        try:
+            starttime = datetime.strptime(start, DATE_TIME_FORMAT)
+        except ValueError:
+            logger.debug('XML: %s' % start)
+            raise Exception('Le informazioni orarie per la programmazione delle misure sono errate.')
+        srvid = task_dict.get('srvid') or "id-server-mancante" #TODO: scartare se id mancante?
+        if not 'srvip' in task_dict:
+            raise TaskException("Nel task manca l'indirizzo IP del server di misura")
+        else:
+            srvip = task_dict.get('srvip')
+        srvname = task_dict.get('srvname')
+        server = Server(srvid, srvip, srvname)
+        return new_task(starttime, server, int(nup), int(ndown), int(nping), now, message)
+            
+        
 if __name__ == '__main__':
     import log_conf
     log_conf.init_log()
     s = Server('s1', '127.0.0.1')
-    p = Task(0, '2010-01-01 10:01:00', s, 'r.raw', 'upload/r.raw')
+    p = Task(start='2010-01-01 10:01:00', server=s)
     print p
