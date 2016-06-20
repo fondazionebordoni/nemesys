@@ -68,6 +68,7 @@ if __name__ == '__main__':
     with open(paths.CONF_MAIN, 'r') as f:
         md5 = hashlib.md5(f.read()).hexdigest()
     scheduler = Scheduler(scheduler_url='https://finaluser.agcom244.fub.it/Scheduler', client=client, md5conf=md5, version=executer.__version__, timeout=10)
+    scheduler = MockScheduler()
     executer = Executer(client, scheduler, deliverer, sys_profiler, isprobe=False)
     loop_thread = threading.Thread(target=executer.loop)
     loop_thread.start()
