@@ -1,5 +1,5 @@
 # httpclient.py 
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify

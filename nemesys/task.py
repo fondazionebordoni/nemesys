@@ -1,5 +1,5 @@
 # task.py
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -118,15 +118,11 @@ def new_wait_task(wait_secs, message=None):
 def xml2task(xml):
     try:
         xml_dict = xmltodict.parse(xml)
-        logger.debug(xml_dict)
     except Exception as e:
         raise TaskException("Impossibile fare il parsing del task ricevuto: %s" % e)
 
-    if not xml_dict or not 'calendar' in xml_dict or not xml_dict['calendar']:
-        raise TaskException("Ricevuto task vuoto o senza sezione 'calendar'")
-    if not 'task' in xml_dict['calendar']:
-        #TODO: check how to handle this
-        return None
+    if not xml_dict or not 'calendar' in xml_dict or not xml_dict['calendar'] or not 'task' in xml_dict['calendar']:
+        raise TaskException("Ricevuto task vuoto")
     task_dict = xml_dict['calendar']['task']
     message = task_dict.get('message') or ""
     if '@wait' in task_dict and task_dict['@wait'].lower() == 'true':

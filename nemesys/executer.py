@@ -18,41 +18,35 @@
 
 from datetime import datetime
 import logging
-from profile import Profile
 from threading import Event
 from time import sleep
 
 from _generated_version import __version__, FULL_VERSION
-from client import Client
-import gui_server
+import client
 from deliverer import Deliverer
+import gui_server
 import iptools
-from isp import Isp
 from measure import Measure
+from nem_exceptions import SysmonitorException
 import nem_exceptions
 import nem_options
 import paths
 from scheduler import Scheduler
-from nem_exceptions import SysmonitorException
+from sysmonitor import SysProfiler
 from tester import Tester
 from timeNtp import timestampNtp
 
 
 logger = logging.getLogger(__name__)
 
-CHECK_ALL = 'CHECKALL'
-CHECK_MEDIUM = 'CHECKMEDIUM'
-
-# Soglia per il rapporto tra traffico 'spurio' e traffico totale
 TH_TRAFFIC = 0.1
-# Enumeration
-MAX_ERRORS = 5
-
+MAX_ERRORS = 3
+SLEEP_SECS_AFTER_TASK = 30
 
 class Executer(object):
 
     def __init__(self, client, scheduler, deliverer, sys_profiler, polling = 300.0, tasktimeout = 60,
-                             testtimeout = 30, isprobe = True, md5conf = None):
+                             testtimeout = 30, isprobe = True):
 
         self._client = client
         self._scheduler = scheduler
@@ -62,18 +56,16 @@ class Executer(object):
         self._tasktimeout = tasktimeout
         self._testtimeout = testtimeout
         self._isprobe = isprobe
-        self._md5conf = md5conf
 
         self._outbox = paths.OUTBOX
         self._sent = paths.SENT
-        self._communicator = None
         self._wakeup_event = Event()
 
         if self._isprobe:
+            self._communicator = None
             logger.info('Inizializzato software per sonda.')
         else:
             logger.info('Inizializzato software per misure d\'utente con ISP id = %s' % client.isp.id)
-            #TODO: new communicator
             self._communicator = gui_server.Communicator()
             self._communicator.start()
 
@@ -119,25 +111,18 @@ class Executer(object):
                         if task.download > 0 or task.upload > 0 or task.ping > 0:
                             logger.debug('Impostazione di un nuovo task tra: %s minuti' % (secs_to_next_measurement/60))
                             self._sleep_and_wait(secs_to_next_measurement)
-                            # Profilazione iniziale del sistema
-                            # Da' exception se fallisce
-                            # ------------------------
                             try:
                                 self._updatestatus(gui_server.gen_profilation_message())
                                 self._sys_profiler.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id, arping=True, callback=self.sys_prof_callback)
                                 dev = iptools.get_dev(task.server.ip, 80)
-                                # TODO: needed? Sleep 1 sec so that user can see result of profiling
                                 sleep(1)
                                 self._updatestatus(gui_server.gen_profilation_message(done=True))
+                                self._dotask(task, dev)
                             except SysmonitorException as e:
                                 logger.error('La profilazione del sistema ha rivelato un problema: %s' % e)
-                                # TODO: needed? Sleep 1 sec so that user can see result of profiling
                                 sleep(2)
                                 self._updatestatus(gui_server.gen_profilation_message(done=True))
                                 self._updatestatus(gui_server.gen_notification_message(error_code=nem_exceptions.errorcode_from_exception(e), message=str(e)))
-                
-                            self._dotask(task, dev)
-                            #TODO: sleep 30 secs after task?
                         else:
                             #TODO: aggiornare GUI?
                             logger.warn('Ricevuto task senza azioni da svolgere')
@@ -148,7 +133,8 @@ class Executer(object):
                 self._updatestatus(gui_server.gen_notification_message(error_code=nem_exceptions.TASK_ERROR, message=str(e)))
             finally:
                 #TODO: check if this is how it is supposed to be
-                sleep(30)
+                self._updatestatus(gui_server.gen_wait_message(SLEEP_SECS_AFTER_TASK, "Aspetto %d secondi prima di continuare" % SLEEP_SECS_AFTER_TASK))
+                sleep(SLEEP_SECS_AFTER_TASK)
 
 
 
@@ -260,11 +246,12 @@ class Executer(object):
             logger.info('Fine task di misura.')
 
         except Exception as e:
-            logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e, exc_info=True)
+            logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s' % e.message, exc_info=True)
             self._updatestatus(gui_server.gen_notification_message(error_code=nem_exceptions.errorcode_from_exception(e), message=str(e)))
 
 
     def _updatestatus(self, current_status):
+        logger.info("Status update: %s", current_status)
         if (self._communicator != None):
             self._communicator.sendstatus(current_status)
 
@@ -284,6 +271,7 @@ class Executer(object):
         self._updatestatus(gui_server.gen_tachometer_message(speed/1000))
         
 
+
 def main():
     #TODO: separate between probe and not probe
     import log_conf
@@ -293,31 +281,20 @@ def main():
     paths.check_paths()
     (options, _, md5conf) = nem_options.parse_args(__version__)
 
-    client = getclient(options)
-    isprobe = (client.isp.certificate != None)
-    e = Executer(client=client, 
-                 scheduler=Scheduler(options.scheduler, __version__, options.httptimeout),
-                 deliverer=Deliverer(options.repository, client.isp.certificate, options.httptimeout),
+    c = client.getclient(options)
+    isprobe = (c.isp.certificate != None)
+    e = Executer(client=c, 
+                 scheduler=Scheduler(options.scheduler, c, md5conf, __version__, options.httptimeout),
+                 deliverer=Deliverer(options.repository, c.isp.certificate, options.httptimeout),
+                 sys_profiler = SysProfiler(bypass=False),
                  polling=options.polling,
                  tasktimeout=options.tasktimeout, 
                  testtimeout=options.testtimeout,
-                 httptimeout=options.httptimeout, 
-                 isprobe=isprobe, 
-                 md5conf=md5conf)
+                 isprobe=isprobe)
     #logger.debug("%s, %s, %s" % (client, client.isp, client.profile))
 
     logger.debug('Inizio il loop.')
     e.loop()
-
-def getclient(options):
-
-    profile = Profile(profile_id = options.profileid, upload = options.bandwidthup,
-                                        download = options.bandwidthdown)
-    isp = Isp(isp_id = options.ispid, certificate = options.certificate)
-    return Client(client_id = options.clientid, profile = profile, isp = isp,
-                                geocode = options.geocode, username = options.username,
-                                password = options.password)
-
 
 if __name__ == '__main__':
     main()

@@ -1,7 +1,7 @@
 # deliverer.py
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 
-# Copyright (c) 2010 Fondazione Ugo Bordoni.
+# Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -155,14 +155,14 @@ class Deliverer(object):
 
         try:
             # Crea il Deliverer che si occuperà della spedizione
-            #logger.debug('Invio il file %s a %s' % (filename, self._repository))
+            logger.debug('Invio il file %s a %s' % (filename, self._url))
             zipname = self.pack(filename)
             response = self.upload(zipname)
 
             if (response != None):
                 (code, message) = self._parserepositorydata(response)
                 code = int(code)
-                logger.info('Risposta dal server di upload: [%d] %s' % (code, message))
+                logger.info('Risposta dal server delle misure: [%d] %s' % (code, message))
 
                 # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
                 if (code == 0):

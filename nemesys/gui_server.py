@@ -1,26 +1,37 @@
-# import tornado.httpserver
-# import tornado.websocket
-# import tornado.ioloop
+# gui_server.py
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 import json
-from os import path
 import subprocess
 from sys import platform
-import sys
 from threading import Thread
 import threading
 import tornado.web
 from tornado.websocket import WebSocketHandler
 import urlparse
 
+import paths
+
 
 WEBSOCKET_PORT = 54201
 
-#Error codes:
+#Error codes in nem_exceptions 
 NO_ERROR = 0
-# TASK_ERROR = 1
-# DELIVERY_ERROR = 2
-# PROFILATION_ERROR = 3
-# UNKNOWN_ERROR = 99
 
 class Communicator(Thread):
     """ Thread di esecuzione del websocket server.
@@ -73,6 +84,9 @@ class GuiMessage(object):
     
     def dict(self):
         return {'type': self.message_type, 'content': self.content}
+    
+    def __str__(self):
+        return "Type: %s, message: %s" % (self.message_type, self.content)
 
 def gen_sys_resource_message(res, status, info=''):
     '''messaggio per informazione su una risorsa durante la profilazione'''
@@ -158,15 +172,15 @@ class GuiWebSocket(WebSocketHandler):
 
 
     def openLogFolder(self):
-        if hasattr(sys, 'frozen'):
-            # trova il path del file in esecuzione.
-            # commentati i "+ sep + '..'" perche portavano nella cartella superiore.
-            d = path.dirname(sys.executable)   # + sep + '..'
-        else:
-            d = path.abspath(path.dirname(__file__))  # + sep + '..'
-
-        d = path.normpath(d)
-
+#         if hasattr(sys, 'frozen'):
+#             # trova il path del file in esecuzione.
+#             # commentati i "+ sep + '..'" perche portavano nella cartella superiore.
+#             d = path.dirname(sys.executable)   # + sep + '..'
+#         else:
+#             d = path.abspath(path.dirname(__file__))  # + sep + '..'
+# 
+#         d = path.normpath(d)
+        d = paths.LOG_DIR
         if platform == 'win32':
             startfile(d)
         elif platform == 'darwin':

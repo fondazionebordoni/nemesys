@@ -1,5 +1,5 @@
 # exceptions.py
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-# import errorcode
 
 UNKNOWN = 99999
 
@@ -91,9 +89,7 @@ def errorcode_from_exception(exception):
     Restituisce il codice di errore relativo al messaggio di errore (errormsg)
     contenuto nell'exception.
     '''
-    if isinstance(exception, MeasurementException):
-        return exception.errorcode
-    if isinstance(exception, SysmonitorException):
+    if isinstance(exception, NemesysException):
         return exception.errorcode
     try:
         error = str(exception.args[0]).replace(':', ',')
@@ -111,24 +107,17 @@ class NemesysException(Exception):
 
     def __init__(self, message, errorcode=UNKNOWN):
         Exception.__init__(self, message)
-        #TODO: needed????
-#         self._message = str(message).decode('utf-8')
-        self._message = message
+#         self._message = message
         try:
             self._errorcode = int(errorcode)
         except ValueError:
             self._errorcode = UNKNOWN
     
     @property
-    def message(self):
-        #TODO: Need to xmlcharrefreplace???
-        #return self._message.encode('ascii', 'xmlcharrefreplace')
-        return self._message
-
-    @property
     def errorcode(self):
         return self._errorcode
     
+ 
 class MeasurementException(NemesysException):
     pass
 
@@ -138,5 +127,7 @@ class SysmonitorException(NemesysException):
 class TaskException(NemesysException):
     
     def __init__(self, message, errorcode=UNKNOWN):
+        NemesysException.__init__(self, message, errorcode)
         if errorcode == UNKNOWN:
-            errorcode = TASK_ERROR
+            self._errorcode = TASK_ERROR
+        

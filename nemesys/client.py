@@ -1,7 +1,7 @@
 # client.py
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 
-# Copyright (c) 2010 Fondazione Ugo Bordoni.
+# Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from isp import Isp
+from profile import Profile
 
 class Client(object):
     
@@ -60,8 +62,17 @@ class Client(object):
     def __str__(self):
         return 'id: %s; profile: %s; isp: %s; geocode: %s' % (self.id, self.profile, self.isp, self.geocode)
 
+def getclient(options):
+
+    profile = Profile(profile_id = options.profileid, upload = options.bandwidthup,
+                                        download = options.bandwidthdown)
+    isp = Isp(isp_id = options.ispid, certificate = options.certificate)
+    return Client(client_id = options.clientid, profile = profile, isp = isp,
+                                geocode = options.geocode, username = options.username,
+                                password = options.password)
+
+
+
 if __name__ == '__main__':
-    from isp import Isp
-    from profile import Profile
     c = Client('fub0000000001', Profile('fub00001', 512, 512), Isp('fub000', 'fub000.pem'), '41.843646,12.485726')
     print c
