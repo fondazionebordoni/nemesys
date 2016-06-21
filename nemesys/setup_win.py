@@ -1,9 +1,8 @@
 from distutils.core import setup
 import py2exe
-import re, sys, os
-from SysProf.windows import profiler
+import re, sys
+import profiler
 from xml.etree import ElementTree as ET
-import modulefinder
 from glob import glob
 
 sys.path.append("C:\\Microsoft.VC90.CRT")
@@ -27,17 +26,16 @@ def get_version():
             break
 
     # Fix version in Inno Setup file too!
-    filedata = None
-    with open('../nemesys.iss', 'r') as file :
-      filedata = file.read()
+    with open('../nemesys.iss', 'r') as fd:
+        filedata = fd.read()
     
     # Replace the target string
     if '@version@' in filedata:
         filedata = filedata.replace('@version@', ver)
     
     # Write the file out again
-    with open('../nemesys.iss', 'w') as file:
-      file.write(filedata)
+    with open('../nemesys.iss', 'w') as fd:
+        fd.write(filedata)
 
     return ver
 
@@ -48,7 +46,7 @@ class Target:
         # for the versioninfo resources
         self.version = get_version()
         self.company_name = "Fondazione Ugo Bordoni"
-        self.copyright = "(c)2010-2015 Fondazione Ugo Bordoni"
+        self.copyright = "(c)2010-2016 Fondazione Ugo Bordoni"
         self.name = "Nemesys"
 
 myservice = Target(
@@ -73,7 +71,6 @@ setup(
     version = get_version(),
     service = [myservice],
     windows = [
-        {"script": "gui.py", 'uac_info': "requireAdministrator", "icon_resources": [(1, "..\\nemesys.ico")]},
         {"script": "login.py", 'uac_info': "requireAdministrator", "icon_resources": [(1, "..\\nemesys.ico")]},
     ],
     #packages = ['nemesys'],
