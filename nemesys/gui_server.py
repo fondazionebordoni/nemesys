@@ -17,6 +17,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import json
+import logging
+import os
 import subprocess
 from sys import platform
 from threading import Thread
@@ -27,6 +29,8 @@ import urlparse
 
 import paths
 
+
+logger = logging.getLogger(__name__)
 
 WEBSOCKET_PORT = 54201
 
@@ -46,26 +50,34 @@ class Communicator(Thread):
         self._lock = threading.Lock()
 
     def run(self):
-        self.application.listen(WEBSOCKET_PORT)
-        self.ioLoop.start()
-        # close() viene eseguito solo dopo che start esce dal loop,
-        # ovvero dopo che riceve il comando stop(). Rilascia le risorse.
-        self.ioLoop.close(all_fds=True)
-        print 'closed ioLoop'
+        try:
+            self.application.listen(WEBSOCKET_PORT)
+            self.ioLoop.start()
+            # close() viene eseguito solo dopo che start esce dal loop,
+            # ovvero dopo che riceve il comando stop(). Rilascia le risorse.
+            self.ioLoop.close(all_fds=True)
+            logger.info('closed ioLoop')
+        except Exception as e:
+            logger.error("Could not open websocket: %s" % (e))
 
     #TODO: Questo non viene mai chiamato - verificare chiusura Nemesys
     def join(self, timeout=None):
-        print "stopping ioloop"
+        logger.info("stopping ioloop")
         self.ioLoop.stop()
-        print "joining thread"
+        logger.info("joining thread")
         Thread.join(self, timeout)
 
     def sendstatus(self, status):
         with self._lock:
             global last_status
             last_status = status.dict()
-            for handler in handlers:
-                handler.send_msg(status.dict())
+            global handler_lock
+            with handler_lock:
+                for handler in handlers:
+                    try:
+                        handler.send_msg(status.dict())
+                    except Exception as e:
+                        logger.warn("Could not send message to GUI: %s" % (e))
 
 class GuiMessage(object):
 
@@ -134,7 +146,7 @@ def gen_result_message(test_type, result = None, spurious=None, error=None):
     return GuiMessage(GuiMessage.RESULT, content=contents)
 
 
-
+handler_lock = threading.Lock()
 handlers = []
 last_status = None
 
@@ -150,22 +162,23 @@ class GuiWebSocket(WebSocketHandler):
             return True
     
     def open(self):
-        handlers.append(self)  # si aggiunge alla lista degli handler attivi,
-        print("server open connection")  # a cui inviare aggiornamenti
+        with handler_lock:
+            handlers.append(self)  # si aggiunge alla lista degli handler attivi,
+            logger.info("server open connection")  # a cui inviare aggiornamenti
 
     def send_msg(self, msg):
         jsonString = json.dumps(msg)
-        print("Sending string %s" % jsonString)
+        logger.info("Sending string %s" % jsonString)
         self.write_message(jsonString)
 
     def on_message(self, message):
         #TODO: wake up executer? When?
         msg_dict = json.loads(message)
-        print "Got message", msg_dict
+        logger.info("Got message", msg_dict)
         if (msg_dict['request'] == 'log'):
             self.openLogFolder()
-        elif (msg_dict['request'] == 'stop'):  # per ora chiude unicamente la websocket
-            self.close(code=1000)  # TODO gestire chiusura applicazione Ne.Me.Sys.
+#         elif (msg_dict['request'] == 'stop'):  # per ora chiude unicamente la websocket
+#             self.close(code=1000)  # TODO gestire chiusura applicazione Ne.Me.Sys.
         elif (msg_dict['request'] == 'currentstatus'): 
             if last_status != None:
                 self.send_msg(last_status)
@@ -182,13 +195,14 @@ class GuiWebSocket(WebSocketHandler):
 #         d = path.normpath(d)
         d = paths.LOG_DIR
         if platform == 'win32':
-            startfile(d)
+            os.startfile(d)
         elif platform == 'darwin':
             subprocess.Popen(['open', d])
         else:
             subprocess.Popen(['xdg-open', d])
 
     def on_close(self):
-        handlers.remove(self) # si rimuove dalla lista degli handler attivi
-        print("server close connection")
+        with handler_lock:
+            handlers.remove(self) # si rimuove dalla lista degli handler attivi
+            logger.info("server close connection")
 
