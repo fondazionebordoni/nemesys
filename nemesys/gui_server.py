@@ -157,7 +157,7 @@ class GuiWebSocket(WebSocketHandler):
     def check_origin(self, origin):
         if origin:
             parsed_origin = urlparse.urlparse(origin)
-            return parsed_origin.netloc.endswith(".misurainternet.it") or (parsed_origin.scheme == 'file')
+            return not parsed_origin.netloc or parsed_origin.netloc.endswith(".misurainternet.it") or (parsed_origin.scheme == 'file')
         else:
             return True
     
