@@ -10,7 +10,7 @@
 #define MyAppDir MyRoot + ""
 
 ; Read the previuos build number. If there is none take 0 instead.
-#define BuildNum Int(ReadIni(SourcePath	+ "\\buildinfo.ini","Info","Build","1"))
+#define BuildNum Int(ReadIni(SourcePath + "\\buildinfo.ini","Info","Build","1"))
 ; Increment the build number by one.
 #expr BuildNum = BuildNum + 1
 ; Store the number in the ini file for the next build
@@ -58,7 +58,6 @@ Source: {#MyAppDir}\ABOUT; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\nemesys.ico; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\COPYING; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\LICENSE; DestDir: {app}; Flags: ignoreversion
-Source: {#MyAppDir}\config\errorcodes.conf; DestDir: {app}\config; Flags: ignoreversion
 Source: {#MyAppDir}\icons\*.png; DestDir: {app}\icons; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
@@ -70,10 +69,7 @@ Name: {app}\sent
 Name: {app}\logs
 
 [Icons]
-Name: {group}\Nemesys GUI; Filename: {app}\dist\gui.exe
 Name: {group}\{cm:UninstallProgram,{#MyAppName}}; Filename: {uninstallexe}
-Name: {commondesktop}\Nemesys GUI; Filename: {app}\dist\gui.exe; IconIndex: 0
-Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Nemesys GUI; Filename: {app}\dist\gui.exe; Tasks: quicklaunchicon; IconIndex: 0
 
 [Run]
 Filename: {sys}\netsh.exe; Parameters: " int ip set global taskoffload=disabled"; Description: "Disable TCP Task Offload"; Flags: RunHidden RunAsCurrentUser; 
@@ -85,7 +81,6 @@ Filename: {app}\dist\Nemesys.exe; Parameters: "--startup auto install"; Descript
 Filename: {app}\dist\Nemesys.exe; Parameters: start; Description: "Avvia il servizio Nemesys"; Flags: PostInstall RunHidden RunAsCurrentUser; StatusMsg: "Avvia il servizio Nemesys"; 
  
 [UninstallRun]
-Filename: taskkill; Parameters: /f /im gui.exe; WorkingDir: {sys}; Flags: runminimized RunAsCurrentUser
 Filename: {sys}\netsh.exe; Parameters: " firewall delete allowedprogram program=""{app}\dist\Nemesys.exe"""; Flags: RunHidden RunAsCurrentUser; 
 Filename: {sys}\netsh.exe; Parameters: " firewall delete allowedprogram program=""{app}\dist\login.exe"""; Flags: RunHidden RunAsCurrentUser; 
 Filename: {app}\dist\Nemesys.exe; Parameters: " --wait 25 stop"; Flags: runminimized RunAsCurrentUser
