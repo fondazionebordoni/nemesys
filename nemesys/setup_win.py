@@ -1,17 +1,12 @@
 from distutils.core import setup
 import py2exe
 import re, sys
-import profiler
 from xml.etree import ElementTree as ET
 from glob import glob
 
 sys.path.append("C:\\Microsoft.VC90.CRT")
 
 data_files = [("Microsoft.VC90.CRT", glob(r'C:\Microsoft.VC90.CRT\*.*'))]
-
-profiler = profiler.Profiler()
-data = profiler.profile({'CPU'})
-print ET.tostring(data)
 
 def get_version():
     try:
