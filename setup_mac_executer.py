@@ -8,7 +8,7 @@ Usage:
 from setuptools import setup
 
 APP = ['nemesys/executer.py']
-DATA_FILES = ['nemesys/executer.py', 'nemesys/lnemesys.py']
+DATA_FILES = ['nemesys/executer.py']
 OPTIONS = {'argv_emulation': True,
  'plist': 'Info_executer.plist',
  'resources': 'nemesys/cfg, config',
