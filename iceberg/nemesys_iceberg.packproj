@@ -94,22 +94,6 @@
 											<key>GID</key>
 											<integer>80</integer>
 											<key>Path</key>
-											<string>gui.app</string>
-											<key>Path Type</key>
-											<integer>2</integer>
-											<key>Privileges</key>
-											<integer>493</integer>
-											<key>Type</key>
-											<integer>3</integer>
-											<key>UID</key>
-											<integer>0</integer>
-										</dict>
-										<dict>
-											<key>Children</key>
-											<array/>
-											<key>GID</key>
-											<integer>80</integer>
-											<key>Path</key>
 											<string>license.app</string>
 											<key>Path Type</key>
 											<integer>2</integer>
@@ -126,9 +110,9 @@
 											<key>GID</key>
 											<integer>80</integer>
 											<key>Path</key>
-											<string>/Users/domenico/nemesys-no-sniffer/iceberg/uninstall.sh</string>
+											<string>uninstall.sh</string>
 											<key>Path Type</key>
-											<integer>1</integer>
+											<integer>2</integer>
 											<key>Privileges</key>
 											<integer>493</integer>
 											<key>Type</key>
@@ -550,13 +534,13 @@
 						<key>IFPkgDescriptionTitle</key>
 						<string>Nemesys</string>
 						<key>IFPkgDescriptionVersion</key>
-						<string>2.2.0</string>
+						<string>3.0.0</string>
 					</dict>
 				</dict>
 				<key>Display Information</key>
 				<dict>
 					<key>CFBundleGetInfoString</key>
-					<string>Nemesys 2.2.0 Copyrights © 2011 Fondazione Ugo Bordoni</string>
+					<string>Nemesys 3.0.0 Copyrights © 2011 Fondazione Ugo Bordoni</string>
 					<key>CFBundleIconFile</key>
 					<string>nemesys_logo.icns</string>
 					<key>CFBundleIconFile Path Type</key>
@@ -566,7 +550,7 @@
 					<key>CFBundleName</key>
 					<string>Nemesys</string>
 					<key>CFBundleShortVersionString</key>
-					<string>2.2.0</string>
+					<string>3.0.0</string>
 				</dict>
 				<key>Options</key>
 				<dict>
@@ -592,9 +576,9 @@
 				<key>Version</key>
 				<dict>
 					<key>IFMajorVersion</key>
-					<integer>2</integer>
+					<integer>3</integer>
 					<key>IFMinorVersion</key>
-					<integer>1</integer>
+					<integer>0</integer>
 				</dict>
 			</dict>
 		</dict>
