@@ -19,7 +19,7 @@
 import unittest
 import profiler
 import sysmonitor
-from nemesys.profiler import ProfilerDarwin
+from profiler import ProfilerDarwin
 
 '''
 Test new sysmonitor
