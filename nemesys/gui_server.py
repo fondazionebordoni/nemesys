@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
 import json
 import logging
 import os
@@ -28,6 +29,7 @@ from tornado.websocket import WebSocketHandler
 import urlparse
 
 import paths
+import collections
 
 
 logger = logging.getLogger(__name__)
@@ -36,6 +38,8 @@ WEBSOCKET_PORT = 54201
 
 #Error codes in nem_exceptions 
 NO_ERROR = 0
+MAX_NOTIFICATIONS = 10
+DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 class Communicator(Thread):
     """ Thread di esecuzione del websocket server.
@@ -69,13 +73,20 @@ class Communicator(Thread):
 
     def sendstatus(self, status):
         with self._lock:
-            global last_status
-            last_status = status.dict()
+            status_dict = status.dict()
+            if status.is_notification:
+                global last_notifications
+                last_notifications.append(status_dict)
+                if len(last_notifications) > MAX_NOTIFICATIONS:
+                    last_notifications.popleft()
+            else:
+                global last_status
+                last_status = status_dict
             global handler_lock
             with handler_lock:
                 for handler in handlers:
                     try:
-                        handler.send_msg(status.dict())
+                        handler.send_msg(status_dict)
                     except Exception as e:
                         logger.warn("Could not send message to GUI: %s" % (e))
 
@@ -93,6 +104,10 @@ class GuiMessage(object):
     def __init__(self, message_type, content=None):
         self.message_type = message_type
         self.content = content
+    
+    @property
+    def is_notification(self):
+        return self.message_type == self.NOTIFICATION
     
     def dict(self):
         return {'type': self.message_type, 'content': self.content}
@@ -119,7 +134,8 @@ def gen_wait_message(seconds, message=''):
 
 def gen_notification_message(error_code=NO_ERROR, message=''):
     '''For errors and notifications'''
-    return GuiMessage(GuiMessage.NOTIFICATION, {'error_code': error_code, 'message': message})
+    dt = datetime.datetime.now()
+    return GuiMessage(GuiMessage.NOTIFICATION, {'datetime': dt.strftime(DATE_TIME_FORMAT), 'error_code': error_code, 'message': message})
 
 def gen_measure_message(test_type, bw=None):
     '''Signals the start of a measurement'''
@@ -149,17 +165,25 @@ def gen_result_message(test_type, result = None, spurious=None, error=None):
 handler_lock = threading.Lock()
 handlers = []
 last_status = None
+last_notifications = collections.deque()
 
 class GuiWebSocket(WebSocketHandler):
     """ Handler per una connessione.
         gestisce le richieste e le risposte.
     """
+
     def check_origin(self, origin):
-        if origin:
-            parsed_origin = urlparse.urlparse(origin)
-            return not parsed_origin.netloc or parsed_origin.netloc.endswith(".misurainternet.it") or (parsed_origin.scheme == 'file')
-        else:
+        logger.info("GUI connecting from: %s" % (origin))
+        if not origin:
             return True
+        parsed_origin = urlparse.urlparse(origin)
+        if (not parsed_origin.netloc) or (parsed_origin.scheme == 'file'):
+            return True
+        if (parsed_origin.netloc == '127.0.0.1') or (parsed_origin.netloc == 'localhost'):
+            return True
+        if parsed_origin.netloc.endswith('.misurainternet.it') or parsed_origin.netloc.endswith('.fub.it'):
+            return True
+        return False
     
     def open(self):
         with handler_lock:
@@ -174,7 +198,7 @@ class GuiWebSocket(WebSocketHandler):
     def on_message(self, message):
         #TODO: wake up executer? When?
         msg_dict = json.loads(message)
-        logger.info("Got message", msg_dict)
+        logger.info("Got message %s", (msg_dict))
         if (msg_dict['request'] == 'log'):
             self.openLogFolder()
 #         elif (msg_dict['request'] == 'stop'):  # per ora chiude unicamente la websocket
@@ -182,6 +206,8 @@ class GuiWebSocket(WebSocketHandler):
         elif (msg_dict['request'] == 'currentstatus'): 
             if last_status != None:
                 self.send_msg(last_status)
+            for status in list(last_notifications):
+                self.send_msg(status)
 
 
     def openLogFolder(self):
