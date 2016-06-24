@@ -16,20 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import collections
 import datetime
 import json
 import logging
 import os
 import subprocess
-from sys import platform
 from threading import Thread
 import threading
 import tornado.web
 from tornado.websocket import WebSocketHandler
 import urlparse
 
+import utils
 import paths
-import collections
 
 
 logger = logging.getLogger(__name__)
@@ -199,11 +199,11 @@ class GuiWebSocket(WebSocketHandler):
         #TODO: wake up executer? When?
         msg_dict = json.loads(message)
         logger.info("Got message %s", (msg_dict))
-        if (msg_dict['request'] == 'log'):
-            self.openLogFolder()
+#         if (msg_dict['request'] == 'log'):
+#             self.openLogFolder()
 #         elif (msg_dict['request'] == 'stop'):  # per ora chiude unicamente la websocket
 #             self.close(code=1000)  # TODO gestire chiusura applicazione Ne.Me.Sys.
-        elif (msg_dict['request'] == 'currentstatus'): 
+        if (msg_dict['request'] == 'currentstatus'): 
             if last_status != None:
                 self.send_msg(last_status)
             for status in list(last_notifications):
@@ -220,11 +220,12 @@ class GuiWebSocket(WebSocketHandler):
 # 
 #         d = path.normpath(d)
         d = paths.LOG_DIR
-        if platform == 'win32':
+        logger.info("Opening log file: %s" % (d))
+        if utils.is_windows():
             os.startfile(d)
-        elif platform == 'darwin':
+        elif utils.is_darwin():
             subprocess.Popen(['open', d])
-        else:
+        elif utils.is_linux():
             subprocess.Popen(['xdg-open', d])
 
     def on_close(self):
