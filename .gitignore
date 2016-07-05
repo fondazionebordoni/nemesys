@@ -1,0 +1,8 @@
+/env
+/outbox/*.zip
+/outbox/*.xml
+*.pyc
+/logs/*.log
+/config/client.conf
+/config/log.conf
+/nemesys/_generated_version.py
