@@ -7,12 +7,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 WEBSOCKET_PORT = 54201
 
-#Error codes in nem_exceptions 
+#Error codes in nem_exceptions
 NO_ERROR = 0
 MAX_NOTIFICATIONS = 10
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
@@ -45,13 +45,14 @@ class Communicator(Thread):
     """ Thread di esecuzione del websocket server.
         Invia status alla gui.
     """
-    def __init__(self):
+    def __init__(self, serial):
         Thread.__init__(self)
         self.application = tornado.web.Application([(r'/ws', GuiWebSocket)])
         self.ioLoop = tornado.ioloop.IOLoop.current()
         self.ioLoop.make_current()
         self._last_status = None
         self._lock = threading.Lock()
+        self._serial = serial
 
     def run(self):
         try:
@@ -74,6 +75,7 @@ class Communicator(Thread):
     def sendstatus(self, status):
         with self._lock:
             status_dict = status.dict()
+            status_dict['serial'] = self._serial
             if status.is_notification:
                 global last_notifications
                 last_notifications.append(status_dict)
@@ -100,18 +102,18 @@ class GuiMessage(object):
     WAIT = 'wait'
     TACHOMETER = 'tachometer'
     RESULT = 'result'
-    
+
     def __init__(self, message_type, content=None):
         self.message_type = message_type
         self.content = content
-    
+
     @property
     def is_notification(self):
         return self.message_type == self.NOTIFICATION
-    
+
     def dict(self):
         return {'type': self.message_type, 'content': self.content}
-    
+
     def __str__(self):
         return "Type: %s, message: %s" % (self.message_type, self.content)
 
@@ -184,7 +186,7 @@ class GuiWebSocket(WebSocketHandler):
         if parsed_origin.netloc.endswith('.misurainternet.it') or parsed_origin.netloc.endswith('.fub.it'):
             return True
         return False
-    
+
     def open(self):
         with handler_lock:
             handlers.append(self)  # si aggiunge alla lista degli handler attivi,
@@ -196,14 +198,14 @@ class GuiWebSocket(WebSocketHandler):
         self.write_message(jsonString)
 
     def on_message(self, message):
-        #TODO: wake up executer? When?
+        # TODO: wake up executer? When?
         msg_dict = json.loads(message)
         logger.info("Got message %s", (msg_dict))
 #         if (msg_dict['request'] == 'log'):
 #             self.openLogFolder()
 #         elif (msg_dict['request'] == 'stop'):  # per ora chiude unicamente la websocket
 #             self.close(code=1000)  # TODO gestire chiusura applicazione Ne.Me.Sys.
-        if (msg_dict['request'] == 'currentstatus'): 
+        if (msg_dict['request'] == 'currentstatus'):
             if last_status != None:
                 self.send_msg(last_status)
             for status in list(last_notifications):
@@ -217,7 +219,7 @@ class GuiWebSocket(WebSocketHandler):
 #             d = path.dirname(sys.executable)   # + sep + '..'
 #         else:
 #             d = path.abspath(path.dirname(__file__))  # + sep + '..'
-# 
+#
 #         d = path.normpath(d)
         d = paths.LOG_DIR
         logger.info("Opening log file: %s" % (d))
@@ -232,4 +234,3 @@ class GuiWebSocket(WebSocketHandler):
         with handler_lock:
             handlers.remove(self) # si rimuove dalla lista degli handler attivi
             logger.info("server close connection")
-

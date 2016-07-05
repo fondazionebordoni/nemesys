@@ -66,7 +66,7 @@ class Executer(object):
             logger.info('Inizializzato software per sonda.')
         else:
             logger.info('Inizializzato software per misure d\'utente con ISP id = %s' % client.isp.id)
-            self._communicator = gui_server.Communicator()
+            self._communicator = gui_server.Communicator(serial=self._client.id)
             self._communicator.start()
 
     def stop(self):
@@ -78,7 +78,7 @@ class Executer(object):
         self._time_to_stop = False
         while not self._time_to_stop:
             if self._isprobe:
-                '''Try to send any unsent measures (only probe)''' 
+                '''Try to send any unsent measures (only probe)'''
                 self._deliverer.uploadall_and_move(self._outbox, self._sent, do_remove=(not self._isprobe))
 
             try:
@@ -90,7 +90,7 @@ class Executer(object):
                 else:
                     delta = task.start - datetime.fromtimestamp(timestampNtp())
                     secs_to_next_measurement = delta.days * 86400 + delta.seconds
-                    
+
                 if task.is_wait or secs_to_next_measurement > self._polling + 30:
                     '''Should just sleep and then download task again'''
                     if task.is_wait:
@@ -201,7 +201,7 @@ class Executer(object):
                         try:
                             logger.debug('Starting %s test [%d]' % (test_type, i))
                             self._updatestatus(gui_server.gen_test_message(test_type, i, n_reps, error_has_occured))
-                            
+
                             if test_type == 'ping':
                                 test = t.testping()
                                 logger.debug('Ping result: %.3f' % test.duration)
@@ -219,7 +219,7 @@ class Executer(object):
                                 self._test_gating(test)
                                 logger.debug('Upload result: %.3f kbps' % (test.bytes_tot*8.0/test.duration))
                                 self._updatestatus(gui_server.gen_result_message(test_type, result=int(test.bytes_tot*8.0/test.duration), spurious=test.spurious))
-                                
+
                             m.savetest(test)
                             done = True
                             error_has_occured = False
@@ -241,7 +241,7 @@ class Executer(object):
             f.close()
 
             if not self._deliverer.upload_and_move(f.name, self._sent, do_remove=(not self._isprobe)):
-                self._updatestatus(gui_server.gen_notification_message(error_code=nem_exceptions.DELIVERY_ERROR, 
+                self._updatestatus(gui_server.gen_notification_message(error_code=nem_exceptions.DELIVERY_ERROR,
                                                                        message='Misura terminata ma un errore si è verificato durante il suo invio.'))
             logger.info('Fine task di misura.')
 
@@ -269,7 +269,7 @@ class Executer(object):
         speed is in kbps'''
         logger.info("Callback from tester: %s, %s" %(second, speed))
         self._updatestatus(gui_server.gen_tachometer_message(speed/1000))
-        
+
 
 
 def main():
@@ -283,12 +283,12 @@ def main():
 
     c = client.getclient(options)
     isprobe = (c.isp.certificate != None)
-    e = Executer(client=c, 
+    e = Executer(client=c,
                  scheduler=Scheduler(options.scheduler, c, md5conf, __version__, options.httptimeout),
                  deliverer=Deliverer(options.repository, c.isp.certificate, options.httptimeout),
                  sys_profiler = SysProfiler(bypass=False),
                  polling=options.polling,
-                 tasktimeout=options.tasktimeout, 
+                 tasktimeout=options.tasktimeout,
                  testtimeout=options.testtimeout,
                  isprobe=isprobe)
     #logger.debug("%s, %s, %s" % (client, client.isp, client.profile))
