@@ -179,14 +179,14 @@ class GuiWebSocket(WebSocketHandler):
         if not origin:
             return True
         parsed_origin = urlparse.urlparse(origin)
-                
+
         # Strip port number if present from netloc
         cleaned_netloc = parsed_origin.netloc.split(':')[0]
         if (not parsed_origin.netloc) or (parsed_origin.scheme == 'file'):
             return True
         if (cleaned_netloc == '127.0.0.1') or (cleaned_netloc == 'localhost'):
             return True
-        if (cleaned_netloc.netloc.endswith('.misurainternet.it')) or (cleaned_netloc.netloc.endswith('.fub.it')):
+        if (cleaned_netloc.endswith('.misurainternet.it')) or (cleaned_netloc.endswith('.fub.it')):
             return True
         return False
 
