@@ -33,7 +33,7 @@ platform_name = platform.system().lower()
 # Soglie di sistema
 # ------------------------------------------------------------------------------
 # Massima quantità di host in rete
-th_host = 1
+MAX_HOSTS = 1
 # Minima memoria disponibile
 th_avMem = 134217728
 # Massimo carico percentuale sulla memoria
@@ -101,7 +101,7 @@ def checkwireless():
         raise SysmonitorException('Wireless LAN attiva.', nem_exceptions.WARNWLAN)
             
 
-def checkhosts(bandwidth_up, bandwidth_down, ispid, arping = 1):
+def checkhosts(bandwidth_up, bandwidth_down, ispid, do_arp=True):
 
     ip = iptools.getipaddr()
     mask = iptools.get_network_mask(ip)
@@ -110,25 +110,20 @@ def checkhosts(bandwidth_up, bandwidth_down, ispid, arping = 1):
     logger.info("Indirizzo ip/mask: %s/%d, device: %s, provider: %s" % (ip, mask, dev, ispid))
     if not iptools.is_public_ip(ip):
     
-        if (arping == 0):
-            thres = th_host + 1
-        else:
-            thres = th_host
-        
         if (mask != 0):
             
-            value = checkhost.countHosts(ip, mask, bandwidth_up, bandwidth_down, ispid, arping)
+            value = checkhost.countHosts(ip, mask, bandwidth_up, bandwidth_down, ispid, do_arp)
             logger.info('Trovati %d host in rete.' % value)
             
             if value < 0:
                 raise SysmonitorException('impossibile determinare il numero di host in rete.', nem_exceptions.BADHOST)
             elif (value == 0):
-                if arping == 1:
+                if do_arp:
                     logger.warning("Passaggio a PING per controllo host in rete")
                     return checkhosts(bandwidth_up, bandwidth_down, ispid, 0)
                 else:
                     raise SysmonitorException('impossibile determinare il numero di host in rete.', nem_exceptions.BADHOST)
-            elif value > thres:
+            elif value > MAX_HOSTS:
                 raise SysmonitorException('Presenza altri host in rete.', nem_exceptions.TOOHOST)
         else:
             raise SysmonitorException('Impossibile recuperare il valore della maschera dell\'IP: %s' % ip, nem_exceptions.BADMASK)
@@ -147,7 +142,7 @@ class SysProfiler():
             (RES_HOSTS, checkhosts),\
             ])
         
-    def checkall(self, up, down, ispid, arping=True, callback=None):
+    def checkall(self, up, down, ispid, do_arp=True, callback=None):
     
         e = None
         passed = True
@@ -158,7 +153,7 @@ class SysProfiler():
             
             try:
                 if resource == RES_HOSTS:
-                    checkhosts(up, down, ispid, arping)
+                    checkhosts(up, down, ispid, do_arp)
                 else:
                     check_method()
                 if callback:
@@ -187,14 +182,14 @@ if __name__ == '__main__':
 #         print 'Errore [%d]: %s' % (nem_exceptions.errorcode_from_exception(e), e)
 #     
     try:
-        print '\ncheckhosts (arping)'
-        print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', 1)  #ARPING
+        print '\ncheckhosts (do_arp)'
+        print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', True)  #do_arp
     except Exception as e:
         print 'Errore [%d]: %s' % (nem_exceptions.errorcode_from_exception(e), e)
     
     try:
         print '\ncheckhosts (ping)'
-        print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', 0)  #PING
+        print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', False)  #PING
     except Exception as e:
         print 'Errore [%d]: %s' % (nem_exceptions.errorcode_from_exception(e), e)
     

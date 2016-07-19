@@ -113,7 +113,7 @@ class Executer(object):
                             self._sleep_and_wait(secs_to_next_measurement)
                             try:
                                 self._updatestatus(gui_server.gen_profilation_message())
-                                self._sys_profiler.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id, arping=True, callback=self.sys_prof_callback)
+                                self._sys_profiler.checkall(self._client.profile.upload, self._client.profile.download, self._client.isp.id, callback=self.sys_prof_callback)
                                 dev = iptools.get_dev(task.server.ip, 80)
                                 sleep(1)
                                 self._updatestatus(gui_server.gen_profilation_message(done=True))

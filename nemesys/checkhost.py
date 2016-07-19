@@ -22,7 +22,7 @@ import ping
 import re
 import threading
 
-from arp import do_arping
+import arp
 
 
 MAX_PING_HOSTS = 128
@@ -43,9 +43,9 @@ class sendit(threading.Thread):
                 self.status = 1
         except Exception:
             self.status = 0
-            pass
 
-def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, arping = 0):
+
+def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, use_arp=False):
 
     if(provider == "fst001" and not bool(re.search('^192\.168\.', ipAddress))):
         realSubnet = False
@@ -59,18 +59,19 @@ def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider = None, 
             logger.debug("Sospetto profilo Fastweb ADSL o Fibra con indirizzo 10.*. Modificata sottorete in %d" % netmask_to_use)
 
         logger.info("Indirizzo: %s/%d; Realsubnet: %s" % (ipAddress, netMask, realSubnet))
-        n_host = _countNetHosts(ipAddress, netmask_to_use, realSubnet, arping)
+        n_host = _countNetHosts(ipAddress, netmask_to_use, realSubnet, use_arp)
+        #Only return if found host, otherwise continue with regular netmask
         if n_host > 0:
             return n_host
         
     realSubnet = True
     netmask_to_use = netMask
     logger.info("Indirizzo: %s/%d; Realsubnet: %s" % (ipAddress, netMask, realSubnet))
-    n_host = _countNetHosts(ipAddress, netmask_to_use, realSubnet, arping)
+    n_host = _countNetHosts(ipAddress, netmask_to_use, realSubnet, use_arp)
     return n_host
 
 
-def _countNetHosts(ipAddress, netMask, realSubnet = True, arping = 0):
+def _countNetHosts(ipAddress, netMask, realSubnet=True, use_arp=False):
     '''
     Ritorna il numero di host che rispondono al ping nella sottorete ipAddress/net_mask.
     Di default effettua i ping dei soli host appartenenti alla sottorete indicata (escludendo il 
@@ -82,11 +83,11 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, arping = 0):
     bcast = ips.broadcast()
     pinglist = []
 
-    if (arping == 1):
+    if use_arp:
         try:
-            nHosts = do_arping(ipAddress, netMask, realSubnet)
+            nHosts = arp.do_arping(ipAddress, netMask, realSubnet)
         except Exception as e:
-            logger.debug('Errore durante l\'arping: %s' % e)
+            logger.warn('Errore durante la ricerca host con ARP: %s' % e)
 
     else:
         i = 0
@@ -97,9 +98,13 @@ def _countNetHosts(ipAddress, netMask, realSubnet = True, arping = 0):
                 logger.debug("Salto il mio ip %s" % ipAddress)
             else:
                 i += 1
-                ping_thread = sendit(ip)
-                pinglist.append(ping_thread)
-                ping_thread.start()
+                try:
+                    ping_thread = sendit(ip)
+                    ping_thread.start()
+                    pinglist.append(ping_thread)
+                except Exception as e:
+                    logger.warn('Errore durante la ricerca host con PING: %s' % e)
+                    break
             if i == MAX_PING_HOSTS:
                 break
 
@@ -122,5 +127,6 @@ if __name__ == '__main__':
     log_conf.init_log()
     ip = iptools.getipaddr('www.fub.it', 80)
 
-    print countHosts(ip, 24, 200, 2000, 'fub001', 4, 0)
+    print "PING:", countHosts(ip, 24, 200, 2000, 'fub001', False)
+    print "ARP:", countHosts(ip, 24, 200, 2000, 'fub001', True)
 #     print countHosts(ip, 24, 2000, 2000, 'fst001', 4, 1)

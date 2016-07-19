@@ -172,7 +172,7 @@ class HttpTesterDown:
             if not self._received_end and not self._timeout:
                 total_time = measuring_time - self._starttime 
                 if total_time > (self._total_measure_time + DOWNLOAD_TIMEOUT_DELAY):
-                    logger.debug("Timeout, total_time is %.2f" % total_time)
+                    logger.info("Timeout, total_time is %.2f" % total_time)
                     self._timeout = True
                 else:
                     # Continue until received end or timeout set
