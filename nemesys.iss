@@ -69,7 +69,9 @@ Name: {app}\sent
 Name: {app}\logs
 
 [Icons]
-Name: {group}\{cm:UninstallProgram,{#MyAppName}}; Filename: {uninstallexe}
+Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
+Name: "{commondesktop}\Nemesys GUI"; Filename: "http://www.misurainternet.it/nemesys_gui.html"; IconFilename: "{app}\dist\Nemesys.exe"
+Name: "{group}\Nemesys GUI"; Filename: "http://www.misurainternet.it/nemesys_gui.html"; IconFilename: "{app}\dist\Nemesys.exe"
 
 [Run]
 Filename: {sys}\netsh.exe; Parameters: " int ip set global taskoffload=disabled"; Description: "Disable TCP Task Offload"; Flags: RunHidden RunAsCurrentUser; 
