@@ -21,7 +21,6 @@ Created on 13/giu/2016
 @author: ewedlund
 '''
 
-import hashlib
 import logging
 from profile import Profile
 import threading
@@ -32,8 +31,6 @@ from executer import Executer
 import executer
 from isp import Isp
 import nem_options
-import paths
-from scheduler import Scheduler
 from server import Server
 from sysmonitor import SysProfiler
 import task
@@ -112,5 +109,6 @@ if __name__ == '__main__':
     loop_thread = threading.Thread(target=executer.loop)
     loop_thread.start()
     raw_input("Press Enter to stop...")
+    print "Stopping..."
     executer.stop()
     loop_thread.join()

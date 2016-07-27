@@ -18,6 +18,7 @@
 
 from datetime import datetime
 import logging
+import platform
 from threading import Event
 from time import sleep
 
@@ -77,6 +78,7 @@ class Executer(object):
         # Open socket for GUI dialog
         self._time_to_stop = False
         while not self._time_to_stop:
+            logger.debug("Starting main loop")
             if self._isprobe:
                 '''Try to send any unsent measures (only probe)'''
                 self._deliverer.uploadall_and_move(self._outbox, self._sent, do_remove=(not self._isprobe))
@@ -135,6 +137,9 @@ class Executer(object):
                 #TODO: check if this is how it is supposed to be
                 self._updatestatus(gui_server.gen_wait_message(SLEEP_SECS_AFTER_TASK, "Aspetto %d secondi prima di continuare" % SLEEP_SECS_AFTER_TASK))
                 sleep(SLEEP_SECS_AFTER_TASK)
+        logger.info("Exiting main loop")
+        if self._communicator:
+            self._communicator.stop(5.0)
 
 
 
@@ -277,7 +282,7 @@ def main():
     import log_conf
     log_conf.init_log()
 
-    logger.info('Starting Nemesys v.%s' % FULL_VERSION)
+    logger.info('Starting Nemesys v.%s on %s %s' % (FULL_VERSION, platform.system(), platform.release()))
     paths.check_paths()
     (options, _, md5conf) = nem_options.parse_args(__version__)
 

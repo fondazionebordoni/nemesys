@@ -107,7 +107,6 @@ class NemesysException(Exception):
 
     def __init__(self, message, errorcode=UNKNOWN):
         Exception.__init__(self, message)
-#         self._message = message
         try:
             self._errorcode = int(errorcode)
         except ValueError:

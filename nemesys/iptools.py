@@ -51,7 +51,7 @@ def get_if_ipaddress(ifname):
         if ifname == nn:
             try:
                 ipval = netifaces.ifaddresses(ifname)[netifaces.AF_INET][0]['addr']
-            except:
+            except Exception:
                 ipval = '127.0.0.1'
     return ipval
 
