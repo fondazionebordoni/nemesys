@@ -103,10 +103,14 @@ def checkwireless():
 
 def checkhosts(bandwidth_up, bandwidth_down, ispid, do_arp=True):
 
-    ip = iptools.getipaddr()
-    mask = iptools.get_network_mask(ip)
-    dev = iptools.get_dev(ip=ip)
-    
+    try:
+        ip = iptools.getipaddr()
+        mask = iptools.get_network_mask(ip)
+        dev = iptools.get_dev(ip=ip)
+    except Exception as e:
+        logger.error("Cannot get info on network device: %s" % (e))
+        raise SysmonitorException("Impossibile ottenere informazioni sulla scheda di rete attiva: %s" % (e), errorcode=nem_exceptions.UNKDEV)
+
     logger.info("Indirizzo ip/mask: %s/%d, device: %s, provider: %s" % (ip, mask, dev, ispid))
     if not iptools.is_public_ip(ip):
     
