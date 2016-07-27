@@ -20,15 +20,12 @@ import collections
 import datetime
 import json
 import logging
-import os
-import subprocess
 from threading import Thread
 import threading
 import tornado.web
 from tornado.websocket import WebSocketHandler
 import urlparse
 
-import utils
 import paths
 
 
@@ -45,7 +42,7 @@ class Communicator(Thread):
     """ Thread di esecuzione del websocket server.
         Invia status alla gui.
     """
-    def __init__(self, serial):
+    def __init__(self, serial, version):
         Thread.__init__(self)
         self.application = tornado.web.Application([(r'/ws', GuiWebSocket)])
         self.ioLoop = tornado.ioloop.IOLoop.current()
@@ -53,6 +50,8 @@ class Communicator(Thread):
         self._last_status = None
         self._lock = threading.Lock()
         self._serial = serial
+        global start_message
+        start_message = gen_start_message(version, paths.LOG_DIR).dict()
 
     def run(self):
         try:
@@ -66,7 +65,7 @@ class Communicator(Thread):
             logger.error("Could not open websocket: %s" % (e))
 
     #TODO: Questo non viene mai chiamato - verificare chiusura Nemesys
-    def join(self, timeout=None):
+    def stop(self, timeout=None):
         logger.info("stopping ioloop")
         self.ioLoop.stop()
         logger.info("joining thread")
@@ -94,6 +93,7 @@ class Communicator(Thread):
 
 class GuiMessage(object):
 
+    START = 'start'
     SYS_RESOURCE = 'sys_resource'
     PROFILATION = 'profilation'
     MEASURE = 'measure'
@@ -116,6 +116,10 @@ class GuiMessage(object):
 
     def __str__(self):
         return "Type: %s, message: %s" % (self.message_type, self.content)
+
+def gen_start_message(version, log_dir):
+    '''messaggio iniziale con informazioni su Nemesys'''
+    return GuiMessage(GuiMessage.START, {'version': str(version), 'logdir': str(log_dir)})
 
 def gen_sys_resource_message(res, status, info=''):
     '''messaggio per informazione su una risorsa durante la profilazione'''
@@ -166,6 +170,7 @@ def gen_result_message(test_type, result = None, spurious=None, error=None):
 
 handler_lock = threading.Lock()
 handlers = []
+start_message = None
 last_status = None
 last_notifications = collections.deque()
 
@@ -196,42 +201,23 @@ class GuiWebSocket(WebSocketHandler):
             logger.info("server open connection")  # a cui inviare aggiornamenti
 
     def send_msg(self, msg):
-        jsonString = json.dumps(msg)
-        logger.info("Sending string %s" % jsonString)
-        self.write_message(jsonString)
-
+        try:
+            jsonString = json.dumps(msg)
+            logger.info("Sending string %s" % jsonString)
+            self.write_message(jsonString)
+        except Exception as e:
+            logger.error("Could not send message [%s] to GUI: %s" % (msg, e))
+    
     def on_message(self, message):
-        # TODO: wake up executer? When?
         msg_dict = json.loads(message)
         logger.info("Got message %s", (msg_dict))
-#         if (msg_dict['request'] == 'log'):
-#             self.openLogFolder()
-#         elif (msg_dict['request'] == 'stop'):  # per ora chiude unicamente la websocket
-#             self.close(code=1000)  # TODO gestire chiusura applicazione Ne.Me.Sys.
         if (msg_dict['request'] == 'currentstatus'):
+            if start_message != None:
+                self.send_msg(start_message)
             if last_status != None:
                 self.send_msg(last_status)
             for status in list(last_notifications):
                 self.send_msg(status)
-
-
-    def openLogFolder(self):
-#         if hasattr(sys, 'frozen'):
-#             # trova il path del file in esecuzione.
-#             # commentati i "+ sep + '..'" perche portavano nella cartella superiore.
-#             d = path.dirname(sys.executable)   # + sep + '..'
-#         else:
-#             d = path.abspath(path.dirname(__file__))  # + sep + '..'
-#
-#         d = path.normpath(d)
-        d = paths.LOG_DIR
-        logger.info("Opening log file: %s" % (d))
-        if utils.is_windows():
-            os.startfile(d)
-        elif utils.is_darwin():
-            subprocess.Popen(['open', d])
-        elif utils.is_linux():
-            subprocess.Popen(['xdg-open', d])
 
     def on_close(self):
         with handler_lock:

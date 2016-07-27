@@ -66,7 +66,7 @@ class Executer(object):
             logger.info('Inizializzato software per sonda.')
         else:
             logger.info('Inizializzato software per misure d\'utente con ISP id = %s' % client.isp.id)
-            self._communicator = gui_server.Communicator(serial=self._client.id)
+            self._communicator = gui_server.Communicator(serial=self._client.id, version=__version__)
             self._communicator.start()
 
     def stop(self):
