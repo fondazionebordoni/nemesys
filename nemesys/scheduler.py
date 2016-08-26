@@ -1,5 +1,6 @@
 # getconf.py
 # -*- coding: utf-8 -*-
+from nemesys.nem_exceptions import TaskException
 
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
@@ -42,20 +43,33 @@ class Scheduler(object):
         self._version = version
         self._httptimeout = timeout
 
-
     def download_task(self):
         '''
-        Download task from scheduler
+        Download task from scheduler, returns a Task
         '''
         url = urlparse.urlparse(self._url)
         certificate = self._client.isp.certificate
-        connection = httputils.getverifiedconnection(url=url, certificate=certificate, timeout=self._httptimeout)
+        connection = httputils.getverifiedconnection(url=url,
+                                                     certificate=certificate,
+                                                     timeout=self._httptimeout)
 
         try:
-            connection.request('GET', '%s?clientid=%s&version=%s&confid=%s' % (url.path, self._client.id, self._version, self._md5conf))
+            connection.request('GET', '%s?clientid=%s&version=%s&confid=%s'
+                               % (url.path,
+                                  self._client.id,
+                                  self._version,
+                                  self._md5conf))
             data = connection.getresponse().read()
         except Exception as e:
-            logger.error('Impossibile scaricare lo scheduling. Errore: %s.' % e)
-            raise Exception('Impossibile dialogare con lo scheduler delle misure.')
-
-        return task.xml2task(data)
+            logger.error('Impossibile scaricare lo scheduling. Errore: %s.'
+                         % e)
+            raise Exception('Impossibile dialogare con '
+                            'lo scheduler delle misure')
+        try:
+            t = task.xml2task(data)
+            return t
+        except TaskException as e:
+            logger.error("Impossibile interpretare il task ricevuto: %s", (e))
+            logger.error("Dati del task: %s", (data))
+            raise Exception('Il task ricevuto dallo scheduler'
+                            'non e\' in un formato valido')

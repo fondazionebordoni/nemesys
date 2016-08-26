@@ -1,4 +1,4 @@
-#task_test.py
+# task_test.py
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
@@ -7,12 +7,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 '''
@@ -25,8 +25,8 @@ import unittest
 import task
 from nem_exceptions import TaskException
 
-class Test(unittest.TestCase):
 
+class Test(unittest.TestCase):
 
     def testOldTask(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -55,7 +55,8 @@ class Test(unittest.TestCase):
         self.assertEqual(res.server.ip, '193.104.137.133')
         self.assertEqual(res.server.id, 'fubsrvrmnmx03')
         self.assertEqual(res.now, True)
-        self.assertEqual('2010-01-01 00:01:00', res.start.strftime("%Y-%m-%d %H:%M:%S"))
+        self.assertEqual('2010-01-01 00:01:00',
+                         res.start.strftime("%Y-%m-%d %H:%M:%S"))
 
     def testNewTask(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -81,7 +82,8 @@ class Test(unittest.TestCase):
         self.assertEqual(res.server.ip, '193.104.137.133')
         self.assertEqual(res.server.id, 'fubsrvrmnmx03')
         self.assertEqual(res.now, True)
-        self.assertEqual('2010-01-01 00:01:00', res.start.strftime("%Y-%m-%d %H:%M:%S"))
+        self.assertEqual('2010-01-01 00:01:00',
+                         res.start.strftime("%Y-%m-%d %H:%M:%S"))
 
     def testNewTaskWithoutNow(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -107,7 +109,8 @@ class Test(unittest.TestCase):
         self.assertEqual(res.server.ip, '193.104.137.133')
         self.assertEqual(res.server.id, 'fubsrvrmnmx03')
         self.assertEqual(res.now, False)
-        self.assertEqual('2010-01-01 00:01:00', res.start.strftime("%Y-%m-%d %H:%M:%S"))
+        self.assertEqual('2010-01-01 00:01:00',
+                         res.start.strftime("%Y-%m-%d %H:%M:%S"))
 
     def testNewTaskNowFalse(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -192,7 +195,26 @@ class Test(unittest.TestCase):
         except TaskException:
             self.assertEqual(True, True)
 
+    def testNotXml(self):
+        xml = '''Ciao'''
+        try:
+            task.xml2task(xml)
+            self.assertEqual(True, False)
+        except TaskException as e:
+            self.assertEqual(True, True)
+            print e
+
+
+# ===================
+# Jul 29 15:52:35 Nemesys executer.pyo.loop():132 [ERROR] Errore durante la gestione del task per le misure: Impossibile fare il parsing del task ricevuto: syntax error: line 1, column 49
+# Traceback (most recent call last):
+#   File "executer.pyo", line 85, in loop
+#   File "scheduler.pyo", line 61, in download_task
+#   File "task.pyo", line 122, in xml2task
+# TaskException: Impossibile fare il parsing del task ricevuto: syntax error: line 1, column 49
+# Jul 29 15:52:35 Nemesys executer.pyo._updatestatus():254 [INFO] Status update: Type: notification, message: {'message': 'Impossibile fare il parsing del task ricevuto: syntax error: line 1, column 49', 'error_code': 1001, 'datetime': '2016-07-29 15:52:35'}
+# ================================
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testWaitTask']
+    # import sys;sys.argv = ['', 'Test.testWaitTask']
     unittest.main()
