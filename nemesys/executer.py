@@ -113,7 +113,6 @@ class Executer(object):
                 proofs = self._do_tests(test_type, n_reps, sleep_secs, t)
                 m.add_proofs(proofs)
             sec = datetime.fromtimestamp(timestampNtp()).strftime('%S')
-            print str(m)
             f = open('%s/measure_%s%s.xml' % (self._outbox, m.id, sec), 'w')
             f.write(str(m))
             f.write('\n<!-- [finished] %s -->'
