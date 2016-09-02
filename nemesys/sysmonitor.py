@@ -7,12 +7,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
@@ -53,166 +53,145 @@ RES_WIFI = 'Wireless'
 RES_HOSTS = 'Hosts'
 RES_TRAFFIC = 'Traffic'
 
-my_profiler = profiler.get_profiler()
-
-
-def check_device():
-    try:
-        ip = iptools.getipaddr()
-        iptools.get_network_mask(ip)
-    except Exception as e:
-        raise SysmonitorException("Impossibile ottenere indirizzo IP della scheda di rete attiva: %s" % (e))
-    try:
-        dev = iptools.get_dev(ip=ip)
-    except Exception as e:
-        raise SysmonitorException("Impossibile identificare la scheda di rete attiva: %s" % (e))
-    return dev
-
-
-def checkcpu():
-
-    value = my_profiler.cpuLoad()
-    if value < 0 or value > 100:
-        raise SysmonitorException('Valore di occupazione della cpu non conforme.', nem_exceptions.BADCPU)
-
-    if value > th_cpu:
-        raise SysmonitorException('CPU occupata al %d%%' % value, nem_exceptions.WARNCPU)
-
-
-def checkmem():
-
-    avMem = my_profiler.total_memory()
-    logger.debug("Memoria disponibile: %2f" % avMem)
-    if avMem < 0:
-        raise SysmonitorException('Valore di memoria disponibile non conforme.', nem_exceptions.BADMEM)
-    if avMem < th_avMem:
-        raise SysmonitorException('Memoria disponibile non sufficiente.', nem_exceptions.LOWMEM)
-    
-    memLoad = my_profiler.percentage_ram_usage()
-    logger.debug("Memoria occupata: %d%%" % memLoad)
-    if memLoad < 0 or memLoad > 100:
-        raise SysmonitorException('Valore di occupazione della memoria non conforme.', nem_exceptions.INVALIDMEM)
-    if memLoad > th_memLoad:
-        raise SysmonitorException('Memoria occupata.', nem_exceptions.OVERMEM)
-
-
-def checkwireless():
-    if my_profiler.is_wireless_active():
-        raise SysmonitorException('Wireless LAN attiva.', nem_exceptions.WARNWLAN)
-            
-
-def checkhosts(bandwidth_up, bandwidth_down, ispid, do_arp=True):
-
-    try:
-        ip = iptools.getipaddr()
-        mask = iptools.get_network_mask(ip)
-        dev = iptools.get_dev(ip=ip)
-    except Exception as e:
-        logger.error("Cannot get info on network device: %s" % (e))
-        raise SysmonitorException("Impossibile ottenere informazioni sulla scheda di rete attiva: %s" % (e), errorcode=nem_exceptions.UNKDEV)
-
-    logger.info("Indirizzo ip/mask: %s/%d, device: %s, provider: %s" % (ip, mask, dev, ispid))
-    if not iptools.is_public_ip(ip):
-    
-        if (mask != 0):
-            
-            value = checkhost.countHosts(ip, mask, bandwidth_up, bandwidth_down, ispid, do_arp)
-            logger.info('Trovati %d host in rete.' % value)
-            
-            if value < 0:
-                raise SysmonitorException('impossibile determinare il numero di host in rete.', nem_exceptions.BADHOST)
-            elif (value == 0):
-                if do_arp:
-                    logger.warning("Passaggio a PING per controllo host in rete")
-                    return checkhosts(bandwidth_up, bandwidth_down, ispid, 0)
-                else:
-                    raise SysmonitorException('impossibile determinare il numero di host in rete.', nem_exceptions.BADHOST)
-            elif value > MAX_HOSTS:
-                raise SysmonitorException('Presenza altri host in rete.', nem_exceptions.TOOHOST)
-        else:
-            raise SysmonitorException('Impossibile recuperare il valore della maschera dell\'IP: %s' % ip, nem_exceptions.BADMASK)
-
 
 class SysProfiler():
-    
-    def __init__(self, bypass=False):
+
+    def __init__(self, bw_upload, bw_download, isp_id, bypass=False):
+        self._bw_upload = bw_upload
+        self._bw_download = bw_download
+        self._isp_id = isp_id
         self._bypass = bypass
-        self._checks = OrderedDict \
-            ([ \
-            (RES_ETH, check_device),\
-            (RES_CPU, checkcpu),\
-            (RES_RAM, checkmem),\
-            (RES_WIFI, checkwireless),\
-            (RES_HOSTS, checkhosts),\
+        self._checks = OrderedDict([
+            (RES_ETH, self.check_device),
+            (RES_CPU, self.checkcpu),
+            (RES_RAM, self.checkmem),
+            (RES_WIFI, self.checkwireless),
+            (RES_HOSTS, self.checkhosts),
             ])
-        
-    def checkall(self, up, down, ispid, do_arp=True, callback=None):
-    
+        self._profiler = profiler.Profiler()
+
+    def check_device(self):
+        try:
+            ip = iptools.getipaddr()
+            iptools.get_network_mask(ip)
+        except Exception as e:
+            raise SysmonitorException("Impossibile ottenere indirizzo IP "
+                                      "della scheda di rete attiva: %s" % (e))
+        if iptools.is_loopback_ip(ip):
+            raise SysmonitorException("Indirizzo IP {0} punta sull'interfaccia"
+                                      " di loopback - Firewall attivo?"
+                                      .format(ip), nem_exceptions.LOOPBACK)
+        try:
+            dev_name = iptools.get_dev(ip=ip)
+        except Exception as e:
+            raise SysmonitorException("Impossibile identificare "
+                                      "la scheda di rete attiva: %s" % (e))
+        device_speed = iptools.get_if_speed(dev_name)
+        if device_speed < (self._bw_download / 1000):
+            raise SysmonitorException("La velocita' della scheda di rete e' "
+                                      "{0} Mb/s, che e' minore della "
+                                      "velocita' del profilo: {1} Mb/s"
+                                      .format(device_speed,
+                                              self._bw_download/1000))
+
+        return dev_name
+
+    def checkcpu(self):
+        value = self._profiler.cpuLoad()
+        if value < 0 or value > 100:
+            raise SysmonitorException('Valore di occupazione della cpu '
+                                      'non conforme.', nem_exceptions.BADCPU)
+        if value > th_cpu:
+            raise SysmonitorException('CPU occupata al %d%%' % value,
+                                      nem_exceptions.WARNCPU)
+
+    def checkmem(self):
+        avMem = self._profiler.total_memory()
+        logger.debug("Memoria disponibile: %2f" % avMem)
+        if avMem < 0:
+            raise SysmonitorException('Valore di memoria disponibile '
+                                      'non conforme.', nem_exceptions.BADMEM)
+        if avMem < th_avMem:
+            raise SysmonitorException('Memoria disponibile '
+                                      'non sufficiente.',
+                                      nem_exceptions.LOWMEM)
+
+        memLoad = self._profiler.percentage_ram_usage()
+        logger.debug("Memoria occupata: %d%%" % memLoad)
+        if memLoad < 0 or memLoad > 100:
+            raise SysmonitorException('Valore di occupazione della memoria '
+                                      'non conforme.',
+                                      nem_exceptions.INVALIDMEM)
+        if memLoad > th_memLoad:
+            raise SysmonitorException('Memoria occupata.',
+                                      nem_exceptions.OVERMEM)
+
+    def checkwireless(self):
+        if self._profiler.is_wireless_active():
+            raise SysmonitorException('Wireless LAN attiva.',
+                                      nem_exceptions.WARNWLAN)
+
+    def checkhosts(self, do_arp=True):
+        try:
+            ip = iptools.getipaddr()
+            dev = iptools.get_dev(ip=ip)
+            mask = iptools.get_network_mask(ip)
+        except Exception as e:
+            logger.error("Cannot get info on network device: %s" % (e))
+            raise SysmonitorException("Impossibile ottenere informazioni "
+                                      "sulla scheda di rete attiva: %s" % (e),
+                                      errorcode=nem_exceptions.UNKDEV)
+        if iptools.is_loopback_ip(ip):
+            raise SysmonitorException("Indirizzo IP {0} punta sull'interfaccia"
+                                      " di loopback - Firewall attivo?"
+                                      .format(ip), nem_exceptions.LOOPBACK)
+        logger.info("Indirizzo ip/mask: %s/%d, device: %s, provider: %s"
+                    % (ip, mask, dev, self._isp_id))
+        if not iptools.is_public_ip(ip):
+            value = checkhost.countHosts(ip,
+                                         mask,
+                                         self._bw_upload,
+                                         self._bw_download,
+                                         self._isp_id,
+                                         do_arp)
+            logger.info('Trovati %d host in rete.' % value)
+            if value < 0:
+                raise SysmonitorException('impossibile determinare il '
+                                          'numero di host in rete.',
+                                          nem_exceptions.BADHOST)
+            elif (value == 0):
+                if do_arp:
+                    logger.warning("Passaggio a PING "
+                                   "per controllo host in rete")
+                    return self._checkhosts(do_arp=False)
+                else:
+                    raise SysmonitorException('impossibile determinare il '
+                                              'numero di host in rete.',
+                                              nem_exceptions.BADHOST)
+            elif value > MAX_HOSTS:
+                raise SysmonitorException('Presenza altri host in rete.',
+                                          nem_exceptions.TOOHOST)
+
+    def checkall(self, callback=None):
         e = None
         passed = True
         error_code = None
-        error_message = None
-        
+        error_msg = ""
+
         for resource, check_method in self._checks.items():
-            
             try:
-                if resource == RES_HOSTS:
-                    checkhosts(up, down, ispid, do_arp)
-                else:
-                    check_method()
+                check_method()
                 if callback:
                     callback(resource, True)
             except Exception as e:
                 error_code = nem_exceptions.errorcode_from_exception(e)
-                error_message = str(e)
+                error_msg = str(e)
                 passed = False
                 if callback:
-                    logger.debug('calling sysmon callback with error: %s' % e)
-                    callback(resource, False, str(e))
-            
+                    callback(resource, False, str(e), error_code)
         if not passed and not self._bypass:
             if error_code:
-                raise SysmonitorException(error_message, error_code)
-            raise SysmonitorException("Profilazione del sistema fallito, ultimo errore: %s" % e, nem_exceptions.FAILPROF)
-
-if __name__ == '__main__':
-    import log_conf
-    log_conf.init_log()
-    
-#     try:
-#         print '\ncheckall'
-#         print 'Test sysmonitor checkall: %s' % checkall(1000, 2000, 'fst001')
-#     except Exception as e:
-#         print 'Errore [%d]: %s' % (nem_exceptions.errorcode_from_exception(e), e)
-#     
-    try:
-        print '\ncheckhosts (do_arp)'
-        print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', True)  #do_arp
-    except Exception as e:
-        print 'Errore [%d]: %s' % (nem_exceptions.errorcode_from_exception(e), e)
-    
-    try:
-        print '\ncheckhosts (ping)'
-        print 'Test sysmonitor checkhosts: %s' % checkhosts(2000, 2000, 'fst001', False)  #PING
-    except Exception as e:
-        print 'Errore [%d]: %s' % (nem_exceptions.errorcode_from_exception(e), e)
-    
-    try:
-        print '\ncheckcpu'
-        print 'Test sysmonitor checkcpu: %s' % checkcpu()
-    except Exception as e:
-        print 'Errore [%d]: %s' % (nem_exceptions.errorcode_from_exception(e), e)
-    
-    try:
-        print '\ncheckmem'
-        print 'Test sysmonitor checkmem: %s' % checkmem()
-    except Exception as e:
-        print 'Errore [%d]: %s' % (nem_exceptions.errorcode_from_exception(e), e)
-    
-    try:
-        print '\ncheckwireless'
-        print 'Test sysmonitor checkwireless: %s' % checkwireless()
-    except Exception as e:
-        print 'Errore [%d]: %s' % (nem_exceptions.errorcode_from_exception(e), e)
-    
-
+                raise SysmonitorException(error_msg, error_code)
+            raise SysmonitorException("Profilazione del sistema fallito, "
+                                      "ultimo errore: %s" % e,
+                                      nem_exceptions.FAILPROF)

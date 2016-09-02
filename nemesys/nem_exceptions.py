@@ -1,4 +1,4 @@
-# exceptions.py
+# nem_exceptions.py
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
@@ -18,16 +18,17 @@
 
 UNKNOWN = 99999
 
-#Errori di Nemesys
+# Errori di Nemesys
 TASK_ERROR = 1001
 DELIVERY_ERROR = 1002
 
-#Profilazione
+# Profilazione
 FAILPROF = 5001
 FAILREADPARAM = 5002
 FAILVALUEPARAM = 5003
 FAILSTATUS = 5004
 BADMASK = 5005
+LOOPBACK = 5006
 UNKDEV = 5008
 BADCPU = 5011
 WARNCPU = 5012
@@ -59,28 +60,29 @@ PING_TIMEOUT = 99997
 These are the old codes
 '''
 CODE_MAPPING = {
-'10013': 99977,
-'425 security: bad ip connecting.': 99978,
-'host unreachable': 99979,
-'10051': 99980,
-'530 login incorrect.': 99981,
-'113': 99982,
-'111': 99983,
-'110': 99984,
-'10053': 99985,
-'104': 99986,
-'port unreachable': 99987,
-'10061': 99988,
-'10054': 99989,
-'10065': 99990,
-'35': 99991,
-'530 this ftp server is anonymous only.': 99992,
-'553 could not create file.': 99993,
-'timed out': 99994,
-'10060': 99995,
-'550 failed to open file.': 99996,
-'timeout during icmp socket select': 99997,
-'operation not permitted - note that icmp messages can only be sent from processes running as root.': 99998
+    '10013': 99977,
+    '425 security: bad ip connecting.': 99978,
+    'host unreachable': 99979,
+    '10051': 99980,
+    '530 login incorrect.': 99981,
+    '113': 99982,
+    '111': 99983,
+    '110': 99984,
+    '10053': 99985,
+    '104': 99986,
+    'port unreachable': 99987,
+    '10061': 99988,
+    '10054': 99989,
+    '10065': 99990,
+    '35': 99991,
+    '530 this ftp server is anonymous only.': 99992,
+    '553 could not create file.': 99993,
+    'timed out': 99994,
+    '10060': 99995,
+    '550 failed to open file.': 99996,
+    'timeout during icmp socket select': 99997,
+    ('operation not permitted - note that icmp messages can only be sent '
+     'from processes running as root.'): 99998
 }
 
 
@@ -95,7 +97,7 @@ def errorcode_from_exception(exception):
         error = str(exception.args[0]).replace(':', ',')
     except AttributeError:
         error = str(exception).replace(':', ',')
-    
+
     try:
         errorcode = CODE_MAPPING[error]
         return errorcode
@@ -111,22 +113,28 @@ class NemesysException(Exception):
             self._errorcode = int(errorcode)
         except ValueError:
             self._errorcode = UNKNOWN
-    
+
     @property
     def errorcode(self):
         return self._errorcode
-    
- 
+
+
 class MeasurementException(NemesysException):
     pass
+
 
 class SysmonitorException(NemesysException):
     pass
 
+
 class TaskException(NemesysException):
-    
+
     def __init__(self, message, errorcode=UNKNOWN):
         NemesysException.__init__(self, message, errorcode)
         if errorcode == UNKNOWN:
             self._errorcode = TASK_ERROR
-        
+
+
+class ProfilerException(NemesysException):
+    '''Exception from Profiler'''
+    pass

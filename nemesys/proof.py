@@ -7,20 +7,22 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import datetime
 
+
 class Proof(object):
 
-    def __init__(self, test_type, start_time, duration, bytes_nem=0, bytes_tot=0, spurious=0, errorcode = 0):
+    def __init__(self, test_type, start_time, duration,
+                 bytes_nem=0, bytes_tot=0, spurious=0, errorcode=0):
         self._type = test_type
         self._start = start_time
         self._duration = duration
@@ -67,7 +69,20 @@ class Proof(object):
         self._errorcode = errorcode
 
     def __str__(self):
-        return 'type: %s; start: %s; value: %1.3f; bytes: %d; counter_stats: {%s}; errorcode: %d' % (self.type, self.start.isoformat(), self.value, self.bytes, self.counter_stats, self.errorcode)
+        return ('type: {0}; '
+                'start: {1}; '
+                'duration: {2:.0f}; '
+                'bytes nem: {3}; '
+                'bytes tot: {4}; '
+                'spurious: {5:.2f}; '
+                'errorcode: {6}'
+                '').format(self.type,
+                           self.start,
+                           self.duration,
+                           self.bytes_nem,
+                           self.bytes_tot,
+                           self.spurious,
+                           self.errorcode)
 
 if __name__ == '__main__':
     t = Proof('download', datetime.now(), 20, 100000, None, 101)

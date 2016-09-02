@@ -7,12 +7,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
@@ -23,13 +23,14 @@ import platform
 
 
 class Measure(object):
-    def __init__(self, measure_id, server, client, version=None, start=datetime.fromtimestamp(timestampNtp()).isoformat()):    
+    def __init__(self, measure_id, server, client, version=None,
+                 start=datetime.fromtimestamp(timestampNtp()).isoformat()):
         '''
         Costruisce un oggetto Measure utilizzando i parametri ricevuti nella
         chiamata.
         Istanzia un oggetto XML in cui vengono salvati i test che costituiscono
-        la misura. L'id della misura viene postposto all'id del client per generare
-        l'id del file di misura XML.
+        la misura. L'id della misura viene postposto all'id del client
+        per generare l'id del file di misura XML.
         '''
         try:
             self._os = '%s %s' % (platform.system(), platform.release())
@@ -43,7 +44,9 @@ class Measure(object):
         self._xml = self.getxml()
 
     def getxml(self):
-        start = '''<measure xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='measure.xsd'/>'''
+        start = ("<measure xmlns:xsi="
+                 "'http://www.w3.org/2001/XMLSchema-instance' "
+                 "xsi:noNamespaceSchemaLocation='measure.xsd'/>")
         xml = parseString(start)
         measure = xml.getElementsByTagName('measure')[0]
         measure.setAttribute('id', str(self._client.id) + str(self._id))
@@ -68,11 +71,13 @@ class Measure(object):
         profile.setAttribute('id', str(self._client.profile.id))
 
         upload = xml.createElement('upload')
-        upload.appendChild(xml.createTextNode(str(self._client.profile.upload)))
+        xml_node = xml.createTextNode(str(self._client.profile.upload))
+        upload.appendChild(xml_node)
         profile.appendChild(upload)
 
         download = xml.createElement('download')
-        download.appendChild(xml.createTextNode(str(self._client.profile.download)))
+        xml_node = xml.createTextNode(str(self._client.profile.download))
+        download.appendChild(xml_node)
         profile.appendChild(download)
 
         client.appendChild(profile)
@@ -111,6 +116,10 @@ class Measure(object):
         body = self._xml.getElementsByTagName('body')[0]
         body.appendChild(node)
 
+    def add_proofs(self, proofs):
+        for proof in proofs:
+            self.savetest(proof)
+
     def test2node(self, proof):
         xml = self._xml
 
@@ -124,7 +133,8 @@ class Measure(object):
         time.appendChild(start)
 
         end = xml.createElement('end')
-        end.appendChild(xml.createTextNode(str(datetime.fromtimestamp(timestampNtp()).isoformat())))
+        date_string = str(datetime.fromtimestamp(timestampNtp()).isoformat())
+        end.appendChild(xml.createTextNode(date_string))
         time.appendChild(end)
 
         t.appendChild(time)
@@ -138,7 +148,7 @@ class Measure(object):
         t.appendChild(bytes_element)
 
         error = proof.errorcode
-        if (error != None):
+        if (error is not None):
             errorcode = xml.createElement('errcode')
             errorcode.appendChild(xml.createTextNode(str(error)))
             t.appendChild(errorcode)

@@ -1,51 +1,27 @@
 # netstat.py
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2016 Fondazione Ugo Bordoni.
+# Copyright (c) 2013-2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-'''
-Created on 13/nov/2013
-
-@author: ewedlund
-'''
-import logging
-import netifaces
-import platform
 import psutil
 
 
-logger = logging.getLogger(__name__)
-
-LINUX_RESOURCE_PATH="/sys/class/net"
-
-
-def get_netstat(if_device):
-    if not if_device:
-        raise NetstatException("Nessun identificatore di device.")
-    platform_name = platform.system().lower()
-    if platform_name.startswith('win'):
-        return NetstatWindows(if_device)
-    elif platform_name.startswith('lin'):
-        return NetstatLinux(if_device)
-    elif platform_name.startswith('darwin'):
-        return NetstatDarwin(if_device)
-
-'''
-Eccezione istanzazione Risorsa
-'''
 class NetstatException(Exception):
+    '''
+    Netstat specific exception
+    '''
 
     def __init__(self, message):
         Exception.__init__(self, message)
@@ -53,7 +29,7 @@ class NetstatException(Exception):
 
 class Netstat(object):
 
-    def __init__(self, if_device=None):
+    def __init__(self, if_device):
         self.if_device = if_device
 
     def get_if_device(self):
@@ -62,222 +38,37 @@ class Netstat(object):
     def get_rx_bytes(self):
         if not self.if_device:
             raise NetstatException("Nessun identificatore di device")
-        # Handle different versions of psutil
-        try:
-            counters_per_nic = psutil.network_io_counters(pernic=True)
-        except AttributeError:
-            counters_per_nic = psutil.net_io_counters(pernic=True)
+        counters_per_nic = psutil.net_io_counters(pernic=True)
         if self.if_device in counters_per_nic:
             rx_bytes = counters_per_nic[self.if_device].bytes_recv
-            if rx_bytes == None:
-                raise NetstatException("Ottenuto contatore vuoto per il device %d" % self.if_device)
+            if rx_bytes is None:
+                raise NetstatException("Ottenuto contatore vuoto "
+                                       "per il device %d"
+                                       % self.if_device)
         else:
-            raise NetstatException("Contatore non trovato per il device %s" % str(self.if_device))
+            raise NetstatException("Contatore non trovato per il device %s"
+                                   % self.if_device)
         return long(rx_bytes)
 
     def get_tx_bytes(self):
         if not self.if_device:
             raise NetstatException("Nessun identificatore di device")
-        # Handle different versions of psutil
-        try:
-            counters_per_nic = psutil.network_io_counters(pernic=True)
-        except AttributeError:
-            counters_per_nic = psutil.net_io_counters(pernic=True)
+        counters_per_nic = psutil.net_io_counters(pernic=True)
         if self.if_device in counters_per_nic:
             tx_bytes = counters_per_nic[self.if_device].bytes_sent
-            if tx_bytes == None:
-                raise NetstatException("Ottenuto contatore vuoto per il device %s" % str(self.if_device))
+            if tx_bytes is None:
+                raise NetstatException("Ottenuto contatore vuoto "
+                                       "per il device %s"
+                                       % str(self.if_device))
         else:
-            raise NetstatException("Contatore non trovato per il device %s" % str(self.if_device))
+            raise NetstatException("Contatore non trovato per il device %s"
+                                   % str(self.if_device))
         return long(tx_bytes)
 
 
-class NetstatWindows(Netstat):
-    '''
-    Netstat funcions on Windows platforms
-    '''
-
-    def __init__(self, if_device_guid=None):
-        super(NetstatWindows, self).__init__(if_device_guid)
-        self._device_guid = if_device_guid
-        if (if_device_guid != None):
-            self.device_id,self.if_device = self._get_psutil_device_from_guid(if_device_guid)
-        else:
-            raise NetstatException("Nessun device identificato!")
-
-
-    def is_device_active(self, if_device_guid=None):
-        is_active = False
-        if if_device_guid:
-            whereCondition = " WHERE SettingID = \"" + if_device_guid + "\""
-            entry_name = "Index"
-            index = self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
-        else:
-            index = self.device_id
-        if index == None:
-            raise NetstatException("Non trovo l'indice dell'interfaccia, impossibile verificare lo stato")
-        whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
-        entry_name = "NetConnectionStatus"
-        status = self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
-        if (status and (int(status) == 2 or int(status) == 9)):
-            is_active = True
-        return is_active
-
-
-    def _get_psutil_device_from_guid(self, guid):
-        # Since Win32_NetworkAdapter does not have GUID on windows XP
-        # We need to get the NetConnectionID in two phases
-        # 1. get the id of the interface from Win32_NetworkAdapterConfiguration
-        index = None
-        device = None
-        try:
-            whereCondition = " WHERE SettingID = \"" + guid + "\""
-            entry_name = "Index"
-            index = self._get_entry_generic("Win32_NetworkAdapterConfiguration", whereCondition, entry_name)
-        except Exception as e:
-            logger.error("Eccezione durante la ricerca dell'indice per l'interfaccia con guid = %s" % str(guid))
-            logger.error("Eccezione = %s" % str(e))
-        if index != None:
-#             # 2. Now get NetConnectionID from Win32_NetworkAdapter
-            try:
-                whereCondition = " WHERE DeviceId = \"" + str(index) + "\""
-                entry_name = "NetConnectionID"
-                device = self._get_entry_generic("Win32_NetworkAdapter", whereCondition, entry_name)
-            except Exception as e:
-                logger.error("Eccezione durante la ricerca dell'interfaccia con GUID %s e indice %d" % (str(guid), int(index)))
-                logger.error("Eccezione = %s" % str(e))
-                raise NetstatException("impossibile ottenere il dettaglio dell'interfaccia di rete")
-        if index == None or not device:
-            raise NetstatException("impossibile ottenere il dettaglio dell'interfaccia di rete")
-        else:
-            return index,device
-
-
-    def get_device_name(self, ip_address):
-        all_devices = netifaces.interfaces()
-        if_dev_name = None
-        found = False
-        for if_dev in all_devices:
-            if_all_addresses = netifaces.ifaddresses(if_dev)
-            if netifaces.AF_INET in if_all_addresses:
-                if_ip_addresses = if_all_addresses[netifaces.AF_INET]
-            for if_ip_address in if_ip_addresses:
-                if (if_ip_address['addr'] == ip_address):
-                    if_dev_name = if_dev
-                    found = True
-                    break
-            if found: break
-        # Now we have the "Setting ID" for the interface
-        # in class Wind32_NetworkAdapterConfiguration
-        # We now need to get the value of "Description"
-        # in the same class
-        where_condition = " WHERE SettingID = \"" + if_dev_name + "\""
-        entry_name = "Description"
-        entry_value = self._get_entry_generic("Win32_NetworkAdapterConfiguration", where_condition, entry_name)
-        return entry_value
-
-#     def get_timestamp(self):
-#         timestamp = float(self._get_entry_generic(entry_name = "Timestamp_Perftime"))
-#         frequency = float(self._get_entry_generic(entry_name = "Frequency_Perftime"))
-#         return timestamp/frequency
-
-    def _get_entry_generic(self, wmi_class,
-                        whereCondition,
-                        entry_name="*"):
-        try:
-            import pythoncom
-        except ImportError:
-            raise NetstatException("Missing WMI library")
-        if wmi_class == None or whereCondition == None:
-            raise NetstatException("Need WMI class and query string!")
-        pythoncom.CoInitialize()
-        try:
-            return self._get_entry_generic_wrapped(wmi_class, whereCondition, entry_name)
-        finally:
-            pythoncom.CoUninitialize()
-
-
-    def _get_entry_generic_wrapped(self, wmi_class,
-                        whereCondition,
-                        entry_name="*"):
-        entry_value = None
-#         ''' TODO: more intelligent search?'''
-#         if not whereCondition:
-#             whereCondition=" WHERE Name Like \"" + self.if_device_search_string + "%\""
-#         if not wmi_class:
-#             wmi_class="Win32_PerfRawData_Tcpip_NetworkAdapter"
-        queryString = None
-        try:
-            import win32com.client
-        except ImportError:
-            raise NetstatException("Missing WMI library")
-        result = None
-        try:
-            objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
-            objSWbemServices = objWMIService.ConnectServer(".", "root\cimv2")
-            queryString = "SELECT " + entry_name + " FROM " + wmi_class + whereCondition
-            result = objSWbemServices.ExecQuery(queryString)
-        except Exception as e:
-            raise NetstatException("Impossibile eseguire query al server root\cimv2: %s" % str(e))
-        if result:
-            try:
-                found = False
-                for obj in result:
-                    value = obj.__getattr__(entry_name)
-                    if value != None:
-                        if found:
-                            raise NetstatException("Found more than one entry for search string " + whereCondition)
-                        else:
-                            found = True
-                            entry_value = value
-            except:
-                raise NetstatException("Could not get " + entry_name + " from result")
-        else:
-            raise NetstatException("Query for " + entry_name + " returned empty result")
-        return entry_value
-
-
-class NetstatLinux(Netstat):
-    '''
-    Netstat funcions on Linux platforms
-    '''
-
-    def __init__(self, if_device):
-        super(NetstatLinux, self).__init__(if_device)
-
-    def get_device_name(self, ip_address):
-        all_devices = netifaces.interfaces()
-        if_dev_name = None
-        found = False
-        for if_dev in all_devices:
-            if_all_addresses = netifaces.ifaddresses(if_dev)
-            if netifaces.AF_INET in if_all_addresses:
-                if_ip_addresses = if_all_addresses[netifaces.AF_INET]
-            for if_ip_address in if_ip_addresses:
-                if (if_ip_address['addr'] == ip_address):
-                    if_dev_name = if_dev
-                    found = True
-                    break
-            if found: break
-        return if_dev_name
-
-class NetstatDarwin(NetstatLinux):
-    '''
-    Netstat functions on MacOS platforms
-    '''
-
-    def __init__(self, if_device):
-        super(NetstatLinux, self).__init__(if_device)
-
-def _read_number_from_file(filename):
-    with open(filename) as f:
-        return int(f.readline())
-
 if __name__ == '__main__':
     import iptools
-    import log_conf
-    log_conf.init_log()
     dev = iptools.get_dev()
-    my_netstat = get_netstat(dev)
+    my_netstat = Netstat(dev)
     print "RX bytes", my_netstat.get_rx_bytes()
     print "TX bytes", my_netstat.get_tx_bytes()

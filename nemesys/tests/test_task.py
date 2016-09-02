@@ -1,4 +1,4 @@
-# task_test.py
+# test_task.py
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
@@ -15,18 +15,20 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-'''
-Created on 16/giu/2016
 
-@author: ewedlund
-'''
 import unittest
 
-import task
-from nem_exceptions import TaskException
+import nemesys.task as task
+from nemesys.nem_exceptions import TaskException
 
 
-class Test(unittest.TestCase):
+class TestTask(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestTask, cls).setUpClass()
+        import nemesys.log_conf as log_conf
+        log_conf.init_log()
 
     def testOldTask(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -200,20 +202,9 @@ class Test(unittest.TestCase):
         try:
             task.xml2task(xml)
             self.assertEqual(True, False)
-        except TaskException as e:
+        except TaskException:
             self.assertEqual(True, True)
-            print e
 
-
-# ===================
-# Jul 29 15:52:35 Nemesys executer.pyo.loop():132 [ERROR] Errore durante la gestione del task per le misure: Impossibile fare il parsing del task ricevuto: syntax error: line 1, column 49
-# Traceback (most recent call last):
-#   File "executer.pyo", line 85, in loop
-#   File "scheduler.pyo", line 61, in download_task
-#   File "task.pyo", line 122, in xml2task
-# TaskException: Impossibile fare il parsing del task ricevuto: syntax error: line 1, column 49
-# Jul 29 15:52:35 Nemesys executer.pyo._updatestatus():254 [INFO] Status update: Type: notification, message: {'message': 'Impossibile fare il parsing del task ricevuto: syntax error: line 1, column 49', 'error_code': 1001, 'datetime': '2016-07-29 15:52:35'}
-# ================================
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testWaitTask']

@@ -33,10 +33,16 @@ logger = logging.getLogger(__name__)
 
 WEBSOCKET_PORT = 54201
 
-#Error codes in nem_exceptions
+# Error codes in nem_exceptions
 NO_ERROR = 0
 MAX_NOTIFICATIONS = 10
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+RES_TRANSLATION = {'Wireless': 'wifistatus',
+                   'Ethernet': 'ethstatus',
+                   'Hosts': 'hoststatus',
+                   'CPU': 'cpustatus',
+                   'RAM': 'ramstatus'}
+
 
 class Communicator(Thread):
     """ Thread di esecuzione del websocket server.
@@ -50,8 +56,11 @@ class Communicator(Thread):
         self._last_status = None
         self._lock = threading.Lock()
         self._serial = serial
-        global start_message
-        start_message = gen_start_message(version, paths.LOG_DIR).dict()
+        global start_msg
+        start_msg = GuiMessage(GuiMessage.START,
+                               {'version': str(version),
+                                'logdir': paths.LOG_DIR}
+                               ).dict()
 
     def run(self):
         try:
@@ -64,14 +73,86 @@ class Communicator(Thread):
         except Exception as e:
             logger.error("Could not open websocket: %s" % (e))
 
-    #TODO: Questo non viene mai chiamato - verificare chiusura Nemesys
     def stop(self, timeout=None):
         logger.info("stopping ioloop")
         self.ioLoop.stop()
         logger.info("joining thread")
         Thread.join(self, timeout)
 
+    def nem_start(self, version, log_dir):
+        '''messaggio iniziale con informazioni su Nemesys'''
+        msg = GuiMessage(GuiMessage.START, {'version': str(version),
+                                            'logdir': str(log_dir)})
+        self.sendstatus(msg)
+
+    def notification(self, error_code, message=''):
+        '''For errors and notifications'''
+        dt = datetime.datetime.now()
+        msg = GuiMessage(GuiMessage.NOTIFICATION,
+                         {'datetime': dt.strftime(DATE_TIME_FORMAT),
+                          'error_code': error_code,
+                          'message': message})
+        self.sendstatus(msg)
+
+    def speed(self, value):
+        msg = GuiMessage(GuiMessage.TACHOMETER,
+                         {'value': value})
+        self.sendstatus(msg)
+
+    def profilation(self, done=False):
+        '''Start or end of system profilation'''
+        msg = GuiMessage(GuiMessage.PROFILATION,
+                         {'done': done})
+        self.sendstatus(msg)
+
+    def sys_res(self, res, status, info):
+        '''messaggio per informazione su una risorsa durante la profilazione'''
+        msg = GuiMessage(GuiMessage.SYS_RESOURCE,
+                         {'resource': RES_TRANSLATION[res],
+                          'state': status,
+                          'info': info})
+        self.sendstatus(msg)
+
+    def wait(self, seconds, message):
+        '''Nemesys is pausing for <seconds> seconds'''
+        msg = GuiMessage(GuiMessage.WAIT,
+                         {'seconds': seconds,
+                          'message': message})
+        self.sendstatus(msg)
+
+    def result(self, test_type, result=None, spurious=None, error=None):
+        contents = {}
+        if error is not None:
+            contents.update({'test_type': test_type, 'error': error})
+        else:
+            contents.update({'test_type': test_type, 'result': result})
+            if spurious is not None:
+                contents.update({'spurious': spurious})
+        msg = GuiMessage(GuiMessage.RESULT, content=contents)
+        self.sendstatus(msg)
+
+    def test(self, test_type, n_tests, n_tot, retry):
+        '''Signals the start of a test'''
+        msg = GuiMessage(GuiMessage.TEST,
+                         {'test_type': test_type,
+                          'n_test': n_tests,
+                          'n_tot': n_tot,
+                          'retry': retry})
+        self.sendstatus(msg)
+
+    def measure(self, test_type, bw=None):
+        '''Signals the start of a measurement'''
+        if bw is not None:
+            msg = GuiMessage(GuiMessage.MEASURE,
+                             {'test_type': test_type,
+                              'bw': bw})
+        else:
+            msg = GuiMessage(GuiMessage.MEASURE,
+                             {'test_type': test_type})
+        self.sendstatus(msg)
+
     def sendstatus(self, status):
+        logger.info("Sending status [%s]" % status)
         with self._lock:
             status_dict = status.dict()
             status_dict['serial'] = self._serial
@@ -90,6 +171,7 @@ class Communicator(Thread):
                         handler.send_msg(status_dict)
                     except Exception as e:
                         logger.warn("Could not send message to GUI: %s" % (e))
+
 
 class GuiMessage(object):
 
@@ -115,64 +197,15 @@ class GuiMessage(object):
         return {'type': self.message_type, 'content': self.content}
 
     def __str__(self):
-        return "Type: %s, message: %s" % (self.message_type, self.content)
-
-def gen_start_message(version, log_dir):
-    '''messaggio iniziale con informazioni su Nemesys'''
-    return GuiMessage(GuiMessage.START, {'version': str(version), 'logdir': str(log_dir)})
-
-def gen_sys_resource_message(res, status, info=''):
-    '''messaggio per informazione su una risorsa durante la profilazione'''
-    res_translation = {'Wireless': 'wifistatus',\
-                      'Ethernet': 'ethstatus',\
-                      'Hosts': 'hoststatus',\
-                      'CPU': 'cpustatus',\
-                      'RAM': 'ramstatus'}
-    return GuiMessage(GuiMessage.SYS_RESOURCE, {'resource': res_translation[res], 'state': status, 'info': info})
-
-def gen_profilation_message(done=False):
-    '''Start of system profilation'''
-    return GuiMessage(GuiMessage.PROFILATION, {'done': done})
-
-def gen_wait_message(seconds, message=''):
-    '''Nemesys is pausing for <seconds> seconds'''
-    return GuiMessage(GuiMessage.WAIT, {'seconds': seconds, 'message': message})
-
-def gen_notification_message(error_code=NO_ERROR, message=''):
-    '''For errors and notifications'''
-    dt = datetime.datetime.now()
-    return GuiMessage(GuiMessage.NOTIFICATION, {'datetime': dt.strftime(DATE_TIME_FORMAT), 'error_code': error_code, 'message': message})
-
-def gen_measure_message(test_type, bw=None):
-    '''Signals the start of a measurement'''
-    if bw != None:
-        return GuiMessage(GuiMessage.MEASURE, {'test_type': test_type, 'bw': bw})
-    else:
-        return GuiMessage(GuiMessage.MEASURE, {'test_type': test_type})
-
-def gen_test_message(test_type, n_test=0, n_tot=0, retry=False):
-    '''Signals the start of a test'''
-    return GuiMessage(GuiMessage.TEST, {'test_type': test_type, 'n_test': n_test, 'n_tot': n_tot, 'retry': retry})
-
-def gen_tachometer_message(value):
-    return GuiMessage(GuiMessage.TACHOMETER, {'value': value})
-
-def gen_result_message(test_type, result = None, spurious=None, error=None):
-    contents = {}
-    if error != None:
-        contents.update({'test_type': test_type, 'error': error})
-    else:
-        contents.update({'test_type': test_type, 'result':result})
-        if spurious != None:
-            contents.update({'spurious': spurious})
-    return GuiMessage(GuiMessage.RESULT, content=contents)
+        return "%s, message: %s" % (self.message_type, self.content)
 
 
 handler_lock = threading.Lock()
 handlers = []
-start_message = None
+start_msg = None
 last_status = None
 last_notifications = collections.deque()
+
 
 class GuiWebSocket(WebSocketHandler):
     """ Handler per una connessione.
@@ -191,35 +224,36 @@ class GuiWebSocket(WebSocketHandler):
         cleaned_netloc = parsed_origin.netloc.split(':')[0]
         if (cleaned_netloc == '127.0.0.1') or (cleaned_netloc == 'localhost'):
             return True
-        if (cleaned_netloc == 'misurainternet.it') or (cleaned_netloc.endswith('.misurainternet.it')) or (cleaned_netloc.endswith('.fub.it')):
+        if ((cleaned_netloc == 'misurainternet.it') or
+                (cleaned_netloc.endswith('.misurainternet.it')) or
+                (cleaned_netloc.endswith('.fub.it'))):
             return True
         return False
 
     def open(self):
         with handler_lock:
-            handlers.append(self)  # si aggiunge alla lista degli handler attivi,
-            logger.info("server open connection")  # a cui inviare aggiornamenti
+            handlers.append(self)
+            logger.info("server open connection")
 
     def send_msg(self, msg):
         try:
             jsonString = json.dumps(msg)
-            logger.info("Sending string %s" % jsonString)
             self.write_message(jsonString)
         except Exception as e:
             logger.error("Could not send message [%s] to GUI: %s" % (msg, e))
-    
+
     def on_message(self, message):
         msg_dict = json.loads(message)
         logger.info("Got message %s", (msg_dict))
         if (msg_dict['request'] == 'currentstatus'):
-            if start_message != None:
-                self.send_msg(start_message)
-            if last_status != None:
+            if start_msg is not None:
+                self.send_msg(start_msg)
+            if last_status is not None:
                 self.send_msg(last_status)
             for status in list(last_notifications):
                 self.send_msg(status)
 
     def on_close(self):
         with handler_lock:
-            handlers.remove(self) # si rimuove dalla lista degli handler attivi
+            handlers.remove(self)
             logger.info("server close connection")

@@ -1,105 +1,140 @@
 # iptools.py
 # -*- coding: utf-8 -*-
-
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-'''
-Created on 14/apr/2016
 
-@author: ewedlund
-'''
-'''
-Some useful functions for IP and Ethernet
-'''
+"""Some useful functions for IP and Ethernet"""
 
 import logging
 import netifaces
+import psutil
 import re
 import socket
 
+from nem_exceptions import NemesysException
 import nem_exceptions
+
 
 logger = logging.getLogger(__name__)
 
-def getipaddr(host = 'finaluser.agcom244.fub.it', port = 443):
+
+def getipaddr(host='finaluser.agcom244.fub.it', port=443):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect((host, port))
         ipaddr = s.getsockname()[0]
-        #TODO: if not checkipsyntax(value):
     except socket.gaierror:
-        ipaddr = ""
+        raise NemesysException("Impossibile ottenere indirizzo IP "
+                               "della scheda di rete attiva")
     return ipaddr
 
-    
+
 def get_if_ipaddress(ifname):
-    neti_names = netifaces.interfaces()
-    ipval = '127.0.0.1'
-    for nn in neti_names:
-        if ifname == nn:
-            try:
-                ipval = netifaces.ifaddresses(ifname)[netifaces.AF_INET][0]['addr']
-            except Exception:
-                ipval = '127.0.0.1'
-    return ipval
+    try:
+        for if_info in psutil.net_if_addrs()[ifname]:
+            if if_info.family == socket.AF_INET:
+                return if_info.address
+    except KeyError:
+        pass
+    raise NemesysException("Impossibile ottenere l'indirizzo IP "
+                           "dell'interfaccia %s" % ifname)
 
-def get_mac_address(ip = None):
-    '''Get mac address of the device with the given IP address.
-    If ip == None, then get MAC address of device
-    used for connecting to the Internet.'''
-    if ip != None:
-        ipaddr = ip
+
+def get_if_speed(ifname):
+    try:
+        if_stats = psutil.net_if_stats()[ifname]
+        return if_stats.speed
+    except KeyError:
+        pass
+    raise NemesysException("Impossibile ottenere la velocita' "
+                           "dell'interfaccia %s" % ifname)
+
+
+def get_mac_address(dev=None):
+    if not dev:
+        ifname = get_dev()
     else:
-        ipaddr = getipaddr()
-        
-    for if_dev in netifaces.interfaces():
-        addrs = netifaces.ifaddresses(if_dev)
-        try:
-            if_mac = addrs[netifaces.AF_LINK][0]['addr']
-            if_ip = addrs[netifaces.AF_INET][0]['addr']
-        except IndexError: #ignore ifaces that dont have MAC or IP
-            if_mac = if_ip = None
-        except KeyError:
-            if_mac = if_ip = None
-        if if_ip == ipaddr:
-            return if_mac
-    return None
+        ifname = dev
+    try:
+        for if_info in psutil.net_if_addrs()[ifname]:
+            if if_info.family == psutil.AF_LINK:
+                return if_info.address
+    except KeyError:
+        pass
+    raise NemesysException("Impossibile ottenere l'indirizzo MAC "
+                           "dell'interfaccia %s" % ifname)
 
-def get_dev(host = 'finaluser.agcom244.fub.it', port = 443, ip = None):
+
+def get_dev(host='finaluser.agcom244.fub.it', port=443, ip=None):
     '''
-    restituisce scheda attiva (guid della scheda su Windows 
+    restituisce scheda attiva (guid della scheda su Windows
     '''
     if not ip:
         local_ip_address = getipaddr(host, port)
     else:
         local_ip_address = ip
-    
-    ''' Now get the associated device '''
-    for ifName in netifaces.interfaces():
-        all_addresses = netifaces.ifaddresses(ifName)
-        if (netifaces.AF_INET in all_addresses):
-            ip_addresses = all_addresses[netifaces.AF_INET]
-            for address in ip_addresses:
-                if ('addr' in address) and (address['addr'] == local_ip_address):
-                    return ifName
-    raise nem_exceptions.SysmonitorException('Impossibile ottenere il dettaglio dell\'interfaccia di rete', nem_exceptions.UNKDEV)
-    
+
+    for (if_name, if_info) in psutil.net_if_addrs().items():
+        for addr_type in if_info:
+            if addr_type.family == socket.AF_INET:
+                if addr_type.address == local_ip_address:
+                    return if_name
+    raise nem_exceptions.SysmonitorException('Impossibile ottenere '
+                                             'il dettaglio '
+                                             'dell\'interfaccia di rete',
+                                             nem_exceptions.UNKDEV)
+
+
 def get_network_mask(ip):
     '''
-    Restituisce un intero rappresentante la maschera di rete, in formato CIDR, 
-    dell'indirizzo IP in uso. In caso non si trova una maschera, torna 24 di default
+        Returns netmask for the given IP
+        as a number, e.g. '24' as set on
+        the network device.
+
+        If ip is None or empty, gets the
+        IP address of the active interface
+        and uses that.
+
+        In case no netmask is found,
+        it returns a default
+        netmask of 24
+    '''
+#     default_netmask = '255.255.255.0'
+    if not ip:
+        local_ip_address = getipaddr()
+    else:
+        local_ip_address = ip
+
+    for (_, if_info) in psutil.net_if_addrs().items():
+        for addr_type in if_info:
+            if addr_type.family == socket.AF_INET:
+                if addr_type.address == local_ip_address:
+                    if addr_type.netmask is not None:
+                        return _maskConversion(addr_type.netmask)
+                    else:
+                        break
+    # Netmask not found, try with netifaces instead
+    logger.warn("Could not find netmask, trying with netifaces")
+    return get_network_mask_netifaces(local_ip_address)
+
+
+def get_network_mask_netifaces(ip):
+    '''
+    This is the 'old' method, using netifaces,
+    used as a fallback when psutil fails,
+    since it does not work on Windows.
     '''
     netmask = '255.255.255.0'
 
@@ -116,14 +151,24 @@ def get_network_mask(ip):
             except KeyError:
                 pass
         except Exception as e:
-            logger.warning("Errore durante il controllo dell'interfaccia %s. %s" % (i, e), exc_info=True)
-    
+            logger.warning("Errore durante il controllo "
+                           "dell'interfaccia {0}. {1}".format(i, e),
+                           exc_info=True)
+
+    logger.warn("Could not find netmask, returning default")
     return _maskConversion(netmask)
 
+
 def is_public_ip(ip):
-    return (bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)) == False)
-   
-def checkipsyntax(ip):
+    return (bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.',
+                           ip)) == False)
+
+
+def is_loopback_ip(ip):
+    return ip.startswith('127')
+
+
+def is_ip_address(ip):
 
     try:
         socket.inet_aton(ip)
@@ -132,8 +177,9 @@ def checkipsyntax(ip):
             return False
     except Exception:
         return False
-    
+
     return True
+
 
 def _maskConversion(netmask):
     nip = str(netmask).split(".")
@@ -160,7 +206,8 @@ def _maskConversion(netmask):
     else:
         return 0
     return maskcidr
-    
+
+
 def _convertDecToBin(dec):
     i = 0
     binval = range(0, 4)
@@ -173,4 +220,3 @@ def _convertDecToBin(dec):
             dec[i] /= 2
             j = j - 1
     return binval
-

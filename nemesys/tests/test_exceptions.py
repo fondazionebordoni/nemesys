@@ -1,4 +1,4 @@
-# nem_exceptions_test.py
+# test_exceptions.py
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
@@ -7,29 +7,30 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import nem_exceptions
+import nemesys.nem_exceptions as nem_exceptions
 import unittest
 
-'''
-Make sure that errorcode works!
-'''
 
-class ErrorcodeTests(unittest.TestCase):
-    
+class TestErrorcode(unittest.TestCase):
+    '''
+    Make sure that errorcode works
+    for backwards compatibility
+    '''
+
     def test_unknown(self):
         e = Exception('pippo')
         code = nem_exceptions.errorcode_from_exception(e)
         self.assertEqual(99999, code)
-        
+
     def test_errno110(self):
         e = Exception('110')
         code = nem_exceptions.errorcode_from_exception(e)
@@ -46,10 +47,13 @@ class ErrorcodeTests(unittest.TestCase):
         self.assertEqual(12345, code)
 
     def test_measurementexception_real(self):
-        e = nem_exceptions.MeasurementException("Test non risucito - tempo ritornato dal server non corrisponde al tempo richiesto.", nem_exceptions.SERVER_ERROR)
+        msg = ("Test non risucito - tempo ritornato dal server "
+               "non corrisponde al tempo richiesto.")
+        e = nem_exceptions.MeasurementException(msg,
+                                                nem_exceptions.SERVER_ERROR)
         code = nem_exceptions.errorcode_from_exception(e)
         self.assertEqual(nem_exceptions.SERVER_ERROR, code)
-        
+
     def test_sysmonitorexception(self):
         e = nem_exceptions.SysmonitorException("Test", 5008)
         code = nem_exceptions.errorcode_from_exception(e)

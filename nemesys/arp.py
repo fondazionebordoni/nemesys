@@ -400,7 +400,7 @@ if __name__ == '__main__':
     dev = iptools.get_dev()
     ip = iptools.getipaddr()
     mac = iptools.get_mac_address(ip)
-    print do_arping(dev, ip, 24, True, 1, mac, 1)
+    print do_arping(dev, ip, 24, True)
     #print do_unix_arping('eth0', '192.168.112.24', 24, True)
     
 #    print do_arping(None, '192.168.208.4', 24, True)

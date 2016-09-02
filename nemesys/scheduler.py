@@ -1,7 +1,5 @@
 # getconf.py
 # -*- coding: utf-8 -*-
-from nemesys.nem_exceptions import TaskException
-
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -25,6 +23,7 @@ import logging
 import urlparse
 
 import httputils
+from nem_exceptions import TaskException
 import task
 
 
