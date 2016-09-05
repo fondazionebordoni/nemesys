@@ -41,7 +41,7 @@ class TestProfiler(unittest.TestCase):
     def test_cpu_load(self):
         cpu_load = self.profiler.cpuLoad()
         self.assertGreaterEqual(cpu_load, 0)
-        self.assertLess(cpu_load, 100)
+        self.assertLessEqual(cpu_load, 100)
 
     def test_mem_total(self):
         total_mem = self.profiler.total_memory()
