@@ -33,8 +33,8 @@ import timeNtp
 
 
 TOTAL_MEASURE_TIME = 10
-# Wait another 5 secs in case end of file has not arrived
-DOWNLOAD_TIMEOUT_DELAY = 5
+# Wait another 15 secs in case end of file has not arrived
+DOWNLOAD_TIMEOUT_DELAY = 15
 # 100 Mbps for 11 seconds
 MAX_TRANSFERED_BYTES = 100 * 1000000 * 11 / 8
 # 10 seconds timeout on open and read operations

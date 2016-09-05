@@ -33,6 +33,8 @@ import timeNtp
 
 
 TOTAL_MEASURE_TIME = 10
+# Long timeout since needed in some cases
+TEST_TIMEOUT = 18
 # 1 Gbps for 15 seconds
 MAX_TRANSFERED_BYTES = 1000 * 1000000 * 15 / 8
 
@@ -111,8 +113,7 @@ class HttpTesterUp:
         start_tx_bytes = self._netstat.get_tx_bytes()
         for _ in range(0, num_sessions):
             fakefile = Fakefile(MAX_TRANSFERED_BYTES)
-            # TODO not needed?
-            test_timeout = total_test_time_secs * 2
+            test_timeout = total_test_time_secs + TEST_TIMEOUT
             upload_thread = UploadThread(httptester=self,
                                          fakefile=fakefile,
                                          url=url,
