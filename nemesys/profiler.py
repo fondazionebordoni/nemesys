@@ -40,7 +40,6 @@ class Device(object):
         self._type_string = 'Unknown'
         self._is_active = False
         self._is_enabled = False
-        self._guid = None
 
     def __str__(self, *args, **kwargs):
         d = self.dict()
@@ -118,13 +117,6 @@ class Device(object):
     @property
     def duplex(self):
         return self._duplex
-
-    def set_guid(self, guid):
-        self._guid = guid
-
-    @property
-    def guid(self):
-        return self._guid
 
 
 class Profiler(object):

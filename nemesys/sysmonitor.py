@@ -35,11 +35,11 @@ platform_name = platform.system().lower()
 # Massima quantità di host in rete
 MAX_HOSTS = 1
 # Minima memoria disponibile
-th_avMem = 134217728
+TH_AV_MEM = 134217728
 # Massimo carico percentuale sulla memoria
-th_memLoad = 95
+TH_MEM_LOAD = 95
 # Massimo carico percentuale sulla CPU
-th_cpu = 85
+TH_CPU = 85
 
 # RES_OS = 'OS'
 RES_CPU = 'CPU'
@@ -54,7 +54,7 @@ RES_HOSTS = 'Hosts'
 RES_TRAFFIC = 'Traffic'
 
 
-class SysProfiler():
+class SysProfiler(object):
 
     def __init__(self, bw_upload, bw_download, isp_id, bypass=False):
         self._bw_upload = bw_upload
@@ -76,7 +76,7 @@ class SysProfiler():
             iptools.get_network_mask(ip)
         except Exception as e:
             raise SysmonitorException("Impossibile ottenere indirizzo IP "
-                                      "della scheda di rete attiva: %s" % (e))
+                                      "della scheda di rete attiva: %s" % e)
         if iptools.is_loopback_ip(ip):
             raise SysmonitorException("Indirizzo IP {0} punta sull'interfaccia"
                                       " di loopback - Firewall attivo?"
@@ -85,7 +85,7 @@ class SysProfiler():
             dev_name = iptools.get_dev(ip=ip)
         except Exception as e:
             raise SysmonitorException("Impossibile identificare "
-                                      "la scheda di rete attiva: %s" % (e))
+                                      "la scheda di rete attiva: %s" % e)
         device_speed = iptools.get_if_speed(dev_name)
         if device_speed < (self._bw_download / 1000):
             raise SysmonitorException("La velocita' della scheda di rete e' "
@@ -101,28 +101,28 @@ class SysProfiler():
         if value < 0 or value > 100:
             raise SysmonitorException('Valore di occupazione della cpu '
                                       'non conforme.', nem_exceptions.BADCPU)
-        if value > th_cpu:
+        if value > TH_CPU:
             raise SysmonitorException('CPU occupata al %d%%' % value,
                                       nem_exceptions.WARNCPU)
 
     def checkmem(self):
-        avMem = self._profiler.total_memory()
-        logger.debug("Memoria disponibile: %2f" % avMem)
-        if avMem < 0:
+        av_mem = self._profiler.total_memory()
+        logger.debug("Memoria disponibile: %2f" % av_mem)
+        if av_mem < 0:
             raise SysmonitorException('Valore di memoria disponibile '
                                       'non conforme.', nem_exceptions.BADMEM)
-        if avMem < th_avMem:
+        if av_mem < TH_AV_MEM:
             raise SysmonitorException('Memoria disponibile '
                                       'non sufficiente.',
                                       nem_exceptions.LOWMEM)
 
-        memLoad = self._profiler.percentage_ram_usage()
-        logger.debug("Memoria occupata: %d%%" % memLoad)
-        if memLoad < 0 or memLoad > 100:
+        mem_load = self._profiler.percentage_ram_usage()
+        logger.debug("Memoria occupata: %d%%" % mem_load)
+        if mem_load < 0 or mem_load > 100:
             raise SysmonitorException('Valore di occupazione della memoria '
                                       'non conforme.',
                                       nem_exceptions.INVALIDMEM)
-        if memLoad > th_memLoad:
+        if mem_load > TH_MEM_LOAD:
             raise SysmonitorException('Memoria occupata.',
                                       nem_exceptions.OVERMEM)
 
@@ -137,9 +137,9 @@ class SysProfiler():
             dev = iptools.get_dev(ip=ip)
             mask = iptools.get_network_mask(ip)
         except Exception as e:
-            logger.error("Cannot get info on network device: %s" % (e))
+            logger.error("Cannot get info on network device: %s" % e)
             raise SysmonitorException("Impossibile ottenere informazioni "
-                                      "sulla scheda di rete attiva: %s" % (e),
+                                      "sulla scheda di rete attiva: %s" % e,
                                       errorcode=nem_exceptions.UNKDEV)
         if iptools.is_loopback_ip(ip):
             raise SysmonitorException("Indirizzo IP {0} punta sull'interfaccia"
@@ -163,7 +163,7 @@ class SysProfiler():
                 if do_arp:
                     logger.warning("Passaggio a PING "
                                    "per controllo host in rete")
-                    return self._checkhosts(do_arp=False)
+                    return self.checkhosts(do_arp=False)
                 else:
                     raise SysmonitorException('impossibile determinare il '
                                               'numero di host in rete.',
