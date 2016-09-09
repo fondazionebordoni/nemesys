@@ -46,12 +46,12 @@ class TestProfiler(unittest.TestCase):
     def test_mem_total(self):
         total_mem = self.profiler.total_memory()
         self.assertGreater(total_mem, 0)
-        self.assertGreater(total_mem, sysmonitor.th_avMem)
+        self.assertGreater(total_mem, sysmonitor.TH_AV_MEM)
 
     def test_mem_usage(self):
         usage = self.profiler.percentage_ram_usage()
         self.assertGreater(usage, 0)
-        self.assertLess(usage, sysmonitor.th_memLoad)
+        self.assertLess(usage, sysmonitor.TH_MEM_LOAD)
 
     def test_wireless(self):
         is_active = self.profiler.is_wireless_active()
