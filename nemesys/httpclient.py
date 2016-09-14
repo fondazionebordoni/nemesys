@@ -41,10 +41,12 @@ class HttpException(Exception):
         return self._message
 
 
-class HttpClient():
+class HttpClient(object):
 
     def __init__(self):
         self._http_response = None
+        self._response_received = False
+        self._read_timeout = False
 
     def post(self, url, headers=None, tcp_window_size=None,
              data_source=None, timeout=18):
@@ -137,7 +139,7 @@ class HttpClient():
                 response = lines[0].strip().split()
                 response_code = int(response[1])
                 response_cause = ' '.join(response[2:])
-            except:
+            except IndexError:
                 logger.error("Could not parse response %s" % all_data)
                 response_code = 999
                 response_cause = "Risposta dal server non HTTP"
@@ -146,7 +148,10 @@ class HttpClient():
             content = ""
             while i < len(lines):
                 if lines[i].strip() == "":
-                    content = lines[i + 1:][0]
+                    try:
+                        content = lines[i + 1:][0]
+                    except IndexError:
+                        content = ""
                     break
                 i += 1
         else:
@@ -178,7 +183,6 @@ class HttpResponse(object):
         my_str += "Response cause: %s\n" % self._response_cause
         my_str += "Response content: %s\n" % self._content
         return my_str
-        return object.__str__(self, *args, **kwargs)
 
     @property
     def status_code(self):

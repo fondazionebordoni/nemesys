@@ -233,7 +233,7 @@ def receive_arp_response(mac_addr, my_socket, timeout):
 
     '''Wait for response'''
 #     timeLeft = timeout*1000
-    stopTime = time.time() + timeout*1;
+    stopTime = time.time() + timeout*1
 
     while True:
         timeLeft = stopTime - time.time()
@@ -393,17 +393,6 @@ def _send_one_win_arp(IPdst, result_queue):
 if __name__ == '__main__':
     import log_conf
     log_conf.init_log()
-    #from arprequest import ArpRequest
-#     ar = ArpRequest('192.168.112.2', 'eth0', '192.168.112.24')
-#     result = ar.request()
     import iptools
-    dev = iptools.get_dev()
     ip = iptools.getipaddr()
-    mac = iptools.get_mac_address(ip)
-    print do_arping(dev, ip, 24, True)
-    #print do_unix_arping('eth0', '192.168.112.24', 24, True)
-    
-#    print do_arping(None, '192.168.208.4', 24, True)
-#    print do_arping('{5FC94950-68BA-417F-97DC-47B0722814F5}', '172.16.141.128', 24, True, 1, '00:0c:29:cb:5f:e7', 1)
-#    print do_win_arping('192.168.208.4', 24)
-#     print(result)
+    print do_arping(ip, 24, True)

@@ -35,11 +35,10 @@ import zipfile
 from httputils import post_multipart
 from timeNtp import timestampNtp
 
-
 logger = logging.getLogger(__name__)
 
-class Deliverer(object):
 
+class Deliverer(object):
     def __init__(self, url, certificate, timeout=60):
         self._url = url
         self._certificate = certificate
@@ -55,9 +54,13 @@ class Deliverer(object):
         try:
             with open(filename, 'rb') as myfile:
                 body = myfile.read()
-            
+
             url = urlparse(self._url)
-            response = post_multipart(url, fields=None, files=[('myfile', os.path.basename(filename), body)], certificate=self._certificate, timeout=self._timeout)
+            response = post_multipart(url,
+                                      fields=None,
+                                      files=[('myfile', os.path.basename(filename), body)],
+                                      certificate=self._certificate,
+                                      timeout=self._timeout)
 
         except HTTPException as e:
             os.remove(filename)
@@ -77,15 +80,16 @@ class Deliverer(object):
 
         # Aggiungi la data di invio in fondo al file
         with open(filename, 'a') as myfile:
-            myfile.write('\n<!-- [packed] %s -->' % datetime.datetime.fromtimestamp(timestampNtp()).isoformat())            
+            myfile.write('\n<!-- [packed] %s -->' % datetime.datetime.fromtimestamp(timestampNtp()).isoformat())
 
-        # Gestione della firma del file
+            # Gestione della firma del file
         sign = None
-        if self._certificate != None and os.path.exists(self._certificate):
+        if self._certificate is not None and os.path.exists(self._certificate):
             # Crea il file della firma
             signature = self.sign(filename)
-            if signature == None:
-                logger.error('Impossibile eseguire la firma del file delle misure. Creazione dello zip omettendo il .sign')
+            if signature is None:
+                logger.error('Impossibile eseguire la firma del file delle misure. '
+                             'Creazione dello zip omettendo il .sign')
             else:
                 with open('%s.sign' % filename[0:-4], 'wb') as sign:
                     sign.write(signature)
@@ -96,12 +100,12 @@ class Deliverer(object):
         zip_file.write(myfile.name, os.path.basename(myfile.name))
 
         # Sposto la firma nello zip
-        if sign != None and os.path.exists(sign.name):
-                zip_file.write(sign.name, os.path.basename(sign.name))
-                os.remove(sign.name)
+        if sign is not None and os.path.exists(sign.name):
+            zip_file.write(sign.name, os.path.basename(sign.name))
+            os.remove(sign.name)
 
         # Controllo lo zip
-        if zip_file.testzip() != None:
+        if zip_file.testzip() is not None:
             zip_file.close()
             logger.error("Lo zip %s è corrotto. Lo elimino." % zipname)
             os.remove(zipname)
@@ -113,7 +117,7 @@ class Deliverer(object):
         # A questo punto ho un xml e uno zip
         return zipname
 
-    #restituisce la firma del file da inviare
+    # restituisce la firma del file da inviare
     def sign(self, filename):
         '''
         Restituisce la stringa contenente la firma del digest SHA1 del
@@ -136,13 +140,13 @@ class Deliverer(object):
         else:
             return None
 
-
     def uploadall_and_move(self, directory, to_dir, do_remove=True):
         '''
         Cerca di spedire tutti i file di misura che trova nella cartella d'uscita
         '''
-        for filename in glob.glob(os.path.join(directory, 'measure_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].xml')):
-            #logger.debug('Trovato il file %s da spedire' % filename)
+        file_pattern = 'measure_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].xml'
+        for filename in glob.glob(os.path.join(directory, file_pattern)):
+            # logger.debug('Trovato il file %s da spedire' % filename)
             self.upload_and_move(filename, to_dir, do_remove)
 
     def upload_and_move(self, filename, to_dir, do_remove=True):
@@ -150,7 +154,6 @@ class Deliverer(object):
         Spedisce il filename di misura al repository entro il tempo messo a
         disposizione secondo il parametro httptimeout
         '''
-        response = None
         result = False
 
         try:
@@ -159,21 +162,19 @@ class Deliverer(object):
             zipname = self.pack(filename)
             response = self.upload(zipname)
 
-            if (response != None):
+            if response is not None:
                 (code, message) = self._parserepositorydata(response)
                 code = int(code)
                 logger.info('Risposta dal server delle misure: [%d] %s' % (code, message))
 
                 # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
-                if (code == 0):
+                if code == 0:
                     os.remove(filename)
                     self._movefiles(zipname, to_dir)
 
                     result = True
-
         except Exception as e:
             logger.error('Errore durante la spedizione del file delle misure %s: %s' % (filename, e))
-
         finally:
             # Elimino lo zip del file di misura temporaneo
             if os.path.exists(zipname):
@@ -183,20 +184,19 @@ class Deliverer(object):
                 os.remove(filename)
 
             return result
-        
-        
+
     def _parserepositorydata(self, data):
         '''
         Valuta l'XML ricevuto dal repository, restituisce il codice e il messaggio ricevuto
         '''
-        #TODO: use xmltodict instead
+        # TODO: use xmltodict instead
         xml = getxml(data)
-        if (xml == None):
+        if xml is None:
             logger.error('Nessuna risposta ricevuta')
             return None
 
         nodes = xml.getElementsByTagName('response')
-        if (len(nodes) < 1):
+        if len(nodes) < 1:
             logger.error('Nessuna risposta ricevuta nell\'XML:\n%s' % xml.toxml())
             return None
 
@@ -204,20 +204,18 @@ class Deliverer(object):
 
         code = getvalues(node, 'code')
         message = getvalues(node, 'message')
-        return (code, message)
-
-
+        return code, message
 
     def _movefiles(self, filename, to_dir):
 
         directory = os.path.dirname(filename)
-        #pattern = path.basename(filename)[0:-4]
+        # pattern = path.basename(filename)[0:-4]
         pattern = os.path.basename(filename)
 
         try:
             for f in os.listdir(directory):
                 # Cercare tutti i file che iniziano per pattern
-                if (re.search(pattern, f) != None):
+                if re.search(pattern, f) is not None:
                     # Spostarli tutti in self._sent
                     old = ('%s/%s' % (directory, f))
                     new = ('%s/%s' % (to_dir, f))
@@ -226,42 +224,40 @@ class Deliverer(object):
         except Exception as e:
             logger.error('Errore durante lo spostamento dei file di misura %s' % e)
 
+
 def getxml(data):
-    
-    if (len(data) < 1):
+    if len(data) < 1:
         logger.error('Nessun dato da processare')
-        raise Exception('Ricevuto un messaggio vuoto');
+        raise Exception('Ricevuto un messaggio vuoto')
 
     logger.debug('Dati da convertire in XML:\n%s' % data)
     try:
         xml = parseString(data)
     except ExpatError:
         logger.error('Il dato ricevuto non è in formato XML: %s' % data)
-        raise Exception('Errore di formattazione del messaggio');
+        raise Exception('Errore di formattazione del messaggio')
 
     return xml
 
 
-
 def getvalues(node, tag=None):
-
-    if (tag == None):
+    if tag is None:
         values = []
         for child in node.childNodes:
             if child.nodeType == Node.TEXT_NODE:
-                #logger.debug('Trovato nodo testo.')
+                # logger.debug('Trovato nodo testo.')
                 values.append(child.nodeValue)
 
-        #logger.debug('Value found: %s' % join(values).strip())
+        # logger.debug('Value found: %s' % join(values).strip())
         return join(values).strip()
 
     else:
         return getvalues(node.getElementsByTagName(tag)[0])
 
 
-
 if __name__ == '__main__':
     import log_conf
+
     log_conf.init_log()
     d = Deliverer('https://repository.agcom244.fub.it/Upload', 'fub000.pem')
     print ('%s' % d.upload(d.pack("outbox/measure.xml")))

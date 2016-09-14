@@ -64,12 +64,15 @@ class Executer(object):
         self._sent = paths.SENT
         self._wakeup_event = Event()
 
+        self._time_to_stop = False
+
         if self._isprobe:
             self._gui_server = None
             logger.info('Inizializzato software per sonda.')
         else:
             logger.info('Inizializzato software per misure '
                         'd\'utente con ISP id = %s' % client.isp.id)
+            logger.info('Con profilo [%s]' % client.profile)
             self._gui_server = gui_server.Communicator(serial=self._client.id,
                                                        version=__version__)
             self._gui_server.start()
@@ -80,7 +83,6 @@ class Executer(object):
         In presenza di errori ri-tenta per un massimo di 5 volte
         '''
         logger.info('Inizio task di misura verso il server %s' % task.server)
-
         try:
             t = Tester(dev=dev, host=task.server, timeout=self._testtimeout,
                        username=self._client.username,
@@ -98,17 +100,15 @@ class Executer(object):
                     n_reps = task.ping
                     self._gui_server.measure(test_type)
                     sleep_secs = 1
-                elif test_type == "down":
+                elif test_type == "download":
                     n_reps = task.download
                     if n_reps > 0:
-                        res = self._client.profile.download/1000.0
-                        self._gui_server.measure(test_type, res)
+                        self._gui_server.measure(test_type, self._client.profile.download/1000)
                     sleep_secs = 10
                 else:
                     n_reps = task.upload
                     if n_reps > 0:
-                        res = self._client.profile.upload/1000.0
-                        self._gui_server.measure(test_type, res)
+                        self._gui_server.measure(test_type, self._client.profile.upload/1000)
                     sleep_secs = 10
                 proofs = self._do_tests(test_type, n_reps, sleep_secs, t)
                 m.add_proofs(proofs)
@@ -288,8 +288,7 @@ class Executer(object):
         self._gui_server.speed(speed/1000.0)
 
     def loop(self):
-        # Open socket for GUI dialog
-        self._time_to_stop = False
+        self._sys_profiler.log_interfaces()
         while not self._time_to_stop:
             logger.debug("Starting main loop")
             if self._isprobe:

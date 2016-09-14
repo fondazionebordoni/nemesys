@@ -102,8 +102,7 @@ def receive_one_ping(my_socket, ID, timeout, dest_addr):
 					3: 'Port Unreachable',
 					}
 				raise Exception(codes[code])
-				break
-		
+
 		timeLeft = timeLeft - howLongInSelect
 		if timeLeft <= 0:
 			raise RuntimeWarning('Timeout during ICMP packet receive (timeout = %f)'

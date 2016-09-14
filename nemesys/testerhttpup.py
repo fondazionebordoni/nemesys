@@ -31,7 +31,6 @@ import netstat
 from proof import Proof
 import timeNtp
 
-
 TOTAL_MEASURE_TIME = 10
 # Long timeout since needed in some cases
 TEST_TIMEOUT = 18
@@ -47,9 +46,11 @@ class HttpTesterUp:
     one measurement at a time!
     '''
 
-    def __init__(self, dev, bufsize=8*1024, rampup_secs=2):
+    def __init__(self, dev, bufsize=8 * 1024):
         self._num_bytes = bufsize
         self._netstat = netstat.Netstat(dev)
+        self.callback_update_speed = None
+        self._time_to_stop = False
 
     def _init_counters(self):
         self._time_to_stop = False
@@ -63,12 +64,12 @@ class HttpTesterUp:
         if not self._time_to_stop:
             self._measure_count += 1
             measuring_time = time.time()
-            elapsed = (measuring_time - self._last_measured_time)*1000.0
+            elapsed = (measuring_time - self._last_measured_time) * 1000.0
             new_tx_bytes = self._netstat.get_tx_bytes()
             tx_diff = new_tx_bytes - self._last_tx_bytes
             if (self._measure_count >= 2) and (self._measure_count < 12):
                 self._partial_tx_bytes += tx_diff
-            rate_tot = float(tx_diff*8)/float(elapsed)
+            rate_tot = float(tx_diff * 8) / float(elapsed)
             self._last_tx_bytes = new_tx_bytes
             self._last_measured_time = measuring_time
 
@@ -90,7 +91,7 @@ class HttpTesterUp:
                 url,
                 callback_update_speed=None,
                 total_test_time_secs=TOTAL_MEASURE_TIME,
-                recv_bufsize=8*1024,
+                recv_bufsize=8 * 1024,
                 num_sessions=1,
                 tcp_window_size=-1):
         '''
@@ -124,6 +125,8 @@ class HttpTesterUp:
                                          tcp_window_size=tcp_window_size)
             upload_thread.start()
             upload_threads.append(upload_thread)
+        thread_error = None
+        resp_content = None
         for upload_thread in upload_threads:
             upload_thread.join()
             thread_error = upload_thread.get_error()
@@ -144,7 +147,7 @@ class HttpTesterUp:
         for upload_thread in upload_threads:
             bytes_read += upload_thread.get_bytes_read()
         tx_diff = self._netstat.get_tx_bytes() - start_tx_bytes
-        if (tx_diff < 0):
+        if tx_diff < 0:
             raise MeasurementException("Ottenuto banda negativa, possibile "
                                        "azzeramento dei contatori.",
                                        nem_exceptions.COUNTER_RESET)
@@ -153,7 +156,7 @@ class HttpTesterUp:
                                        "connessione interrotta",
                                        nem_exceptions.BROKEN_CONNECTION)
         if tx_diff > bytes_read:
-            spurious = (float(tx_diff - bytes_read)/float(tx_diff))
+            spurious = (float(tx_diff - bytes_read) / float(tx_diff))
         else:
             logger.warn("Bytes read from file > tx_diff, "
                         "alternative calculation of spurious traffic")
@@ -178,8 +181,8 @@ def _test_from_server_response(response):
     '''
     logger.debug("Ricevuto risposta dal server: %s" % str(response))
     if not response or len(response) == 0:
-        MeasurementException("Ricevuto risposta vuota dal server",
-                             nem_exceptions.SERVER_ERROR)
+        raise MeasurementException("Nessuna risposta dal server",
+                                   nem_exceptions.SERVER_ERROR)
     else:
         try:
             results = map(int, response.strip(']').strip('[').split(', '))
@@ -189,11 +192,10 @@ def _test_from_server_response(response):
         time = len(results) * 1000
         partial_bytes = [float(x) for x in results]
         bytes_received = int(sum(partial_bytes))
-    return (time, bytes_received)
+    return time, bytes_received
 
 
 class UploadThread(threading.Thread):
-
     def __init__(self, httptester, fakefile, url, upload_sending_timeout,
                  measurement_id, recv_bufsize, num_bytes,
                  tcp_window_size=None):
@@ -251,7 +253,6 @@ class UploadThread(threading.Thread):
 
 
 class ChunkGenerator:
-
     def __init__(self, fakefile, num_bytes):
         self._fakefile = fakefile
         self._time_to_stop = False
@@ -267,17 +268,19 @@ class ChunkGenerator:
 
 if __name__ == '__main__':
     import log_conf
+
     log_conf.init_log()
     socket.setdefaulttimeout(10)
-#    host = "10.80.1.1"
-#    host = "193.104.137.133"
-#    host = "regopptest6.fub.it"
+    #    host = "10.80.1.1"
+    #    host = "193.104.137.133"
+    #    host = "regopptest6.fub.it"
     host = "eagle2.fub.it"
-#     host = "rambo.fub.it"
-#     host = "regoppwebtest.fub.it"
-#    host = "rocky.fub.it"
-#    host = "billia.fub.it"
+    #     host = "rambo.fub.it"
+    #     host = "regoppwebtest.fub.it"
+    #    host = "rocky.fub.it"
+    #    host = "billia.fub.it"
     import iptools
+
     dev = iptools.get_dev()
     http_tester = HttpTesterUp(dev)
     print "\n------ UPLOAD ---------\n"

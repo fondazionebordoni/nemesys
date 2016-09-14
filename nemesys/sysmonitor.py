@@ -70,6 +70,15 @@ class SysProfiler(object):
             ])
         self._profiler = profiler.Profiler()
 
+    def log_interfaces(self):
+        all_devices = self._profiler.get_all_devices()
+        for device in all_devices:
+            logger.info("============================================")
+            device_dict = device.dict()
+            for key in device_dict:
+                logger.info("| %s : %s" % (key, device_dict[key]))
+            logger.info("============================================")
+
     def check_device(self):
         try:
             ip = iptools.getipaddr()
@@ -159,7 +168,7 @@ class SysProfiler(object):
                 raise SysmonitorException('impossibile determinare il '
                                           'numero di host in rete.',
                                           nem_exceptions.BADHOST)
-            elif (value == 0):
+            elif value == 0:
                 if do_arp:
                     logger.warning("Passaggio a PING "
                                    "per controllo host in rete")

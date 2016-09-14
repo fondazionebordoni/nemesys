@@ -40,7 +40,7 @@ import nem_exceptions
 logger = logging.getLogger(__name__)
 
 
-class MockScheduler():
+class MockScheduler(object):
 
     def __init__(self):
         server = Server('fubsrvrmnmx03', 'eagle2.fub.it', 'Namex server')
@@ -85,7 +85,7 @@ class MockScheduler():
         return self._tasks[self._i]
 
 
-class MockDeliverer():
+class MockDeliverer(object):
 
     def uploadall_and_move(self, from_dir=None, to_dir=None, do_remove=False):
         logger.info("Move all from {0} to {1}, do remove is {2}"
@@ -98,7 +98,7 @@ class MockDeliverer():
         return True
 
 
-class MockDysfunctDeliverer():
+class MockDysfunctDeliverer(object):
 
     def uploadall_and_move(self, from_dir=None, to_dir=None, do_remove=False):
         logger.info("Move all from {0} to {1}, do remove is {2}"
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     sys_profiler = SysProfiler(c.profile.upload,
                                c.profile.download,
                                c.isp.id,
-                               bypass=False)
+                               bypass=True)
 #     d = MockDeliverer()
 #     d = MockDysfunctDeliverer()
     d = Deliverer(options.repository,
