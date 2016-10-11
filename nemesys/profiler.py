@@ -157,18 +157,21 @@ class Profiler(object):
         devices = []
         for (if_name, if_addrs) in psutil.net_if_addrs().items():
             device = Device(if_name)
-            if (if_name.startswith('eth') or if_name.startswith('en') or
-                    ('(LAN)' in if_name)):
-                device.set_type(IF_TYPE_ETHERNET)
-            for if_addr in if_addrs:
-                if if_addr.family == socket.AF_INET:
-                    ip_addr = if_addr.address
-                    device.set_ipaddr(ip_addr)
-                    if ip_addr == self.ipaddr:
-                        device.set_active(True)
-                    device.set_netmask(if_addr.netmask)
-                elif if_addr.family == psutil.AF_LINK:
-                    device.set_macaddr(if_addr.address)
+            try:
+                if (if_name.startswith('eth') or if_name.startswith('en') or
+                        ('(LAN)' in if_name)):
+                    device.set_type(IF_TYPE_ETHERNET)
+                for if_addr in if_addrs:
+                    if if_addr.family == socket.AF_INET:
+                        ip_addr = if_addr.address
+                        device.set_ipaddr(ip_addr)
+                        if ip_addr == self.ipaddr:
+                            device.set_active(True)
+                        device.set_netmask(if_addr.netmask)
+                    elif if_addr.family == psutil.AF_LINK:
+                        device.set_macaddr(if_addr.address)
+            except Exception as e:
+                pass
             devices.append(device)
 
         net_if_stats = psutil.net_if_stats()

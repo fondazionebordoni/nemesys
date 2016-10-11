@@ -288,7 +288,13 @@ class Executer(object):
         self._gui_server.speed(speed/1000.0)
 
     def loop(self):
-        self._sys_profiler.log_interfaces()
+        try:
+            self._sys_profiler.log_interfaces()
+        except Exception as e:
+            msg = "Impossibile rilevare le schede di rete: %s" % e
+            logger.error(msg, exc_info=True)
+            self._gui_server.notification(nem_exceptions.FAILPROF,
+                                          message=msg)
         while not self._time_to_stop:
             logger.debug("Starting main loop")
             if self._isprobe:
