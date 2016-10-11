@@ -171,7 +171,7 @@ class Profiler(object):
                     elif if_addr.family == psutil.AF_LINK:
                         device.set_macaddr(if_addr.address)
             except Exception as e:
-                pass
+                device.set_type(str(e))
             devices.append(device)
 
         net_if_stats = psutil.net_if_stats()
