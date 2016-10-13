@@ -147,10 +147,13 @@ class Profiler(object):
 
     def is_wireless_active(self):
         for (if_name, if_info) in psutil.net_if_stats().items():
-            if if_info.isup:
-                for wifi_word in WIFI_WORDS:
-                    if wifi_word in str(if_name).lower():
-                        return True
+            try:
+                if if_info.isup:
+                    for wifi_word in WIFI_WORDS:
+                        if wifi_word in str(if_name).lower():
+                            return True
+            except AttributeError:
+                pass
 
     def get_all_devices(self):
         self.ipaddr = iptools.getipaddr()
