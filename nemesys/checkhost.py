@@ -16,117 +16,160 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import ipcalc
 import logging
-import ping
 import re
 import threading
 
-import arp
+import ipcalc
 
+import arp
+import ping
 
 MAX_PING_HOSTS = 128
+TECHNICOLOR_MAC_REGEX = ('^F..94.E3|^F..91.14|^F..52.8D|^E..B9.E5|^E..88.5D|^D..B2.C4|^C..35.40|'
+                         '^C..03.FA|^C..EA.1D|^C..27.95|^B..C2.87|^A..B1.E9|^9..97.26|^8..04.FF|'
+                         '^8..F7.C7|^8..C6.AB|^8..29.94|^7..5A.9E|^5..98.35|^5..23.8C|^5..09.59|'
+                         '^4..F7.C0|^4..00.33|^4..32.C8|^3..91.8F|^2..BE.9B|^1..B7.F8|^1..13.31|'
+                         '^0..02.27|^0..95.2A')
 
 logger = logging.getLogger(__name__)
 
-class sendit(threading.Thread):
-    def __init__ (self, ip):
+
+def filter_out_technicolor(ip_table):
+    """
+    This check is needed to ignore routers that respond to ARP and ping with two
+    addresses, typically this happens with routers from Technicolor.
+    If the MAC address is the same, except for the first byte and last, then it
+    is considered Technicolor and ignored
+    """
+    n_hosts = len(ip_table)
+    if n_hosts < 2:
+        logger.debug('No check for technicolor, num hosts = %d', n_hosts)
+        return n_hosts
+
+    temp_table = []
+    for ip_address in ip_table:
+        mac_address = ip_table[ip_address]
+        if re.search(TECHNICOLOR_MAC_REGEX, mac_address, re.I):
+            logger.warn('Trovato possibile Technicolor: [%s, %s]', ip_address, mac_address)
+            temp_table.append(mac_address[3:14])
+        else:
+            temp_table.append(mac_address)
+    unique_addresses = set(temp_table)
+    return len(unique_addresses)
+
+
+class PingSender(threading.Thread):
+    def __init__(self, dest_ip):
         threading.Thread.__init__(self)
-        self.ip = ip
+        self.ip = dest_ip
         self.status = 0
         self.elapsed = 0
 
     def run(self):
         try:
-            self.elapsed = ping.do_one("%s" % self.ip, 1)
+            self.elapsed = ping.do_one('%s' % self.ip, 1)
             if self.elapsed > 0:
                 self.status = 1
         except Exception:
             self.status = 0
 
 
-def countHosts(ipAddress, netMask, bandwidthup, bandwidthdown, provider=None, use_arp=False):
-
-    if(provider == "fst001" and not bool(re.search('^192\.168\.', ipAddress))):
-        realSubnet = False
-        if bandwidthup == bandwidthdown and not bool(re.search('^10\.', ipAddress)):
-            #profilo fibra
+def count_hosts(ip_address, netmask, bandwidth_up, bandwidth_down, provider=None, use_arp=False):
+    if provider == 'fst001' and not bool(re.search('^192\.168\.', ip_address)):
+        real_subnet = False
+        if bandwidth_up == bandwidth_down and not bool(re.search('^10\.', ip_address)):
+            # profilo fibra
             netmask_to_use = 29
-            logger.debug("Sospetto profilo Fastweb in Fibra. Modificata sottorete in %d" % netmask_to_use)
+            logger.debug('Sospetto profilo Fastweb in Fibra. Modificata sottorete in %d', netmask_to_use)
         else:
-            #profilo ADSL
+            # profilo ADSL
             netmask_to_use = 30
-            logger.debug("Sospetto profilo Fastweb ADSL o Fibra con indirizzo 10.*. Modificata sottorete in %d" % netmask_to_use)
+            logger.debug('Sospetto profilo Fastweb ADSL o Fibra con indirizzo 10.*. Modificata sottorete in %d',
+                         netmask_to_use)
 
-        logger.info("Indirizzo: %s/%d; Realsubnet: %s" % (ipAddress, netMask, realSubnet))
-        n_host = _countNetHosts(ipAddress, netmask_to_use, realSubnet, use_arp)
-        #Only return if found host, otherwise continue with regular netmask
+        logger.info('Indirizzo: %s/%d; Realsubnet: %s', ip_address, netmask, real_subnet)
+        n_host = _count_net_hosts(ip_address, netmask_to_use, real_subnet, use_arp)
+        # Only return if found host, otherwise continue with regular netmask
         if n_host > 0:
             return n_host
-        
-    realSubnet = True
-    netmask_to_use = netMask
-    logger.info("Indirizzo: %s/%d; Realsubnet: %s" % (ipAddress, netMask, realSubnet))
-    n_host = _countNetHosts(ipAddress, netmask_to_use, realSubnet, use_arp)
+
+    real_subnet = True
+    netmask_to_use = netmask
+    logger.info('Indirizzo: %s/%d; Realsubnet: %s', ip_address, netmask, real_subnet)
+    n_host = _count_net_hosts(ip_address, netmask_to_use, real_subnet, use_arp)
     return n_host
 
 
-def _countNetHosts(ipAddress, netMask, realSubnet=True, use_arp=False):
-    '''
+def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
+    """
     Ritorna il numero di host che rispondono al ping nella sottorete ipAddress/net_mask.
-    Di default effettua i ping dei soli host appartenenti alla sottorete indicata (escludendo il 
+    Di default effettua i ping dei soli host appartenenti alla sottorete indicata (escludendo il
     primo e ultimo ip).
-    '''
-    nHosts = 0
-    ips = ipcalc.Network('%s/%d' % (ipAddress, netMask))
-    net = ips.network()
-    bcast = ips.broadcast()
-    pinglist = []
+    """
+    n_hosts = 0
+    ip_network = ipcalc.Network('%s/%d' % (dev_ip_address, netmask))
+    net = ip_network.network()
+    bcast = ip_network.broadcast()
+
+    ip_destinations = []
+    for ip_address in ip_network:
+        if (ip_address.hex() == net.hex() or ip_address.hex() == bcast.hex()) and real_subnet:
+            logger.debug('Saltato ip %s', ip_address)
+        elif ip_address.dq == dev_ip_address:
+            logger.debug('Salto il mio ip %s', dev_ip_address)
+        else:
+            ip_destinations.append(ip_address)
 
     if use_arp:
         try:
-            nHosts = arp.do_arping(ipAddress, netMask, realSubnet)
+            # ip_table = arp.do_arping(dev_ip_address, netmask, real_subnet)
+            ip_table = arp.do_arping(ip_destinations)
         except Exception as e:
-            logger.warn('Errore durante la ricerca host con ARP: %s' % e)
-
+            logger.warn('Errore durante la ricerca host con ARP: %s', e)
+            return 0
+        hosts = 'HOSTS: '
+        for key in ip_table:
+            hosts += '[{}|{}] '.format(ip_table[key], key)
+        logger.info(hosts)
+        # Check for router that responds with 2 IP addresses
+        # with slightly different Ethernet addresses
+        n_hosts = filter_out_technicolor(ip_table)
     else:
+        ping_threads = []
         i = 0
-        for ip in ips:
-            if ((ip.hex() == net.hex() or ip.hex() == bcast.hex()) and realSubnet):
-                logger.debug("Saltato ip %s" % ip)
-            elif(ip.dq == ipAddress):
-                logger.debug("Salto il mio ip %s" % ipAddress)
-            else:
-                i += 1
-                try:
-                    ping_thread = sendit(ip)
-                    ping_thread.start()
-                    pinglist.append(ping_thread)
-                except Exception as e:
-                    logger.warn('Errore durante la ricerca host con PING: %s' % e)
-                    break
+        for ip_address in ip_destinations:
+            i += 1
+            try:
+                ping_thread = PingSender(ip_address)
+                ping_thread.start()
+                ping_threads.append(ping_thread)
+            except Exception as e:
+                logger.warn('Errore durante la ricerca host con PING: %s', e)
+                break
             if i == MAX_PING_HOSTS:
                 break
 
-        for ping_thread in pinglist:
+        for ping_thread in ping_threads:
             ping_thread.join()
 
-            if(ping_thread.status):
-                logger.debug("Trovato host: %s (in %.2f ms)" % (ping_thread.ip, ping_thread.elapsed * 1000))
-                nHosts = nHosts + 1
+            if ping_thread.status:
+                logger.info('Trovato host: %s (in %.2f ms)', ping_thread.ip, ping_thread.elapsed * 1000)
+                n_hosts += 1
 
-    if not realSubnet:
-        nHosts += 1
-    
-    return nHosts
+    if not real_subnet:
+        n_hosts += 1
+
+    return n_hosts
 
 
 if __name__ == '__main__':
     import log_conf
     import iptools
+
     log_conf.init_log()
     ip = iptools.getipaddr('www.fub.it', 80)
 
-    print "PING:", countHosts(ip, 24, 200, 2000, 'fub001', False)
-    print "ARP:", countHosts(ip, 24, 200, 2000, 'fub001', True)
-#     print countHosts(ip, 24, 2000, 2000, 'fst001', 4, 1)
+    print 'PING:', count_hosts(ip, 24, 200, 2000, 'fub001', False)
+    print 'ARP:', count_hosts(ip, 24, 200, 2000, 'fub001', True)
+# print count_hosts(ip, 24, 2000, 2000, 'fst001', 4, 1)

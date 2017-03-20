@@ -157,12 +157,12 @@ class SysProfiler(object):
         logger.info("Indirizzo ip/mask: %s/%d, device: %s, provider: %s"
                     % (ip, mask, dev, self._isp_id))
         if not iptools.is_public_ip(ip):
-            value = checkhost.countHosts(ip,
-                                         mask,
-                                         self._bw_upload,
-                                         self._bw_download,
-                                         self._isp_id,
-                                         do_arp)
+            value = checkhost.count_hosts(ip,
+                                          mask,
+                                          self._bw_upload,
+                                          self._bw_download,
+                                          self._isp_id,
+                                          do_arp)
             logger.info('Trovati %d host in rete.' % value)
             if value < 0:
                 raise SysmonitorException('impossibile determinare il '

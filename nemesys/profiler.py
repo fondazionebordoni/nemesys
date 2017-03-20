@@ -37,6 +37,8 @@ class Device(object):
         self._ipaddr = 'Unknown'
         self._netmask = 'Unknown'
         self._macaddr = 'Unknown'
+        self._speed = 'Unknown'
+        self._duplex = 'Unknown'
         self._type_string = 'Unknown'
         self._is_active = False
         self._is_enabled = False
@@ -54,6 +56,8 @@ class Device(object):
                             ('Mask', self._netmask),
                             ('MAC', self._macaddr),
                             ('Type', self._type_string),
+                            ('Speed', self._speed),
+                            ('Duplex', self._duplex),
                             ('isEnabled', self._is_enabled),
                             ('isActive', self._is_active)
                             ])
