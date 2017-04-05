@@ -44,6 +44,41 @@ RES_TRANSLATION = {'Wireless': 'wifistatus',
                    'RAM': 'ramstatus'}
 
 
+class DummyGuiServer(object):
+    def start(self):
+        pass
+
+    def stop(self, timeout=None):
+        pass
+
+    def nem_start(self, version, log_dir):
+        pass
+
+    def notification(self, error_code, message=''):
+        pass
+
+    def speed(self, value):
+        pass
+
+    def profilation(self, done=False):
+        pass
+
+    def sys_res(self, res, status, info):
+       pass
+
+    def wait(self, seconds, message):
+        pass
+
+    def result(self, test_type, result=None, spurious=None, error=None):
+        pass
+
+    def test(self, test_type, n_tests, n_tot, retry):
+        pass
+
+    def measure(self, test_type, bw=None):
+        pass
+
+
 class Communicator(Thread):
     """ Thread di esecuzione del websocket server.
         Invia status alla gui.

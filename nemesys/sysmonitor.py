@@ -18,7 +18,6 @@
 
 from collections import OrderedDict
 import logging
-import platform
 
 import checkhost
 import iptools
@@ -28,7 +27,6 @@ import nem_exceptions
 
 
 logger = logging.getLogger(__name__)
-platform_name = platform.system().lower()
 
 # Soglie di sistema
 # ------------------------------------------------------------------------------

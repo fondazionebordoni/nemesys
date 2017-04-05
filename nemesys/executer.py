@@ -32,6 +32,7 @@ from nem_exceptions import SysmonitorException
 import nem_exceptions
 import nem_options
 import paths
+from proof import Proof
 from scheduler import Scheduler
 from sysmonitor import SysProfiler
 from tester import Tester
@@ -67,8 +68,8 @@ class Executer(object):
         self._time_to_stop = False
 
         if self._isprobe:
-            self._gui_server = None
             logger.info('Inizializzato software per sonda.')
+            self._gui_server = gui_server.DummyGuiServer()
         else:
             logger.info('Inizializzato software per misure '
                         'd\'utente con ISP id = %s' % client.isp.id)
@@ -78,15 +79,13 @@ class Executer(object):
             self._gui_server.start()
 
     def _do_task(self, task, dev):
-        '''
+        """
         Esegue il complesso di test prescritti dal task
         In presenza di errori ri-tenta per un massimo di 5 volte
-        '''
+        """
         logger.info('Inizio task di misura verso il server %s' % task.server)
         try:
-            t = Tester(dev=dev, host=task.server, timeout=self._testtimeout,
-                       username=self._client.username,
-                       password=self._client.password)
+            t = Tester(dev=dev, host=task.server, timeout=self._testtimeout)
             # TODO: Pensare ad un'altra soluzione per la generazione
             # del progressivo di misura
             start = datetime.fromtimestamp(timestampNtp())
@@ -144,13 +143,12 @@ class Executer(object):
                 if n_errors > 0:
                     logger.info('Misura in ripresa '
                                 'dopo sospensione per errore.')
-                logger.info("Esecuzione Test %d su %d" % (i, n_reps))
-                logger.debug('Starting %s test [%d]' % (test_type, i))
+                logger.info("Esecuzione Test %d su %d di %s" % (i, n_reps, test_type))
                 self._gui_server.test(test_type, i, n_reps, (n_errors > 0))
                 try:
                     if test_type == 'ping':
                         proof = t.testping()
-                        logger.debug('Ping result: %.3f' % proof.duration)
+                        logger.info('Ping result: %.3f' % proof.duration)
                         self._gui_server.speed(proof.duration)
                         if i == n_reps:
                             self._gui_server.result(test_type, proof.duration)
@@ -158,7 +156,7 @@ class Executer(object):
                         proof = t.testhttpdown(self.callback_httptest)
                         self._test_gating(proof)
                         kbps = proof.bytes_tot * 8.0 / proof.duration
-                        logger.debug('Download result: %.3f kbps' % kbps)
+                        logger.info('Download result: %.3f kbps' % kbps)
                         result = int(proof.bytes_tot * 8.0 / proof.duration)
                         self._gui_server.result(test_type,
                                                 result=result,
@@ -168,7 +166,7 @@ class Executer(object):
                                              upload_bw)
                         self._test_gating(proof)
                         kbps = proof.bytes_tot * 8.0 / proof.duration
-                        logger.debug('Upload result: %.3f kbps' % kbps)
+                        logger.info('Upload result: %.3f kbps' % kbps)
                         res = int(proof.bytes_tot * 8.0 / proof.duration)
                         self._gui_server.result(test_type,
                                                 result=res,
@@ -180,7 +178,15 @@ class Executer(object):
                     if n_errors >= MAX_ERRORS:
                         logger.warn("Il massimo numero di errori è stato "
                                     "raggiunto, sospendo la misura")
-                        raise e
+                        if self._isprobe:
+                            proof = Proof(test_type=test_type,
+                                          start_time=datetime.now(),
+                                          duration=0,
+                                          errorcode=nem_exceptions.errorcode_from_exception(e))
+                            proofs.append(proof)
+                            break
+                        else:
+                            raise e
                     else:
                         logger.warning(('Misura sospesa per eccezione {0}, '
                                        'è errore n. {1}').format(e, n_errors),
@@ -191,10 +197,10 @@ class Executer(object):
         return proofs
 
     def _get_and_handle_task(self):
-        '''
+        """
             Downloads a task from the scheduler and
             follows the directions found in the task
-        '''
+        """
         task = self._scheduler.download_task()
         logger.debug('Trovato task %s' % task)
         if task.now:
@@ -222,7 +228,10 @@ class Executer(object):
                     logger.debug('Impostazione di un nuovo task tra: %s minuti'
                                  % (secs_to_next_measurement/60))
                     self._sleep_and_wait(secs_to_next_measurement)
-                    dev = self._profile_system(task.server.ip, 80)
+                    if self._isprobe:
+                        dev = iptools.getipaddr(task.server.ip, 80)
+                    else:
+                        dev = self._profile_system(task.server.ip, 80)
                     if dev:
                         self._do_task(task, dev)
                 else:
@@ -255,9 +264,9 @@ class Executer(object):
             self._wakeup_event.clear()
 
     def _test_gating(self, test):
-        '''
+        """
         Check that spurious traffic is not too high
-        '''
+        """
         logger.debug('Percentuale di traffico spurio: %.2f%%'
                      % (test.spurious * 100))
         if not self._isprobe:
@@ -270,7 +279,7 @@ class Executer(object):
                                 % (round(test.spurious * 100)))
 
     def callback_sys_prof(self, resource, status, info="", errorcode=0):
-        '''Is called by sysmonitor for each resource'''
+        """Is called by sysmonitor for each resource"""
         if status is True:
             status = 'ok'
         else:
@@ -282,8 +291,8 @@ class Executer(object):
             self._gui_server.notification(errorcode, message=info)
 
     def callback_httptest(self, second, speed):
-        '''Is called by the tester each second.
-        speed is in kbps'''
+        """Is called by the tester each second.
+        speed is in kbps"""
         logger.info("Callback from tester: %s, %s" % (second, speed))
         self._gui_server.speed(speed/1000.0)
 
@@ -356,6 +365,7 @@ def main():
 
     logger.debug('Inizio il loop.')
     e.loop()
+
 
 if __name__ == '__main__':
     main()

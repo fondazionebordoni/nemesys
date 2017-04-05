@@ -1,7 +1,7 @@
-# httptester.py
+# httptesterdown.py
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015-2016 Fondazione Ugo Bordoni.
+# Copyright (c) 2015-2017 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,40 +17,41 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import Queue
-from datetime import datetime
 import logging
 import random
 import socket
 import threading
-import time
 import urllib2
+from datetime import datetime
+import time
 
-from nem_exceptions import MeasurementException
 import nem_exceptions
 import netstat
-from proof import Proof
 import timeNtp
-
+from nem_exceptions import MeasurementException
+import iptools
+from proof import Proof
 
 TOTAL_MEASURE_TIME = 10
+RAMPUP_SECS = 2
 # Wait another 15 secs in case end of file has not arrived
 DOWNLOAD_TIMEOUT_DELAY = 15
-# 100 Mbps for 11 seconds
-MAX_TRANSFERED_BYTES = 100 * 1000000 * 11 / 8
+# 1000 Mbps for 12 seconds
+MAX_TRANSFERED_BYTES = 1000 * 1000000 * 12 / 8
 # 10 seconds timeout on open and read operations
 HTTP_TIMEOUT = 10.0
 
 logger = logging.getLogger(__name__)
 
 
-class HttpTesterDown:
-    '''
+class HttpTesterDown(object):
+    """
     NOTE: not thread-safe, make sure to only call
     one measurement at a time!
-    '''
+    """
 
     def __init__(self, dev, bufsize=8 * 1024, rampup_secs=2):
-        self._num_bytes = bufsize
+        self._bufsize = bufsize
         self._rampup_secs = rampup_secs
         self._netstat = netstat.Netstat(dev)
 
@@ -169,7 +170,7 @@ class HttpTesterDown:
                     (not self._received_end)) and
                     (not self._timeout)):
                 try:
-                    my_buffer = response.read(self._num_bytes)
+                    my_buffer = response.read(self._bufsize)
                     if my_buffer is not None:
                         filebytes += len(my_buffer)
                         if "_ThisIsTheEnd_" in my_buffer:
@@ -232,18 +233,11 @@ if __name__ == '__main__':
     import log_conf
     log_conf.init_log()
     socket.setdefaulttimeout(10)
-#    host = "10.80.1.1"
-#    host = "193.104.137.133"
-#    host = "regopptest6.fub.it"
-#     host = "eagle2.fub.it"
-    host = "eagle2.fub.it"
-#     host = "regoppwebtest.fub.it"
-#    host = "rocky.fub.it"
-#    host = "billia.fub.it"
-    import iptools
+    #    host = "193.104.137.133"
+    server = "eagle2.fub.it"
     dev = iptools.get_dev()
     http_tester = HttpTesterDown(dev)
     print "\n------ DOWNLOAD -------\n"
     for _ in range(0, 1):
-        res = http_tester.test_down("http://%s:80" % host, num_sessions=7)
+        res = http_tester.test_down("http://%s:80" % server, num_sessions=7)
         print res

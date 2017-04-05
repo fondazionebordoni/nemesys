@@ -24,6 +24,7 @@
 import httplib, mimetypes
 import ssl
 
+
 def verifypeer(url):
     '''
     # TODO: Verificare il certificato del server
@@ -41,22 +42,25 @@ def verifypeer(url):
     '''
     return True
 
+
 def getverifiedconnection(url, certificate=None, timeout=60):
     connection = None
 
     if (url.scheme != 'https'):
         connection = httplib.HTTPConnection(host=url.hostname, timeout=timeout)
     elif verifypeer(url):
-        if (certificate != None):
+        if (certificate is not None):
             try:
                 '''python >= 2.7.9'''
                 context = ssl.create_default_context()
                 context.check_hostname = False
                 context.verify_mode = ssl.CERT_NONE
-                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout, context=context)
+                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
+                                                     timeout=timeout, context=context)
             except AttributeError:
                 '''python < 2.7.9'''
-                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate, timeout=timeout)
+                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
+                                                     timeout=timeout)
         else:
             try:
                 '''python >= 2.7.9'''
@@ -69,6 +73,7 @@ def getverifiedconnection(url, certificate=None, timeout=60):
                 connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout)
 
     return connection
+
 
 def post_multipart(url, fields, files, certificate=None, timeout=60):
     """
@@ -90,6 +95,7 @@ def post_multipart(url, fields, files, certificate=None, timeout=60):
 
     return response
 
+
 def encode_multipart_formdata(fields, files):
     """
     fields is a sequence of (name, value) elements for regular form fields.
@@ -100,14 +106,14 @@ def encode_multipart_formdata(fields, files):
     CRLF = '\r\n'
     L = []
 
-    if fields != None:
+    if fields is not None:
         for (key, value) in fields:
             L.append('--' + BOUNDARY)
             L.append('Content-Disposition: form-data; name="%s"' % key)
             L.append('')
             L.append(value)
 
-    if files != None:
+    if files is not None:
         for (key, filename, value) in files:
             L.append('--' + BOUNDARY)
             L.append('Content-Disposition: form-data; name="%s"; filename="%s"' % (key, filename))
@@ -120,6 +126,7 @@ def encode_multipart_formdata(fields, files):
     body = CRLF.join(L)
     content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
     return content_type, body
+
 
 def get_content_type(filename):
     return mimetypes.guess_type(filename)[0] or 'application/octet-stream'
