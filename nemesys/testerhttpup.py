@@ -216,7 +216,7 @@ class UploadThread(threading.Thread):
         response = None
         httpc = httpclient.HttpClient()
         try:
-            logger.info("Connecting to server")
+            logger.debug("Connecting to server")
             headers = {"X-measurement-id": self._measurement_id}
             response = httpc.post(self._url,
                                   data_source=chunk_generator.gen_chunk(),

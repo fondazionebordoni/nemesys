@@ -229,7 +229,7 @@ class Executer(object):
                                  % (secs_to_next_measurement/60))
                     self._sleep_and_wait(secs_to_next_measurement)
                     if self._isprobe:
-                        dev = iptools.getipaddr(task.server.ip, 80)
+                        dev = iptools.get_dev(task.server.ip, 80)
                     else:
                         dev = self._profile_system(task.server.ip, 80)
                     if dev:
@@ -284,7 +284,7 @@ class Executer(object):
             status = 'ok'
         else:
             status = 'error'
-        logger.info("Callback from system profiler: %s, %s, %s"
+        logger.debug("Callback from system profiler: %s, %s, %s"
                     % (resource, status, info))
         self._gui_server.sys_res(resource, status, info)
         if status is 'error':
