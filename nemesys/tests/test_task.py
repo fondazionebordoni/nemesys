@@ -205,6 +205,10 @@ class TestTask(unittest.TestCase):
         except TaskException:
             self.assertEqual(True, True)
 
+    def testEmptyTask(self):
+        xml = '''<?xml version="1.0" encoding="UTF-8"?><calendar/>'''
+        res = task.xml2task(xml)
+        self.assertNotEqual(None, res)
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testWaitTask']

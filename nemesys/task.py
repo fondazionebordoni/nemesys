@@ -131,11 +131,10 @@ def xml2task(xml):
         raise TaskException("Impossibile fare il "
                             "parsing del task ricevuto: %s" % e)
 
-    if (not xml_dict or
-            'calendar' not in xml_dict or
-            not xml_dict['calendar'] or
-            'task' not in xml_dict['calendar']):
-        raise TaskException("Ricevuto task vuoto")
+    if not xml_dict or 'calendar' not in xml_dict:
+        raise TaskException("Ricevuto task invalido")
+    if not xml_dict['calendar'] or 'task' not in xml_dict['calendar']:
+        return None
     task_dict = xml_dict['calendar']['task']
     message = task_dict.get('message') or ""
     if '@wait' in task_dict and task_dict['@wait'].lower() == 'true':

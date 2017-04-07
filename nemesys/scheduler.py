@@ -70,5 +70,5 @@ class Scheduler(object):
         except TaskException as e:
             logger.error("Impossibile interpretare il task ricevuto: %s", (e))
             logger.error("Dati del task: %s", (data))
-            raise Exception('Il task ricevuto dallo scheduler'
+            raise Exception('Il task ricevuto dallo scheduler '
                             'non e\' in un formato valido')

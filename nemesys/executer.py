@@ -202,7 +202,10 @@ class Executer(object):
             follows the directions found in the task
         """
         task = self._scheduler.download_task()
-        logger.debug('Trovato task %s' % task)
+        if task is None:
+            logger.warn("Ricevuto task vuoto")
+            return
+        logger.info('Trovato task %s' % task)
         if task.now:
             secs_to_next_measurement = 0
         else:
