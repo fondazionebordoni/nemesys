@@ -296,7 +296,7 @@ class Executer(object):
     def callback_httptest(self, second, speed):
         """Is called by the tester each second.
         speed is in kbps"""
-        logger.info("Callback from tester: %s, %s" % (second, speed))
+        logger.debug("Callback from tester: %s, %s" % (second, speed))
         self._gui_server.speed(speed/1000.0)
 
     def loop(self):

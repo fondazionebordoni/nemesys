@@ -58,3 +58,20 @@ class TestErrorcode(unittest.TestCase):
         e = nem_exceptions.SysmonitorException("Test", 5008)
         code = nem_exceptions.errorcode_from_exception(e)
         self.assertEqual(5008, code)
+
+    def test_not_exception(self):
+        e = "pippo"
+        code = nem_exceptions.errorcode_from_exception(e)
+        self.assertEqual(99999, code)
+
+    def test_none(self):
+        e = None
+        code = nem_exceptions.errorcode_from_exception(e)
+        self.assertEqual(99999, code)
+
+
+def main():
+    unittest.main()
+
+if __name__ == '__main__':
+    main()

@@ -84,7 +84,6 @@ class HttpClient(object):
         if data_source is not None:
             for data_chunk in data_source:
                 if self._response_received or self._read_timeout:
-                    logger.debug("Received response or timeout, stop sending")
                     try:
                         if not self._read_timeout:
                             s.send(END_STRING*2)
@@ -104,9 +103,8 @@ class HttpClient(object):
                     chunk_size = len(data_chunk)
                     bytes_sent += s.send("%s\r\n" % hex(chunk_size)[2:])
                     bytes_sent += s.send("%s\r\n" % data_chunk)
-                except:
+                except Exception:
                     pass
-        logger.debug("sent %d bytes" % bytes_sent)
         receive_thread.join()
         timeout_timer.cancel()
         return self._http_response
@@ -131,7 +129,7 @@ class HttpClient(object):
                         break
                 except socket.timeout:
                     pass
-                except:
+                except Exception:
                     break
         if all_data and '\n' in all_data:
             lines = all_data.split('\n')
@@ -164,7 +162,7 @@ class HttpClient(object):
 
 
 class HttpResponse(object):
-    '''Read from socket and parse something like this
+    """Read from socket and parse something like this
 
     HTTP/1.1 200 OK
     Content-Type: text/plain;charset=ISO-8859-1
@@ -172,7 +170,7 @@ class HttpResponse(object):
     Server: Jetty(8.1.16.v20140903)
 
     [11758564,11691628,11771232,11656120,11534992,11603564,11724892,11764052,11781776]
-    '''
+    """
     def __init__(self, response_code, response_cause, content):
         self._response_code = response_code
         self._response_cause = response_cause

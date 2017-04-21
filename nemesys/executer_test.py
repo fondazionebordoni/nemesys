@@ -15,11 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-'''
-Created on 13/giu/2016
 
-@author: ewedlund
-'''
 
 import logging
 # from profile import Profile
@@ -31,17 +27,18 @@ from executer import Executer
 import executer
 # from isp import Isp
 import nem_options
+from client import Client
+from isp import Isp
+from profile import Profile
 from server import Server
 from sysmonitor import SysProfiler
 import task
 import nem_exceptions
 
-
 logger = logging.getLogger(__name__)
 
 
 class MockScheduler(object):
-
     def __init__(self):
         server = Server('fubsrvrmnmx03', 'eagle2.fub.it', 'Namex server')
         self.task_default = task.Task(now=True,
@@ -66,15 +63,15 @@ class MockScheduler(object):
                                    ping=0)
         self.task_wait = task.new_wait_task(wait_secs=5, message="Ciao")
 
-#         self._tasks = ([self.task_wait,
-#                         self.task_ping,
-#                         self.task_wait,
-#                         self.task_up,
-#                         self.task_wait,
-#                         self.task_down,
-#                         self.task_wait])
-        self._tasks = [self.task_wait, self.task_default]
-#         self._tasks = [self.task_wait, self.task_ping]
+        #         self._tasks = ([self.task_wait,
+        #                         self.task_ping,
+        #                         self.task_wait,
+        #                         self.task_up,
+        #                         self.task_wait,
+        #                         self.task_down,
+        #                         self.task_wait])
+        #         self._tasks = [self.task_wait, self.task_default]
+        self._tasks = [None, self.task_ping, self.task_wait]
         self._i = -1
 
     def download_task(self):
@@ -86,7 +83,6 @@ class MockScheduler(object):
 
 
 class MockDeliverer(object):
-
     def uploadall_and_move(self, from_dir=None, to_dir=None, do_remove=False):
         logger.info("Move all from {0} to {1}, do remove is {2}"
                     .format(from_dir, to_dir, do_remove))
@@ -99,14 +95,12 @@ class MockDeliverer(object):
 
 
 class MockDysfunctDeliverer(object):
-
     def uploadall_and_move(self, from_dir=None, to_dir=None, do_remove=False):
         logger.info("Move all from {0} to {1}, do remove is {2}"
                     .format(from_dir, to_dir, do_remove))
         msg = (u"Misura terminata ma "
                u"un errore si è verificato durante il suo invio.")
-        raise nem_exceptions.NemesysException(msg,
-                                              nem_exceptions.DELIVERY_ERROR)
+        raise nem_exceptions.NemesysException(msg, nem_exceptions.DELIVERY_ERROR)
 
     def upload_and_move(self, f=None, to_dir=None, do_remove=False):
         logger.info("Move all from {0} to {1}, do remove is {2}"
@@ -114,34 +108,38 @@ class MockDysfunctDeliverer(object):
         return False
 
 
-if __name__ == '__main__':
+def main():
     import log_conf
     log_conf.init_log()
 
-    (options, _, md5conf) = nem_options.parse_args(executer.__version__)
-    import client
-    c = client.getclient(options)
-#     c = Client('245e843ec08897fd0df7e5a780bbdcc8',
-#                Profile('130', 100000, 100000),
-#                Isp('mcl007', None), '41.843646,12.485726')
+    # (options, _, md5conf) = nem_options.parse_args(executer.__version__)
+    # import client
+    # c = client.getclient(options)
+    c = Client('245e843ec08897fd0df7e5a780bbdcc8',
+               Profile('130', 100000, 100000),
+               Isp('mcl007', None), '41.843646,12.485726')
     sys_profiler = SysProfiler(c.profile.upload,
                                c.profile.download,
                                c.isp.id,
                                bypass=True)
-#     d = MockDeliverer()
-#     d = MockDysfunctDeliverer()
-    d = Deliverer(options.repository,
-                  c.isp.certificate,
-                  options.httptimeout)
+    d = MockDeliverer()
+    #     d = MockDysfunctDeliverer()
+    # d = Deliverer(options.repository,
+    #               c.isp.certificate,
+    #               options.httptimeout)
     scheduler = MockScheduler()
-    executer = Executer(client=c,
-                        scheduler=scheduler,
-                        deliverer=d,
-                        sys_profiler=sys_profiler,
-                        isprobe=False)
-    loop_thread = threading.Thread(target=executer.loop)
+    exe = Executer(client=c,
+                   scheduler=scheduler,
+                   deliverer=d,
+                   sys_profiler=sys_profiler,
+                   isprobe=True)
+    loop_thread = threading.Thread(target=exe.loop)
     loop_thread.start()
     raw_input("Press Enter to stop...")
     print "Stopping..."
-    executer.stop()
+    exe.stop()
     loop_thread.join()
+
+
+if __name__ == '__main__':
+    main()
