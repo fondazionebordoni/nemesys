@@ -136,7 +136,7 @@ class HttpTesterUp:
                 thread_response.close()
         self._time_to_stop = True
         if thread_error:
-            raise MeasurementException(thread_error)
+            raise thread_error
         (duration, bytes_received) = _test_from_server_response(resp_content)
         if duration < (total_test_time_secs * 1000) - 1:
             raise MeasurementException("Test non risucito - tempo ritornato "
@@ -225,7 +225,7 @@ class UploadThread(threading.Thread):
                                   timeout=self._upload_sending_timeout)
         except Exception as e:
             logger.error("Failed connection to server", exc_info=True)
-            self._error = "Errore di connessione: %s" % str(e)
+            self._error = MeasurementException("Errore di connessione: %s" % str(e), nem_exceptions.CONNECTION_FAILED)
         finally:
             self._httptester._stop_up_measurement()
             chunk_generator.stop()
@@ -236,10 +236,10 @@ class UploadThread(threading.Thread):
                     pass
         if response is None:
             if not self._error:
-                self._error = "Nessuna risposta dal server"
+                self._error = MeasurementException("Nessuna risposta dal server", nem_exceptions.SERVER_ERROR)
         elif response.status_code != 200:
             if not self._error:
-                self._error = "Errore: %s" % response.status
+                self._error = MeasurementException("Errore: %s" % response.status, nem_exceptions.SERVER_ERROR)
         self._response = response
 
     def get_bytes_read(self):

@@ -115,7 +115,7 @@ class HttpTesterDown(object):
         for read_thread in self._read_measure_threads:
             read_thread.join()
         if not error_queue.empty():
-            raise MeasurementException(error_queue.get())
+            raise error_queue.get()
         if missing_results:
             raise MeasurementException("Risultati mancanti da uno o piu' "
                                        "sessioni, impossibile "
@@ -156,19 +156,19 @@ class HttpTesterDown(object):
             logger.error("Impossibile creare connessione: %s" % str(e))
             self._time_to_stop = True
             self._timeout = True
-            error_queue.put("Impossibile aprire la connessione HTTP: %s"
-                            % str(e))
+            error_queue.put(MeasurementException("Impossibile aprire la connessione HTTP: %s" % str(e),
+                                                 nem_exceptions.CONNECTION_FAILED))
             return
         if response.getcode() != 200:
             self._time_to_stop = True
-            error_queue.put("Impossibile aprire la connessione HTTP, "
-                            "codice di errore ricevuto: %d"
-                            % response.getcode())
+            error_queue.put(MeasurementException("Impossibile aprire la connessione HTTP, "
+                                                 "codice di errore ricevuto: %d"
+                                                 % response.getcode(), nem_exceptions.CONNECTION_FAILED))
             return
         else:
             while (((not self._time_to_stop) or
-                    (not self._received_end)) and
-                    (not self._timeout)):
+                        (not self._received_end)) and
+                       (not self._timeout)):
                 try:
                     my_buffer = response.read(self._bufsize)
                     if my_buffer is not None:
@@ -177,8 +177,9 @@ class HttpTesterDown(object):
                             self._received_end = True
                     else:
                         self._time_to_stop = True
-                        error_queue.put("Non ricevuti dati sufficienti per "
-                                        "completare la misura")
+                        error_queue.put(MeasurementException("Non ricevuti dati sufficienti per "
+                                        "completare la misura"),
+                                        nem_exceptions.BROKEN_CONNECTION)
                         return
                 except socket.timeout:
                     pass
@@ -203,11 +204,11 @@ class HttpTesterDown(object):
                     read_thread.start()
             return
         self._measure_count += 1
-        elapsed = (measuring_time - self._last_measured_time)*1000.0
+        elapsed = (measuring_time - self._last_measured_time) * 1000.0
         self._last_measured_time = measuring_time
         new_rx_bytes = self._netstat.get_rx_bytes()
         rx_diff = new_rx_bytes - self._last_rx_bytes
-        rate_tot = float(rx_diff * 8)/float(elapsed)
+        rate_tot = float(rx_diff * 8) / float(elapsed)
         if self._measure_count > self._rampup_secs:
             self._bytes_total += rx_diff
             self._measures_tot.append(rate_tot)
@@ -231,6 +232,7 @@ class HttpTesterDown(object):
 
 if __name__ == '__main__':
     import log_conf
+
     log_conf.init_log()
     socket.setdefaulttimeout(10)
     #    host = "193.104.137.133"

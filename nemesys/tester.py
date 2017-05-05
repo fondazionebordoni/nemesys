@@ -80,10 +80,10 @@ class Tester(object):
             if "Timeout" in str(e):
                 rtt = None
             else:
-                raise MeasurementException("Impossibile effettuare il ping: %s" % e)
+                raise MeasurementException("Impossibile effettuare il ping: %s" % e, nem_exceptions.PING_ERROR)
 
         if rtt is None:
-            raise MeasurementException("Ping timeout", errorcode=nem_exceptions.PING_TIMEOUT)
+            raise MeasurementException("Ping timeout", nem_exceptions.PING_TIMEOUT)
 
         return Proof(test_type=test_type, start_time=start, duration=rtt*1000, bytes_nem=0)
 
