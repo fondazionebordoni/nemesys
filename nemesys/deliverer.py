@@ -168,7 +168,8 @@ class Deliverer(object):
                 logger.info('Risposta dal server delle misure: [%d] %s' % (code, message))
 
                 # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
-                if code == 0:
+                # Anche in caso di "duplicate entry", 506
+                if code == 0 or code == 506:
                     os.remove(filename)
                     self._movefiles(zipname, to_dir)
 
