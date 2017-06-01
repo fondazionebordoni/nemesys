@@ -2,7 +2,12 @@
 /outbox/*.zip
 /outbox/*.xml
 *.pyc
-/logs/*.log
-/config/client.conf
-/config/log.conf
+/logs/
+/config/
 /nemesys/_generated_version.py
+/sent/
+/.idea/
+.idea/
+config/
+logs/
+outbox/
