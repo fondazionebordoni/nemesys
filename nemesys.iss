@@ -52,7 +52,7 @@ Name: italian; MessagesFile: compiler:Languages\Italian.isl
 Name: quicklaunchicon; Description: {cm:CreateQuickLaunchIcon}; GroupDescription: {cm:AdditionalIcons}; Flags: unchecked; OnlyBelowVersion: 0,6.1
 
 [Files]
-Source: {#MyAppDir}\nemesys\dist\*; DestDir: {app}\dist; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: {#MyAppDir}\dist\*; DestDir: {app}\dist; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: {#MyAppDir}\nemesys\cfg\*; DestDir: {app}\dist\cfg; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: {#MyAppDir}\ABOUT; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\nemesys.ico; DestDir: {app}; Flags: ignoreversion

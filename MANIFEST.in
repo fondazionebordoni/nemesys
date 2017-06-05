@@ -1,4 +1,21 @@
+# Informational files
 
 include *.txt
 recursive-include docs *.txt
 include README ABOUT COPYING INSTALL LICENSE
+
+# Include docs and tests. It's unclear whether convention dictates
+# including built docs. However, Sphinx doesn't include built docs, so
+# we are following their lead.
+graft docs
+prune docs/build
+graft tests
+
+# Exclude any compile Python files (most likely grafted by tests/ directory).
+global-exclude *.pyc
+
+# Setup-related things
+include pavement.py
+include requirements-dev.txt
+include requirements.txt
+include setup.py

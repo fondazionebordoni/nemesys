@@ -22,21 +22,21 @@ import platform
 from threading import Event
 from time import sleep
 
-from _generated_version import __version__, FULL_VERSION
-import client
-from deliverer import Deliverer
+from common._generated_version import __version__, FULL_VERSION
+from common import client
+from common.deliverer import Deliverer
 import gui_server
-import iptools
+from common import iptools
 from measure import Measure
-from nem_exceptions import SysmonitorException
-import nem_exceptions
+from common.nem_exceptions import SysmonitorException
+from common import nem_exceptions
 import nem_options
 import paths
-from proof import Proof
+from common.proof import Proof
 from scheduler import Scheduler
 from sysmonitor import SysProfiler
-from tester import Tester
-from timeNtp import timestampNtp
+from common.tester import Tester
+from common.timeNtp import timestampNtp
 
 
 logger = logging.getLogger(__name__)

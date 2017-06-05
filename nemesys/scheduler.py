@@ -22,8 +22,8 @@ Created on 13/giu/2016
 import logging
 import urlparse
 
-import httputils
-from nem_exceptions import TaskException
+from common import httputils
+from common.nem_exceptions import TaskException
 import task
 
 

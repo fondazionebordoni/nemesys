@@ -32,7 +32,6 @@ else:
 _APP_PATH = path.normpath(_APP_PATH)
 
 # Resources path
-ICONS = path.join(_APP_PATH, 'icons')
 OUTBOX = path.join(_APP_PATH, 'outbox')
 SENT = path.join(_APP_PATH, 'sent')
 

@@ -50,39 +50,3 @@ def getconf(serial, conf_dir, filename, url):
         raise Exception('Error in configuration file')
 
     return os.path.exists(myfile.name)
-
-if __name__ == '__main__':
-    filetmp = 'client.conf'
-    service = 'https://finaluser.agcom244.fub.it/Config'
-    
-    if (os.path.exists(filetmp)):
-        os.remove(filetmp)
-        
-    try:
-        getconf('fub00000000001', '.', filetmp, service)
-        assert False
-    except:
-        assert True
-        
-    if (os.path.exists(filetmp)):
-        os.remove(filetmp)
-        
-    try:
-        getconf('', '.', filetmp, service)
-        assert False
-    except:
-        assert True
-        
-    exit
-        
-    if (os.path.exists(filetmp)):
-        os.remove(filetmp)
-
-    try:
-        getconf('test@example.com|notaverystrongpassword', '.', filetmp, service)
-        assert False
-    except:
-        assert True
-
-    if (os.path.exists(filetmp)):
-        os.remove(filetmp)

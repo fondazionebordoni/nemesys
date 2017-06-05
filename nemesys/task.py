@@ -21,8 +21,8 @@ from datetime import datetime
 import logging
 import xmltodict
 
-from nem_exceptions import TaskException
-from server import Server
+from common.nem_exceptions import TaskException
+from common.server import Server
 
 
 logger = logging.getLogger(__name__)

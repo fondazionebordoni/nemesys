@@ -18,7 +18,7 @@
 
 from datetime import datetime
 from xml.dom.minidom import parseString
-from timeNtp import timestampNtp
+from common.timeNtp import timestampNtp
 import platform
 
 

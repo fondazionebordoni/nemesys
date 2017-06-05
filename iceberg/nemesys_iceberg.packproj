@@ -94,22 +94,6 @@
 											<key>GID</key>
 											<integer>80</integer>
 											<key>Path</key>
-											<string>license.app</string>
-											<key>Path Type</key>
-											<integer>2</integer>
-											<key>Privileges</key>
-											<integer>493</integer>
-											<key>Type</key>
-											<integer>3</integer>
-											<key>UID</key>
-											<integer>0</integer>
-										</dict>
-										<dict>
-											<key>Children</key>
-											<array/>
-											<key>GID</key>
-											<integer>80</integer>
-											<key>Path</key>
 											<string>uninstall.sh</string>
 											<key>Path Type</key>
 											<integer>2</integer>
@@ -534,13 +518,13 @@
 						<key>IFPkgDescriptionTitle</key>
 						<string>Nemesys</string>
 						<key>IFPkgDescriptionVersion</key>
-						<string>3.0.0</string>
+						<string>@version@</string>
 					</dict>
 				</dict>
 				<key>Display Information</key>
 				<dict>
 					<key>CFBundleGetInfoString</key>
-					<string>Nemesys 3.0.0 Copyrights © 2011 Fondazione Ugo Bordoni</string>
+					<string>Nemesys @version@ Copyrights © 2017 Fondazione Ugo Bordoni</string>
 					<key>CFBundleIconFile</key>
 					<string>nemesys_logo.icns</string>
 					<key>CFBundleIconFile Path Type</key>
@@ -550,7 +534,7 @@
 					<key>CFBundleName</key>
 					<string>Nemesys</string>
 					<key>CFBundleShortVersionString</key>
-					<string>3.0.0</string>
+					<string>@version@</string>
 				</dict>
 				<key>Options</key>
 				<dict>
@@ -576,9 +560,9 @@
 				<key>Version</key>
 				<dict>
 					<key>IFMajorVersion</key>
-					<integer>3</integer>
+					<integer>@major_version@</integer>
 					<key>IFMinorVersion</key>
-					<integer>0</integer>
+					<integer>@minor_version@</integer>
 				</dict>
 			</dict>
 		</dict>

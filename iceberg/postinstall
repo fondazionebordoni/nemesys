@@ -2,18 +2,7 @@
 
 DIR='/Applications/Nemesys/'
 
-mkdir ${DIR}executer.app/Contents/logs
-
-ln -s ${DIR}executer.app/Contents/config /Applications/Nemesys/gui.app/Contents/
-ln -s ${DIR}executer.app/Contents/logs /Applications/Nemesys/gui.app/Contents/
-ln -s ${DIR}executer.app/Contents/config /Applications/Nemesys/license.app/Contents/
-ln -s ${DIR}executer.app/Contents/logs /Applications/Nemesys/license.app/Contents/
-ln -s ${DIR}executer.app/Contents/Resources/cfg /Applications/Nemesys/license.app/Contents/Resources/
-
-touch ${DIR}executer.app/Contents/logs/nemesys.log
-chmod 666 ${DIR}executer.app/Contents/logs/nemesys.log
-
-${DIR}license.app/Contents/MacOS/license
+${DIR}executer.app/Contents/MacOS/login
 
 cat << EOF > /Library/LaunchDaemons/it.fub.nemesys.plist
 <?xml version="1.0" encoding="UTF-8"?>

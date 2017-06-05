@@ -64,7 +64,7 @@ class DummyGuiServer(object):
         pass
 
     def sys_res(self, res, status, info):
-       pass
+        pass
 
     def wait(self, seconds, message):
         pass
@@ -106,7 +106,7 @@ class Communicator(Thread):
             self.ioLoop.close(all_fds=True)
             logger.info('closed ioLoop')
         except Exception as e:
-            logger.error("Could not open websocket: %s" % (e))
+            logger.error("Could not open websocket: %s" % e)
 
     def stop(self, timeout=None):
         logger.info("stopping ioloop")
@@ -115,45 +115,45 @@ class Communicator(Thread):
         Thread.join(self, timeout)
 
     def nem_start(self, version, log_dir):
-        '''messaggio iniziale con informazioni su Nemesys'''
+        """messaggio iniziale con informazioni su Nemesys"""
         msg = GuiMessage(GuiMessage.START, {'version': str(version),
                                             'logdir': str(log_dir)})
-        self.sendstatus(msg)
+        self.send_status(msg)
 
     def notification(self, error_code, message=''):
-        '''For errors and notifications'''
+        """For errors and notifications"""
         dt = datetime.datetime.now()
         msg = GuiMessage(GuiMessage.NOTIFICATION,
                          {'datetime': dt.strftime(DATE_TIME_FORMAT),
                           'error_code': error_code,
                           'message': message})
-        self.sendstatus(msg)
+        self.send_status(msg)
 
     def speed(self, value):
         msg = GuiMessage(GuiMessage.TACHOMETER,
                          {'value': value})
-        self.sendstatus(msg)
+        self.send_status(msg)
 
     def profilation(self, done=False):
-        '''Start or end of system profilation'''
+        """Start or end of system profilation"""
         msg = GuiMessage(GuiMessage.PROFILATION,
                          {'done': done})
-        self.sendstatus(msg)
+        self.send_status(msg)
 
     def sys_res(self, res, status, info):
-        '''messaggio per informazione su una risorsa durante la profilazione'''
+        """messaggio per informazione su una risorsa durante la profilazione"""
         msg = GuiMessage(GuiMessage.SYS_RESOURCE,
                          {'resource': RES_TRANSLATION[res],
                           'state': status,
                           'info': info})
-        self.sendstatus(msg)
+        self.send_status(msg)
 
     def wait(self, seconds, message):
-        '''Nemesys is pausing for <seconds> seconds'''
+        """Nemesys is pausing for <seconds> seconds"""
         msg = GuiMessage(GuiMessage.WAIT,
                          {'seconds': seconds,
                           'message': message})
-        self.sendstatus(msg)
+        self.send_status(msg)
 
     def result(self, test_type, result=None, spurious=None, error=None):
         contents = {}
@@ -164,19 +164,19 @@ class Communicator(Thread):
             if spurious is not None:
                 contents.update({'spurious': spurious})
         msg = GuiMessage(GuiMessage.RESULT, content=contents)
-        self.sendstatus(msg)
+        self.send_status(msg)
 
     def test(self, test_type, n_tests, n_tot, retry):
-        '''Signals the start of a test'''
+        """Signals the start of a test"""
         msg = GuiMessage(GuiMessage.TEST,
                          {'test_type': test_type,
                           'n_test': n_tests,
                           'n_tot': n_tot,
                           'retry': retry})
-        self.sendstatus(msg)
+        self.send_status(msg)
 
     def measure(self, test_type, bw=None):
-        '''Signals the start of a measurement'''
+        """Signals the start of a measurement"""
         if bw is not None:
             msg = GuiMessage(GuiMessage.MEASURE,
                              {'test_type': test_type,
@@ -184,14 +184,14 @@ class Communicator(Thread):
         else:
             msg = GuiMessage(GuiMessage.MEASURE,
                              {'test_type': test_type})
-        self.sendstatus(msg)
+        self.send_status(msg)
 
-    def sendstatus(self, status):
-        logger.info("Sending status [%s]" % status)
+    def send_status(self, gui_message):
+        logger.info("Sending status [%s]" % gui_message)
         with self._lock:
-            status_dict = status.dict()
+            status_dict = gui_message.dict()
             status_dict['serial'] = self._serial
-            if status.is_notification:
+            if gui_message.is_notification:
                 global last_notifications
                 last_notifications.append(status_dict)
                 if len(last_notifications) > MAX_NOTIFICATIONS:
@@ -205,7 +205,7 @@ class Communicator(Thread):
                     try:
                         handler.send_msg(status_dict)
                     except Exception as e:
-                        logger.warn("Could not send message to GUI: %s" % (e))
+                        logger.warn("Could not send message to GUI: %s" % e)
 
 
 class GuiMessage(object):
@@ -248,7 +248,7 @@ class GuiWebSocket(WebSocketHandler):
     """
 
     def check_origin(self, origin):
-        logger.info("GUI connecting from: %s" % (origin))
+        logger.info("GUI connecting from: %s" % origin)
         if not origin:
             return True
         parsed_origin = urlparse.urlparse(origin)
@@ -272,21 +272,21 @@ class GuiWebSocket(WebSocketHandler):
 
     def send_msg(self, msg):
         try:
-            jsonString = json.dumps(msg)
-            self.write_message(jsonString)
+            json_string = json.dumps(msg)
+            self.write_message(json_string)
         except Exception as e:
             logger.error("Could not send message [%s] to GUI: %s" % (msg, e))
 
     def on_message(self, message):
         msg_dict = json.loads(message)
-        logger.info("Got message %s", (msg_dict))
-        if (msg_dict['request'] == 'currentstatus'):
+        logger.info("Got message %s", msg_dict)
+        if msg_dict['request'] == 'currentstatus':
             if start_msg is not None:
                 self.send_msg(start_msg)
             if last_status is not None:
                 self.send_msg(last_status)
-            for status in list(last_notifications):
-                self.send_msg(status)
+            for notification in list(last_notifications):
+                self.send_msg(notification)
 
     def on_close(self):
         with handler_lock:

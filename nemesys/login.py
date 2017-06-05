@@ -26,7 +26,7 @@ import tkMessageBox
 from getconf import getconf
 import myProp
 import paths
-import utils
+from common import utils
 
 
 logger = logging.getLogger(__name__)

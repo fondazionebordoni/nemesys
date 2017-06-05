@@ -22,18 +22,18 @@ import logging
 import threading
 
 # from client import Client
-from deliverer import Deliverer
+from common.deliverer import Deliverer
 from executer import Executer
 import executer
 # from isp import Isp
 import nem_options
-from client import Client
-from isp import Isp
-from profile import Profile
-from server import Server
+# from client import Client
+# from isp import Isp
+# from profile import Profile
+from common.server import Server
 from sysmonitor import SysProfiler
 import task
-import nem_exceptions
+from common import nem_exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class MockScheduler(object):
         #                         self.task_down,
         #                         self.task_wait])
         #         self._tasks = [self.task_wait, self.task_default]
-        self._tasks = [None, self.task_ping, self.task_wait]
+        self._tasks = [self.task_default, self.task_wait]
         self._i = -1
 
     def download_task(self):
@@ -112,27 +112,27 @@ def main():
     import log_conf
     log_conf.init_log()
 
-    # (options, _, md5conf) = nem_options.parse_args(executer.__version__)
-    # import client
-    # c = client.getclient(options)
-    c = Client('245e843ec08897fd0df7e5a780bbdcc8',
-               Profile('130', 100000, 100000),
-               Isp('mcl007', None), '41.843646,12.485726')
+    (options, _, md5conf) = nem_options.parse_args(executer.__version__)
+    from common import client
+    c = client.getclient(options)
+    # c = Client('245e843ec08897fd0df7e5a780bbdcc8',
+    #            Profile('8981', 100000, 100000),
+    #            Isp('fub000', None), '41.843646,12.485726')
     sys_profiler = SysProfiler(c.profile.upload,
                                c.profile.download,
                                c.isp.id,
                                bypass=True)
-    d = MockDeliverer()
+    # d = MockDeliverer()
     #     d = MockDysfunctDeliverer()
-    # d = Deliverer(options.repository,
-    #               c.isp.certificate,
-    #               options.httptimeout)
+    d = Deliverer(options.repository,
+                  c.isp.certificate,
+                  options.httptimeout)
     scheduler = MockScheduler()
     exe = Executer(client=c,
                    scheduler=scheduler,
                    deliverer=d,
                    sys_profiler=sys_profiler,
-                   isprobe=True)
+                   isprobe=False)
     loop_thread = threading.Thread(target=exe.loop)
     loop_thread.start()
     raw_input("Press Enter to stop...")

@@ -1,13 +1,8 @@
 /env
-/outbox/*.zip
-/outbox/*.xml
+/outbox/
 *.pyc
 /logs/
 /config/
-/nemesys/_generated_version.py
+/common/_generated_version.py
 /sent/
 /.idea/
-.idea/
-config/
-logs/
-outbox/
