@@ -21,6 +21,7 @@ import urlparse
 import os
 import ssl
 
+
 def getconf(serial, conf_dir, filename, url):
     '''
     Scarica il file di configurazione dalla url (HTTPS) specificata, salvandolo nel file specificato.

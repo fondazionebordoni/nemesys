@@ -1,11 +1,29 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# nem_options.py
+#
+# Copyright (c) 2016 Fondazione Ugo Bordoni.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 import ctypes
 import logging
 import os
 import platform
 import sys
 import wx
+from optparse import OptionParser
 from time import sleep
 
 from common._generated_version import __version__, FULL_VERSION, __updated__
@@ -15,9 +33,8 @@ import mist_gui
 import mist_options
 import paths
 import sysmonitor
-from checkSoftware import CheckSoftware
+from check_software import CheckSoftware
 from mist_controller import MistController
-from optionParser import OptionParser
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +50,8 @@ def main(argv=None):
     program_longdesc = ''''''
 
     # TODO: Needs fixing, mixup with optionParser.OptionParser
-    parser = OptionParser(version=program_version_string, epilog=program_longdesc)  # , description=program_license)
+    # , description=program_license)
+    parser = OptionParser(version=program_version_string, epilog=program_longdesc)
     parser.add_option("-t", "--text", dest="text_based", action="store_true",
                       help="Senza interfaccia grafica [default: %default]")
     parser.set_defaults(text_based=False)
@@ -98,11 +116,11 @@ def main(argv=None):
             app = wx.App(False)
 
             # Check if this is the last version
-            version_ok = CheckSoftware(version).checkIT()
+            version_ok = CheckSoftware(version).check_it()
 
             if not version_ok:
                 return
-        (file_opts, _, md5conf) = parser.parse()
+        (file_opts, _, md5conf) = mist_options.parse(version)
         mist_opts = mist_options.MistOptions(file_opts, md5conf)
         if args_opts.text_based:
             event_dispatcher = gui_event.CliEventDispatcher()

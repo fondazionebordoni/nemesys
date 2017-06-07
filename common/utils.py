@@ -18,17 +18,20 @@
 
 import platform
 
+
 def is_windows():
     if platform.system().lower().startswith('win'):
         return True
     else:
         return False
 
+
 def is_linux():
     if platform.system().lower().startswith('lin'):
         return True
     else:
         return False
+
 
 def is_darwin():
     if platform.system().lower().startswith('darwin'):

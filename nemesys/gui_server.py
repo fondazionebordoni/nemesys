@@ -83,6 +83,7 @@ class Communicator(Thread):
     """ Thread di esecuzione del websocket server.
         Invia status alla gui.
     """
+
     def __init__(self, serial, version):
         Thread.__init__(self)
         self.application = tornado.web.Application([(r'/ws', GuiWebSocket)])

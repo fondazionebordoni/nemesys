@@ -5,12 +5,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 '''
@@ -170,7 +170,8 @@ class mistGUI(wx.Frame):
         grid_sizer_system_indicators.Add(self.label_traffic, 0,
                                          wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 24)
         self.messages_text = wx.TextCtrl(panel_main, -1, "",
-                                         style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2 | wx.TE_BESTWRAP | wx.BORDER_NONE)
+                                         style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2
+                                         | wx.TE_BESTWRAP | wx.BORDER_NONE)
         sizer_main_window = wx.BoxSizer(wx.VERTICAL)
         sizer_messages_area = wx.StaticBoxSizer(wx.StaticBox(panel_main, -1, "Messaggi"), wx.VERTICAL)
         sizer_system_status = wx.BoxSizer(wx.VERTICAL)
@@ -328,7 +329,7 @@ class mistGUI(wx.Frame):
         try:
             if info.status is None:
                 colour = 'gray'
-            elif info.status == True:
+            elif info.status is True:
                 colour = 'green'
             else:
                 colour = 'red'
@@ -433,7 +434,8 @@ class mistGUI(wx.Frame):
             self._update_messages("Misura terminata\n", 'medium forest green', (12, 93, 92, 1), True)
             if (stop_event.isOneShot()):
                 self._update_messages(
-                    "Per effettuare altre misure e conservare i tuoi risultati nell'area riservata effettua l'iscrizione su misurainternet.it\n",
+                    "Per effettuare altre misure e conservare i tuoi risultati nell'area riservata "
+                    "effettua l'iscrizione su misurainternet.it\n",
                     'black', (12, 90, 92, 0), True)
             else:
                 self._update_messages("Sistema pronto per una nuova misura", 'black', (12, 90, 92, 0), True)
@@ -470,12 +472,12 @@ class mistGUI(wx.Frame):
 
     def _initial_message(self):
 
-        message = \
-            '''Benvenuto in %s versione %s
+        message = ('''Benvenuto in {} versione {}
 
             Premendo il tasto CHECK avvierai la profilazione della macchina per la misura.
 
-            Premendo il tasto TEST avvierai una profilazione e il test di misura completo.''' % (mist_messages.SWN, self._version)
+            Premendo il tasto TEST avvierai una profilazione e il test di misura completo.'''
+                   .format(mist_messages.SWN, self._version))
 
         self.messages_text.SetWindowStyleFlag(self.messages_text_style + wx.TE_CENTER)
 

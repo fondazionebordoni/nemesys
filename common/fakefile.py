@@ -44,7 +44,7 @@ class Fakefile(object):
             # e.g. 0-FF  in case of one byte buffer
             data = '%x' % random.randint(0, 2 ** (8 * bufsize) - 1)
             # if hex number is e.g. 6, pad with one 0 to 06
-            data = data.rjust(bufsize*2, '0')
+            data = data.rjust(bufsize * 2, '0')
             # transform into a string
             self.data = data.decode('hex')
             self.data_len = len(self.data)

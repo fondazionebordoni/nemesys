@@ -1,4 +1,4 @@
-# logger.py 
+# logger.py
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
@@ -7,12 +7,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
@@ -51,7 +51,7 @@ level=INFO
 formatter=formatter
 args=(''' + repr(logfile) + ''',)
 
-[formatter_formatter] 
+[formatter_formatter]
 format=%(asctime)s Nemesys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
 datefmt=%b %d %H:%M:%S
 '''
@@ -82,16 +82,17 @@ level=INFO
 formatter=formatter
 args=(''' + repr(logfile) + ''',)
 
-[formatter_formatter] 
+[formatter_formatter]
 format=%(asctime)s Nemesys %(filename)s.%(funcName)s():%(lineno)d [%(levelname)s] %(message)s
 datefmt=%b %d %H:%M:%S
 '''
+
 
 def init_log(level=logging.INFO, use_name='Nemesys'):
     paths.check_paths()
     if not os.path.isfile(configfile):
         with open(configfile, 'w') as f:
             s = str(default_no_stdout)
-            f.write(s) 
+            f.write(s)
 
     logging.config.fileConfig(configfile, disable_existing_loggers=False)

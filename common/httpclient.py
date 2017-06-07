@@ -7,13 +7,13 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
+#  This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#  along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 Minimal httpclient so that we can set
 TCP window size
@@ -86,7 +86,7 @@ class HttpClient(object):
                 if self._response_received or self._read_timeout:
                     try:
                         if not self._read_timeout:
-                            s.send(END_STRING*2)
+                            s.send(END_STRING * 2)
                         s.shutdown(socket.SHUT_RDWR)
                         s.close()
                     except socket.error:
@@ -118,19 +118,19 @@ class HttpClient(object):
         sock.settimeout(2.0)
 
         while not self._read_timeout:
-                try:
-                    data = sock.recv(1)
-                    if data is not None:
-                        all_data = "%s%s" % (all_data, data)
-                    if '[' in data:
-                        start_body_found = True
-                    if ']' in data and start_body_found:
-                        self._response_received = True
-                        break
-                except socket.timeout:
-                    pass
-                except Exception:
+            try:
+                data = sock.recv(1)
+                if data is not None:
+                    all_data = "%s%s" % (all_data, data)
+                if '[' in data:
+                    start_body_found = True
+                if ']' in data and start_body_found:
+                    self._response_received = True
                     break
+            except socket.timeout:
+                pass
+            except Exception:
+                break
         if all_data and '\n' in all_data:
             lines = all_data.split('\n')
             try:
@@ -171,6 +171,7 @@ class HttpResponse(object):
 
     [11758564,11691628,11771232,11656120,11534992,11603564,11724892,11764052,11781776]
     """
+
     def __init__(self, response_code, response_cause, content):
         self._response_code = response_code
         self._response_cause = response_cause
@@ -195,4 +196,4 @@ class HttpResponse(object):
         return self._content
 
     def close(self):
-            pass
+        pass

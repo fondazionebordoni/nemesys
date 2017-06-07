@@ -189,7 +189,7 @@ class Executer(object):
                             raise e
                     else:
                         logger.warning(('Misura sospesa per eccezione {0}, '
-                                       'è errore n. {1}').format(e, n_errors),
+                                        'è errore n. {1}').format(e, n_errors),
                                        exc_info=True)
                         self._gui_server.result(test_type, error=str(e))
                 sleep(sleep_secs)
@@ -218,9 +218,9 @@ class Executer(object):
             else:
                 wait_secs = self._polling
                 logger.debug('Prossimo task tra: %s minuti'
-                             % (secs_to_next_measurement/60))
+                             % (secs_to_next_measurement / 60))
             logger.debug('Faccio una pausa per %s minuti (%s secondi)'
-                         % (wait_secs/60, wait_secs))
+                         % (wait_secs / 60, wait_secs))
             logger.debug("Trovato messaggio: %s" % task.message)
             self._gui_server.wait(wait_secs, task.message)
             self._sleep_and_wait(wait_secs)
@@ -229,7 +229,7 @@ class Executer(object):
             if secs_to_next_measurement >= 0:
                 if task.download > 0 or task.upload > 0 or task.ping > 0:
                     logger.debug('Impostazione di un nuovo task tra: %s minuti'
-                                 % (secs_to_next_measurement/60))
+                                 % (secs_to_next_measurement / 60))
                     self._sleep_and_wait(secs_to_next_measurement)
                     if self._isprobe:
                         dev = iptools.get_dev(task.server.ip, 80)
@@ -241,7 +241,7 @@ class Executer(object):
                     logger.warn('Ricevuto task senza azioni da svolgere')
             else:
                 logger.warn('Tempo di attesa prima della misura anomalo: '
-                            '%s minuti' % (secs_to_next_measurement/60))
+                            '%s minuti' % (secs_to_next_measurement / 60))
 
     def _profile_system(self, server_ip, port):
         self._gui_server.profilation()
@@ -288,7 +288,7 @@ class Executer(object):
         else:
             status = 'error'
         logger.debug("Callback from system profiler: %s, %s, %s"
-                    % (resource, status, info))
+                     % (resource, status, info))
         self._gui_server.sys_res(resource, status, info)
         if status is 'error':
             self._gui_server.notification(errorcode, message=info)
@@ -297,7 +297,7 @@ class Executer(object):
         """Is called by the tester each second.
         speed is in kbps"""
         logger.debug("Callback from tester: %s, %s" % (second, speed))
-        self._gui_server.speed(speed/1000.0)
+        self._gui_server.speed(speed / 1000.0)
 
     def loop(self):
         try:

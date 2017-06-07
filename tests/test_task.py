@@ -171,7 +171,7 @@ class TestTask(unittest.TestCase):
     '''
         res = task.xml2task(xml)
         self.assertNotEqual(None, res)
-        self.assertEqual(5*60, res.delay)
+        self.assertEqual(5 * 60, res.delay)
         self.assertEqual(True, res.is_wait)
 
     def testNotTaskXml(self):
@@ -210,6 +210,7 @@ class TestTask(unittest.TestCase):
         xml = '''<?xml version="1.0" encoding="UTF-8"?><calendar/>'''
         res = task.xml2task(xml)
         self.assertEqual(None, res)
+
 
 if __name__ == "__main__":
     unittest.main()

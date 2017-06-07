@@ -77,9 +77,9 @@ def get_mac_address(dev=None):
 
 
 def get_dev(host='finaluser.agcom244.fub.it', port=443, ip=None):
-    '''
+    """
     restituisce scheda attiva (guid della scheda su Windows
-    '''
+    """
     if not ip:
         local_ip_address = getipaddr(host, port)
     else:
@@ -97,7 +97,7 @@ def get_dev(host='finaluser.agcom244.fub.it', port=443, ip=None):
 
 
 def get_network_mask(ip):
-    '''
+    """
         Returns netmask for the given IP
         as a number, e.g. '24' as set on
         the network device.
@@ -109,7 +109,7 @@ def get_network_mask(ip):
         In case no netmask is found,
         it returns a default
         netmask of 24
-    '''
+    """
 #     default_netmask = '255.255.255.0'
     if not ip:
         local_ip_address = getipaddr()
@@ -121,7 +121,7 @@ def get_network_mask(ip):
             if addr_type.family == socket.AF_INET:
                 if addr_type.address == local_ip_address:
                     if addr_type.netmask is not None:
-                        return _maskConversion(addr_type.netmask)
+                        return _mask_conversion(addr_type.netmask)
                     else:
                         break
     # Netmask not found, try with netifaces instead
@@ -130,11 +130,11 @@ def get_network_mask(ip):
 
 
 def get_network_mask_netifaces(ip):
-    '''
+    """
     This is the 'old' method, using netifaces,
     used as a fallback when psutil fails,
     since it does not work on Windows.
-    '''
+    """
     netmask = '255.255.255.0'
 
     inames = netifaces.interfaces()
@@ -144,9 +144,9 @@ def get_network_mask_netifaces(ip):
             try:
                 ipinfo = addrs[socket.AF_INET][0]
                 address = ipinfo['addr']
-                if (address == ip):
+                if address == ip:
                     netmask = ipinfo['netmask']
-                    return _maskConversion(netmask)
+                    return _mask_conversion(netmask)
             except KeyError:
                 pass
         except Exception as e:
@@ -155,12 +155,11 @@ def get_network_mask_netifaces(ip):
                            exc_info=True)
 
     logger.warn("Could not find netmask, returning default")
-    return _maskConversion(netmask)
+    return _mask_conversion(netmask)
 
 
 def is_public_ip(ip):
-    return (bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.',
-                           ip)) == False)
+    return bool(re.search('^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.', ip)) is False
 
 
 def is_loopback_ip(ip):
@@ -180,42 +179,5 @@ def is_ip_address(ip):
     return True
 
 
-def _maskConversion(netmask):
-    nip = str(netmask).split(".")
-    if(len(nip) == 4):
-        i = 0
-        bini = range(0, len(nip))
-        while i < len(nip):
-            bini[i] = int(nip[i])
-            i += 1
-        bins = _convertDecToBin(bini)
-        lastChar = 1
-        maskcidr = 0
-        i = 0
-        while i < 4:
-            j = 0
-            while j < 8:
-                if (bins[i][j] == 1):
-                    if (lastChar == 0):
-                        return 0
-                    maskcidr = maskcidr + 1
-                lastChar = bins[i][j]
-                j = j + 1
-            i = i + 1
-    else:
-        return 0
-    return maskcidr
-
-
-def _convertDecToBin(dec):
-    i = 0
-    binval = range(0, 4)
-    for x in range(0, 4):
-        binval[x] = range(0, 8)
-    for i in range(0, 4):
-        j = 7
-        while j >= 0:
-            binval[i][j] = (dec[i] & 1) + 0
-            dec[i] /= 2
-            j = j - 1
-    return binval
+def _mask_conversion(netmask):
+    return sum([bin(int(x)).count('1') for x in netmask.split('.')])

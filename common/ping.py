@@ -47,8 +47,8 @@ def checksum(source_string):
     countTo = len(source_string) / 2 * 2
     count = 0
     while count < countTo:
-        thisVal = ord(source_string[count + 1]) * 256 \
-                  + ord(source_string[count])
+        thisVal = ord(source_string[count + 1]) * \
+            256 + ord(source_string[count])
         sum = sum + thisVal
         sum = sum & 0xffffffff  # Necessary?
         count = count + 2
@@ -106,7 +106,6 @@ def receive_one_ping(my_socket, ID, timeout, dest_addr):
                     3: 'Port Unreachable',
                 }
                 raise Exception(codes[code])
-                break
 
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
@@ -164,8 +163,7 @@ def do_one(dest_addr, timeout):
         if errno == 1:
             # Operation not permitted
 
-            msg = msg \
-                  + ' - Note that ICMP messages can only be sent from processes running as root.'
+            msg += ' - Note that ICMP messages can only be sent from processes running as root.'
             raise socket.error(msg)
         raise  # raise the original error
 

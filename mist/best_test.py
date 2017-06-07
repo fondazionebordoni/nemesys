@@ -36,15 +36,15 @@ class BestTest(object):
         self._proof = proof
         self._profiler_info = profiler_info
         self._n_tests_done = n_tests_done
-        
+
     @property
     def proof(self):
         return self._proof
-    
+
     @property
     def profiler_info(self):
         return self._profiler_info
-    
+
     @property
     def n_tests_done(self):
         return self._n_tests_done

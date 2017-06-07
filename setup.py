@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# This setup.py comes from the project template
+#
 from __future__ import print_function
 
 import os
 import sys
-import imp
 import subprocess
 
 ## Python 2.6 subprocess.check_output compatibility. Thanks Greg Hewgill!
@@ -169,7 +170,8 @@ def _lint():
     project_python_files = [filename for filename in get_project_files()
                             if filename.endswith(b'.py')]
     retcode = subprocess.call(
-        ['flake8', '--max-complexity=10'] + project_python_files)
+        ['flake8'] + project_python_files)
+        # ['flake8', '--max-complexity=10'] + project_python_files)
     if retcode == 0:
         print_success_message('No style errors')
     return retcode

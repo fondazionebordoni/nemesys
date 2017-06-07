@@ -7,12 +7,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
@@ -22,7 +22,7 @@ from datetime import datetime
 
 import xmltodict
 
-import httputils
+from common import httputils
 from common.server import Server
 
 logger = logging.getLogger(__name__)
@@ -114,6 +114,7 @@ class Task(object):
         ])
         return task
 
+
 def xml2task(xml):
     try:
         xml_dict = xmltodict.parse(xml)
@@ -122,9 +123,9 @@ def xml2task(xml):
                             "parsing del task ricevuto: %s" % e)
 
     if (not xml_dict or
-                'calendar' not in xml_dict or
+        'calendar' not in xml_dict or
             not xml_dict['calendar'] or
-                'task' not in xml_dict['calendar']):
+            'task' not in xml_dict['calendar']):
         raise TaskException("Ricevuto task vuoto")
     task_dict = xml_dict['calendar']['task']
     message = task_dict.get('message') or ""
@@ -193,7 +194,7 @@ def download_task(url, certificate, client_id, version, md5conf, timeout, server
     """Scarica il prossimo task dallo scheduler"""
 
     try:
-        connection = httputils.getverifiedconnection(url=url, certificate=certificate, timeout=timeout)
+        connection = httputils.get_verified_connection(url=url, certificate=certificate, timeout=timeout)
         if server is not None:
             connection.request('GET', '%s?clientid=%s&version=%s&confid=%s&server=%s' % (
                 url.path, client_id, version, md5conf, server.ip))
@@ -216,8 +217,6 @@ def download_task(url, certificate, client_id, version, md5conf, timeout, server
         return None
 
     return task
-
-
 
     # def get_n_test(self, t_type):
     #     if t_type == test_type.PING:

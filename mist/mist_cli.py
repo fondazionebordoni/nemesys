@@ -5,15 +5,15 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
 mist.mist_cli -- CLI version of Speedtest
 
 mist.mist_cli is a network speed test
@@ -26,7 +26,7 @@ mist.mist_cli is a network speed test
 @license:    GNU General Public License
 
 @contact:    helpdesk@misurainternet.it
-'''
+"""
 import logging
 import os
 import platform
@@ -102,7 +102,7 @@ class MistCli(Thread):
         except Exception:
             height = DEFAULT_HEIGHT
             width = DEFAULT_WIDTH
-        return (int(height), int(width))
+        return int(height), int(width)
 
     def _format_string(self, string, centered=True, frame='', color=None):
         (_, width) = self._get_height_width()
@@ -154,7 +154,7 @@ class MistCli(Thread):
                 if status is not None:
                     color = None
                     info_string = '\t' + info_string
-                elif status == True:
+                elif status is True:
                     color = bcolors.GREEN
                     info_string = '[OK]\t' + info_string
                 else:
@@ -194,11 +194,12 @@ class MistCli(Thread):
         self._update_messages(error_event.getMessage(), bcolors.RED)
 
     def _on_stop(self, stop_event):
-        if (stop_event.isOneShot()):
+        if stop_event.isOneShot():
             self._update_messages(">> MISURA TERMINATA <<\nPer la versione completa iscriviti su misurainternet.it",
                                   color=bcolors.GREEN)
-            self._update_messages(
-                "Per effettuare altre misure e conservare i tuoi risultati nell'area riservata effettua l'iscrizione su misurainternet.it\n")
+            self._update_messages('''Per effettuare altre misure e conservare i tuoi risultati \
+            nell'area riservata effettua l'iscrizione su misurainternet.it
+            ''')
         else:
             self._update_messages(">> MISURA TERMINATA <<", color=bcolors.GREEN)
             self._update_messages("Sistema pronto per una nuova misura")

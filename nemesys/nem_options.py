@@ -1,4 +1,4 @@
-# executer.py
+# nem_options.py
 # -*- coding: utf-8 -*-
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
@@ -14,11 +14,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
 Created on 13/mag/2016
 
 @author: ewedlund
-'''
+"""
 
 from ConfigParser import ConfigParser, NoOptionError
 import hashlib
@@ -28,50 +28,46 @@ import os
 
 import paths
 
-
 logger = logging.getLogger(__name__)
 
-class OptionParser(OptionParser):
 
-    def check_required(self, opt):
-        option = self.get_option(opt)
-        if getattr(self.values, option.dest) is None:
-            self.error('%s option not supplied' % option)
-
-
+def check_required(parser, opt):
+    option = parser.get_option(opt)
+    if getattr(parser.values, option.dest) is None:
+        parser.error('%s option not supplied' % option)
 
 
 def parse_args(version):
-    '''
+    """
     Parsing dei parametri da linea di comando
-    '''
+    """
 
     config = ConfigParser()
 
-    if (os.path.exists(paths.CONF_MAIN)):
+    if os.path.exists(paths.CONF_MAIN):
         config.read(paths.CONF_MAIN)
         logger.info('Caricata configurazione da %s' % paths.CONF_MAIN)
 
-    parser = OptionParser(version = version, description = '')
-    parser.add_option('--task', dest = 'task',
-                                        help = 'path of an xml file with a task to execute (valid only if -T option is enabled)')
+    parser = OptionParser(version=version, description='')
+    parser.add_option('--task', dest='task',
+                      help='path of an xml file with a task to execute (valid only if -T option is enabled)')
 
     # System options
     # --------------------------------------------------------------------------
     section = 'options'
-    if (not config.has_section(section)):
+    if not config.has_section(section):
         config.add_section(section)
 
     # System options
     # --------------------------------------------------------------------------
     section = 'system'
-    if (not config.has_section(section)):
+    if not config.has_section(section):
         config.add_section(section)
 
     # Task options
     # --------------------------------------------------------------------------
     section = 'task'
-    if (not config.has_section(section)):
+    if not config.has_section(section):
         config.add_section(section)
 
     option = 'tasktimeout'
@@ -80,8 +76,8 @@ def parse_args(version):
         value = config.getint(section, option)
     except (ValueError, NoOptionError):
         config.set(section, option, value)
-    parser.add_option('--task-timeout', dest = option, type = 'int', default = value,
-                                        help = 'global timeout (in seconds) for each task [%s]' % value)
+    parser.add_option('--task-timeout', dest=option, type='int', default=value,
+                      help='global timeout (in seconds) for each task [%s]' % value)
 
     option = 'testtimeout'
     value = '60'
@@ -89,8 +85,8 @@ def parse_args(version):
         value = config.getint(section, option)
     except (ValueError, NoOptionError):
         config.set(section, option, value)
-    parser.add_option('--test-timeout', dest = option, type = 'float', default = value,
-                                        help = 'timeout (in seconds as float number) for each test in a task [%s]' % value)
+    parser.add_option('--test-timeout', dest=option, type='float', default=value,
+                      help='timeout (in seconds as float number) for each test in a task [%s]' % value)
 
     option = 'repository'
     value = 'https://finaluser.agcom244.fub.it/Upload'
@@ -98,8 +94,8 @@ def parse_args(version):
         value = config.get(section, option)
     except (ValueError, NoOptionError):
         config.set(section, option, value)
-    parser.add_option('-r', '--repository', dest = option, default = value,
-                                        help = 'upload URL for deliver measures\' files [%s]' % value)
+    parser.add_option('-r', '--repository', dest=option, default=value,
+                      help='upload URL for deliver measures\' files [%s]' % value)
 
     option = 'scheduler'
     value = 'https://finaluser.agcom244.fub.it/Scheduler'
@@ -107,8 +103,8 @@ def parse_args(version):
         value = config.get(section, option)
     except (ValueError, NoOptionError):
         config.set(section, option, value)
-    parser.add_option('-s', '--scheduler', dest = option, default = value,
-                                        help = 'complete url for schedule download [%s]' % value)
+    parser.add_option('-s', '--scheduler', dest=option, default=value,
+                      help='complete url for schedule download [%s]' % value)
 
     option = 'httptimeout'
     value = '60'
@@ -116,8 +112,8 @@ def parse_args(version):
         value = config.getint(section, option)
     except (ValueError, NoOptionError):
         config.set(section, option, value)
-    parser.add_option('--http-timeout', dest = option, type = 'int', default = value,
-                                        help = 'timeout (in seconds) for http operations [%s]' % value)
+    parser.add_option('--http-timeout', dest=option, type='int', default=value,
+                      help='timeout (in seconds) for http operations [%s]' % value)
 
     option = 'polling'
     value = '300'
@@ -125,13 +121,13 @@ def parse_args(version):
         value = config.getint(section, option)
     except (ValueError, NoOptionError):
         config.set(section, option, value)
-    parser.add_option('--polling-time', dest = option, type = 'int', default = value,
-                                        help = 'polling time in seconds between two scheduling requests [%s]' % value)
+    parser.add_option('--polling-time', dest=option, type='int', default=value,
+                      help='polling time in seconds between two scheduling requests [%s]' % value)
 
     # Client options
     # --------------------------------------------------------------------------
     section = 'client'
-    if (not config.has_section(section)):
+    if not config.has_section(section):
         config.add_section(section)
 
     option = 'clientid'
@@ -140,8 +136,8 @@ def parse_args(version):
         value = config.get(section, option)
     except (ValueError, NoOptionError):
         pass
-    parser.add_option('-c', '--clientid', dest = option, default = value,
-                                        help = 'client identification string [%s]' % value)
+    parser.add_option('-c', '--clientid', dest=option, default=value,
+                      help='client identification string [%s]' % value)
 
     option = 'geocode'
     value = None
@@ -150,31 +146,13 @@ def parse_args(version):
     except (ValueError, NoOptionError):
         logger.warning('Nessuna specifica geocode inserita.')
         pass
-    parser.add_option('-g', '--geocode', dest = option, default = value,
-                                        help = 'geocode identification string [%s]' % value)
-
-    option = 'username'
-    value = 'anonymous'
-    try:
-        value = config.get(section, option)
-    except (ValueError, NoOptionError):
-        config.set(section, option, value)
-    parser.add_option('--username', dest = option, default = value,
-                                        help = 'username for FTP login [%s]' % value)
-
-    option = 'password'
-    value = '@anonymous'
-    try:
-        value = config.get(section, option)
-    except (ValueError, NoOptionError):
-        config.set(section, option, value)
-    parser.add_option('--password', dest = option, default = value,
-                                        help = 'password for FTP login [%s]' % value)
+    parser.add_option('-g', '--geocode', dest=option, default=value,
+                      help='geocode identification string [%s]' % value)
 
     # Profile options
     # --------------------------------------------------------------------------
     section = 'profile'
-    if (not config.has_section(section)):
+    if not config.has_section(section):
         config.add_section(section)
 
     option = 'profileid'
@@ -183,8 +161,8 @@ def parse_args(version):
         value = config.get(section, option)
     except (ValueError, NoOptionError):
         pass
-    parser.add_option('-p', '--profileid', dest = option, default = value,
-                                        help = 'profile identification string [%s]' % value)
+    parser.add_option('-p', '--profileid', dest=option, default=value,
+                      help='profile identification string [%s]' % value)
 
     option = 'bandwidthup'
     value = None
@@ -192,8 +170,8 @@ def parse_args(version):
         value = config.getint(section, option)
     except (ValueError, NoOptionError):
         pass
-    parser.add_option('--up', dest = option, default = value, type = 'int',
-                                        help = 'upload bandwidth [%s]' % value)
+    parser.add_option('--up', dest=option, default=value, type='int',
+                      help='upload bandwidth [%s]' % value)
 
     option = 'bandwidthdown'
     value = None
@@ -201,13 +179,13 @@ def parse_args(version):
         value = config.getint(section, option)
     except (ValueError, NoOptionError):
         pass
-    parser.add_option('--down', dest = option, default = value, type = 'int',
-                                        help = 'download bandwidth [%s]' % value)
+    parser.add_option('--down', dest=option, default=value, type='int',
+                      help='download bandwidth [%s]' % value)
 
     # Isp options
     # --------------------------------------------------------------------------
     section = 'isp'
-    if (not config.has_section(section)):
+    if not config.has_section(section):
         config.add_section(section)
 
     option = 'ispid'
@@ -216,8 +194,8 @@ def parse_args(version):
         value = config.get(section, option)
     except (ValueError, NoOptionError):
         pass
-    parser.add_option('--ispid', dest = option, default = value,
-                                        help = 'isp identification string [%s]' % value)
+    parser.add_option('--ispid', dest=option, default=value,
+                      help='isp identification string [%s]' % value)
 
     option = 'certificate'
     value = None
@@ -230,8 +208,8 @@ def parse_args(version):
     except (ValueError, NoOptionError):
         logger.warning('Nessun certificato client specificato.')
         pass
-    parser.add_option('--certificate', dest = option, default = value,
-                                        help = 'client certificate for schedule downloading and measure file signing [%s]' % value)
+    parser.add_option('--certificate', dest=option, default=value,
+                      help='client certificate for schedule downloading and measure file signing [%s]' % value)
 
     with open(paths.CONF_MAIN, 'w') as f:
         config.write(f)
@@ -243,19 +221,19 @@ def parse_args(version):
 
     try:
 
-        parser.check_required('--clientid')
+        check_required(parser, '--clientid')
         config.set('client', 'clientid', options.clientid)
 
-        parser.check_required('--up')
+        check_required(parser, '--up')
         config.set('profile', 'bandwidthup', options.bandwidthup)
 
-        parser.check_required('--down')
+        check_required(parser, '--down')
         config.set('profile', 'bandwidthdown', options.bandwidthdown)
 
-        parser.check_required('--profileid')
+        check_required(parser, '--profileid')
         config.set('profile', 'profileid', options.profileid)
 
-        parser.check_required('--ispid')
+        check_required(parser, '--ispid')
         config.set('isp', 'ispid', options.ispid)
 
     finally:
@@ -265,4 +243,4 @@ def parse_args(version):
     with open(paths.CONF_MAIN, 'r') as f:
         md5 = hashlib.md5(f.read()).hexdigest()
 
-    return (options, args, md5)
+    return options, args, md5

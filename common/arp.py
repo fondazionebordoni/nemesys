@@ -49,7 +49,8 @@ if is_windows:
         raise Exception("Manca uno o più delle librerie Iphlapi.dll e ws2_32.dll")
 
 
-def mac_straddr(mac, printable=False, delimiter=None):  # TODO this should be the same as _print_mac
+# TODO this should be the same as _print_mac
+def mac_straddr(mac, printable=False, delimiter=None):
     """
     Convert c_ulong*2 to a hexadecimal string or a printable ascii
     string delimited by the 3rd parameter

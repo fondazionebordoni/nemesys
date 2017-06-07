@@ -144,7 +144,7 @@ def xml2task(xml):
         else:
             logger.warn("Task di attesa, ma manca il tempo di attesa, "
                         "uso il default 5 minuti")
-            delay = 5*60
+            delay = 5 * 60
         return new_wait_task(int(delay), message)
     else:
         nup = (task_dict.get('nup') or

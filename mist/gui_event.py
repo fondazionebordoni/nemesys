@@ -48,7 +48,6 @@ class CliEventDispatcher(object):
 
     def postEvent(self, event):
         """Dispatch an event"""
-        # Dispatch the event to all the associated listeners 
         listeners = self._events.get(event.type, set())
         for listener in listeners:
             listener(event)

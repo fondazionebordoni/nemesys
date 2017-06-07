@@ -21,7 +21,7 @@ __updated__ = '%s'
 if __name__ == '__main__':
     print __version__
 """
-VERSION_FILE="_generated_version.py"
+VERSION_FILE = "_generated_version.py"
 
 
 def update_version_py():
@@ -42,7 +42,7 @@ def update_version_py():
     assert stdout.startswith(TAG_PREFIX)
     full_version = stdout[len(TAG_PREFIX):].strip()
     if '-' in full_version:
-        strict_version = full_version[:full_version.find('-')] 
+        strict_version = full_version[:full_version.find('-')]
     else:
         strict_version = full_version
     f = open(VERSION_FILE, "w")

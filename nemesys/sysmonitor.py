@@ -19,11 +19,11 @@
 import logging
 from collections import OrderedDict
 
-from common import checkhost, nem_exceptions
+from common import checkhost
 from common import iptools
+from common import nem_exceptions
 from common import profiler
 from common.nem_exceptions import SysmonitorException
-from common import nem_exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class SysProfiler(object):
             (RES_RAM, self.checkmem),
             (RES_WIFI, self.checkwireless),
             (RES_HOSTS, self.checkhosts),
-            ])
+        ])
         self._profiler = profiler.Profiler()
 
     def log_interfaces(self):
@@ -98,7 +98,7 @@ class SysProfiler(object):
                                       "{0} Mb/s, che e' minore della "
                                       "velocita' del profilo: {1} Mb/s"
                                       .format(device_speed,
-                                              self._bw_download/1000))
+                                              self._bw_download / 1000))
 
         return dev_name
 

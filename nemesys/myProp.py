@@ -16,26 +16,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+
 def readProps(filename):
-    inf = open(filename,"r")
+    inf = open(filename, "r")
     line = inf.readline()
-    prop=[]
-    while line!='':
+    prop = []
+    while line != '':
         line = line.rstrip()
-        x=line.find('=')
-        [name, value] = [line[0:x], line[x+1:]]
-        prop.append((name.rstrip(),value.lstrip()))
+        x = line.find('=')
+        [name, value] = [line[0:x], line[x + 1:]]
+        prop.append((name.rstrip(), value.lstrip()))
         line = inf.readline()
 
     inf.close()
 
     return dict(prop)
 
+
 def writeProps(filename, key, value):
-    inf = open(filename,"a")
-    inf.write("\r\n"+key+" = "+value)
+    inf = open(filename, "a")
+    inf.write("\r\n" + key + " = " + value)
     inf.close()
 
+
 if __name__ == '__main__':
-    a='./cfg/cfg.properties'
-    writeProps(a,"prova","ciccio")
+    a = './cfg/cfg.properties'
+    writeProps(a, "prova", "ciccio")

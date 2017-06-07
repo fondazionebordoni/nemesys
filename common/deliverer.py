@@ -7,12 +7,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
@@ -180,7 +180,7 @@ class Deliverer(object):
             # Elimino lo zip del file di misura temporaneo
             if os.path.exists(zipname):
                 os.remove(zipname)
-            # Se non sono una sonda _devo_ cancellare il file di misura 
+            # Se non sono una sonda _devo_ cancellare il file di misura
             if do_remove and os.path.exists(filename):
                 os.remove(filename)
 

@@ -59,7 +59,8 @@ class TestGetConf(unittest.TestCase):
             os.remove(self.temp_file)
 
         try:
-            getconf('test@example.com|notaverystrongpassword', '.', self.temp_file, self.service)
+            getconf('test@example.com|notaverystrongpassword',
+                    '.', self.temp_file, self.service)
             assert False
         except Exception:
             assert True

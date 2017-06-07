@@ -83,6 +83,7 @@ class Proof(object):
                            self.spurious,
                            self.errorcode)
 
+
 if __name__ == '__main__':
     t = Proof('download', datetime.now(), 20, 100000, None, 101)
     print t

@@ -26,12 +26,14 @@ from common.timeNtp import timestampNtp
 
 DATE = datetime.fromtimestamp(timestampNtp())
 
+
 def formatdate(mode='sec'):
     if mode == 'day':
         format_date = str(DATE.strftime('%Y%m%d'))
     elif mode == 'sec':
         format_date = str(DATE.strftime('%Y%m%d_%H%M%S'))
     return format_date
+
 
 DAY = formatdate('day')
 SEC = formatdate('sec')
@@ -47,17 +49,17 @@ _APP_PATH = path.normpath(_APP_PATH)
 # Resources path
 ICONS = path.join(_APP_PATH, 'mist', 'resources', 'icons')
 
-#SENT
+# SENT
 SENT_DIR = path.join(_APP_PATH, 'sent')
 SENT_DAY_DIR = path.join(SENT_DIR, DAY)
 
-#OUTBOX
+# OUTBOX
 OUTBOX_DIR = path.join(_APP_PATH, 'outbox')
 OUTBOX_DAY_DIR = path.join(OUTBOX_DIR, DAY)
 
-#LOG
+# LOG
 LOG_DIR = path.join(_APP_PATH, 'logs')
-LOG_FILE = path.join(LOG_DIR, 'misurainternet-'+DAY+'.log')
+LOG_FILE = path.join(LOG_DIR, 'misurainternet-' + DAY + '.log')
 
 # Configuration dirs and files
 _CONF_DIR = path.join(_APP_PATH, 'config')
@@ -68,15 +70,20 @@ CONF_MAIN = path.join(_CONF_DIR, 'client.conf')
 # RESULTS = path.join(_CONF_DIR, 'result.xml')
 # MEASURE_STATUS = path.join(_CONF_DIR, 'progress.xml')
 # MEASURE_PROSPECT = path.join(OUTBOX_DIR, 'prospect.xml')
+
+
 def check_paths():
-    dirs = [LOG_DIR, OUTBOX_DIR, OUTBOX_DAY_DIR, SENT_DIR, SENT_DAY_DIR, _CONF_DIR]
+    dirs = [LOG_DIR, OUTBOX_DIR, OUTBOX_DAY_DIR,
+            SENT_DIR, SENT_DAY_DIR, _CONF_DIR]
     for d in dirs:
         if not path.exists(d):
             mkdir(d)
 
+
 def remove_temp_dirs():
     remove_empty_dir(OUTBOX_DIR)
     remove_empty_dir(SENT_DIR)
+
 
 def remove_empty_dir(topdir):
     subdirs = os.walk(topdir, topdown=False)
@@ -84,8 +91,7 @@ def remove_empty_dir(topdir):
         for filedir in range(len(dirs)):
             dirs[filedir] = os.path.join(root, dirs[filedir])
             dirs.append(root)
-        for filedir in dirs:    
+        for filedir in dirs:
             if os.path.exists(filedir):
                 if not os.listdir(filedir):    # to check wither the dir is empty
                     os.removedirs(filedir)
-

@@ -18,9 +18,12 @@
 import unittest
 import common.checkhost
 
-HOSTS_OLD_TECHNICOLOR = {'192.168.1.253':'c6:ea:1d:4d:e6:70', '192.168.1.254]':'c4:ea:1d:4d:e6:70'}
-HOSTS_NEW_TECHNICOLOR = {'192.168.1.254':'e0:b9:e5:59:d6:22', '192.168.1.148':'e2:b9:e5:59:d6:2b'}
-HOSTS_NOT_TECHNICOLOR = {'192.168.1.254':'f0:b9:e5:59:d6:22', '192.168.1.148':'f2:b9:e5:59:d6:2b'}
+HOSTS_OLD_TECHNICOLOR = {
+    '192.168.1.253': 'c6:ea:1d:4d:e6:70', '192.168.1.254]': 'c4:ea:1d:4d:e6:70'}
+HOSTS_NEW_TECHNICOLOR = {
+    '192.168.1.254': 'e0:b9:e5:59:d6:22', '192.168.1.148': 'e2:b9:e5:59:d6:2b'}
+HOSTS_NOT_TECHNICOLOR = {
+    '192.168.1.254': 'f0:b9:e5:59:d6:22', '192.168.1.148': 'f2:b9:e5:59:d6:2b'}
 
 
 class TestCheckhost(unittest.TestCase):
@@ -40,6 +43,7 @@ class TestCheckhost(unittest.TestCase):
 
 def main():
     unittest.main()
+
 
 if __name__ == '__main__':
     main()

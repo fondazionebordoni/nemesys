@@ -35,16 +35,17 @@ class TestFakefile(unittest.TestCase):
     def test_tcp_buf(self):
         num_iterations = 100000
 #         starttime = time.time()
-        ff = Fakefile(8*1024*num_iterations)
+        ff = Fakefile(8 * 1024 * num_iterations)
         for _ in range(0, num_iterations):
-            data = ff.read(8*1024)
-            self.assertEqual(8*1024, len(data))
+            data = ff.read(8 * 1024)
+            self.assertEqual(8 * 1024, len(data))
 #         endtime = time.time()
 #         print (endtime - starttime)/num_iterations
 
 
 def main():
     unittest.main()
+
 
 if __name__ == '__main__':
     main()

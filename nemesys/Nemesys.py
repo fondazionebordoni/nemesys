@@ -27,7 +27,8 @@ except ImportError:
 
 import executer
 import time
-import os,sys
+import os
+import sys
 import logging
 import myProp
 # import paths
@@ -37,15 +38,16 @@ from threading import Thread
 try:
     _PATH = os.path.dirname(sys.argv[0])
     if _PATH == '':
-            _PATH="."+os.sep
-    if _PATH[len(_PATH)-1] != os.sep: _PATH=_PATH+os.sep
+        _PATH = "." + os.sep
+    if _PATH[len(_PATH) - 1] != os.sep:
+        _PATH = _PATH + os.sep
 except Exception as e:
     pass
 
 
 ###  READING PROPERTIES  ###
 try:
-    _prop= myProp.readProps(_PATH+"cfg"+os.sep+"cfg.properties")
+    _prop = myProp.readProps(_PATH + "cfg" + os.sep + "cfg.properties")
 except Exception as e:
     pass
 
@@ -54,12 +56,12 @@ except Exception as e:
 # quando esegui da linea di comando il file di prop e' in C:\Python26\Lib\site-packages\win32\cfg !!
 nemesys = logging.getLogger("nemesys")
 nemesys.setLevel(logging.DEBUG)
-fh1 = logging.FileHandler(_PATH+_prop['nemlog'])
+fh1 = logging.FileHandler(_PATH + _prop['nemlog'])
 fh1.setLevel(logging.DEBUG)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 fh1.setFormatter(formatter)
 nemesys.addHandler(fh1)
-nemesys.info('PATH: '+ _PATH)
+nemesys.info('PATH: ' + _PATH)
 
 
 ### Executer Thread ###
@@ -67,52 +69,55 @@ class execThread (Thread):
     def __init__(self):
         Thread.__init__(self)
         self.pid = os.getpid()
-    
+
     def run(self):
         executer.main()
-          
+
 ### Service Running ###
+
+
 class aservice(win32serviceutil.ServiceFramework):
     _svc_name_ = "NeMeSys"
     _svc_display_name_ = "NeMeSys Service"
     _svc_description_ = "Sistema per la valutazione della connessione broadband"
-   
 
-    def __init__(self,args):
-        win32serviceutil.ServiceFramework.__init__(self,args)
+    def __init__(self, args):
+        win32serviceutil.ServiceFramework.__init__(self, args)
         self.isAlive = True
-    
+
     def SvcDoRun(self):
         servicemanager.LogInfoMsg("NeMeSys Service - started")
         ex = execThread()
         ex.start()
-        pid=ex.pid
-        servicemanager.LogInfoMsg("NeMeSys Service - executer started - "+str(pid))      
+        pid = ex.pid
+        servicemanager.LogInfoMsg("NeMeSys Service - executer started - " + str(pid))
         i = 1
         while self.isAlive:
             # Aspetta il segnale di stop per il tempo di timeout (30 secs)
             #rc = win32event.WaitForSingleObject(self.hWaitStop, 30000)
             time.sleep(1)
-            i+=0
+            i += 0
             #servicemanager.LogInfoMsg("NeMeSys Service Up&Running")
-           
-        if self.isAlive == False:
-            #Stop Signal received
+
+        if self.isAlive is False:
+            # Stop Signal received
             servicemanager.LogInfoMsg("NeMeSys Service Stopped")
             # disalloco la memoria COM prima di uccidere il processo
-            #ex.couni()
-            os.popen('taskkill /pid '+str(pid))
-    
+            # ex.couni()
+            os.popen('taskkill /pid ' + str(pid))
+
     def SvcStop(self):
         servicemanager.LogInfoMsg("Stopping NeMeSys Service - stop signal received ")
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
         self.isAlive = False
-        #win32event.SetEvent(self.hWaitStop)
-    
+        # win32event.SetEvent(self.hWaitStop)
+
     SvcShutdown = SvcStop
-   
+
+
 def ctrlHandler(ctrlType):
     return True
+
 
 def mainArg(argv):
     if len(argv) == 1:

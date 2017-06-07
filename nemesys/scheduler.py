@@ -48,9 +48,9 @@ class Scheduler(object):
         '''
         url = urlparse.urlparse(self._url)
         certificate = self._client.isp.certificate
-        connection = httputils.getverifiedconnection(url=url,
-                                                     certificate=certificate,
-                                                     timeout=self._httptimeout)
+        connection = httputils.get_verified_connection(url=url,
+                                                       certificate=certificate,
+                                                       timeout=self._httptimeout)
 
         try:
             connection.request('GET', '%s?clientid=%s&version=%s&confid=%s'
