@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-# import hashlib
 try:
     import win32serviceutil
     import win32service
@@ -30,8 +29,6 @@ import time
 import os
 import sys
 import logging
-import myProp
-# import paths
 from threading import Thread
 
 ###  DISCOVERING PATH  ###
@@ -42,21 +39,14 @@ try:
     if _PATH[len(_PATH) - 1] != os.sep:
         _PATH = _PATH + os.sep
 except Exception as e:
-    pass
-
-
-###  READING PROPERTIES  ###
-try:
-    _prop = myProp.readProps(_PATH + "cfg" + os.sep + "cfg.properties")
-except Exception as e:
-    pass
+    _PATH = "." + os.sep
 
 
 ### Logging Functionality ###
 # quando esegui da linea di comando il file di prop e' in C:\Python26\Lib\site-packages\win32\cfg !!
 nemesys = logging.getLogger("nemesys")
 nemesys.setLevel(logging.DEBUG)
-fh1 = logging.FileHandler(_PATH + _prop['nemlog'])
+fh1 = logging.FileHandler(_PATH + 'log_nemesys.log')
 fh1.setLevel(logging.DEBUG)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 fh1.setFormatter(formatter)

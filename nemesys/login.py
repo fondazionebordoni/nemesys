@@ -24,7 +24,6 @@ import sys
 import tkMessageBox
 
 from getconf import getconf
-import myProp
 import paths
 from common import utils
 
@@ -37,7 +36,6 @@ _configurationServer = 'https://finaluser.agcom244.fub.it/Config'
 class LoginException(Exception):
     def __init__(self, message):
         Exception.__init__(self, message)
-
 
 class LoginAuthenticationException(LoginException):
     def __init__(self, message):
@@ -53,12 +51,36 @@ class LoginCancelledException(LoginException):
     def __init__(self, message=""):
         Exception.__init__(self, message)
 
+class MaxLoginException(LoginException):
+    def __init__(self, message=""):
+        Exception.__init__(self, message)
+
+
+def read_properties(filename):
+    """
+    reads a properties file and returns a dict of properties
+    """
+    with open(filename, "r") as inf:
+        properties = {}
+        for line in inf:
+            line = line.strip()
+            if '=' in line:
+                name, value = line.split('=')
+                properties[name.strip()] = value.strip()
+    return properties
+
+
+def write_properties(filename, properties):
+    with open(filename, "w") as inf:
+        for key in properties:
+            inf.write("\r\n" + key + " = " + properties[key])
+
 
 ### Activation code ###
 def getCode():
-    '''
+    """
     Apre una finestra che chiede il codice licenza. Resituisce il codice licenza e chiude la finestra.
-    '''
+    """
     root = Tkinter.Tk()
     if utils.is_windows():
         root.wm_iconbitmap('../Nemesys.ico')
@@ -73,9 +95,8 @@ def getCode():
         raise LoginCancelledException()
 
     if appresult == '' or len(appresult) < 4:
-        appresult = None
-        logger.error('Exit: wrong activation code')
-        CodeError()
+        logger.error('Wrong activation code')
+        # CodeError()
         raise LoginAuthenticationException('Wrong username/password')
 
     if root:
@@ -88,7 +109,8 @@ def CodeError():
     Errore in caso di credenziali errate
     """
     message = '''Autenticazione fallita o licenza non attiva.
-                Controllare i dati di accesso e la presenza di una licenza attiva al sito www.misurainternet.it'''
+
+Controllare i dati di accesso e la presenza di una licenza attiva al sito www.misurainternet.it'''
     ErrorDialog(message)
 
 
@@ -97,22 +119,22 @@ def ConnectionError():
     Errore in caso di connessione fallita
     """
     message = '''Connessione fallita.
-    Controllare di avere accesso alla rete.'''
+Controllare di avere accesso alla rete.'''
     ErrorDialog(message)
 
 
-def FinalError():
+def GenericError():
     """
     Errore in caso di tentativo di download non andato a buon fine
     """
     message = '''Si è verificato un errore. Controllare:
 
-    - di avere accesso alla rete,
-    - di aver digitato correttamente le credenziali di accesso,
-    - di avere una licenza attiva,
-    - di non aver ottenuto un certificato con Ne.Me.Sys. meno di 45 giorni antecedenti ad oggi.
+- di avere accesso alla rete,
+- di aver digitato correttamente le credenziali di accesso,
+- di avere una licenza attiva,
+- di non aver ottenuto un certificato con Ne.Me.Sys. meno di 45 giorni antecedenti ad oggi.
 
-    Dopo 5 tentativi di accesso falliti, sarà necessario disinstallare Ne.Me.Sys e reinstallarlo nuovamente.'''
+Dopo 5 tentativi di accesso falliti, sarà necessario disinstallare Ne.Me.Sys e reinstallarlo nuovamente.'''
     ErrorDialog(message)
 
 
@@ -121,9 +143,9 @@ def MaxError():
     Errore in caso di quinto inserimento errato di credenziali
     """
     message = '''Le credenziali non sono corrette o la licenza non è più valida.
-              Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \
-              dopo aver controllato user-id e password che ti sono state invitate in fase \
-              di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it.'''
+Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \
+dopo aver controllato user-id e password che ti sono state invitate in fase \
+di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it.'''
     ErrorDialog(message)
 
 
@@ -132,9 +154,9 @@ def CancelError():
     Utente e' uscito
     """
     message = '''L'autenticazione non e' andata a buon fine.
-               Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \
-               dopo aver controllato user-id e password che ti sono state invitate in fase \
-               di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it.'''
+Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \
+dopo aver controllato user-id e password che ti sono state invitate in fase \
+di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it.'''
     ErrorDialog(message)
     sys.exit()
 
@@ -162,18 +184,19 @@ def OkDialog():
 
 ### Function to Download Configuration File ###
 def getActivationFile(appresult, path, config_path):
-    '''
+    """
       Scarica il file di configurazione. Ritorna True se tutto è andato bene
-    '''
+    """
     logger.info('getActivationFile function')
-
     ac = appresult
     logger.info('Codici ricevuti: %s' % ac)
 
-    download = False
     try:
         download = getconf(ac, path, _clientConfigurationFile, _configurationServer)
         logger.info('download = %s' % str(download))
+    except IOError as e:
+        logger.error('Cannot write to the configuration file: %s' % str(e))
+        raise
     except Exception as e:
         logger.error('Cannot download the configuration file: %s' % str(e))
         raise LoginConnectionException(str(e))
@@ -182,9 +205,9 @@ def getActivationFile(appresult, path, config_path):
         raise LoginAuthenticationException("")
     else:
         logger.info('Configuration file successfully downloaded')
-        myProp.writeProps(config_path, '\nregistered', 'ok')
+        # myProp.writeProps(config_path, '\nregistered', 'ok')
         OkDialog()
-        return True
+        # return True
 
 
 class LoginGui(Tkinter.Frame):
@@ -245,6 +268,36 @@ class LoginGui(Tkinter.Frame):
         self.result = None
 
 
+def try_to_activate(config_path):
+    activated = False
+    j = 0
+    # Al massimo faccio fare 5 tentativi di inserimento codice di licenza
+    while not activated:
+        # Prendo un codice licenza valido sintatticamente
+        errorfunc = None
+        try:
+            appresult = getCode()
+            activated = getActivationFile(appresult, paths._CONF_DIR, config_path)
+            return appresult
+        except LoginAuthenticationException:
+            logger.warning("Authentication failure n. %d" % j)
+            errorfunc = CodeError
+        except LoginConnectionException as e:
+            logger.warning("Authentication connection problem: %s", e)
+            errorfunc = ConnectionError
+        except LoginCancelledException:
+            raise
+        except Exception as e:
+            logger.error("Caught exception while downloading configuration file: %s", e)
+            errorfunc = GenericError
+        if j < 4:
+            errorfunc()
+            j += 1
+        else:
+            raise MaxLoginException()
+    return activated
+
+
 def main():
     ###  DISCOVERING PATH  ###
     try:
@@ -256,78 +309,47 @@ def main():
     except Exception as e:
         _PATH = "." + os.sep
 
-    config_path = _PATH + "cfg" + os.sep + "cfg.properties"
-
     ###  READING PROPERTIES  ###
-    _prop = None
-    try:
-        _prop = myProp.readProps(config_path)
-    except Exception as e:
-        logger.error("Could not read configuration file from %s" % config_path)
-        ErrorDialog("File di configurazione non trovata in %s, impossibile procedere con l'installazione" % config_path)
-        sys.exit(1)
+    config_dir = os.path.join(_PATH, 'cfg')
+    if not os.path.exists(config_dir):
+        os.mkdir(config_dir)
+    config_file = os.path.join(config_dir, 'cfg.properties')
+    if os.path.exists(config_file):
+        try:
+            _prop = read_properties(config_file)
+        except Exception as e:
+            logger.error("Could not read configuration file from %s" % config_file, e)
+            ErrorDialog("File di configurazione non trovata in %s, impossibile procedere con l'installazione" % config_file)
+            sys.exit(1)
+    else:
+        _prop = []
 
-    if 'code' not in _prop:
-        result = False
-        j = 0
-        has_canceled = False
-        # Al massimo faccio fare 5 tentativi di inserimento codice di licenza
-        while not result and j < 5 and not has_canceled:
-            # Prendo un codice licenza valido sintatticamente
-            appresult = None
-            errorfunc = None
-            try:
-                appresult = getCode()
-                result = getActivationFile(appresult, paths._CONF_DIR, config_path)
-            except LoginAuthenticationException as e:
-                logger.warning("Authentication failure n. %d" % j)
-                errorfunc = CodeError
-            except LoginConnectionException as e:
-                logger.warning("Authentication connection problem: %s" % str(e))
-                errorfunc = ConnectionError
-            except LoginCancelledException:
-                has_canceled = True
-            except Exception as e:
-                logger.error("Caught exception while downloading configuration file: %s" % str(e))
-
-            if result is False and not has_canceled and j < 4:
-                if errorfunc:
-                    errorfunc()
-                else:
-                    logger.warning('Final Error occurred at attempt number %d' % j)
-                    FinalError()
-            j += 1
-
-        if has_canceled:
+    if 'registered' in _prop:
+        # Ho tentato almeno una volta il download
+        logger.debug('Registered in _prop')
+        status = str(_prop['registered'])
+        if status == 'ok':
+            # Allora posso continuare lo start del servizio
+            logger.debug('Status of registered is Ok')
+            logger.info('Configuration file already downloaded')
+        else:
+            # Il servizio non può partire
+            logger.error('Login previously failed. ')
+            # Dialog to unistall and retry
+            MaxError()
+    else:
+        try:
+            code = try_to_activate(config_file)
+            logger.info('License file successfully downloaded')
+        except LoginCancelledException:
             CancelError()
             sys.exit(0)
-        elif result is False:
+        except MaxLoginException:
             MaxError()
             logger.warning('MaxError occurred at attempt number 5')
-            myProp.writeProps(config_path, '\ncode', appresult)
-            _prop = myProp.readProps(config_path)
-            myProp.writeProps(config_path, '\nregistered', 'nok')
-            _prop = myProp.readProps(config_path)
+            write_properties(config_file, {'registered':'nok'})
             sys.exit(1)
-        elif result is True:
-            logger.info('License file successfully downloaded')
-            myProp.writeProps(config_path, '\ncode', appresult)
-            _prop = myProp.readProps(config_path)
-    else:
-        logger.debug('Activation Code found')
-        if 'registered' in _prop:
-            # Ho tentato almeno una volta il download
-            logger.debug('Registered in _prop')
-            status = str(_prop['registered'])
-            if status == 'ok':
-                # Allora posso continuare lo start del servizio
-                logger.debug('Status of registered is Ok')
-                logger.info('Configuration file already downloaded')
-            else:
-                # Il servizio non può partire
-                logger.error('Login previously failed. ')
-                # Dialog to unistall and retry
-                MaxError()
+        write_properties(config_file, {'code': code, 'registered': 'ok'})
 
 
 if __name__ == '__main__':
