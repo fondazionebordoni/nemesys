@@ -37,6 +37,7 @@ class LoginException(Exception):
     def __init__(self, message):
         Exception.__init__(self, message)
 
+
 class LoginAuthenticationException(LoginException):
     def __init__(self, message):
         Exception.__init__(self, message)
