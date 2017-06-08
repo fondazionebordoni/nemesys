@@ -51,6 +51,7 @@ class LoginCancelledException(LoginException):
     def __init__(self, message=""):
         Exception.__init__(self, message)
 
+
 class MaxLoginException(LoginException):
     def __init__(self, message=""):
         Exception.__init__(self, message)
@@ -71,6 +72,9 @@ def read_properties(filename):
 
 
 def write_properties(filename, properties):
+    """
+    (over)writes properties to a file
+    """
     with open(filename, "w") as inf:
         for key in properties:
             inf.write("\r\n" + key + " = " + properties[key])
