@@ -324,7 +324,8 @@ def main():
             _prop = read_properties(config_file)
         except Exception as e:
             logger.error("Could not read configuration file from %s" % config_file, e)
-            ErrorDialog("File di configurazione non trovata in %s, impossibile procedere con l'installazione" % config_file)
+            ErrorDialog("File di configurazione non trovata in {}, impossibile procedere con l'installazione".format(
+                config_file))
             sys.exit(1)
     else:
         _prop = []
@@ -352,7 +353,7 @@ def main():
         except MaxLoginException:
             MaxError()
             logger.warning('MaxError occurred at attempt number 5')
-            write_properties(config_file, {'registered':'nok'})
+            write_properties(config_file, {'registered': 'nok'})
             sys.exit(1)
         write_properties(config_file, {'code': code, 'registered': 'ok'})
 
