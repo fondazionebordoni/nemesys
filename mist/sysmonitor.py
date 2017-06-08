@@ -17,7 +17,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from collections import OrderedDict
-import netifaces
 import platform
 import time
 
@@ -264,22 +263,3 @@ class SysMonitor(object):
         self.checkhosts(use_arp)
         # TODO: Reinserire questo check quanto corretto il problema di determinazione del dato
         # checkdisk()
-
-
-def get_net_if():
-    my_interfaces = {}
-    for ifName in netifaces.interfaces():
-        # logger.debug((ifName,netifaces.ifaddresses(ifName)))
-        mac = [i.setdefault('addr', '') for i in
-               netifaces.ifaddresses(ifName).setdefault(netifaces.AF_LINK, [{'addr': ''}])]
-        ip = [i.setdefault('addr', '') for i in
-              netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'addr': ''}])]
-        mask = [i.setdefault('netmask', '') for i in
-                netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'netmask': ''}])]
-        if mask[0] == '0.0.0.0':
-            mask = [i.setdefault('broadcast', '') for i in
-                    netifaces.ifaddresses(ifName).setdefault(netifaces.AF_INET, [{'broadcast': ''}])]
-        my_interfaces[ifName] = {'mac': mac, 'ip': ip, 'mask': mask}
-    logger.debug('Network Interfaces:\n %s' % my_interfaces)
-
-    return my_interfaces

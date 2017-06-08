@@ -18,7 +18,6 @@
 """Some useful functions for IP and Ethernet"""
 
 import logging
-import netifaces
 import psutil
 import re
 import socket
@@ -110,7 +109,7 @@ def get_network_mask(ip):
         it returns a default
         netmask of 24
     """
-#     default_netmask = '255.255.255.0'
+    default_netmask = '255.255.255.0'
     if not ip:
         local_ip_address = getipaddr()
     else:
@@ -124,38 +123,8 @@ def get_network_mask(ip):
                         return _mask_conversion(addr_type.netmask)
                     else:
                         break
-    # Netmask not found, try with netifaces instead
-    logger.warn("Could not find netmask, trying with netifaces")
-    return get_network_mask_netifaces(local_ip_address)
-
-
-def get_network_mask_netifaces(ip):
-    """
-    This is the 'old' method, using netifaces,
-    used as a fallback when psutil fails,
-    since it does not work on Windows.
-    """
-    netmask = '255.255.255.0'
-
-    inames = netifaces.interfaces()
-    for i in inames:
-        try:
-            addrs = netifaces.ifaddresses(i)
-            try:
-                ipinfo = addrs[socket.AF_INET][0]
-                address = ipinfo['addr']
-                if address == ip:
-                    netmask = ipinfo['netmask']
-                    return _mask_conversion(netmask)
-            except KeyError:
-                pass
-        except Exception as e:
-            logger.warning("Errore durante il controllo "
-                           "dell'interfaccia {0}. {1}".format(i, e),
-                           exc_info=True)
-
     logger.warn("Could not find netmask, returning default")
-    return _mask_conversion(netmask)
+    return _mask_conversion(default_netmask)
 
 
 def is_public_ip(ip):

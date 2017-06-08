@@ -179,7 +179,7 @@ def ErrorDialog(message):
 def OkDialog():
     root = Tkinter.Tk()
     if utils.is_windows():
-        root.wm_iconbitmap('../Nemesys.ico')
+        root.wm_iconbitmap(os.path.join('..', 'Nemesys.ico'))
     root.withdraw()
     title = 'Ne.Me.Sys autenticazione corretta'
     message = 'Username e password corrette e verificate'
