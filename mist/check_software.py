@@ -24,8 +24,8 @@ import wx
 from urlparse import urlparse
 
 from common import httputils
-import mist_options
-from registration import registration
+from mist import mist_options
+from mist.registration import registration
 
 SWN = 'MisuraInternet Speed Test'
 

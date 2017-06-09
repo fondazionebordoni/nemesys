@@ -1,10 +1,10 @@
-'''
+"""
 Created on 28/ott/2015
 
 @author: ewedlund
 
 Collecting messages for use in both gui and text vesrsions
-'''
+"""
 
 SWN = 'MisuraInternet Speed Test'
 PROFILING = 'Profilazione dello stato del sistema di misura'

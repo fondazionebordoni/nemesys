@@ -28,7 +28,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={pf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=true
-InfoBeforeFile={#MyAppDir}\EULA
+InfoBeforeFile={#MyAppDir}\EULA.nemesys
 LicenseFile={#MyAppDir}\LICENSE
 OutputDir={#MyAppDir}
 OutputBaseFilename={#MyAppName}_v.{#myAppVersion}-{#BuildNum}
@@ -53,12 +53,10 @@ Name: quicklaunchicon; Description: {cm:CreateQuickLaunchIcon}; GroupDescription
 
 [Files]
 Source: {#MyAppDir}\dist\*; DestDir: {app}\dist; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: {#MyAppDir}\nemesys\cfg\*; DestDir: {app}\dist\cfg; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: {#MyAppDir}\ABOUT; DestDir: {app}; Flags: ignoreversion
-Source: {#MyAppDir}\nemesys.ico; DestDir: {app}; Flags: ignoreversion
+Source: {#MyAppDir}\nemesys.ico; DestDir: {app}\dist; Flags: ignoreversion
 Source: {#MyAppDir}\COPYING; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\LICENSE; DestDir: {app}; Flags: ignoreversion
-Source: {#MyAppDir}\icons\*.png; DestDir: {app}\icons; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Dirs]

@@ -24,9 +24,9 @@ from datetime import datetime
 
 import xmltodict
 
-import gui_event
-import paths
 from common.timeNtp import timestampNtp
+from mist import gui_event
+from mist import paths
 
 logger = logging.getLogger(__name__)
 MAX_SEND_RETRY = 3

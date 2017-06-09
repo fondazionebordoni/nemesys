@@ -24,12 +24,13 @@ try:
 except ImportError:
     raise Exception("Missing WMI library")
 
-import executer
-import time
+import logging
 import os
 import sys
-import logging
+import time
 from threading import Thread
+
+from nemesys import executer
 
 ###  DISCOVERING PATH  ###
 try:

@@ -21,15 +21,15 @@ import socket
 from datetime import datetime
 from optparse import OptionParser
 
-import iptools
-import ping
-from host import Host
-import nem_exceptions
-from nem_exceptions import MeasurementException
-from proof import Proof
-from testerhttpdown import HttpTesterDown
-from testerhttpup import HttpTesterUp
-from timeNtp import timestampNtp
+from common import iptools
+from common import ping
+from common.host import Host
+from common import nem_exceptions
+from common.nem_exceptions import MeasurementException
+from common.proof import Proof
+from common.testerhttpdown import HttpTesterDown
+from common.testerhttpup import HttpTesterUp
+from common.timeNtp import timestampNtp
 
 HTTP_BUFF = 8 * 1024
 BW_3M = 3000000

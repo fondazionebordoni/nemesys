@@ -19,7 +19,7 @@
 import logging.config
 import os
 
-import paths
+from nemesys import paths
 
 
 configfile = paths.CONF_LOG

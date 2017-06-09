@@ -21,7 +21,7 @@ from collections import OrderedDict
 import psutil
 import socket
 
-import iptools
+from common import iptools
 
 
 IF_TYPE_ETHERNET = 'Ethernet 802.3'

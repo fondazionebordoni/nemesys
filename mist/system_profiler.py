@@ -19,10 +19,10 @@ import threading
 import time
 from collections import OrderedDict
 
-import gui_event
 from common import iptools
-from sysmonitor import SysMonitor
-from system_resource import RES_OS, RES_CPU, RES_RAM, RES_ETH, RES_WIFI, RES_HOSTS, RES_TRAFFIC
+from mist import gui_event
+from mist.sysmonitor import SysMonitor
+from mist.system_resource import RES_OS, RES_CPU, RES_RAM, RES_ETH, RES_WIFI, RES_HOSTS, RES_TRAFFIC
 
 logger = logging.getLogger(__name__)
 

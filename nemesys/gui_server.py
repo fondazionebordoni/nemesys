@@ -20,14 +20,14 @@ import collections
 import datetime
 import json
 import logging
-from threading import Thread
 import threading
+import urlparse
+from threading import Thread
+
 import tornado.web
 from tornado.websocket import WebSocketHandler
-import urlparse
 
-import paths
-
+from nemesys import paths
 
 logger = logging.getLogger(__name__)
 

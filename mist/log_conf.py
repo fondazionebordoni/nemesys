@@ -21,7 +21,6 @@ import os
 
 from mist import paths
 
-
 configfile = paths.CONF_LOG
 logfile = paths.LOG_FILE
 

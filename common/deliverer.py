@@ -32,8 +32,8 @@ from xml.dom.minidom import parseString
 from xml.parsers.expat import ExpatError
 import zipfile
 
-from httputils import post_multipart
-from timeNtp import timestampNtp
+from common.httputils import post_multipart
+from common.timeNtp import timestampNtp
 
 logger = logging.getLogger(__name__)
 

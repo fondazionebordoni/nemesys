@@ -16,28 +16,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
 import logging
 import platform
+from datetime import datetime
 from threading import Event
 from time import sleep
 
-from common._generated_version import __version__, FULL_VERSION
 from common import client
-from common.deliverer import Deliverer
-import gui_server
 from common import iptools
-from measure import Measure
-from common.nem_exceptions import SysmonitorException
 from common import nem_exceptions
-import nem_options
-import paths
+from common._generated_version import __version__, FULL_VERSION
+from common.deliverer import Deliverer
+from common.nem_exceptions import SysmonitorException
 from common.proof import Proof
-from scheduler import Scheduler
-from sysmonitor import SysProfiler
 from common.tester import Tester
 from common.timeNtp import timestampNtp
-
+from nemesys import gui_server
+from nemesys import nem_options
+from nemesys import paths
+from nemesys.measure import Measure
+from nemesys.scheduler import Scheduler
+from nemesys.sysmonitor import SysProfiler
 
 logger = logging.getLogger(__name__)
 

@@ -19,9 +19,9 @@
 from datetime import datetime
 from time import sleep
 
-import ping
-from host import Host
-from timeNtp import timestampNtp
+from common import ping
+from common.host import Host
+from common.timeNtp import timestampNtp
 
 
 class Server(Host):

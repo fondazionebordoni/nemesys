@@ -23,10 +23,10 @@ import ssl
 
 
 def getconf(serial, conf_dir, filename, url):
-    '''
+    """
     Scarica il file di configurazione dalla url (HTTPS) specificata, salvandolo nel file specificato.
     Solleva eccezioni in caso di problemi o file ricevuto non corretto.
-    '''
+    """
     url = urlparse.urlparse(url)
     try:
         '''python >= 2.7.9'''
@@ -42,10 +42,10 @@ def getconf(serial, conf_dir, filename, url):
     connection.request('GET', '%s?clientid=%s' % (url.path, serial))
     data = connection.getresponse().read()
     # Controllo stupido sul contenuto del file
-    if ("clientid" in str(data)):
+    if 'clientid' in str(data):
         with open('%s/%s' % (conf_dir, filename), 'w') as myfile:
             myfile.write(data)
-    elif ("non valido" in str(data)):
+    elif 'non valido' in str(data):
         return False
     else:
         raise Exception('Error in configuration file')

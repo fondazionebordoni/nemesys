@@ -14,19 +14,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
 Created on 14/apr/2016
 
 @author: ewedlund
-'''
+"""
 
 import hashlib
 from ConfigParser import ConfigParser, NoOptionError
 from optparse import OptionParser
 from os import path
 
-import paths
 from common import client
+from mist import paths
 
 
 class MistOptions(object):

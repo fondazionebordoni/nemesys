@@ -16,14 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 from collections import OrderedDict
 from datetime import datetime
-import logging
+
 import xmltodict
 
 from common.nem_exceptions import TaskException
 from common.server import Server
-
 
 logger = logging.getLogger(__name__)
 

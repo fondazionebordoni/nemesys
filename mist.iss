@@ -28,7 +28,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={pf}\{#MyAppExeName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=true
-InfoBeforeFile={#MyAppDir}\EULA
+InfoBeforeFile={#MyAppDir}\EULA.mist
 LicenseFile={#MyAppDir}\LICENSE
 OutputDir={#MyAppDir}
 OutputBaseFilename={#MyAppExeName}_v.{#myAppVersion}-{#BuildNum}
@@ -50,12 +50,12 @@ Name: italian; MessagesFile: compiler:Languages\Italian.isl
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 0,6.1; Languages: italian
 
 [Files]
-Source: {#MyAppDir}\mist\dist\*; DestDir: {app}\dist; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: {#MyAppDir}\dist\*; DestDir: {app}\dist; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: {#MyAppDir}\ABOUT; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\mist.ico; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\COPYING; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\LICENSE; DestDir: {app}; Flags: ignoreversion
-Source: {#MyAppDir}\icons\*.png; DestDir: {app}\icons; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: {#MyAppDir}\mist\resources\icons\*.png; DestDir: {app}\mist\resources\icons; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Dirs]
@@ -64,23 +64,23 @@ Source: {#MyAppDir}\icons\*.png; DestDir: {app}\icons; Flags: ignoreversion recu
 ;Name: {app}\logs
 
 [Icons]
-Name: {group}\{#MyAppName}; Filename: {app}\dist\mist.exe
+Name: {group}\{#MyAppName}; Filename: {app}\dist\mist_main.exe
 Name: {group}\{cm:UninstallProgram,{#MyAppName}}; Filename: {uninstallexe}
-Name: {commondesktop}\{#MyAppName}; Filename: {app}\dist\mist.exe; IconIndex: 0
-Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}; Filename: {app}\dist\mist.exe; Tasks: quicklaunchicon; IconIndex: 0
+Name: {commondesktop}\{#MyAppName}; Filename: {app}\dist\mist_main.exe; IconIndex: 0
+Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}; Filename: {app}\dist\mist_main.exe; Tasks: quicklaunchicon; IconIndex: 0
 
 [Run]
 Filename: {sys}\netsh.exe; Parameters: " int ip set global taskoffload=disabled"; Description: "Disable TCP Task Offload"; Flags: RunHidden RunAsCurrentUser; 
-Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\mist.exe"" ""MisuraInternetSpeedTest"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable MisuraInternet Speed Test traffic"; Flags: RunHidden RunAsCurrentUser; 
-Filename: {sys}\netsh.exe; Parameters: " advfirewall firewall add rule name=""MisuraInternetSpeedTest"" dir=out action=allow program=""{app}\dist\mist.exe"" enable=yes"; Description: "Enable MisuraInternet Speed Test traffic"; Flags: RunHidden RunAsCurrentUser; MinVersion: 0,6.1.7600; 
-Filename: {app}\dist\mist.exe; Parameters: start; Description: "Avvia MisuraInternet Speed Test"; Flags: PostInstall runmaximized RunAsCurrentUser; StatusMsg: "Avvia MisuraInternet Speed Test";
+Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\mist_main.exe"" ""MisuraInternetSpeedTest"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable MisuraInternet Speed Test traffic"; Flags: RunHidden RunAsCurrentUser;
+Filename: {sys}\netsh.exe; Parameters: " advfirewall firewall add rule name=""MisuraInternetSpeedTest"" dir=out action=allow program=""{app}\dist\mist_main.exe"" enable=yes"; Description: "Enable MisuraInternet Speed Test traffic"; Flags: RunHidden RunAsCurrentUser; MinVersion: 0,6.1.7600;
+Filename: {app}\dist\mist_main.exe; Parameters: start; Description: "Avvia MisuraInternet Speed Test"; Flags: PostInstall runmaximized RunAsCurrentUser; StatusMsg: "Avvia MisuraInternet Speed Test";
 ;Filename: {app}\dist\Nemesys.exe; Parameters: "--startup auto install"; Description: "Installazione del servizio Nemesys."; StatusMsg: "Installazione del servizio Nemesys"; Flags: RunHidden RunAsCurrentUser; 
 ;Filename: {app}\dist\Nemesys.exe; Parameters: start; Description: "Avvia il servizio Nemesys"; Flags: PostInstall RunHidden RunAsCurrentUser; StatusMsg: "Avvia il servizio Nemesys";
 
  
 [UninstallRun]
-Filename: taskkill; Parameters: /f /im mist.exe; WorkingDir: {sys}; Flags: runminimized RunAsCurrentUser
-Filename: {sys}\netsh.exe; Parameters: " firewall delete allowedprogram program=""{app}\dist\mist.exe"""; Flags: RunHidden RunAsCurrentUser; 
+Filename: taskkill; Parameters: /f /im mist_main.exe; WorkingDir: {sys}; Flags: runminimized RunAsCurrentUser
+Filename: {sys}\netsh.exe; Parameters: " firewall delete allowedprogram program=""{app}\dist\mist_main.exe"""; Flags: RunHidden RunAsCurrentUser;
 ;Filename: {app}\dist\Nemesys.exe; Parameters: " --wait 25 stop"; Flags: runminimized RunAsCurrentUser
 ;Filename: {app}\dist\NemesysSpeedtest.exe; Parameters: " remove"; Flags: runminimized RunAsCurrentUser
 

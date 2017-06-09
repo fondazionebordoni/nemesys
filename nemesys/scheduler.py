@@ -14,26 +14,25 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
 Created on 13/giu/2016
 
 @author: ewedlund
-'''
+"""
 import logging
 import urlparse
 
 from common import httputils
 from common.nem_exceptions import TaskException
-import task
-
+from nemesys import task
 
 logger = logging.getLogger(__name__)
 
 
 class Scheduler(object):
-    '''
+    """
     Handles the download of tasks
-    '''
+    """
 
     def __init__(self, scheduler_url, client, md5conf, version, timeout):
         self._url = scheduler_url
@@ -43,9 +42,9 @@ class Scheduler(object):
         self._httptimeout = timeout
 
     def download_task(self):
-        '''
+        """
         Download task from scheduler, returns a Task
-        '''
+        """
         url = urlparse.urlparse(self._url)
         certificate = self._client.isp.certificate
         connection = httputils.get_verified_connection(url=url,
@@ -68,7 +67,7 @@ class Scheduler(object):
             t = task.xml2task(data)
             return t
         except TaskException as e:
-            logger.error("Impossibile interpretare il task ricevuto: %s", (e))
-            logger.error("Dati del task: %s", (data))
+            logger.error("Impossibile interpretare il task ricevuto: %s", e)
+            logger.error("Dati del task: %s", data)
             raise Exception('Il task ricevuto dallo scheduler '
                             'non e\' in un formato valido')

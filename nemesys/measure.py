@@ -16,10 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import platform
 from datetime import datetime
 from xml.dom.minidom import parseString
+
 from common.timeNtp import timestampNtp
-import platform
 
 
 class Measure(object):

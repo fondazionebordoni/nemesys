@@ -24,7 +24,6 @@
 # Not possible at the moment since it is not thread safe, using pid to
 # identify packets
 
-from exceptions import Exception
 import random
 import select
 import socket

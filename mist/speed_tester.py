@@ -23,20 +23,20 @@ from threading import Thread
 from time import sleep
 from urlparse import urlparse
 
-import gui_event
-import paths
-import result_sender
-import system_resource
-import task
-import test_type
-from best_test import BestTest
 from common import iptools
 from common import server
 from common.deliverer import Deliverer
 from common.nem_exceptions import MeasurementException
 from common.tester import Tester
 from common.timeNtp import timestampNtp
-from measure import Measure
+from mist import gui_event
+from mist import paths
+from mist import result_sender
+from mist import system_resource
+from mist import task
+from mist import test_type
+from mist.best_test import BestTest
+from mist.measure import Measure
 
 logger = logging.getLogger(__name__)
 

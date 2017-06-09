@@ -20,13 +20,13 @@ Created on 13/mag/2016
 @author: ewedlund
 """
 
-from ConfigParser import ConfigParser, NoOptionError
 import hashlib
 import logging
-from optparse import OptionParser
 import os
+from ConfigParser import ConfigParser, NoOptionError
+from optparse import OptionParser
 
-import paths
+from nemesys import paths
 
 logger = logging.getLogger(__name__)
 

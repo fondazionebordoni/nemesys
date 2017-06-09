@@ -27,14 +27,14 @@ from optparse import OptionParser
 from time import sleep
 
 from common._generated_version import __version__, FULL_VERSION, __updated__
-import gui_event
-import mist_cli
-import mist_gui
-import mist_options
-import paths
-import sysmonitor
-from check_software import CheckSoftware
-from mist_controller import MistController
+from mist import gui_event
+from mist import mist_cli
+from mist import mist_gui
+from mist import mist_options
+from mist import paths
+from mist import sysmonitor
+from mist.check_software import CheckSoftware
+from mist.mist_controller import MistController
 
 logger = logging.getLogger(__name__)
 

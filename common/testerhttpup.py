@@ -25,12 +25,12 @@ import time
 from datetime import datetime
 
 from common import httpclient
-import iptools
-import nem_exceptions
-import timeNtp
-from fakefile import Fakefile
-from netstat import Netstat
-from proof import Proof
+from common import iptools
+from common import nem_exceptions
+from common import timeNtp
+from common.fakefile import Fakefile
+from common.netstat import Netstat
+from common.proof import Proof
 
 MEASURE_TIME = 10
 RAMPUP_SECS = 2

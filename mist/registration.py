@@ -27,7 +27,7 @@ import urlparse
 import wx
 
 from common import iptools
-import paths
+from mist import paths
 
 SWN = 'MisuraInternet Speed Test'
 

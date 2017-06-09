@@ -16,13 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
-from os import mkdir, path, sep
 import os
 import sys
+from datetime import datetime
+from os import mkdir, path, sep
 
 from common.timeNtp import timestampNtp
-
 
 DATE = datetime.fromtimestamp(timestampNtp())
 

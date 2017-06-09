@@ -17,9 +17,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from os import mkdir, path, sep
 import sys
-
+from os import mkdir, path, sep
 
 logger = logging.getLogger(__name__)
 

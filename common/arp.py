@@ -29,7 +29,7 @@ import struct
 from subprocess import Popen, PIPE
 from threading import Thread
 
-import ping
+from common import ping
 
 logger = logging.getLogger(__name__)
 

@@ -23,9 +23,10 @@ import os
 import sys
 import tkMessageBox
 
-from getconf import getconf
-import paths
 from common import utils
+from nemesys import log_conf
+from nemesys import paths
+from nemesys.getconf import getconf
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ def getCode():
     """
     root = Tkinter.Tk()
     if utils.is_windows():
-        root.wm_iconbitmap('../Nemesys.ico')
+        root.wm_iconbitmap('Nemesys.ico')
     app = LoginGui(master=root)
     app.master.title("Attivazione Ne.Me.Sys")
     app.mainloop()
@@ -169,7 +170,7 @@ di registrazione o a richiedere una nuova licenza dalla tua area privata sul sit
 def ErrorDialog(message):
     root = Tkinter.Tk()
     if utils.is_windows():
-        root.wm_iconbitmap('../Nemesys.ico')
+        root.wm_iconbitmap('Nemesys.ico')
     root.withdraw()
     title = 'Errore'
     tkMessageBox.showerror(title, message, parent=root)
@@ -179,7 +180,7 @@ def ErrorDialog(message):
 def OkDialog():
     root = Tkinter.Tk()
     if utils.is_windows():
-        root.wm_iconbitmap(os.path.join('..', 'Nemesys.ico'))
+        root.wm_iconbitmap('Nemesys.ico')
     root.withdraw()
     title = 'Ne.Me.Sys autenticazione corretta'
     message = 'Username e password corrette e verificate'
@@ -267,7 +268,7 @@ class LoginGui(Tkinter.Frame):
         Tkinter.Frame.__init__(self, master)
         self.config(width="800")
         if utils.is_windows():
-            self.master.wm_iconbitmap(os.path.join('..', 'nemesys.ico'))
+            self.master.wm_iconbitmap('Nemesys.ico')
         self.pack()
         self.createWidgets()
         self.result = None
@@ -359,7 +360,5 @@ def main():
 
 
 if __name__ == '__main__':
-    import log_conf
-
     log_conf.init_log()
     main()
