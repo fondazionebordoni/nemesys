@@ -52,9 +52,9 @@ version = get_version()
 print "version: ", version
 
 COPYRIGHT = 'Copyright 2012-2017 Fondazione Ugo Bordoni'
-APP_MIST = ['mist/mist.py']
+APP_MIST = ['mist/mist_main.py']
 APP_NAME_MIST = 'Mist'
-DATA_FILES_MIST = ['mist/mist.py']
+DATA_FILES_MIST = ['mist/mist_main.py']
 OPTIONS_MIST = {'argv_emulation': True,
                 # 'plist': 'Info_mist.plist',
                 'plist': {
@@ -67,7 +67,7 @@ OPTIONS_MIST = {'argv_emulation': True,
                     'NSHumanReadableCopyright': COPYRIGHT,
                     'CFBundleIconFile': 'mist.icns'
                 },
-                'resources': 'icons',
+                'resources': 'mist/resources/icons',
                 'iconfile': 'mist.icns',
                 'semi_standalone': False,
                 }
@@ -87,7 +87,6 @@ OPTIONS_EXECUTER = {'argv_emulation': True,
                         'NSHumanReadableCopyright': COPYRIGHT,
                         'CFBundleIconFile': 'nemesys.icns'
                     },
-                    'resources': 'nemesys/cfg, config',
                     'iconfile': 'nemesys.icns',
                     'semi_standalone': False,
                     'extra_scripts': 'nemesys/login.py',

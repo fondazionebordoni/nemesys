@@ -22,6 +22,7 @@ from datetime import datetime
 from os import mkdir, path, sep
 
 from common.timeNtp import timestampNtp
+from common import utils
 
 DATE = datetime.fromtimestamp(timestampNtp())
 
@@ -46,7 +47,10 @@ else:
 _APP_PATH = path.normpath(_APP_PATH)
 
 # Resources path
-ICONS = path.join(_APP_PATH, 'mist', 'resources', 'icons')
+if utils.is_darwin():
+    ICONS = path.join(_APP_PATH, 'Resources', 'icons')
+else:
+    ICONS = path.join(_APP_PATH, 'mist', 'resources', 'icons')
 
 # SENT
 SENT_DIR = path.join(_APP_PATH, 'sent')
