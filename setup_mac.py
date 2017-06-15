@@ -65,10 +65,10 @@ OPTIONS_MIST = {'argv_emulation': True,
                     'CFBundleVersion': version,
                     'CFBundleShortVersionString': version,
                     'NSHumanReadableCopyright': COPYRIGHT,
-                    'CFBundleIconFile': 'mist.icns'
+                    'CFBundleIconFile': 'icons/mist.icns'
                 },
                 'resources': 'mist/resources/icons',
-                'iconfile': 'mist.icns',
+                'iconfile': 'icons/mist.icns',
                 'semi_standalone': False,
                 }
 
@@ -85,9 +85,9 @@ OPTIONS_EXECUTER = {'argv_emulation': True,
                         'CFBundleVersion': version,
                         'CFBundleShortVersionString': version,
                         'NSHumanReadableCopyright': COPYRIGHT,
-                        'CFBundleIconFile': 'nemesys.icns'
+                        'CFBundleIconFile': 'icons/nemesys.icns'
                     },
-                    'iconfile': 'nemesys.icns',
+                    'iconfile': 'icons/nemesys.icns',
                     'semi_standalone': False,
                     'extra_scripts': 'nemesys/login.py',
                     }

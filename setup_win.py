@@ -64,7 +64,7 @@ nemesys_service = Target(
     # what to build.  For a service, the module name (not the
     # filename) must be specified!
     modules=['nemesys.Nemesys'],
-    icon_resources=[(1, '.\\nemesys.ico')],
+    icon_resources=[(1, '.\\icons\nemesys.ico')],
     cmdline_style='pywin32',
     name='Nemesys'
     )
@@ -84,10 +84,10 @@ setup(
         {'name': 'MisuraInternet Speed Test',
          'script': '.\mist\mist.py',
          'uac_info': 'requireAdministrator',
-         'icon_resources': [(1, '.\\mist.ico')]},
+         'icon_resources': [(1, '.\\icons\mist.ico')]},
         {'name': 'Nemesys login',
          'script': os.path.join('nemesys', 'login.py'),
          'uac_info': 'requireAdministrator',
-         'icon_resources': [(1, '.\\nemesys.ico')]}
+         'icon_resources': [(1, '.\\icons\nemesys.ico')]}
     ],
 )

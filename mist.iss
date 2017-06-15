@@ -35,9 +35,9 @@ OutputBaseFilename={#MyAppExeName}_v.{#myAppVersion}-{#BuildNum}
 SolidCompression=true
 VersionInfoCopyright=(c) 2010-2016 Fondazione Ugo Bordoni
 PrivilegesRequired=admin
-SetupIconFile={#MyAppDir}\mist.ico
-WizardSmallImageFile={#MyAppDir}\mist_55.bmp
-WizardImageFile={#MyAppDir}\mist_164.bmp
+SetupIconFile={#MyAppDir}\icons\mist.ico
+WizardSmallImageFile={#MyAppDir}\icons\mist_55.bmp
+WizardImageFile={#MyAppDir}\icons\mist_164.bmp
 AppCopyright=Fondazione Ugo Bordoni
 
 [Messages]
@@ -52,7 +52,7 @@ Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescrip
 [Files]
 Source: {#MyAppDir}\dist\*; DestDir: {app}\dist; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: {#MyAppDir}\ABOUT; DestDir: {app}; Flags: ignoreversion
-Source: {#MyAppDir}\mist.ico; DestDir: {app}; Flags: ignoreversion
+Source: {#MyAppDir}\icons\mist.ico; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\COPYING; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\LICENSE; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\mist\resources\icons\*.png; DestDir: {app}\mist\resources\icons; Flags: ignoreversion recursesubdirs createallsubdirs

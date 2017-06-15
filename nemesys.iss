@@ -35,9 +35,9 @@ OutputBaseFilename={#MyAppName}_v.{#myAppVersion}-{#BuildNum}
 SolidCompression=true
 VersionInfoCopyright=(c) 2010-2016 Fondazione Ugo Bordoni
 PrivilegesRequired=admin
-SetupIconFile={#MyAppDir}\nemesys.ico
-WizardSmallImageFile={#MyAppDir}\nemesys_55.bmp
-WizardImageFile={#MyAppDir}\nemesys_164.bmp
+SetupIconFile={#MyAppDir}\icons\nemesys.ico
+WizardSmallImageFile={#MyAppDir}\icons\nemesys_55.bmp
+WizardImageFile={#MyAppDir}\icons\nemesys_164.bmp
 AppCopyright=Fondazione Ugo Bordoni
 AlwaysRestart=True
 RestartIfNeededByRun=False
@@ -54,7 +54,7 @@ Name: quicklaunchicon; Description: {cm:CreateQuickLaunchIcon}; GroupDescription
 [Files]
 Source: {#MyAppDir}\dist\*; DestDir: {app}\dist; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: {#MyAppDir}\ABOUT; DestDir: {app}; Flags: ignoreversion
-Source: {#MyAppDir}\nemesys.ico; DestDir: {app}\dist; Flags: ignoreversion
+Source: {#MyAppDir}\icons\nemesys.ico; DestDir: {app}\dist; Flags: ignoreversion
 Source: {#MyAppDir}\COPYING; DestDir: {app}; Flags: ignoreversion
 Source: {#MyAppDir}\LICENSE; DestDir: {app}; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
