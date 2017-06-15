@@ -135,19 +135,12 @@ class Profiler(object):
         return psutil.virtual_memory().total
 
     def percentage_ram_usage(self):
-        meminfo = psutil.virtual_memory()
-        total = meminfo.total
-        used = meminfo.used
+        mem_info = psutil.virtual_memory()
         try:
-            buffers = meminfo.buffers
+            percentage = mem_info.percent
         except AttributeError:
-            buffers = 0
-        try:
-            cached = meminfo.cached
-        except AttributeError:
-            cached = 0
-        real_used = used - buffers - cached
-        return int(float(real_used) / float(total) * 100.0)
+            percentage = float(mem_info.total - mem_info.available) / float(mem_info.total) * 100.0
+        return int(percentage)
 
     def is_wireless_active(self):
         for (if_name, if_info) in psutil.net_if_stats().items():
