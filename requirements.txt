@@ -1,8 +1,6 @@
-# Python 2.6 compatibility
-# argparse==1.2.1
 psutil>=4.3.1
 ipcalc
 xmltodict
 ntplib
-netifaces
 tornado
+# M2Crypto cannot be installed with pip
