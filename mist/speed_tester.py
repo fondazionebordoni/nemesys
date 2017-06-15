@@ -218,7 +218,9 @@ class SpeedTester(Thread):
             self._event_dispatcher.postEvent(gui_event.UpdateEvent("Scelta del server di misura "
                                                                    "in corso, attendere..."))
             try:
-                chosen_server = server.get_server(self._event_dispatcher)
+                # chosen_server = server.get_server(self._event_dispatcher)
+                chosen_server = server.get_server(
+                    lambda msg: self._event_dispatcher.postEvent(gui_event.UpdateEvent(msg)))
                 self._event_dispatcher.postEvent(
                     gui_event.UpdateEvent("Scelto il server di misura %s" % chosen_server.name,
                                           gui_event.UpdateEvent.MAJOR_IMPORTANCE))
