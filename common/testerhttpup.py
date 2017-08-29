@@ -259,7 +259,7 @@ class HttpTesterUp(object):
         # duration = (observer.endtime - observer.starttime) * 1000.0
         # int(round(consumer.bytes_received * (1 - overhead)))
         bytes_tot = int(consumer.bytes_received * (1 + overhead))
-        return Proof(test_type='download_http',
+        return Proof(test_type='upload_http',
                      start_time=start_timestamp,
                      duration=consumer.duration,
                      bytes_nem=consumer.bytes_received,

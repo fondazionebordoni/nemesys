@@ -68,7 +68,6 @@ class Tester(object):
 
     def testping(self, timeout=10):
         # si utilizza funzione ping.py
-        test_type = 'ping'
         start = datetime.fromtimestamp(timestampNtp())
         try:
             rtt = ping.do_one(self._host.ip, timeout)
@@ -81,7 +80,7 @@ class Tester(object):
         if rtt is None:
             raise MeasurementException("Ping timeout", nem_exceptions.PING_TIMEOUT)
 
-        return Proof(test_type=test_type, start_time=start, duration=rtt * 1000, bytes_nem=0)
+        return Proof(test_type='ping', start_time=start, duration=rtt * 1000, bytes_nem=0)
 
 
 def main():

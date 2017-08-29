@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
-
 
 class Proof(object):
 
@@ -82,10 +80,3 @@ class Proof(object):
                            self.bytes_tot,
                            self.spurious,
                            self.errorcode)
-
-
-if __name__ == '__main__':
-    t = Proof('download', datetime.now(), 20, 100000, None, 101)
-    print t
-    t = Proof('ping', datetime.now(), 10000, 999)
-    print t
