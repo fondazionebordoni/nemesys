@@ -47,4 +47,4 @@ def check_paths():
     for d in dirs:
         if not path.exists(d):
             mkdir(d)
-            logger.debug('Creata la cartella "%s".' % d)
+            logger.debug('Creata la cartella "%s".', d)

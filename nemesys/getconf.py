@@ -29,13 +29,13 @@ def getconf(serial, conf_dir, filename, url):
     """
     url = urlparse.urlparse(url)
     try:
-        '''python >= 2.7.9'''
+        # python >= 2.7.9
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         connection = httplib.HTTPSConnection(host=url.hostname, context=context)
     except AttributeError:
-        '''python < 2.7.9'''
+        # python < 2.7.9
         connection = httplib.HTTPSConnection(host=url.hostname)
     # Warning This does not do any verification of the server’s certificate.
 
@@ -48,6 +48,6 @@ def getconf(serial, conf_dir, filename, url):
     elif 'non valido' in str(data):
         return False
     else:
-        raise Exception('Error in configuration file')
+        raise Exception('Errore nel file di configurazione')
 
     return os.path.exists(myfile.name)

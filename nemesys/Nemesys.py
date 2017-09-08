@@ -22,7 +22,7 @@ try:
     import win32api
     import servicemanager
 except ImportError:
-    raise Exception("Missing WMI library")
+    raise Exception("Non trovo le librerie necessarie su Windows, impossibile continuare")
 
 import logging
 import os
@@ -56,7 +56,7 @@ nemesys.info('PATH: ' + _PATH)
 
 
 ### Executer Thread ###
-class execThread (Thread):
+class execThread(Thread):
     def __init__(self):
         Thread.__init__(self)
         self.pid = os.getpid()
@@ -115,13 +115,13 @@ def mainArg(argv):
         start = 'start'
         sys.argv.append(start)
         es = os.popen('Net START EventSystem').read()
-        nemesys.info('Starting EventSystem - %s' % es)
+        nemesys.info('Starting EventSystem - %s', es)
     elif 'start' in argv:
         es = os.popen('Net START EventSystem').read()
-        nemesys.info('Starting EventSystem - %s' % es)
+        nemesys.info('Starting EventSystem - %s', es)
     elif 'restart' in argv:
         es = os.popen('Net START EventSystem').read()
-        nemesys.info('Starting EventSystem - %s' % es)
+        nemesys.info('Starting EventSystem - %s', es)
 
 
 if __name__ == '__main__':

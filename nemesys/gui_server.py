@@ -22,7 +22,6 @@ import json
 import logging
 import threading
 import urlparse
-from threading import Thread
 
 import tornado.web
 from tornado.websocket import WebSocketHandler
@@ -79,13 +78,13 @@ class DummyGuiServer(object):
         pass
 
 
-class Communicator(Thread):
+class Communicator(threading.Thread):
     """ Thread di esecuzione del websocket server.
         Invia status alla gui.
     """
 
     def __init__(self, serial, version):
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
         self.application = tornado.web.Application([(r'/ws', GuiWebSocket)])
         self.ioLoop = tornado.ioloop.IOLoop.current()
         self.ioLoop.make_current()
@@ -95,8 +94,7 @@ class Communicator(Thread):
         global start_msg
         start_msg = GuiMessage(GuiMessage.START,
                                {'version': str(version),
-                                'logdir': paths.LOG_DIR}
-                               ).dict()
+                                'logdir': paths.LOG_DIR}).dict()
 
     def run(self):
         try:
@@ -105,15 +103,13 @@ class Communicator(Thread):
             # close() viene eseguito solo dopo che start esce dal loop,
             # ovvero dopo che riceve il comando stop(). Rilascia le risorse.
             self.ioLoop.close(all_fds=True)
-            logger.info('closed ioLoop')
         except Exception as e:
-            logger.error("Could not open websocket: %s" % e)
+            logger.error('Impossibile aprire il websocket: %s', e)
 
     def stop(self, timeout=None):
-        logger.info("stopping ioloop")
+        logger.info('Stop del server GUI')
         self.ioLoop.stop()
-        logger.info("joining thread")
-        Thread.join(self, timeout)
+        threading.Thread.join(self, timeout)
 
     def nem_start(self, version, log_dir):
         """messaggio iniziale con informazioni su Nemesys"""
@@ -188,7 +184,7 @@ class Communicator(Thread):
         self.send_status(msg)
 
     def send_status(self, gui_message):
-        logger.info("Sending status [%s]" % gui_message)
+        logger.info('Invio a GUI [%s]', gui_message)
         with self._lock:
             status_dict = gui_message.dict()
             status_dict['serial'] = self._serial
@@ -206,7 +202,7 @@ class Communicator(Thread):
                     try:
                         handler.send_msg(status_dict)
                     except Exception as e:
-                        logger.warn("Could not send message to GUI: %s" % e)
+                        logger.warn('Errore inviando messaggio alla GUI: %s', e)
 
 
 class GuiMessage(object):
@@ -233,7 +229,7 @@ class GuiMessage(object):
         return {'type': self.message_type, 'content': self.content}
 
     def __str__(self):
-        return "%s, message: %s" % (self.message_type, self.content)
+        return '{}, message: {}'.format(self.message_type, self.content)
 
 
 handler_lock = threading.Lock()
@@ -249,7 +245,7 @@ class GuiWebSocket(WebSocketHandler):
     """
 
     def check_origin(self, origin):
-        logger.info("GUI connecting from: %s" % origin)
+        logger.info('GUI - connessione da: %s', origin)
         if not origin:
             return True
         parsed_origin = urlparse.urlparse(origin)
@@ -269,18 +265,18 @@ class GuiWebSocket(WebSocketHandler):
     def open(self):
         with handler_lock:
             handlers.append(self)
-            logger.info("server open connection")
+        logger.info('Connessione a GUI aperta')
 
     def send_msg(self, msg):
         try:
             json_string = json.dumps(msg)
             self.write_message(json_string)
         except Exception as e:
-            logger.error("Could not send message [%s] to GUI: %s" % (msg, e))
+            logger.error('Errore inviando messaggio [%s] alla GUI: %s', msg, e)
 
     def on_message(self, message):
         msg_dict = json.loads(message)
-        logger.info("Got message %s", msg_dict)
+        logger.info('Ricevuto messaggio da GUI: %s', msg_dict)
         if msg_dict['request'] == 'currentstatus':
             if start_msg is not None:
                 self.send_msg(start_msg)
@@ -292,4 +288,4 @@ class GuiWebSocket(WebSocketHandler):
     def on_close(self):
         with handler_lock:
             handlers.remove(self)
-            logger.info("server close connection")
+            logger.info('Connessione a GUI chiusa')

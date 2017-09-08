@@ -27,7 +27,7 @@ from common import iptools
 from common import nem_exceptions
 from common._generated_version import __version__, FULL_VERSION
 from common.deliverer import Deliverer
-from common.nem_exceptions import SysmonitorException
+from common.nem_exceptions import SysmonitorException, TaskException
 from common.proof import Proof
 from common.tester import Tester
 from common.timeNtp import timestampNtp
@@ -70,9 +70,8 @@ class Executer(object):
             logger.info('Inizializzato software per sonda.')
             self._gui_server = gui_server.DummyGuiServer()
         else:
-            logger.info('Inizializzato software per misure '
-                        'd\'utente con ISP id = %s' % client.isp.id)
-            logger.info('Con profilo [%s]' % client.profile)
+            logger.info('Inizializzato software per misure d\'utente con ISP id = %s', client.isp.id)
+            logger.info('Con profilo [%s]', client.profile)
             self._gui_server = gui_server.Communicator(serial=self._client.id,
                                                        version=__version__)
             self._gui_server.start()
@@ -82,7 +81,7 @@ class Executer(object):
         Esegue il complesso di test prescritti dal task
         In presenza di errori ri-tenta per un massimo di 5 volte
         """
-        logger.info('Inizio task di misura verso il server %s' % task.server)
+        logger.info('Inizio task di misura verso il server %s', task.server)
         try:
             t = Tester(dev=dev, host=task.server, timeout=self._testtimeout)
             # TODO: Pensare ad un'altra soluzione per la generazione
@@ -127,8 +126,8 @@ class Executer(object):
             logger.info('Fine task di misura.')
 
         except Exception as e:
-            logger.error('Task interrotto per eccezione durante l\'esecuzione '
-                         'di un test: %s' % e.message, exc_info=True)
+            logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s',
+                         e.message, exc_info=True)
             error_code = nem_exceptions.errorcode_from_exception(e)
             self._gui_server.notification(error_code, str(e))
 
@@ -142,20 +141,21 @@ class Executer(object):
                 if n_errors > 0:
                     logger.info('Misura in ripresa '
                                 'dopo sospensione per errore.')
-                logger.info("Esecuzione Test %d su %d di %s" % (i, n_reps, test_type))
+                logger.info("Esecuzione Test %d su %d di %s", i, n_reps, test_type)
                 self._gui_server.test(test_type, i, n_reps, (n_errors > 0))
                 try:
                     if test_type == 'ping':
                         proof = t.testping()
-                        logger.info('Ping result: %.3f' % proof.duration)
+                        logger.info('Ping result: %.3f', proof.duration)
                         self._gui_server.speed(proof.duration)
                         if i == n_reps:
                             self._gui_server.result(test_type, proof.duration)
                     elif test_type == 'download':
                         proof = t.testhttpdown(self.callback_httptest)
-                        self._test_gating(proof)
                         kbps = proof.bytes_tot * 8.0 / proof.duration
-                        logger.info('Download result: %.3f kbps' % kbps)
+                        logger.info('Download result: %.3f kbps', kbps)
+                        logger.info('Percentuale di traffico spurio: %.2f%%', proof.spurious * 100)
+                        self._check_spurious_traffic(proof)
                         result = int(proof.bytes_tot * 8.0 / proof.duration)
                         self._gui_server.result(test_type,
                                                 result=result,
@@ -163,9 +163,10 @@ class Executer(object):
                     else:
                         proof = t.testhttpup(self.callback_httptest,
                                              upload_bw)
-                        self._test_gating(proof)
                         kbps = proof.bytes_tot * 8.0 / proof.duration
-                        logger.info('Upload result: %.3f kbps' % kbps)
+                        logger.info('Upload result: %.3f kbps', kbps)
+                        logger.info('Percentuale di traffico spurio: %.2f%%', proof.spurious * 100)
+                        self._check_spurious_traffic(proof)
                         res = int(proof.bytes_tot * 8.0 / proof.duration)
                         self._gui_server.result(test_type,
                                                 result=res,
@@ -175,8 +176,7 @@ class Executer(object):
                 except Exception as e:
                     n_errors += 1
                     if n_errors >= MAX_ERRORS:
-                        logger.warn("Il massimo numero di errori è stato "
-                                    "raggiunto, sospendo la misura")
+                        logger.warn('Il massimo numero di errori è stato raggiunto, sospendo la misura')
                         if self._isprobe:
                             proof = Proof(test_type=test_type,
                                           start_time=datetime.now(),
@@ -187,48 +187,38 @@ class Executer(object):
                         else:
                             raise e
                     else:
-                        logger.warning(('Misura sospesa per eccezione {0}, '
-                                        'è errore n. {1}').format(e, n_errors),
-                                       exc_info=True)
+                        logger.warning('Misura sospesa per eccezione, e\' errore n. %d: %s', n_errors, e, exc_info=True)
                         self._gui_server.result(test_type, error=str(e))
                 sleep(sleep_secs)
             i += 1
         return proofs
 
-    def _get_and_handle_task(self):
+    def _handle_task(self, task):
         """
-            Downloads a task from the scheduler and
-            follows the directions found in the task
+          Follows the directions found in the task
         """
-        task = self._scheduler.download_task()
-        if task is None:
-            logger.warn("Ricevuto task vuoto")
-            return
-        logger.info('Trovato task %s' % task)
         if task.now:
             secs_to_next_measurement = 0
         else:
             delta = task.start - datetime.fromtimestamp(timestampNtp())
             secs_to_next_measurement = delta.days * 86400 + delta.seconds
         if task.is_wait or secs_to_next_measurement > self._polling + 30:
-            '''Should just sleep and then download task again'''
+            # Should just sleep and then download task again
             if task.is_wait:
                 wait_secs = task.delay
             else:
                 wait_secs = self._polling
                 logger.debug('Prossimo task tra: %s minuti'
                              % (secs_to_next_measurement / 60))
-            logger.debug('Faccio una pausa per %s minuti (%s secondi)'
-                         % (wait_secs / 60, wait_secs))
-            logger.debug("Trovato messaggio: %s" % task.message)
+            logger.info('Faccio una pausa per %d minuti (%d secondi)', wait_secs / 60, wait_secs)
+            logger.debug('Trovato messaggio: %s', task.message)
             self._gui_server.wait(wait_secs, task.message)
             self._sleep_and_wait(wait_secs)
         else:
-            '''Should execute task after secs_to_next_measurement'''
+            # Should execute task after secs_to_next_measurement
             if secs_to_next_measurement >= 0:
                 if task.download > 0 or task.upload > 0 or task.ping > 0:
-                    logger.debug('Impostazione di un nuovo task tra: %s minuti'
-                                 % (secs_to_next_measurement / 60))
+                    logger.debug('Impostazione di un nuovo task tra: %d minuti', secs_to_next_measurement / 60)
                     self._sleep_and_wait(secs_to_next_measurement)
                     if self._isprobe:
                         dev = iptools.get_dev(task.server.ip, 80)
@@ -240,9 +230,14 @@ class Executer(object):
                     logger.warn('Ricevuto task senza azioni da svolgere')
             else:
                 logger.warn('Tempo di attesa prima della misura anomalo: '
-                            '%s minuti' % (secs_to_next_measurement / 60))
+                            '%d minuti', secs_to_next_measurement / 60)
 
     def _profile_system(self, server_ip, port):
+        """
+        :param server_ip: IP address of measurement server
+        :param port: port number on which to connect (e.g. 80)
+        :return: the local device for Internet traffic
+        """
         self._gui_server.profilation()
         try:
             self._sys_profiler.checkall(self.callback_sys_prof)
@@ -251,8 +246,7 @@ class Executer(object):
             dev = iptools.get_dev(server_ip, port)
             return dev
         except SysmonitorException as e:
-            logger.error('La profilazione del sistema ha rivelato '
-                         'un problema: %s' % e)
+            logger.error('La profilazione del sistema ha rivelato un problema: %s', e)
             sleep(2)
             self._gui_server.profilation(done=True)
 #             error_code = nem_exceptions.errorcode_from_exception(e)
@@ -262,72 +256,79 @@ class Executer(object):
     def _sleep_and_wait(self, seconds):
         event_status = self._wakeup_event.wait(seconds)
         if event_status is True:
-            logger.debug("Woken up while sleeping")
+            logger.debug('Ricevuto evento durante attesa')
             self._wakeup_event.clear()
 
-    def _test_gating(self, test):
+    def _check_spurious_traffic(self, test):
         """
         Check that spurious traffic is not too high
         """
-        logger.debug('Percentuale di traffico spurio: %.2f%%'
-                     % (test.spurious * 100))
         if not self._isprobe:
             if test.spurious < 0:
                 raise Exception('Errore durante la verifica del traffico di '
                                 'misura: impossibile salvare i dati.')
             if test.spurious >= TH_TRAFFIC:
-                raise Exception('Eccessiva presenza di traffico internet non '
-                                'legato alla misura: percentuali %d%%.'
-                                % (round(test.spurious * 100)))
+                raise Exception('Eccessiva presenza di traffico non '
+                                'legato alla misura: percentuali {}%.'.format(round(test.spurious * 100)))
 
     def callback_sys_prof(self, resource, status, info="", errorcode=0):
-        """Is called by sysmonitor for each resource"""
+        # Is called by sysmonitor for each resource
         if status is True:
             status = 'ok'
         else:
             status = 'error'
-        logger.debug("Callback from system profiler: %s, %s, %s"
-                     % (resource, status, info))
+        logger.debug('Callback dal system profiler: %s, %s, %s', resource, status, info)
         self._gui_server.sys_res(resource, status, info)
         if status is 'error':
             self._gui_server.notification(errorcode, message=info)
 
     def callback_httptest(self, second, speed):
-        """Is called by the tester each second.
-        speed is in kbps"""
-        logger.debug("Callback from tester: %s, %s" % (second, speed))
+        """
+        Is called by the tester each second.
+        Speed is in kbps
+        """
         self._gui_server.speed(speed / 1000.0)
 
     def loop(self):
+        """
+        Main loop.
+        """
         try:
             self._sys_profiler.log_interfaces()
         except Exception as e:
-            msg = "Impossibile rilevare le schede di rete: %s" % e
+            msg = 'Impossibile rilevare le schede di rete: {}'.format(e)
             logger.error(msg, exc_info=True)
-            self._gui_server.notification(nem_exceptions.FAILPROF,
-                                          message=msg)
+            self._gui_server.notification(nem_exceptions.FAILPROF, message=msg)
         while not self._time_to_stop:
-            logger.debug("Starting main loop")
+            logger.debug('Inizio del loop principale')
             if self._isprobe:
-                '''Try to send any unsent measures (only probe)'''
-                self._deliverer.uploadall_and_move(self._outbox,
-                                                   self._sent,
-                                                   do_remove=False)
-
-            try:
-                self._get_and_handle_task()
-            except Exception as e:
-                logger.error('Errore durante la gestione del task per le '
-                             'misure: %s' % e, exc_info=True)
-                self._gui_server.notification(nem_exceptions.TASK_ERROR,
-                                              message=str(e))
-            finally:
-                # TODO: check if this is how it is supposed to be
-                self._gui_server.wait(SLEEP_SECS_AFTER_TASK,
-                                      "Aspetto %d secondi prima di continuare"
-                                      % SLEEP_SECS_AFTER_TASK)
-                sleep(SLEEP_SECS_AFTER_TASK)
-        logger.info("Exiting main loop")
+                # Try to send any unsent measures (only probe)
+                self._deliverer.uploadall_and_move(self._outbox, self._sent, do_remove=False)
+            # Try to download task
+            task = None
+            tries = 0
+            while not task:
+                try:
+                    task = self._scheduler.download_task()
+                except TaskException as e:
+                    if tries >= 3:
+                        self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
+                        continue
+                    else:
+                        tries += 1
+            if task is not None:
+                # Task found, now do it
+                logger.info('Trovato task %s', task)
+                try:
+                    self._handle_task(task)
+                except Exception as e:
+                    logger.error('Errore durante la gestione del task per le misure: %s', e, exc_info=True)
+                    self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
+            # TODO: check if this is how it is supposed to be
+            self._gui_server.wait(SLEEP_SECS_AFTER_TASK,
+                                  'Aspetto {} secondi prima di continuare'.format(SLEEP_SECS_AFTER_TASK))
+            sleep(SLEEP_SECS_AFTER_TASK)
+        logger.info('Uscita dal loop')
         if self._gui_server:
             self._gui_server.stop(5.0)
 
@@ -339,8 +340,7 @@ def main():
     import log_conf
     log_conf.init_log()
 
-    logger.info('Starting Nemesys v.%s on %s %s'
-                % (FULL_VERSION, platform.system(), platform.release()))
+    logger.info('Avvio di Nemesys v.%s on %s %s', FULL_VERSION, platform.system(), platform.release())
     paths.check_paths()
     (options, _, md5conf) = nem_options.parse_args(__version__)
 

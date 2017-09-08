@@ -199,10 +199,8 @@ class Observer(threading.Thread):
             rate_tot = float(tx_diff * 8) / float(elapsed)
             last_tx_bytes = new_tx_bytes
             last_measured_time = measuring_time
-            logger.debug('[HTTP] Reading... count = %d, speed = %d'
-                         % (measure_count, int(rate_tot)))
-            self.callback(second=measure_count,
-                          speed=rate_tot)
+            logger.debug('[HTTP] secondo = %d, velocita\' = %d', measure_count, int(rate_tot))
+            self.callback(second=measure_count, speed=rate_tot)
 
 
 class HttpTesterUp(object):
@@ -229,7 +227,7 @@ class HttpTesterUp(object):
         if timeout.isAlive():
             timeout.cancel()
         if consumer.errors:
-            logger.debug('Errors: {}'.format(consumer.errors))
+            logger.debug('Errori: %s', consumer.errors)
             first_error = consumer.errors[0]
             raise nem_exceptions.MeasurementException(first_error.get('message'), first_error.get('code'))
         total_sent_bytes = netstat.get_tx_bytes() - starttotalbytes
@@ -247,7 +245,7 @@ class HttpTesterUp(object):
         if total_sent_bytes > consumer.total_read_bytes:
             overhead = (float(total_sent_bytes - consumer.total_read_bytes) / float(total_sent_bytes))
         else:
-            logger.warn('Bytes read from file > tx_diff, alternative calculation of spurious traffic')
+            logger.warn('Byte di payload > tx_diff, uso calcolo alternativo di spurious traffic')
             # for thread in self._read_measure_threads:
             #     thread.join()
             overhead = (float(observer.measured_bytes - consumer.bytes_received) /
@@ -255,7 +253,6 @@ class HttpTesterUp(object):
         if (total_sent_bytes == 0) or (consumer.total_read_bytes == 0):
             raise nem_exceptions.MeasurementException('Ottenuto banda zero',
                                                       nem_exceptions.ZERO_SPEED)
-        logger.debug('Traffico spurio: %f', overhead)
         # duration = (observer.endtime - observer.starttime) * 1000.0
         # int(round(consumer.bytes_received * (1 - overhead)))
         bytes_tot = int(consumer.bytes_received * (1 + overhead))

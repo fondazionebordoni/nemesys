@@ -73,7 +73,7 @@ class SysProfiler(object):
             logger.info("============================================")
             device_dict = device.dict()
             for key in device_dict:
-                logger.info("| %s : %s" % (key, device_dict[key]))
+                logger.info("| %s : %s", key, device_dict[key])
             logger.info("============================================")
 
     def check_device(self):
@@ -82,7 +82,7 @@ class SysProfiler(object):
             iptools.get_network_mask(ip)
         except Exception as e:
             raise SysmonitorException("Impossibile ottenere indirizzo IP "
-                                      "della scheda di rete attiva: %s" % e)
+                                      "della scheda di rete attiva: %s", e)
         if iptools.is_loopback_ip(ip):
             raise SysmonitorException("Indirizzo IP {0} punta sull'interfaccia"
                                       " di loopback - Firewall attivo?"
@@ -91,7 +91,7 @@ class SysProfiler(object):
             dev_name = iptools.get_dev(ip=ip)
         except Exception as e:
             raise SysmonitorException("Impossibile identificare "
-                                      "la scheda di rete attiva: %s" % e)
+                                      "la scheda di rete attiva: %s", e)
         device_speed = iptools.get_if_speed(dev_name)
         if device_speed < (self._bw_download / 1000):
             raise SysmonitorException("La velocita' della scheda di rete e' "
@@ -113,7 +113,7 @@ class SysProfiler(object):
 
     def checkmem(self):
         av_mem = self._profiler.total_memory()
-        logger.debug("Memoria disponibile: %2f" % av_mem)
+        logger.debug("Memoria disponibile: %2f", av_mem)
         if av_mem < 0:
             raise SysmonitorException('Valore di memoria disponibile '
                                       'non conforme.', nem_exceptions.BADMEM)
@@ -143,7 +143,7 @@ class SysProfiler(object):
             dev = iptools.get_dev(ip=ip)
             mask = iptools.get_network_mask(ip)
         except Exception as e:
-            logger.error("Cannot get info on network device: %s" % e)
+            logger.error("Errore ottenendo informazioni sulla scheda di rete: %s", e)
             raise SysmonitorException("Impossibile ottenere informazioni "
                                       "sulla scheda di rete attiva: %s" % e,
                                       errorcode=nem_exceptions.UNKDEV)
@@ -151,8 +151,7 @@ class SysProfiler(object):
             raise SysmonitorException("Indirizzo IP {0} punta sull'interfaccia"
                                       " di loopback - Firewall attivo?"
                                       .format(ip), nem_exceptions.LOOPBACK)
-        logger.info("Indirizzo ip/mask: %s/%d, device: %s, provider: %s"
-                    % (ip, mask, dev, self._isp_id))
+        logger.info("Indirizzo ip/mask: %s/%d, device: %s, provider: %s", ip, mask, dev, self._isp_id)
         if not iptools.is_public_ip(ip):
             value = checkhost.count_hosts(ip,
                                           mask,
@@ -160,7 +159,7 @@ class SysProfiler(object):
                                           self._bw_download,
                                           self._isp_id,
                                           do_arp)
-            logger.info('Trovati %d host in rete.' % value)
+            logger.info('Trovati %d host in rete.', value)
             if value < 0:
                 raise SysmonitorException('impossibile determinare il '
                                           'numero di host in rete.',
@@ -199,5 +198,4 @@ class SysProfiler(object):
             if error_code:
                 raise SysmonitorException(error_msg, error_code)
             raise SysmonitorException("Profilazione del sistema fallito, "
-                                      "ultimo errore: %s" % e,
-                                      nem_exceptions.FAILPROF)
+                                      "ultimo errore: %s", e, nem_exceptions.FAILPROF)

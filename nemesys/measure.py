@@ -26,13 +26,13 @@ from common.timeNtp import timestampNtp
 class Measure(object):
     def __init__(self, measure_id, server, client, version=None,
                  start=datetime.fromtimestamp(timestampNtp()).isoformat()):
-        '''
+        """
         Costruisce un oggetto Measure utilizzando i parametri ricevuti nella
         chiamata.
         Istanzia un oggetto XML in cui vengono salvati i test che costituiscono
         la misura. L'id della misura viene postposto all'id del client
         per generare l'id del file di misura XML.
-        '''
+        """
         try:
             self._os = '%s %s' % (platform.system(), platform.release())
         except Exception:
@@ -110,9 +110,9 @@ class Measure(object):
         return xml
 
     def savetest(self, proof):
-        '''
+        """
         Salva l'oggetto Test ricevuto nel file XML interno.
-        '''
+        """
         node = self.test2node(proof)
         body = self._xml.getElementsByTagName('body')[0]
         body.appendChild(node)
@@ -149,7 +149,7 @@ class Measure(object):
         t.appendChild(bytes_element)
 
         error = proof.errorcode
-        if (error is not None):
+        if error is not None:
             errorcode = xml.createElement('errcode')
             errorcode.appendChild(xml.createTextNode(str(error)))
             t.appendChild(errorcode)

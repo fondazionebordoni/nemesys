@@ -42,10 +42,7 @@ class Task(object):
         self._ping = ping
         self._nicmp = nicmp
         self._delay = delay
-        if now:
-            self._now = True
-        else:
-            self._now = False
+        self._now = bool(now)
         self._message = message
         self._is_wait = is_wait
 
@@ -138,7 +135,7 @@ def xml2task(xml):
     task_dict = xml_dict['calendar']['task']
     message = task_dict.get('message') or ""
     if '@wait' in task_dict and task_dict['@wait'].lower() == 'true':
-        '''wait task, just get delay and message'''
+        # wait task, just get delay and message
         if 'delay' in task_dict:
             delay = task_dict['delay']
         else:
@@ -173,14 +170,12 @@ def xml2task(xml):
         try:
             starttime = datetime.strptime(start, DATE_TIME_FORMAT)
         except ValueError:
-            logger.debug('XML: %s' % start)
-            raise Exception("Le informazioni orarie "
-                            "per la programmazione delle misure sono errate.")
+            logger.debug('XML: %s', start)
+            raise Exception('Le informazioni orarie per la programmazione delle misure sono errate.')
         # TODO: scartare se id mancante?
         srvid = task_dict.get('srvid') or "id-server-mancante"
         if 'srvip' not in task_dict:
-            raise TaskException("Nel task manca l'indirizzo IP "
-                                "del server di misura")
+            raise TaskException('Nel task manca l\'indirizzo IP  del server di misura')
         else:
             srvip = task_dict.get('srvip')
         srvname = task_dict.get('srvname')

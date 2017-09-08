@@ -47,14 +47,13 @@ def filter_out_technicolor(ip_table):
     """
     n_hosts = len(ip_table)
     if n_hosts < 2:
-        logger.debug('No check for technicolor, num hosts = %d', n_hosts)
         return n_hosts
 
     temp_table = []
     for ip_address in ip_table:
         mac_address = ip_table[ip_address]
         if re.search(TECHNICOLOR_MAC_REGEX, mac_address, re.I):
-            logger.warn('Trovato possibile Technicolor: [%s, %s]', ip_address, mac_address)
+            logger.warn('Trovato possibile router Technicolor: [%s, %s]', ip_address, mac_address)
             temp_table.append(mac_address[3:14])
         else:
             temp_table.append(mac_address)

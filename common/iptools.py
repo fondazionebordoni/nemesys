@@ -123,7 +123,7 @@ def get_network_mask(ip):
                         return _mask_conversion(addr_type.netmask)
                     else:
                         break
-    logger.warn("Could not find netmask, returning default")
+    logger.warn("Impossibile calcolare il netmask, uso il default")
     return _mask_conversion(default_netmask)
 
 

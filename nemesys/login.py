@@ -35,28 +35,24 @@ _configurationServer = 'https://finaluser.agcom244.fub.it/Config'
 
 
 class LoginException(Exception):
-    def __init__(self, message):
+    def __init__(self, message=''):
         Exception.__init__(self, message)
 
 
 class LoginAuthenticationException(LoginException):
-    def __init__(self, message):
-        Exception.__init__(self, message)
+    pass
 
 
 class LoginConnectionException(LoginException):
-    def __init__(self, message):
-        Exception.__init__(self, message)
+    pass
 
 
 class LoginCancelledException(LoginException):
-    def __init__(self, message=""):
-        Exception.__init__(self, message)
+    pass
 
 
 class MaxLoginException(LoginException):
-    def __init__(self, message=""):
-        Exception.__init__(self, message)
+    pass
 
 
 def read_properties(filename):
@@ -94,19 +90,16 @@ def getCode():
     app.master.title("Attivazione Ne.Me.Sys")
     app.mainloop()
     appresult = str(app.result)
-    logger.info(appresult)
-
-    if appresult == 'Cancel':
-        logger.info("User pressed Cancel button, exiting")
-        raise LoginCancelledException()
-
-    if appresult == '' or len(appresult) < 4:
-        logger.error('Wrong activation code')
-        # CodeError()
-        raise LoginAuthenticationException('Wrong username/password')
-
     if root:
         root.destroy()
+
+    if appresult == 'Cancel':
+        logger.info('Utente ha premuto Cancel')
+        raise LoginCancelledException()
+
+    if appresult == 'None' or len(appresult) < 4:
+        raise LoginAuthenticationException('Nome utente o password sbagliato')
+
     return appresult
 
 
@@ -189,31 +182,27 @@ def OkDialog():
 
 
 ### Function to Download Configuration File ###
-def getActivationFile(appresult, path, config_path):
+def getActivationFile(appresult, path):
     """
-      Scarica il file di configurazione. Ritorna True se tutto è andato bene
+      Scarica il file di configurazione.
     """
-    logger.info('getActivationFile function')
     ac = appresult
-    logger.info('Codici ricevuti: %s' % ac)
+    logger.info('Codici ricevuti: %s', ac)
 
     try:
         download = getconf(ac, path, _clientConfigurationFile, _configurationServer)
-        logger.info('download = %s' % str(download))
     except IOError as e:
-        logger.error('Cannot write to the configuration file: %s' % str(e))
+        logger.error('Impossible scrivere il file di configurazione: %s', e)
         raise
     except Exception as e:
-        logger.error('Cannot download the configuration file: %s' % str(e))
+        logger.error('impossibile scaricare il file di configurazione: %s', e)
         raise LoginConnectionException(str(e))
     if download is not True:
-        logger.info('Received error from server, wrong credentials or license not active')
-        raise LoginAuthenticationException("")
+        logger.info('Ricevuto errore dal server, credenziali errati o licenza non attiva.')
+        raise LoginAuthenticationException('')
     else:
-        logger.info('Configuration file successfully downloaded')
-        # myProp.writeProps(config_path, '\nregistered', 'ok')
+        logger.info('File di configurazione scaricato con successo')
         OkDialog()
-        # return True
 
 
 class LoginGui(Tkinter.Frame):
@@ -224,8 +213,8 @@ class LoginGui(Tkinter.Frame):
     def sendMsg(self):
         inserted_username = self.username.get()
         inserted_password = self.password.get()
-        if (inserted_username and inserted_password):
-            self.result = "%s|%s" % (self.username.get(), hashlib.sha1(self.password.get()).hexdigest())
+        if inserted_username and inserted_password:
+            self.result = "{}|{}".format(self.username.get(), hashlib.sha1(self.password.get()).hexdigest())
         self.quit()
 
     def cancel(self):
@@ -274,49 +263,36 @@ class LoginGui(Tkinter.Frame):
         self.result = None
 
 
-def try_to_activate(config_path):
-    activated = False
+def try_to_activate():
     j = 0
     # Al massimo faccio fare 5 tentativi di inserimento codice di licenza
-    while not activated:
+    while j < 5:
         # Prendo un codice licenza valido sintatticamente
-        errorfunc = None
         try:
             appresult = getCode()
-            activated = getActivationFile(appresult, paths._CONF_DIR, config_path)
+            getActivationFile(appresult, paths._CONF_DIR)
             return appresult
         except LoginAuthenticationException:
-            logger.warning("Authentication failure n. %d" % j)
+            logger.warning('Errore di autenticazione n. %d', j)
             errorfunc = CodeError
         except LoginConnectionException as e:
-            logger.warning("Authentication connection problem: %s", e)
+            logger.warning('Problema di connessione al server per l\'autenticazione: %s', e)
             errorfunc = ConnectionError
         except LoginCancelledException:
             raise
         except Exception as e:
-            logger.error("Caught exception while downloading configuration file: %s", e)
+            logger.error('Si e\' riscontrato un problema scaricando il file di configurazione: %s', e)
             errorfunc = GenericError
-        if j < 4:
-            errorfunc()
-            j += 1
-        else:
-            raise MaxLoginException()
-    return activated
+        errorfunc()
+        j += 1
+    raise MaxLoginException()
 
 
 def main():
-    ###  DISCOVERING PATH  ###
-    try:
-        _PATH = os.path.dirname(sys.argv[0])
-        if _PATH == '':
-            _PATH = "." + os.sep
-        if _PATH[len(_PATH) - 1] != os.sep:
-            _PATH = _PATH + os.sep
-    except Exception as e:
-        _PATH = "." + os.sep
-
-    ###  READING PROPERTIES  ###
-    config_dir = os.path.join(_PATH, 'cfg')
+    logger.info('Avvio del processo di autenticazione')
+    #  READING PROPERTIES (if exist)
+    app_dir = os.path.dirname(sys.argv[0])
+    config_dir = os.path.join(app_dir, 'cfg')
     if not os.path.exists(config_dir):
         os.mkdir(config_dir)
     config_file = os.path.join(config_dir, 'cfg.properties')
@@ -324,36 +300,32 @@ def main():
         try:
             _prop = read_properties(config_file)
         except Exception as e:
-            logger.error("Could not read configuration file from %s" % config_file, e)
-            ErrorDialog("File di configurazione non trovata in {}, impossibile procedere con l'installazione".format(
-                config_file))
+            logger.error('Impossibile leggere il file di configuraizone da %s: %s', config_file, e)
+            ErrorDialog('File di configurazione non trovata in {}, '
+                        'impossibile procedere con l\'installazione'.format(config_file))
             sys.exit(1)
     else:
         _prop = []
 
     if 'registered' in _prop:
         # Ho tentato almeno una volta il download
-        logger.debug('Registered in _prop')
         status = str(_prop['registered'])
         if status == 'ok':
-            # Allora posso continuare lo start del servizio
-            logger.debug('Status of registered is Ok')
-            logger.info('Configuration file already downloaded')
+            logger.info('File di configurazione gia\' scaricato precedentemente')
         else:
-            # Il servizio non può partire
-            logger.error('Login previously failed. ')
+            logger.error('Login fallito precedentemente, bisogna reinstallare Nemesys')
             # Dialog to unistall and retry
             MaxError()
     else:
         try:
-            code = try_to_activate(config_file)
-            logger.info('License file successfully downloaded')
+            code = try_to_activate()
+            logger.info('Autenticazione completato con successo')
         except LoginCancelledException:
             CancelError()
             sys.exit(0)
         except MaxLoginException:
             MaxError()
-            logger.warning('MaxError occurred at attempt number 5')
+            logger.warning('Il massimo numero di tentativi di autenticazione raggiunto')
             write_properties(config_file, {'registered': 'nok'})
             sys.exit(1)
         write_properties(config_file, {'code': code, 'registered': 'ok'})

@@ -45,7 +45,7 @@ if is_windows:
         ws2_32 = ctypes.windll.ws2_32
     except OSError:
         """ Should it still fail """
-        logger.error("Error loading windows system libraries!")
+        logger.error("Imposibile caricare le librerie di Microsoft Windows!")
         raise Exception("Manca uno o più delle librerie Iphlapi.dll e ws2_32.dll")
 
 
@@ -144,7 +144,7 @@ def _send_one_win_arp(ip_address, result_queue):
 
     if error:
         if (int(error) != 31) and (int(error) != 67):
-            logger.error("Warning: SendARP failed! Error code: %d", int(error))
+            logger.error("Invio di ARP fallito! Errore: {}".format(error))
     else:
         mac_str = mac_straddr(mac_addr, True, ":")
         result_queue.put((ip_address, mac_str))

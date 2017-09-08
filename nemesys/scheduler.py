@@ -47,11 +47,11 @@ class Scheduler(object):
         """
         url = urlparse.urlparse(self._url)
         certificate = self._client.isp.certificate
-        connection = httputils.get_verified_connection(url=url,
-                                                       certificate=certificate,
-                                                       timeout=self._httptimeout)
-
+        connection = None
         try:
+            connection = httputils.get_verified_connection(url=url,
+                                                           certificate=certificate,
+                                                           timeout=self._httptimeout)
             connection.request('GET', '%s?clientid=%s&version=%s&confid=%s'
                                % (url.path,
                                   self._client.id,
@@ -59,15 +59,12 @@ class Scheduler(object):
                                   self._md5conf))
             data = connection.getresponse().read()
         except Exception as e:
-            logger.error('Impossibile scaricare lo scheduling. Errore: %s.'
-                         % e)
-            raise Exception('Impossibile dialogare con '
-                            'lo scheduler delle misure')
-        try:
-            t = task.xml2task(data)
-            return t
-        except TaskException as e:
-            logger.error("Impossibile interpretare il task ricevuto: %s", e)
-            logger.error("Dati del task: %s", data)
-            raise Exception('Il task ricevuto dallo scheduler '
-                            'non e\' in un formato valido')
+            logger.error('Impossibile scaricare lo scheduling: %s', e)
+            raise TaskException('Download del task fallito')
+        finally:
+            if connection:
+                try:
+                    connection.close()
+                except Exception:
+                    pass
+        return task.xml2task(data)

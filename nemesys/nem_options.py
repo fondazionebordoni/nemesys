@@ -46,7 +46,7 @@ def parse_args(version):
 
     if os.path.exists(paths.CONF_MAIN):
         config.read(paths.CONF_MAIN)
-        logger.info('Caricata configurazione da %s' % paths.CONF_MAIN)
+        logger.info('Caricata configurazione da %s', paths.CONF_MAIN)
 
     parser = OptionParser(version=version, description='')
     parser.add_option('--task', dest='task',
@@ -144,8 +144,7 @@ def parse_args(version):
     try:
         value = config.get(section, option)
     except (ValueError, NoOptionError):
-        logger.warning('Nessuna specifica geocode inserita.')
-        pass
+        logger.info('Nessuna specifica geocode inserita.')
     parser.add_option('-g', '--geocode', dest=option, default=value,
                       help='geocode identification string [%s]' % value)
 
@@ -206,8 +205,7 @@ def parse_args(version):
             logger.warning('Trovata configurazione di certificato non esistente su disco. Cambiata configurazione')
             value = None
     except (ValueError, NoOptionError):
-        logger.warning('Nessun certificato client specificato.')
-        pass
+        logger.info('Nessun certificato client specificato.')
     parser.add_option('--certificate', dest=option, default=value,
                       help='client certificate for schedule downloading and measure file signing [%s]' % value)
 

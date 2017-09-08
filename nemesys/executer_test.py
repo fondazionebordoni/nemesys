@@ -78,27 +78,23 @@ class MockScheduler(object):
 
 class MockDeliverer(object):
     def uploadall_and_move(self, from_dir=None, to_dir=None, do_remove=False):
-        logger.info("Move all from {0} to {1}, do remove is {2}"
-                    .format(from_dir, to_dir, do_remove))
+        logger.info("Move all from %s to %s, do remove is %s", from_dir, to_dir, do_remove)
         return True
 
     def upload_and_move(self, f=None, to_dir=None, do_remove=False):
-        logger.info("Move all from {0} to {1}, do remove is {2}"
-                    .format(f, to_dir, do_remove))
+        logger.info("Move file %s to %s, do remove is %s", f, to_dir, do_remove)
         return True
 
 
 class MockDysfunctDeliverer(object):
     def uploadall_and_move(self, from_dir=None, to_dir=None, do_remove=False):
-        logger.info("Move all from {0} to {1}, do remove is {2}"
-                    .format(from_dir, to_dir, do_remove))
+        logger.info("Move all from %s to %s, do remove is %s", from_dir, to_dir, do_remove)
         msg = (u"Misura terminata ma "
                u"un errore si è verificato durante il suo invio.")
         raise nem_exceptions.NemesysException(msg, nem_exceptions.DELIVERY_ERROR)
 
     def upload_and_move(self, f=None, to_dir=None, do_remove=False):
-        logger.info("Move all from {0} to {1}, do remove is {2}"
-                    .format(f, to_dir, do_remove))
+        logger.info("Move file %s to %s, do remove is %s", f, to_dir, do_remove)
         return False
 
 
