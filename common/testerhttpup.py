@@ -27,7 +27,7 @@ from datetime import datetime
 from common import httpclient
 from common import iptools
 from common import nem_exceptions
-from common import timeNtp
+from common import ntptime
 from common.fakefile import Fakefile
 from common.netstat import Netstat
 from common.proof import Proof
@@ -208,7 +208,7 @@ class HttpTesterUp(object):
         self.dev = dev
 
     def test(self, url, callback_update_speed=noop, num_sessions=1, tcp_window_size=-1):
-        start_timestamp = datetime.fromtimestamp(timeNtp.timestampNtp())
+        start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
         stop_event = threading.Event()
         result_queue = Queue.Queue()
         netstat = Netstat(self.dev)
@@ -253,7 +253,7 @@ class HttpTesterUp(object):
         if (total_sent_bytes == 0) or (consumer.total_read_bytes == 0):
             raise nem_exceptions.MeasurementException('Ottenuto banda zero',
                                                       nem_exceptions.ZERO_SPEED)
-        # duration = (observer.endtime - observer.starttime) * 1000.0
+        #   = (observer.endtime - observer.starttime) * 1000.0
         # int(round(consumer.bytes_received * (1 - overhead)))
         bytes_tot = int(consumer.bytes_received * (1 + overhead))
         return Proof(test_type='upload_http',

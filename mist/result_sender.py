@@ -24,7 +24,7 @@ from datetime import datetime
 
 import xmltodict
 
-from common.timeNtp import timestampNtp
+from common import ntptime
 from mist import gui_event
 from mist import paths
 
@@ -132,6 +132,6 @@ def save_and_send_measure(measure, event_dispatcher, deliverer):
     f = open(os.path.join(paths.OUTBOX_DAY_DIR, 'measure_%s.xml' % measure.id), 'w')
     f.write(str(measure))
     # Aggiungi la data di fine in fondo al file
-    f.write('\n<!-- [finished] %s -->' % datetime.fromtimestamp(timestampNtp()).isoformat())
+    f.write('\n<!-- [finished] %s -->' % datetime.fromtimestamp(ntptime.timestamp()).isoformat())
     f.close()
     return upload(event_dispatcher, deliverer)

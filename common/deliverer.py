@@ -33,7 +33,7 @@ from xml.parsers.expat import ExpatError
 import zipfile
 
 from common.httputils import post_multipart
-from common.timeNtp import timestampNtp
+from common import ntptime
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +45,9 @@ class Deliverer(object):
         self._timeout = timeout
 
     def upload(self, filename):
-        '''
+        """
         Effettua l'upload del file. Restituisce la risposta ricevuta dal repository o None se c'è stato un problema.
-        '''
+        """
         response = None
         logger.info('Invio a WEB: %s' % self._url)
         logger.info('Del file ZIP: %s' % filename)
@@ -73,14 +73,15 @@ class Deliverer(object):
         return response
 
     def pack(self, filename):
-        '''
+        """
         Crea un file zip contenente //filename// e la sua firma SHA1.
         Restituisce il nome del file zip creato.
-        '''
+        """
 
         # Aggiungi la data di invio in fondo al file
         with open(filename, 'a') as myfile:
-            myfile.write('\n<!-- [packed] %s -->' % datetime.datetime.fromtimestamp(timestampNtp()).isoformat())
+            timestamp = ntptime.timestamp()
+            myfile.write('\n<!-- [packed] %s -->' % datetime.datetime.fromtimestamp(timestamp).isoformat())
 
             # Gestione della firma del file
         sign = None
@@ -119,10 +120,10 @@ class Deliverer(object):
 
     # restituisce la firma del file da inviare
     def sign(self, filename):
-        '''
+        """
         Restituisce la stringa contenente la firma del digest SHA1 del
         file da firmare
-        '''
+        """
         try:
             from M2Crypto import RSA
         except Exception:
@@ -141,29 +142,29 @@ class Deliverer(object):
             return None
 
     def uploadall_and_move(self, directory, to_dir, do_remove=True):
-        '''
+        """
         Cerca di spedire tutti i file di misura che trova nella cartella d'uscita
-        '''
+        """
         file_pattern = 'measure_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].xml'
         for filename in glob.glob(os.path.join(directory, file_pattern)):
             # logger.debug('Trovato il file %s da spedire' % filename)
             self.upload_and_move(filename, to_dir, do_remove)
 
     def upload_and_move(self, filename, to_dir, do_remove=True):
-        '''
+        """
         Spedisce il filename di misura al repository entro il tempo messo a
         disposizione secondo il parametro httptimeout
-        '''
+        """
         result = False
-
+        zip_file_name = None
         try:
             # Crea il Deliverer che si occuperà della spedizione
             logger.debug('Invio il file %s a %s' % (filename, self._url))
-            zipname = self.pack(filename)
-            response = self.upload(zipname)
+            zip_file_name = self.pack(filename)
+            response = self.upload(zip_file_name)
 
             if response is not None:
-                (code, message) = self._parserepositorydata(response)
+                (code, message) = _parserepositorydata(response)
                 code = int(code)
                 logger.info('Risposta dal server delle misure: [%d] %s' % (code, message))
 
@@ -171,59 +172,60 @@ class Deliverer(object):
                 # Anche in caso di "duplicate entry", 506
                 if code == 0 or code == 506:
                     os.remove(filename)
-                    self._movefiles(zipname, to_dir)
+                    _movefiles(zip_file_name, to_dir)
 
                     result = True
         except Exception as e:
             logger.error('Errore durante la spedizione del file delle misure %s: %s' % (filename, e))
         finally:
             # Elimino lo zip del file di misura temporaneo
-            if os.path.exists(zipname):
-                os.remove(zipname)
+            if os.path.exists(zip_file_name):
+                os.remove(zip_file_name)
             # Se non sono una sonda _devo_ cancellare il file di misura
             if do_remove and os.path.exists(filename):
                 os.remove(filename)
 
             return result
 
-    def _parserepositorydata(self, data):
-        '''
-        Valuta l'XML ricevuto dal repository, restituisce il codice e il messaggio ricevuto
-        '''
-        # TODO: use xmltodict instead
-        xml = getxml(data)
-        if xml is None:
-            logger.error('Nessuna risposta ricevuta')
-            return None
 
-        nodes = xml.getElementsByTagName('response')
-        if len(nodes) < 1:
-            logger.error('Nessuna risposta ricevuta nell\'XML:\n%s' % xml.toxml())
-            return None
+def _parserepositorydata(data):
+    """
+    Valuta l'XML ricevuto dal repository, restituisce il codice e il messaggio ricevuto
+    """
+    # TODO: use xmltodict instead
+    xml = getxml(data)
+    if xml is None:
+        logger.error('Nessuna risposta ricevuta')
+        return None
 
-        node = nodes[0]
+    nodes = xml.getElementsByTagName('response')
+    if len(nodes) < 1:
+        logger.error('Nessuna risposta ricevuta nell\'XML:\n%s' % xml.toxml())
+        return None
 
-        code = getvalues(node, 'code')
-        message = getvalues(node, 'message')
-        return code, message
+    node = nodes[0]
 
-    def _movefiles(self, filename, to_dir):
+    code = getvalues(node, 'code')
+    message = getvalues(node, 'message')
+    return code, message
 
-        directory = os.path.dirname(filename)
-        # pattern = path.basename(filename)[0:-4]
-        pattern = os.path.basename(filename)
 
-        try:
-            for f in os.listdir(directory):
-                # Cercare tutti i file che iniziano per pattern
-                if re.search(pattern, f) is not None:
-                    # Spostarli tutti in self._sent
-                    old = ('%s/%s' % (directory, f))
-                    new = ('%s/%s' % (to_dir, f))
-                    shutil.move(old, new)
+def _movefiles(filename, to_dir):
 
-        except Exception as e:
-            logger.error('Errore durante lo spostamento dei file di misura %s' % e)
+    directory = os.path.dirname(filename)
+    pattern = os.path.basename(filename)
+
+    try:
+        for f in os.listdir(directory):
+            # Cercare tutti i file che iniziano per pattern
+            if re.search(pattern, f) is not None:
+                # Spostarli tutti in self._sent
+                old = ('%s/%s' % (directory, f))
+                new = ('%s/%s' % (to_dir, f))
+                shutil.move(old, new)
+
+    except Exception as e:
+        logger.error('Errore durante lo spostamento dei file di misura %s' % e)
 
 
 def getxml(data):
@@ -254,11 +256,3 @@ def getvalues(node, tag=None):
 
     else:
         return getvalues(node.getElementsByTagName(tag)[0])
-
-
-if __name__ == '__main__':
-    import log_conf
-
-    log_conf.init_log()
-    d = Deliverer('https://repository.agcom244.fub.it/Upload', 'fub000.pem')
-    print ('%s' % d.upload(d.pack("outbox/measure.xml")))

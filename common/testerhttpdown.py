@@ -17,19 +17,19 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import Queue
-import random
-from datetime import datetime
 import logging
+import random
 import socket
 import threading
 import time
 import urllib2
+from datetime import datetime
 
 from common import iptools
-from common.proof import Proof
 from common import nem_exceptions
+from common import ntptime
 from common.netstat import Netstat
-from common import timeNtp
+from common.proof import Proof
 
 MEASURE_TIME = 10
 RAMPUP_SECS = 2
@@ -186,7 +186,7 @@ class HttpTesterDown(object):
         self.dev = dev
 
     def test(self, url, callback_update_speed=noop, num_sessions=7):
-        start_timestamp = datetime.fromtimestamp(timeNtp.timestampNtp())
+        start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
         stop_event = threading.Event()
         result_queue = Queue.Queue()
         netstat = Netstat(self.dev)

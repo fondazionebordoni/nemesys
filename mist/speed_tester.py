@@ -23,12 +23,11 @@ from threading import Thread
 from time import sleep
 from urlparse import urlparse
 
-from common import iptools
+from common import iptools, ntptime
 from common import server
 from common.deliverer import Deliverer
 from common.nem_exceptions import MeasurementException
 from common.tester import Tester
-from common.timeNtp import timestampNtp
 from mist import gui_event
 from mist import paths
 from mist import result_sender
@@ -260,7 +259,7 @@ class SpeedTester(Thread):
                         gui_event.UpdateEvent("Selezionato il server di misura di %s" % my_task.server.location,
                                               gui_event.UpdateEvent.MAJOR_IMPORTANCE))
 
-                start_time = datetime.fromtimestamp(timestampNtp())
+                start_time = datetime.fromtimestamp(ntptime.timestamp())
 
                 tester = Tester(dev=dev, host=my_task.server, timeout=self._testtimeout)
 
@@ -290,7 +289,7 @@ class SpeedTester(Thread):
                     except MeasurementException as e:
                         self._event_dispatcher.postEvent(gui_event.ErrorEvent("Errore durante il test: %s" % e.message))
 
-                stop_time = datetime.fromtimestamp(timestampNtp())
+                stop_time = datetime.fromtimestamp(ntptime.timestamp())
                 measure.savetime(start_time, stop_time)
                 logger.debug(measure)
 

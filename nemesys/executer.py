@@ -22,7 +22,7 @@ from datetime import datetime
 from threading import Event
 from time import sleep
 
-from common import client
+from common import client, ntptime
 from common import iptools
 from common import nem_exceptions
 from common._generated_version import __version__, FULL_VERSION
@@ -30,7 +30,6 @@ from common.deliverer import Deliverer
 from common.nem_exceptions import SysmonitorException, TaskException
 from common.proof import Proof
 from common.tester import Tester
-from common.timeNtp import timestampNtp
 from nemesys import gui_server
 from nemesys import nem_options
 from nemesys import paths
@@ -86,7 +85,7 @@ class Executer(object):
             t = Tester(dev=dev, host=task.server, timeout=self._testtimeout)
             # TODO: Pensare ad un'altra soluzione per la generazione
             # del progressivo di misura
-            start = datetime.fromtimestamp(timestampNtp())
+            start = datetime.fromtimestamp(ntptime.timestamp())
             m_id = start.strftime('%y%m%d%H%M')
             m = Measure(m_id, task.server,
                         self._client, __version__,
@@ -109,11 +108,11 @@ class Executer(object):
                     sleep_secs = 10
                 proofs = self._do_tests(test_type, n_reps, sleep_secs, t)
                 m.add_proofs(proofs)
-            sec = datetime.fromtimestamp(timestampNtp()).strftime('%S')
+            sec = datetime.fromtimestamp(ntptime.timestamp()).strftime('%S')
             f = open('%s/measure_%s%s.xml' % (self._outbox, m.id, sec), 'w')
             f.write(str(m))
             f.write('\n<!-- [finished] %s -->'
-                    % datetime.fromtimestamp(timestampNtp()).isoformat())
+                    % datetime.fromtimestamp(ntptime.timestamp()).isoformat())
             f.close()
 
             if not self._deliverer.upload_and_move(f.name,
@@ -200,7 +199,7 @@ class Executer(object):
         if task.now:
             secs_to_next_measurement = 0
         else:
-            delta = task.start - datetime.fromtimestamp(timestampNtp())
+            delta = task.start - datetime.fromtimestamp(ntptime.timestamp())
             secs_to_next_measurement = delta.days * 86400 + delta.seconds
         if task.is_wait or secs_to_next_measurement > self._polling + 30:
             # Should just sleep and then download task again

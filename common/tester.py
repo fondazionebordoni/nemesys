@@ -22,14 +22,14 @@ from datetime import datetime
 from optparse import OptionParser
 
 from common import iptools
+from common import nem_exceptions
+from common import ntptime
 from common import ping
 from common.host import Host
-from common import nem_exceptions
 from common.nem_exceptions import MeasurementException
 from common.proof import Proof
 from common.testerhttpdown import HttpTesterDown
 from common.testerhttpup import HttpTesterUp
-from common.timeNtp import timestampNtp
 
 HTTP_BUFF = 8 * 1024
 BW_3M = 3000000
@@ -68,7 +68,7 @@ class Tester(object):
 
     def testping(self, timeout=10):
         # si utilizza funzione ping.py
-        start = datetime.fromtimestamp(timestampNtp())
+        start = datetime.fromtimestamp(ntptime.timestamp())
         try:
             rtt = ping.do_one(self._host.ip, timeout)
         except Exception as e:

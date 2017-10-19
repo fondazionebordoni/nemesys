@@ -21,10 +21,10 @@ import sys
 from datetime import datetime
 from os import mkdir, path, sep
 
-from common.timeNtp import timestampNtp
+from common import ntptime
 from common import utils
 
-DATE = datetime.fromtimestamp(timestampNtp())
+DATE = datetime.fromtimestamp(ntptime.timestamp())
 
 
 def formatdate(mode='sec'):

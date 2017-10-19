@@ -16,12 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
 from time import sleep
 
 from common import ping
 from common.host import Host
-from common.timeNtp import timestampNtp
 
 
 class Server(Host):
@@ -44,7 +42,7 @@ class Server(Host):
 
 def get_server(callback, servers={Server('NAMEX', '193.104.137.133', 'NAP di Roma'),
                                   Server('MIX', '193.104.137.4', 'NAP di Milano')}):
-    maxREP = 4
+    max_reps = 4
     best = {'start': None,
             'delay': 8000,
             'server': None
@@ -54,16 +52,14 @@ def get_server(callback, servers={Server('NAMEX', '193.104.137.133', 'NAP di Rom
     for server in servers:
         rtt[server.name] = best['delay']
 
-    for _ in range(maxREP):
+    for _ in range(max_reps):
         sleep(1.0)
         for server in servers:
             try:
-                start = datetime.fromtimestamp(timestampNtp())
                 delay = ping.do_one("%s" % server.ip, 1) * 1000
                 if delay < rtt[server.name]:
                     rtt[server.name] = delay
                 if delay < best['delay']:
-                    best['start'] = start
                     best['delay'] = delay
                     best['server'] = server
             except Exception:
@@ -74,7 +70,7 @@ def get_server(callback, servers={Server('NAMEX', '193.104.137.133', 'NAP di Rom
             if rtt[server.name] != 8000:
                 callback("Distanza dal %s: %.1f ms" % (server.name, rtt[server.name]))
             else:
-                callback("Distanza dal %s: Timeout" % (server.name))
+                callback("Distanza dal %s: Timeout" % server.name)
     else:
         raise Exception("Impossibile eseguire i test poiche' i server risultano irragiungibili da questa linea. "
                         "Contattare l'helpdesk del progetto Misurainternet per avere informazioni "

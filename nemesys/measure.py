@@ -20,12 +20,12 @@ import platform
 from datetime import datetime
 from xml.dom.minidom import parseString
 
-from common.timeNtp import timestampNtp
+from common import ntptime
 
 
 class Measure(object):
     def __init__(self, measure_id, server, client, version=None,
-                 start=datetime.fromtimestamp(timestampNtp()).isoformat()):
+                 start=datetime.fromtimestamp(ntptime.timestamp()).isoformat()):
         """
         Costruisce un oggetto Measure utilizzando i parametri ricevuti nella
         chiamata.
@@ -134,7 +134,7 @@ class Measure(object):
         time.appendChild(start)
 
         end = xml.createElement('end')
-        date_string = str(datetime.fromtimestamp(timestampNtp()).isoformat())
+        date_string = str(datetime.fromtimestamp(ntptime.timestamp()).isoformat())
         end.appendChild(xml.createTextNode(date_string))
         time.appendChild(end)
 
