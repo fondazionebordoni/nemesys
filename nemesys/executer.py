@@ -302,7 +302,7 @@ class Executer(object):
             logger.debug('Inizio del loop principale')
             if self._isprobe:
                 # Try to send any unsent measures (only probe)
-                self._deliverer.upload_all_and_move(self._outbox, self._sent, do_remove=False)
+                self._deliverer.uploadall_and_move(self._outbox, self._sent, do_remove=False)
             # Try to download task
             task = None
             tries = 0

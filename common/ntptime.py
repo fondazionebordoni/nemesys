@@ -21,7 +21,10 @@ import ntplib
 import time
 
 NTP_SERVERS = ['time.ien.it',
-               'time.google.com']
+               '0.pool.ntp.org',
+               '1.pool.ntp.org',
+               '2.pool.ntp.org',
+               '3.pool.ntp.org']
 
 
 _time_diff = 0
@@ -57,5 +60,4 @@ def timestamp():
 
 
 if __name__ == '__main__':
-    import datetime
-    print datetime.datetime.fromtimestamp(timestamp()).isoformat()
+    print timestamp()

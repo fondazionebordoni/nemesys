@@ -19,25 +19,20 @@
 import datetime
 import glob
 import hashlib
+from httplib import HTTPException
 import logging
 import os
 import re
 import shutil
-import zipfile
-from Crypto.Hash import SHA
-from Crypto.PublicKey import RSA
-from Crypto.Signature import PKCS1_v1_5
-from httplib import HTTPException
 from ssl import SSLError
 from string import join
 from urlparse import urlparse
 from xml.dom import Node
 from xml.dom.minidom import parseString
 from xml.parsers.expat import ExpatError
+import zipfile
 
-import pem
-
-from common import httputils
+from common.httputils import post_multipart
 from common import ntptime
 
 logger = logging.getLogger(__name__)
@@ -47,16 +42,6 @@ class Deliverer(object):
     def __init__(self, url, certificate, timeout=60):
         self._url = url
         self._certificate = certificate
-        self._signer = None
-        try:
-            certs_and_keys = pem.parse_file(certificate)
-            for key in certs_and_keys:
-                if isinstance(key, pem.Key):
-                    private_key = RSA.importKey(str(key))
-                    self._signer = PKCS1_v1_5.new(private_key)
-                    break
-        except Exception:
-            pass
         self._timeout = timeout
 
     def upload(self, filename):
@@ -67,15 +52,15 @@ class Deliverer(object):
         logger.info('Invio a WEB: %s' % self._url)
         logger.info('Del file ZIP: %s' % filename)
         try:
-            with open(filename, 'rb') as file_to_upload:
-                body = file_to_upload.read()
+            with open(filename, 'rb') as myfile:
+                body = myfile.read()
 
             url = urlparse(self._url)
-            response = httputils.post_multipart(url,
-                                                fields=None,
-                                                files=[('file_to_upload', os.path.basename(filename), body)],
-                                                certificate=self._certificate,
-                                                timeout=self._timeout)
+            response = post_multipart(url,
+                                      fields=None,
+                                      files=[('myfile', os.path.basename(filename), body)],
+                                      certificate=self._certificate,
+                                      timeout=self._timeout)
 
         except HTTPException as e:
             os.remove(filename)
@@ -92,54 +77,71 @@ class Deliverer(object):
         Crea un file zip contenente //filename// e la sua firma SHA1.
         Restituisce il nome del file zip creato.
         """
+
         # Aggiungi la data di invio in fondo al file
-        with open(filename, 'a') as file_to_pack:
+        with open(filename, 'a') as myfile:
             timestamp = ntptime.timestamp()
-            file_to_pack.write('\n<!-- [packed] %s -->' % datetime.datetime.fromtimestamp(timestamp).isoformat())
+            myfile.write('\n<!-- [packed] %s -->' % datetime.datetime.fromtimestamp(timestamp).isoformat())
 
-        # Creazione del file zip
-        zip_file_name = '%s.zip' % filename[0:-4]
-        zip_file = zipfile.ZipFile(zip_file_name, 'a', zipfile.ZIP_DEFLATED)
-        zip_file.write(file_to_pack.name, os.path.basename(file_to_pack.name))
-
-        # Gestione della firma del file
-        if self._signer is not None:
+            # Gestione della firma del file
+        sign = None
+        if self._certificate is not None and os.path.exists(self._certificate):
             # Crea il file della firma
-            try:
-                signature = self.get_signature(filename)
-                with open('%s.sign' % filename[0:-4], 'wb') as signature_file:
-                    signature_file.write(signature)
-                # Sposto la firma nello zip
-                zip_file.write(signature_file.name, os.path.basename(signature_file.name))
-                os.remove(signature_file.name)
-            except Exception:
+            signature = self.sign(filename)
+            if signature is None:
                 logger.error('Impossibile eseguire la firma del file delle misure. '
                              'Creazione dello zip omettendo il .sign')
+            else:
+                with open('%s.sign' % filename[0:-4], 'wb') as sign:
+                    sign.write(signature)
+
+        # Creazione del file zip
+        zipname = '%s.zip' % filename[0:-4]
+        zip_file = zipfile.ZipFile(zipname, 'a', zipfile.ZIP_DEFLATED)
+        zip_file.write(myfile.name, os.path.basename(myfile.name))
+
+        # Sposto la firma nello zip
+        if sign is not None and os.path.exists(sign.name):
+            zip_file.write(sign.name, os.path.basename(sign.name))
+            os.remove(sign.name)
 
         # Controllo lo zip
         if zip_file.testzip() is not None:
             zip_file.close()
-            logger.error("Lo zip %s è corrotto. Lo elimino." % zip_file_name)
-            os.remove(zip_file_name)
-            zip_file_name = None
+            logger.error("Lo zip %s è corrotto. Lo elimino." % zipname)
+            os.remove(zipname)
+            zipname = None
         else:
             zip_file.close()
-            logger.debug("File %s compresso correttamente in %s" % (filename, zip_file_name))
+            logger.debug("File %s compresso correttamente in %s" % (filename, zipname))
 
         # A questo punto ho un xml e uno zip
-        return zip_file_name
+        return zipname
 
     # restituisce la firma del file da inviare
-    def get_signature(self, filename):
+    def sign(self, filename):
         """
         Restituisce la stringa contenente la firma del digest SHA1 del
         file da firmare
         """
-        digest = SHA.new()
-        digest.update(open(filename).read())
-        return self._signer.sign(digest)
+        try:
+            from M2Crypto import RSA
+        except Exception:
+            logger.debug('Impossibile importare il modulo M2Crypto')
+            return None
 
-    def upload_all_and_move(self, directory, to_dir, do_remove=True):
+        data = open(filename, 'rb').read()
+        digest = hashlib.sha1(data).digest()
+
+        rsa = RSA.load_key(self._certificate)
+
+        signature = rsa.sign(digest)
+        if rsa.verify(digest, signature):
+            return signature
+        else:
+            return None
+
+    def uploadall_and_move(self, directory, to_dir, do_remove=True):
         """
         Cerca di spedire tutti i file di misura che trova nella cartella d'uscita
         """
