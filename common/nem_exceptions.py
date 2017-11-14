@@ -87,21 +87,21 @@ CODE_MAPPING = {
 
 
 def errorcode_from_exception(exception):
-    '''
+    """
     Restituisce il codice di errore relativo al messaggio di errore (errormsg)
     contenuto nell'exception.
-    '''
+    """
     if isinstance(exception, NemesysException):
         return exception.errorcode
     try:
         error = str(exception.args[0]).replace(':', ',')
-    except AttributeError:
+    except (AttributeError, IndexError):
         error = str(exception).replace(':', ',')
 
     try:
         errorcode = CODE_MAPPING[error]
         return errorcode
-    except (KeyError):
+    except KeyError:
         return UNKNOWN
 
 
@@ -136,5 +136,5 @@ class TaskException(NemesysException):
 
 
 class ProfilerException(NemesysException):
-    '''Exception from Profiler'''
+    """Exception from Profiler"""
     pass

@@ -65,8 +65,14 @@ class TestErrorcode(unittest.TestCase):
         code = nem_exceptions.errorcode_from_exception(e)
         self.assertEqual(99999, code)
 
-    def test_none(self):
-        e = None
+    def test_none_in_args(self):
+        e = Exception()
+        e.args = []
+        code = nem_exceptions.errorcode_from_exception(e)
+        self.assertEqual(99999, code)
+
+    def test_empty_string(self):
+        e = ''
         code = nem_exceptions.errorcode_from_exception(e)
         self.assertEqual(99999, code)
 
