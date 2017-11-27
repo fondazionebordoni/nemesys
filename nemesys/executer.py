@@ -306,16 +306,14 @@ class Executer(object):
             # Try to download task
             task = None
             tries = 0
-            while not task:
+            while not task and tries < 3:
                 try:
                     task = self._scheduler.download_task()
                 except TaskException as e:
-                    if tries >= 3:
-                        self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
-                        continue
-                    else:
-                        tries += 1
-            if task is not None:
+                    tries += 1
+            if task is None:
+                self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
+            else:
                 # Task found, now do it
                 logger.info('Trovato task %s', task)
                 try:
