@@ -39,7 +39,8 @@ class MockScheduler(object):
                                       server=server,
                                       upload=1,
                                       download=1,
-                                      ping=4)
+                                      ping=4,
+                                      message='Test message')
         self.task_ping = task.Task(now=True,
                                    server=server,
                                    upload=0,

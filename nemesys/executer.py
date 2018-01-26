@@ -215,6 +215,9 @@ class Executer(object):
             self._sleep_and_wait(wait_secs)
         else:
             # Should execute task after secs_to_next_measurement
+            # If there is a message, send it to the GUI
+            if task.message:
+                self._gui_server.notification(0, task.message)
             if secs_to_next_measurement >= 0:
                 if task.download > 0 or task.upload > 0 or task.ping > 0:
                     logger.debug('Impostazione di un nuovo task tra: %d minuti', secs_to_next_measurement / 60)

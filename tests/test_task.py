@@ -211,6 +211,38 @@ class TestTask(unittest.TestCase):
         res = task.xml2task(xml)
         self.assertEqual(None, res)
 
+    def testNewTaskWithMessage(self):
+        xml = '''<?xml version="1.0" encoding="UTF-8"?>
+ <calendar>
+    <task>
+     <nup>20</nup>
+     <ndown>20</ndown>
+     <nping>10</nping>
+     <start now="True">2010-01-01 00:01:00</start>
+     <srvid>fubsrvrmnmx03</srvid>
+     <srvip>193.104.137.133</srvip>
+     <srvname>NAMEX</srvname>
+     <message>Ciao</message>
+    </task>
+ </calendar>
+    '''
+        res = task.xml2task(xml)
+        self.assertNotEqual(None, res)
+        self.assertEqual(10, res.ping)
+        self.assertEqual(20, res.upload)
+        self.assertEqual(20, res.download)
+        self.assertNotEqual(None, res.server)
+        self.assertEqual(res.server.name, 'NAMEX')
+        self.assertEqual(res.server.ip, '193.104.137.133')
+        self.assertEqual(res.server.id, 'fubsrvrmnmx03')
+        self.assertEqual(res.now, True)
+        self.assertEqual('2010-01-01 00:01:00',
+                         res.start.strftime("%Y-%m-%d %H:%M:%S"))
+        self.assertEqual('Ciao',
+                         res.message)
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
