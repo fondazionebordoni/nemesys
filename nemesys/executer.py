@@ -340,7 +340,7 @@ def main():
     import log_conf
     log_conf.init_log()
 
-    logger.info('Avvio di Nemesys v.%s on %s %s', FULL_VERSION, platform.system(), platform.release())
+    logger.info('Avvio di Nemesys v.%s on %s', FULL_VERSION, platform.platform())
     paths.check_paths()
     (options, _, md5conf) = nem_options.parse_args(__version__)
 
