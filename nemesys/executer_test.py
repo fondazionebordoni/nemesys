@@ -20,10 +20,9 @@
 import logging
 import threading
 
-from common import nem_exceptions
+from common import nem_exceptions, _generated_version
 from common.deliverer import Deliverer
 from common.server import Server
-from nemesys import executer
 from nemesys import nem_options
 from nemesys import task
 from nemesys.executer import Executer
@@ -103,7 +102,7 @@ def main():
     import log_conf
     log_conf.init_log()
 
-    (options, _, md5conf) = nem_options.parse_args(executer.__version__)
+    (options, _, md5conf) = nem_options.parse_args(_generated_version.__version__)
     from common import client
     c = client.getclient(options)
     # c = Client('245e843ec08897fd0df7e5a780bbdcc8',

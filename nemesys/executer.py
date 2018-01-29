@@ -22,10 +22,9 @@ from datetime import datetime
 from threading import Event
 from time import sleep
 
-from common import client, ntptime
+from common import client, ntptime, _generated_version
 from common import iptools
 from common import nem_exceptions
-from common._generated_version import __version__, FULL_VERSION
 from common.deliverer import Deliverer
 from common.nem_exceptions import SysmonitorException, TaskException
 from common.proof import Proof
@@ -72,7 +71,7 @@ class Executer(object):
             logger.info('Inizializzato software per misure d\'utente con ISP id = %s', client.isp.id)
             logger.info('Con profilo [%s]', client.profile)
             self._gui_server = gui_server.Communicator(serial=self._client.id,
-                                                       version=__version__)
+                                                       version=_generated_version.__version__)
             self._gui_server.start()
 
     def _do_task(self, task, dev):
@@ -88,7 +87,7 @@ class Executer(object):
             start = datetime.fromtimestamp(ntptime.timestamp())
             m_id = start.strftime('%y%m%d%H%M')
             m = Measure(m_id, task.server,
-                        self._client, __version__,
+                        self._client, _generated_version.__version__,
                         start.isoformat())
 
             for test_type in ['ping', 'download', 'upload']:
@@ -314,9 +313,9 @@ class Executer(object):
                     task = self._scheduler.download_task()
                 except TaskException as e:
                     tries += 1
-            if task is None:
-                self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
-            else:
+                    if tries >= 3:
+                        self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
+            if task:
                 # Task found, now do it
                 logger.info('Trovato task %s', task)
                 try:
@@ -340,9 +339,10 @@ def main():
     import log_conf
     log_conf.init_log()
 
-    logger.info('Avvio di Nemesys v.%s on %s', FULL_VERSION, platform.platform())
+    logger.info('Avvio di Nemesys v.%s on %s', _generated_version.FULL_VERSION, platform.platform())
+    logger.info('Pacchetto Nemesys generato su %s in data %s', _generated_version.PLATFORM, _generated_version.__updated__)
     paths.check_paths()
-    (options, _, md5conf) = nem_options.parse_args(__version__)
+    (options, _, md5conf) = nem_options.parse_args(_generated_version.__version__)
 
     c = client.getclient(options)
     isprobe = (c.isp.certificate is not None)
@@ -354,7 +354,7 @@ def main():
                  scheduler=Scheduler(options.scheduler,
                                      c,
                                      md5conf,
-                                     __version__,
+                                     _generated_version.__version__,
                                      options.httptimeout),
                  deliverer=Deliverer(options.repository,
                                      c.isp.certificate,
