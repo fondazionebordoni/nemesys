@@ -44,7 +44,6 @@ SLEEP_SECS_AFTER_TASK = 30
 
 
 class Executer(object):
-
     def __init__(self, client, scheduler, deliverer, sys_profiler,
                  polling=300.0, tasktimeout=60,
                  testtimeout=30, isprobe=True):
@@ -98,12 +97,12 @@ class Executer(object):
                 elif test_type == "download":
                     n_reps = task.download
                     if n_reps > 0:
-                        self._gui_server.measure(test_type, self._client.profile.download/1000)
+                        self._gui_server.measure(test_type, self._client.profile.download / 1000)
                     sleep_secs = 10
                 else:
                     n_reps = task.upload
                     if n_reps > 0:
-                        self._gui_server.measure(test_type, self._client.profile.upload/1000)
+                        self._gui_server.measure(test_type, self._client.profile.upload / 1000)
                     sleep_secs = 10
                 proofs = self._do_tests(test_type, n_reps, sleep_secs, t)
                 m.add_proofs(proofs)
@@ -188,6 +187,7 @@ class Executer(object):
                         logger.warning('Misura sospesa per eccezione, e\' errore n. %d: %s', n_errors, e, exc_info=True)
                         self._gui_server.result(test_type, error=str(e))
                 sleep(sleep_secs)
+            sleep(sleep_secs)
             i += 1
         return proofs
 
@@ -250,8 +250,6 @@ class Executer(object):
             logger.error('La profilazione del sistema ha rivelato un problema: %s', e)
             sleep(2)
             self._gui_server.profilation(done=True)
-#             error_code = nem_exceptions.errorcode_from_exception(e)
-#             self._gui_server.notification(error_code, message=str(e))
             return None
 
     def _sleep_and_wait(self, seconds):
@@ -340,7 +338,8 @@ def main():
     log_conf.init_log()
 
     logger.info('Avvio di Nemesys v.%s on %s', _generated_version.FULL_VERSION, platform.platform())
-    logger.info('Pacchetto Nemesys generato su %s in data %s', _generated_version.PLATFORM, _generated_version.__updated__)
+    logger.info('Pacchetto Nemesys generato su %s in data %s', _generated_version.PLATFORM,
+                _generated_version.__updated__)
     paths.check_paths()
     (options, _, md5conf) = nem_options.parse_args(_generated_version.__version__)
 

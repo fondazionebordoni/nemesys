@@ -8,6 +8,7 @@ STRICT_VERSION="2.2.2"
 
 """
 import os
+import platform
 import subprocess
 import time
 
@@ -17,6 +18,7 @@ GENERATED_VERSION_PY = """
 
 __version__ = '%s'
 FULL_VERSION = '%s'
+PLATFORM = '%s'
 __updated__ = '%s'
 if __name__ == '__main__':
     print __version__
@@ -46,7 +48,7 @@ def update_version_py():
     else:
         strict_version = full_version
     f = open(VERSION_FILE, "w")
-    f.write(GENERATED_VERSION_PY % (strict_version, full_version, time.strftime("%c")))
+    f.write(GENERATED_VERSION_PY % (strict_version, full_version, platform.platform(), time.strftime("%c")))
     f.close()
     print "updated _generated_version.py to '%s'" % strict_version
 
