@@ -242,7 +242,5 @@ class TestTask(unittest.TestCase):
                          res.message)
 
 
-
-
 if __name__ == "__main__":
     unittest.main()

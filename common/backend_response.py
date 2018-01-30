@@ -36,4 +36,3 @@ def parse(data):
         code = 999
         message = ''
     return int(code), message
-

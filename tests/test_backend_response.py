@@ -17,8 +17,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-from datetime import datetime
-from xml.dom.minidom import parseString
 
 from common import backend_response
 
