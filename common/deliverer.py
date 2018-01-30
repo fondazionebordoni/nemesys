@@ -18,22 +18,22 @@
 
 import datetime
 import glob
-import hashlib
-from httplib import HTTPException
 import logging
 import os
 import re
 import shutil
-from ssl import SSLError
-from string import join
-from urlparse import urlparse
-from xml.dom import Node
-from xml.dom.minidom import parseString
-from xml.parsers.expat import ExpatError
 import zipfile
+from httplib import HTTPException
+from ssl import SSLError
+from urlparse import urlparse
 
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+
+from common import ntptime, backend_response
 from common.httputils import post_multipart
-from common import ntptime
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,16 @@ class Deliverer(object):
         self._url = url
         self._certificate = certificate
         self._timeout = timeout
+        try:
+            with open(self._certificate, "rb") as key_file:
+                self.private_key = serialization.load_pem_private_key(
+                    key_file.read(),
+                    password=None,
+                    backend=default_backend()
+                )
+        except Exception as e:
+            logger.warn('Impossibile inizializzare chiave privata, i file non verranno firmate: %s', e)
+            self.private_key = None
 
     def upload(self, filename):
         """
@@ -83,17 +93,17 @@ class Deliverer(object):
             timestamp = ntptime.timestamp()
             myfile.write('\n<!-- [packed] %s -->' % datetime.datetime.fromtimestamp(timestamp).isoformat())
 
-            # Gestione della firma del file
-        sign = None
-        if self._certificate is not None and os.path.exists(self._certificate):
+        # Gestione della firma del file
+        signature_file = None
+        if self.private_key:
             # Crea il file della firma
-            signature = self.sign(filename)
-            if signature is None:
-                logger.error('Impossibile eseguire la firma del file delle misure. '
-                             'Creazione dello zip omettendo il .sign')
-            else:
-                with open('%s.sign' % filename[0:-4], 'wb') as sign:
-                    sign.write(signature)
+            with open(filename, 'rb') as data_file:
+                data = data_file.read()
+                signature = self.private_key.sign(data,
+                                                  padding.PKCS1v15(),
+                                                  hashes.SHA1())
+            with open('%s.sign' % filename[0:-4], 'wb') as signature_file:
+                signature_file.write(signature)
 
         # Creazione del file zip
         zipname = '%s.zip' % filename[0:-4]
@@ -101,9 +111,9 @@ class Deliverer(object):
         zip_file.write(myfile.name, os.path.basename(myfile.name))
 
         # Sposto la firma nello zip
-        if sign is not None and os.path.exists(sign.name):
-            zip_file.write(sign.name, os.path.basename(sign.name))
-            os.remove(sign.name)
+        if signature_file is not None and os.path.exists(signature_file.name):
+            zip_file.write(signature_file.name, os.path.basename(signature_file.name))
+            os.remove(signature_file.name)
 
         # Controllo lo zip
         if zip_file.testzip() is not None:
@@ -117,29 +127,6 @@ class Deliverer(object):
 
         # A questo punto ho un xml e uno zip
         return zipname
-
-    # restituisce la firma del file da inviare
-    def sign(self, filename):
-        """
-        Restituisce la stringa contenente la firma del digest SHA1 del
-        file da firmare
-        """
-        try:
-            from M2Crypto import RSA
-        except Exception:
-            logger.debug('Impossibile importare il modulo M2Crypto')
-            return None
-
-        data = open(filename, 'rb').read()
-        digest = hashlib.sha1(data).digest()
-
-        rsa = RSA.load_key(self._certificate)
-
-        signature = rsa.sign(digest)
-        if rsa.verify(digest, signature):
-            return signature
-        else:
-            return None
 
     def uploadall_and_move(self, directory, to_dir, do_remove=True):
         """
@@ -164,7 +151,7 @@ class Deliverer(object):
             response = self.upload(zip_file_name)
 
             if response is not None:
-                (code, message) = _parserepositorydata(response)
+                (code, message) = backend_response.parse(response)
                 code = int(code)
                 logger.info('Risposta dal server delle misure: [%d] %s' % (code, message))
 
@@ -188,30 +175,7 @@ class Deliverer(object):
             return result
 
 
-def _parserepositorydata(data):
-    """
-    Valuta l'XML ricevuto dal repository, restituisce il codice e il messaggio ricevuto
-    """
-    # TODO: use xmltodict instead
-    xml = getxml(data)
-    if xml is None:
-        logger.error('Nessuna risposta ricevuta')
-        return None
-
-    nodes = xml.getElementsByTagName('response')
-    if len(nodes) < 1:
-        logger.error('Nessuna risposta ricevuta nell\'XML:\n%s' % xml.toxml())
-        return None
-
-    node = nodes[0]
-
-    code = getvalues(node, 'code')
-    message = getvalues(node, 'message')
-    return code, message
-
-
 def _movefiles(filename, to_dir):
-
     directory = os.path.dirname(filename)
     pattern = os.path.basename(filename)
 
@@ -226,33 +190,3 @@ def _movefiles(filename, to_dir):
 
     except Exception as e:
         logger.error('Errore durante lo spostamento dei file di misura %s' % e)
-
-
-def getxml(data):
-    if len(data) < 1:
-        logger.error('Nessun dato da processare')
-        raise Exception('Ricevuto un messaggio vuoto')
-
-    logger.debug('Dati da convertire in XML:\n%s' % data)
-    try:
-        xml = parseString(data)
-    except ExpatError:
-        logger.error('Il dato ricevuto non è in formato XML: %s' % data)
-        raise Exception('Errore di formattazione del messaggio')
-
-    return xml
-
-
-def getvalues(node, tag=None):
-    if tag is None:
-        values = []
-        for child in node.childNodes:
-            if child.nodeType == Node.TEXT_NODE:
-                # logger.debug('Trovato nodo testo.')
-                values.append(child.nodeValue)
-
-        # logger.debug('Value found: %s' % join(values).strip())
-        return join(values).strip()
-
-    else:
-        return getvalues(node.getElementsByTagName(tag)[0])

@@ -132,13 +132,13 @@ def main():
                 res = t.testhttpup(None, bw=bw)
                 printout_http(res)
             except MeasurementException as e:
-                print("Error: %s" % str(e))
+                print("Error: [%d] %s" % (e.errorcode, str(e)))
         elif options.testtype == 'ping':
             try:
                 res = t.testping()
                 print("Ping: %.2f milliseconds" % res.duration)
             except Exception as e:
-                print("Error: %s" % str(e))
+                print("Error: [%d] %s" % (e.errorcode, str(e)))
         else:
             try:
                 res = t.testhttpdown(None)

@@ -22,30 +22,12 @@ import re
 import time
 from datetime import datetime
 
-import xmltodict
-
-from common import ntptime
+from common import ntptime, backend_response
 from mist import gui_event
 from mist import paths
 
 logger = logging.getLogger(__name__)
 MAX_SEND_RETRY = 3
-
-
-def parse_response(data):
-    """
-    Valuta l'XML ricevuto dal repository, restituisce il codice e il messaggio ricevuto
-    """
-    code = 99
-    message = ''
-    try:
-        xml_dict = xmltodict.parse(data)
-        response_dict = xml_dict['response']
-        message = response_dict.get('message') or ''
-        code = response_dict.get('code') or 99
-    except Exception:
-        logger.error('Ricevuto risposta non XML dal server: %s', data)
-    return int(code), message
 
 
 def upload_one_file(deliverer, filename):
@@ -56,7 +38,7 @@ def upload_one_file(deliverer, filename):
         response = deliverer.upload(zipname)
 
         if response is not None:
-            (code, message) = parse_response(response)
+            (code, message) = backend_response.parse_response(response)
             logger.info('Risposta dal server di upload: [%d] %s', code, message)
             upload_ok = code == 0
     except Exception as e:
