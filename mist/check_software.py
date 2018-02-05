@@ -24,151 +24,131 @@ import wx
 from urlparse import urlparse
 
 from common import httputils
-from mist import mist_options
-from mist.registration import registration
+
+MSG_SCADUTO = '''
+Questa versione di %s
+e' scaduta da %s giorni e pertanto
+non potra' piu' essere utilizzata.
+'''
+
+MSG_NUOVA_VERSIONE_ = '''
+E' disponibile una nuova versione:
+%s %s
+
+E' possibile effettuare il download
+nella pagina di download del sito
+www.misurainternet.it
+
+Vuoi scaricare ora la nuova versione?
+'''
 
 SWN = 'MisuraInternet Speed Test'
 
 logger = logging.getLogger(__name__)
 
-# Data di scadenza
-dead_date = 22221111
-
-url_version = "https://speedtest.agcom244.fub.it/Version"
-area_privata = "https://www.misurainternet.it"  # /login_form.php"
+URL_VERSION = 'https://speedtest.agcom244.fub.it/Version'
+URL_MISURAINTERNET = 'https://www.misurainternet.it'  # /login_form.php'
 
 
-class CheckSoftware(object):
-    def __init__(self, version):
-        (options, args, md5conf) = mist_options.parse(version=version, description='')
-        self._httptimeout = options.httptimeout
-        self._clientid = options.clientid
-        self._thisVersion = version
-        self._lastVersion = version
-        self._stillDay = "unknown"
+def show_dialog(dialog):
+    """
+    Creates a dialog window with message, title and style as in the
+    dict passed
+    """
+    message_dialog = wx.MessageDialog(None, dialog['message'], dialog['title'], dialog['style'])
+    res = message_dialog.ShowModal()
+    message_dialog.Destroy()
+    return res
 
-    def _showDialog(self, dialog):
-        msgBox = wx.MessageDialog(None, dialog['message'], dialog['title'], dialog['style'])
-        res = msgBox.ShowModal()
-        msgBox.Destroy()
-        return res
 
-    def _softwareVersion(self):
-        version_ok = True
-        deadline_ok = True
+def get_version(version):
+    url = urlparse(URL_VERSION)
+    connection = httputils.get_verified_connection(url=url, certificate=None)
+    connection.request('GET', '%s?speedtest=true&version=%s' % (url.path, version))
+    data = connection.getresponse().read()
+    # Esempio di risposta: '1.1.1beta:8'
+    if re.search(r'(\.?\d+)+?.\S+:', data) is None:
+        logger.warning("Non e' stato possibile controllare la versione per risposta errata del server.")
+        return True
 
-        url = urlparse(url_version)
-        connection = httputils.get_verified_connection(url=url, certificate=None, timeout=self._httptimeout)
-        try:
-            connection.request('GET', '%s?speedtest=true&version=%s' % (url.path, self._thisVersion))
-            data = connection.getresponse().read()
-            # data = "1.1.1beta:8"        # example
-            if re.search('(\.?\d+)+?.\S+:', data) is None:
-                logger.warning("Non e' stato possibile controllare la versione per risposta errata del server.")
-                return True
+    data = data.split(':')
 
-            data = data.split(":")
+    # una stringa di uno o piu' numeri      \d+
+    # opzionalmente preceduta da un punto   \.?
+    # che si ripeta piu' volte              (\.?\d+)+
+    remote_version_regex = re.search(r'(\.?\d+)+', data[0])
+    if not remote_version_regex:
+        raise Exception('Ricevuto stringa anomala per la versione dal server: %s', data)
 
-            version = re.search('(\.?\d+)+', data[0])
-            '''
-            una stringa di uno o piu' numeri      \d+
-            opzionalmente preceduta da un punto   \.?
-            che si ripeta piu' volte              (\.?\d+)+
-            '''
-            if version is not None:
-                self._lastVersion = version.string
-                logger.info("L'ultima versione sul server e' la %s" % self._lastVersion)
-                if self._thisVersion != self._lastVersion:
-                    logger.info("Nuova versione disponbile. [ this:{} | last:{} ]"
-                                .format(self._thisVersion, self._lastVersion))
-                    new_version = \
-                        {
-                            "style": wx.YES | wx.NO | wx.ICON_INFORMATION,
-                            "title": "%s %s" % (SWN, self._thisVersion),
-                            "message": '''
-                            E' disponibile una nuova versione:
-                            %s %s
+    # DEADLINE
+    # una stringa di uno o piu' numeri            \d+
+    # opzionalmente preceduta da un segno meno     -?
+    # ma che non abbia alcun carattere dopo       (?!.)
+    days_left = re.search(r'(-?\d+)(?!.)', data[1])
+    if not days_left:
+        return remote_version_regex.string, None
+    else:
+        return remote_version_regex.string, days_left.string
 
-                            E' possibile effettuare il download dalla relativa sezione
-                            nell'area privata del sito www.misurainternet.it
 
-                            Vuoi scaricare ora la nuova versione?
-                            ''' % (SWN, self._lastVersion)
-                        }
-                    res = self._showDialog(new_version)
-                    if res == wx.ID_YES:
-                        version_ok = False
-                        logger.info("Si e' scelto di scaricare la nuova versione del software.")
-                        webbrowser.open(area_privata, new=2, autoraise=True)
-                        return version_ok
-                    else:
-                        logger.info("Si e' scelto di continuare ad utilizzare la vecchia versione del software.")
-                        version_ok = True
-                else:
-                    version_ok = True
-                    logger.info("E' in esecuzione l'ultima versione del software.")
-            else:
-                version_ok = True
-                logger.error("Errore nella verifica della presenza di una nuova versione.")
+def get_new_version(version, remote_version):
+    new_version_dialog = \
+        {
+            'style': wx.YES | wx.NO | wx.ICON_INFORMATION,
+            'title': '%s %s' % (SWN, version),
+            'message': MSG_NUOVA_VERSIONE_ % (SWN, remote_version)
+        }
+    result = show_dialog(new_version_dialog)
+    if result == wx.ID_YES:
+        logger.info("Si e' scelto di scaricare la nuova versione del software.")
+        webbrowser.open(URL_MISURAINTERNET, new=2, autoraise=True)
+        # Torna False per fermare Speedtest
+        return True
 
-            # DEADLINE
-            deadline = re.search('(-?\d+)(?!.)', data[1])
-            '''
-            una stringa di uno o piu' numeri            \d+
-            ozionalmente preceduta da un segno meno     -?
-            ma che non abbia alcun carattere dopo       (?!.)
-            '''
-            if deadline is not None:
-                self._stillDay = deadline.string
-                logger.info("Giorni rimasti comunicati dal server: %s" % self._stillDay)
-                if int(self._stillDay) >= 0:
-                    deadline_ok = True
-                    logger.info("L'attuale versione %s scade fra %s giorni." % (self._thisVersion, self._stillDay))
-                    before_deadline = \
-                        {
-                            "style": wx.OK | wx.ICON_EXCLAMATION,
-                            "title": "%s %s" % (SWN, self._thisVersion),
-                            "message": '''
-                            Questa versione di %s
-                            potra' essere utilizzata ancora per %s giorni.
-                            ''' % (SWN, self._stillDay)
-                        }
-                    self._showDialog(before_deadline)
-                else:
-                    deadline_ok = False
-                    self._stillDay = -(int(self._stillDay))
-                    logger.info("L'attuale versione %s e' scaduta da %s giorni." % (self._thisVersion, self._stillDay))
-                    after_deadline = \
-                        {
-                            "style": wx.OK | wx.ICON_EXCLAMATION,
-                            "title": "%s %s" % (SWN, self._thisVersion),
-                            "message": '''
-                            Questa versione di %s
-                            e' scaduta da %s giorni e pertanto
-                            non potra' piu' essere utilizzata.
-                            ''' % (SWN, self._stillDay)
-                        }
-                    self._showDialog(after_deadline)
-            else:
-                deadline_ok = True
-                logger.info("Questa versione del software non ha ancora scadenza.")
 
-        except Exception as e:
-            logger.error("Impossibile controllare se ci sono nuove versioni. Errore: %s." % e)
+def warn_version_not_valid(days_left, version):
+    still_day = -(int(days_left))
+    logger.info("L'attuale versione %s e' scaduta da %s giorni.", version, still_day)
+    after_deadline = \
+        {
+            'style': wx.OK | wx.ICON_EXCLAMATION,
+            'title': '%s %s' % (SWN, version),
+            'message': MSG_SCADUTO % (SWN, still_day)
+        }
+    show_dialog(after_deadline)
 
-        return version_ok and deadline_ok
 
-    def _is_registered(self):
-        return registration(self._clientid)
+def do_check(version):
+    """
+    Check if the running version is the most recent
+    If not, ask user to download the latest
+    """
+    try:
+        (remote_version, days_left) = get_version(version)
+    except Exception:
+        # This should not stop Speedtest
+        return True
 
-    def check_it(self):
-        check_ok = False
-        check_list = {1: self._softwareVersion, 2: self._is_registered}
-        for check in check_list:
-            check_ok = check_list[check]()
-            if not check_ok:
-                break
-        return check_ok
+    logger.info("L'ultima versione sul server e' la %s", remote_version)
+
+    if version == remote_version:
+        logger.info("E' in esecuzione l'ultima versione del software.")
+        return True
+
+    logger.info("Nuova versione disponibile [ this:%s | last:%s ]", version, remote_version)
+    if get_new_version(version, remote_version):
+        # Stop Speedtest
+        return False
+
+    logger.info("Si e' scelto di continuare ad utilizzare la vecchia versione del software.")
+
+    logger.info("Giorni rimasti comunicati dal server: %s", days_left)
+    if not days_left or int(days_left) >= 0:
+        logger.info("L'attuale versione %s scade fra %s giorni.", version, days_left)
+        return True
+
+    warn_version_not_valid(days_left, version)
+    return False
 
 
 if __name__ == '__main__':
@@ -176,5 +156,4 @@ if __name__ == '__main__':
 
     log_conf.init_log()
     app = wx.App(False)
-    checker = CheckSoftware("1.1.2")
-    checker.check_it()
+    print do_check('1.1.2')

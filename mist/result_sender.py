@@ -38,7 +38,7 @@ def upload_one_file(deliverer, filename):
         response = deliverer.upload(zipname)
 
         if response is not None:
-            (code, message) = backend_response.parse_response(response)
+            (code, message) = backend_response.parse(response)
             logger.info('Risposta dal server di upload: [%d] %s', code, message)
             upload_ok = code == 0
     except Exception as e:

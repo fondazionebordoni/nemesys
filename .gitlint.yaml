@@ -1,0 +1,11 @@
+pylint:
+  extensions:
+  - .py
+  command: pylint
+  arguments:
+  - "--rcfile=.pylintrc" # doesn't seem to work
+  - "--output-format=text"
+  - "--msg-template='{{abspath}}:{{line}}:{{column}}: [{{category}}:{{symbol}}] {{obj}}: {{msg}}'"
+  - "--reports=n"
+  filter: "^{filename}:(?P<line>{lines}):((?P<column>\\d+):)? \\[(?P<severity>.+):(?P<message_id>\\S+)\\]\\s+(: )?(?P<message>.+)$"
+  installation: "Run pip install pylint."

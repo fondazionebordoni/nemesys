@@ -26,14 +26,14 @@ import wx
 from optparse import OptionParser
 from time import sleep
 
-from common._generated_version import __version__, FULL_VERSION, __updated__
-from mist import gui_event
+from common import _generated_version
+from mist import gui_event, registration
 from mist import mist_cli
 from mist import mist_gui
 from mist import mist_options
 from mist import paths
 from mist import sysmonitor
-from mist.check_software import CheckSoftware
+from mist import check_software
 from mist.mist_controller import MistController
 
 logger = logging.getLogger(__name__)
@@ -44,8 +44,8 @@ def main(argv=None):
         argv = sys.argv[1:]
     '''Command line options.'''
     program_name = os.path.basename(sys.argv[0])
-    program_version = __version__
-    program_build_date = "%s" % __updated__
+    program_version = _generated_version.__version__
+    program_build_date = "%s" % _generated_version.__updated__
     program_version_string = '%%prog %s (%s)' % (program_version, program_build_date)
     program_longdesc = ''''''
 
@@ -90,7 +90,8 @@ def main(argv=None):
         print ("Impossibile inizializzare il logging, assicurarsi che il programma stia girando con "
                "i permessi di amministratore.")
         sys.exit()
-
+    logger.info('Avvio di MisuraInternet Speed Test v.%s on %s', _generated_version.FULL_VERSION, platform.platform())
+    logger.info('Pacchetto generato su %s in data %s', _generated_version.PLATFORM, _generated_version.__updated__)
     try:
         sysmonitor.SysMonitor().log_interfaces()
     except Exception as e:
@@ -108,19 +109,17 @@ def main(argv=None):
         sys.exit()
 
     try:
-        SWN = 'MisuraInternet Speed Test'
-        logger.info('Starting %s v.%s' % (SWN, FULL_VERSION))
-        #         mist(args_opts.text_based, file_opts, md5conf)
-        version = __version__
+        version = _generated_version.__version__
+        (file_opts, _, md5conf) = mist_options.parse(version)
         if not args_opts.text_based:
             app = wx.App(False)
 
-            # Check if this is the last version
-            version_ok = CheckSoftware(version).check_it()
-
-            if not version_ok:
+            # Check if this version is supported, exit if returns False
+            if not check_software.do_check(version):
                 return
-        (file_opts, _, md5conf) = mist_options.parse(version)
+            # Check/do registration, exit if fails
+            if not registration.is_registered(file_opts.clientid):
+                return
         mist_opts = mist_options.MistOptions(file_opts, md5conf)
         if args_opts.text_based:
             event_dispatcher = gui_event.CliEventDispatcher()

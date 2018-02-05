@@ -227,7 +227,7 @@ def getconf(code, filepath, url_string):
     return os.path.exists(filepath)
 
 
-def registration(code):
+def is_registered(code):
     if (len(code) < 4) or '|' in code:
         reg_ok = False
         logger.info("ClientID assente o di errata lunghezza, login richiesto")
@@ -281,5 +281,5 @@ if __name__ == '__main__':
     import log_conf
     log_conf.init_log()
     app = wx.App(False)
-    registration("456")
+    print is_registered("981a9f45d4e261e1cbc9921b457e5477")
     # getconf('ab0cd1ef2gh3ij4kl5mn6op7qr8st9uv', './../config/client.conf', 'https://finaluser.agcom244.fub.it/Config')
