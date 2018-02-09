@@ -28,12 +28,12 @@ from common import nem_exceptions
 from common.deliverer import Deliverer
 from common.nem_exceptions import SysmonitorException, TaskException
 from common.proof import Proof
+from common.scheduler import Scheduler
 from common.tester import Tester
 from nemesys import gui_server
 from nemesys import nem_options
 from nemesys import paths
 from nemesys.measure import Measure
-from nemesys.scheduler import Scheduler
 from nemesys.sysmonitor import SysProfiler
 
 logger = logging.getLogger(__name__)

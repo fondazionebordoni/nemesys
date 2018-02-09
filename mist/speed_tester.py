@@ -21,18 +21,16 @@ import logging
 from datetime import datetime
 from threading import Thread
 from time import sleep
-from urlparse import urlparse
 
 from common import iptools, ntptime
 from common import server
 from common.deliverer import Deliverer
-from common.nem_exceptions import MeasurementException
+from common.nem_exceptions import MeasurementException, TaskException
 from common.tester import Tester
 from mist import gui_event
 from mist import paths
 from mist import result_sender
 from mist import system_resource
-from mist import task
 from mist import test_type
 from mist.best_test import BestTest
 from mist.measure import Measure
@@ -45,19 +43,16 @@ MAX_TEST_RETRY = 3
 
 
 class SpeedTester(Thread):
-    def __init__(self, version, event_dispatcher, system_profiler, mist_options):
+    def __init__(self, version, event_dispatcher, system_profiler, scheduler, deliverer, mist_options):
         Thread.__init__(self)
 
         self._version = version
         self._event_dispatcher = event_dispatcher
         self._profiler = system_profiler
+        self._scheduler = scheduler
+        self._deliverer = deliverer
         self._client = mist_options.client
-        self._scheduler = mist_options.scheduler
-        # TODO: serve?         self._tasktimeout = mist_options.tasktimeout
-        self._httptimeout = mist_options.httptimeout
         self._testtimeout = mist_options.testtimeout
-        self._md5conf = mist_options.md5conf
-        self._deliverer = Deliverer(mist_options.repository, self._client.isp.certificate, self._httptimeout)
         self._running = False
         self._progress = 0.01
 
@@ -92,13 +87,12 @@ class SpeedTester(Thread):
         retry = 0
         best_ping_value = 4444
         best_bw_value = -1
-
         if t_type == test_type.PING:
             test_todo = my_task.ping
         elif test_type.is_http_down(t_type):
-            test_todo = my_task.http_download
+            test_todo = my_task.download
         elif test_type.is_http_up(t_type):
-            test_todo = my_task.http_upload
+            test_todo = my_task.upload
         else:
             logger.warn("Tipo di test da effettuare non definito: %s" % test_type.get_string_type(t_type))
             test_todo = 0
@@ -217,7 +211,6 @@ class SpeedTester(Thread):
             self._event_dispatcher.postEvent(gui_event.UpdateEvent("Scelta del server di misura "
                                                                    "in corso, attendere..."))
             try:
-                # chosen_server = server.get_server(self._event_dispatcher)
                 chosen_server = server.get_server(
                     lambda msg: self._event_dispatcher.postEvent(gui_event.UpdateEvent(msg)))
                 self._event_dispatcher.postEvent(
@@ -231,26 +224,21 @@ class SpeedTester(Thread):
                 return
         else:
             chosen_server = None
-        my_task = task.download_task(url=urlparse(self._scheduler),
-                                     client_id=self._client.id,
-                                     certificate=self._client.isp.certificate,
-                                     version=self._version,
-                                     md5conf=self._md5conf,
-                                     timeout=self._httptimeout,
-                                     server=chosen_server)
+        try:
+            my_task = self._scheduler.download_task(server=chosen_server)
 
-        if my_task is None:
+        except TaskException as e:
+            logger.warn(e)
             self._event_dispatcher.postEvent(
                 gui_event.ErrorEvent("Impossibile eseguire ora i test di misura. Riprovare tra qualche secondo."))
-        else:
+            my_task = None
+        if my_task:
             self._progress += 0.01
             self._event_dispatcher.postEvent(gui_event.ProgressEvent(self._progress))
             try:
                 test_types = [test_type.PING, test_type.HTTP_DOWN, test_type.HTTP_UP]
-                total_num_tasks = 0
-                for _ in test_types:
-                    total_num_tasks += 4
-                total_num_tasks *= 2  # Multiply by 2 to make two progress per task
+                total_num_tasks = my_task.ping + my_task.upload + my_task.download
+                total_num_tasks *= 2  # Multiply by 2 to make two progress per test
                 total_num_tasks += 3  # Two profilations and save test
                 self._progress_step = (1.0 - self._progress) / total_num_tasks
 

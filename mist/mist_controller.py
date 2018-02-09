@@ -23,18 +23,17 @@ from system_profiler import SystemProfiler
 
 
 class MistController(object):
-    def __init__(self, gui, version, event_dispatcher, mist_opts, task_file=None):
+    def __init__(self, gui, version, event_dispatcher, scheduler, deliverer, mist_opts):
         self._gui = gui
         self._version = version
-        # TODO: Should not pass ISP id, invent something else
         self._profiler = SystemProfiler(event_dispatcher,
                                         client=mist_opts.client)
         self._tester_profiler = SystemProfiler(event_dispatcher,
                                                client=mist_opts.client,
                                                from_tester=True)
         self._event_dispatcher = event_dispatcher
-        self._task_file = task_file
-        #         self._do_profile = (no_profile == False)
+        self._scheduler = scheduler
+        self._deliverer = deliverer
         self._speed_tester = None
         self._mist_opts = mist_opts
 
@@ -61,7 +60,12 @@ class MistController(object):
 
     def measure(self, profiler_result=None):
         """Callback to continue with measurement after profiling"""
-        self._speed_tester = SpeedTester(self._version, self._event_dispatcher, self._tester_profiler, self._mist_opts)
+        self._speed_tester = SpeedTester(version=self._version,
+                                         event_dispatcher=self._event_dispatcher,
+                                         system_profiler=self._tester_profiler,
+                                         scheduler=self._scheduler,
+                                         deliverer=self._deliverer,
+                                         mist_options=self._mist_opts)
         self._speed_tester.start()
 
     def kill_test(self):

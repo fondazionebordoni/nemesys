@@ -18,7 +18,7 @@
 
 import unittest
 
-import nemesys.task as task
+import common.task as task
 
 from common.nem_exceptions import TaskException
 
@@ -31,7 +31,7 @@ class TestTask(unittest.TestCase):
         import nemesys.log_conf as log_conf
         log_conf.init_log()
 
-    def testOldTask(self):
+    def test_old_task(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
  <calendar>
     <task>
@@ -61,7 +61,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual('2010-01-01 00:01:00',
                          res.start.strftime("%Y-%m-%d %H:%M:%S"))
 
-    def testNewTask(self):
+    def test_new_task(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
  <calendar>
     <task>
@@ -88,7 +88,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual('2010-01-01 00:01:00',
                          res.start.strftime("%Y-%m-%d %H:%M:%S"))
 
-    def testNewTaskWithoutNow(self):
+    def test_new_task_without_now(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
  <calendar>
     <task>
@@ -115,7 +115,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual('2010-01-01 00:01:00',
                          res.start.strftime("%Y-%m-%d %H:%M:%S"))
 
-    def testNewTaskNowFalse(self):
+    def test_new_task_now_false(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
  <calendar>
     <task>
@@ -140,7 +140,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual(res.server.id, 'fubsrvrmnmx03')
         self.assertEqual(res.now, False)
 
-    def testWaitTask(self):
+    def test_wait_task(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
  <calendar>
     <task wait='true'>
@@ -155,7 +155,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual(True, res.is_wait)
         self.assertEqual('Ciao'.encode('UTF-8'), res.message)
 
-    def testWaitTaskNodelay(self):
+    def test_wait_task_no_delay(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
  <calendar>
     <task wait='true'>
@@ -174,7 +174,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual(5 * 60, res.delay)
         self.assertEqual(True, res.is_wait)
 
-    def testNotTaskXml(self):
+    def test_not_task_xml(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
     <measure>
         <content/>
@@ -186,7 +186,7 @@ class TestTask(unittest.TestCase):
         except TaskException:
             self.assertEqual(True, True)
 
-    def testInvalidXml(self):
+    def test_invalid_xml(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
     <measure>
         <content/>
@@ -198,20 +198,22 @@ class TestTask(unittest.TestCase):
         except TaskException:
             self.assertEqual(True, True)
 
-    def testNotXml(self):
+    def test_not_xml(self):
         xml = '''Ciao'''
-        try:
+        with self.assertRaises(TaskException):
             task.xml2task(xml)
-            self.assertEqual(True, False)
-        except TaskException:
-            self.assertEqual(True, True)
 
-    def testEmptyTask(self):
+    def test_empty_task(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?><calendar/>'''
-        res = task.xml2task(xml)
-        self.assertEqual(None, res)
+        with self.assertRaises(TaskException):
+            task.xml2task(xml)
 
-    def testNewTaskWithMessage(self):
+    def test_none_task(self):
+        xml = None
+        with self.assertRaises(TaskException):
+            task.xml2task(xml)
+
+    def test_new_task_with_message(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
  <calendar>
     <task>
@@ -241,6 +243,29 @@ class TestTask(unittest.TestCase):
         self.assertEqual('Ciao',
                          res.message)
 
+    def test_10_ping_task(self):
+        xml = '''<?xml version="1.0" encoding="UTF-8"?><calendar>
+<task>
+        <id>41311310</id>
+        <nftpup mult="10">4</nftpup>
+        <nftpdown>4</nftpdown>
+        <nping delay="1" icmp="1">10</nping>
+        <start now="1">2018-02-08 11:28:31</start>
+        <srvid>fubsrvrmnmx03</srvid>
+        <srvip>193.104.137.133</srvip>
+        <srvname>NAMEX</srvname>
+        <srvlocation>Roma</srvlocation>
+        <ftpuppath>/upload/1994.rnd</ftpuppath>
+        <ftpdownpath>/download/1000.rnd</ftpdownpath>
+    </task>
+</calendar>
+
+    '''
+        res = task.xml2task(xml)
+        self.assertNotEqual(None, res)
+        self.assertEqual(10, res.ping)
+        self.assertEqual(4, res.upload)
+        self.assertEqual(4, res.download)
 
 if __name__ == "__main__":
     unittest.main()

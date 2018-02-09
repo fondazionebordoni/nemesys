@@ -22,9 +22,8 @@ Created on 13/giu/2016
 import logging
 import urlparse
 
-from common import httputils
+from common import httputils, task
 from common.nem_exceptions import TaskException
-from nemesys import task
 
 logger = logging.getLogger(__name__)
 
@@ -41,22 +40,25 @@ class Scheduler(object):
         self._version = version
         self._httptimeout = timeout
 
-    def download_task(self):
+    def download_task(self, server=None):
         """
         Download task from scheduler, returns a Task
         """
         url = urlparse.urlparse(self._url)
         certificate = self._client.isp.certificate
+        request_string = '{path}?clientid={client_id}&version={version}&confid={conf_id}'.format(
+            path=url.path,
+            client_id=self._client.id,
+            version=self._version,
+            conf_id=self._md5conf)
+        if server:
+            request_string = '{str}&server={server}'.format(str=request_string, server=server)
         connection = None
         try:
             connection = httputils.get_verified_connection(url=url,
                                                            certificate=certificate,
                                                            timeout=self._httptimeout)
-            connection.request('GET', '%s?clientid=%s&version=%s&confid=%s'
-                               % (url.path,
-                                  self._client.id,
-                                  self._version,
-                                  self._md5conf))
+            connection.request('GET', request_string)
             data = connection.getresponse().read()
         except Exception as e:
             logger.error('Impossibile scaricare lo scheduling: %s', e)

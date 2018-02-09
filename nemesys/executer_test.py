@@ -20,11 +20,10 @@
 import logging
 import threading
 
-from common import nem_exceptions, _generated_version
+from common import nem_exceptions, _generated_version, task
 from common.deliverer import Deliverer
 from common.server import Server
 from nemesys import nem_options
-from nemesys import task
 from nemesys.executer import Executer
 from nemesys.sysmonitor import SysProfiler
 

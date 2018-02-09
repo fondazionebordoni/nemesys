@@ -27,13 +27,15 @@ from optparse import OptionParser
 from time import sleep
 
 from common import _generated_version
+from common.deliverer import Deliverer
+from common.scheduler import Scheduler
+from mist import check_software
 from mist import gui_event, registration
 from mist import mist_cli
 from mist import mist_gui
 from mist import mist_options
 from mist import paths
 from mist import sysmonitor
-from mist import check_software
 from mist.mist_controller import MistController
 
 logger = logging.getLogger(__name__)
@@ -121,10 +123,16 @@ def main(argv=None):
             if not registration.is_registered(file_opts.clientid):
                 return
         mist_opts = mist_options.MistOptions(file_opts, md5conf)
+        scheduler = Scheduler(scheduler_url=mist_opts.scheduler,
+                              client=mist_opts.client,
+                              md5conf=mist_opts.md5conf,
+                              version=version,
+                              timeout=mist_opts.httptimeout)
+        deliverer = Deliverer(mist_opts.repository, mist_opts.client.isp.certificate, mist_opts.httptimeout)
         if args_opts.text_based:
             event_dispatcher = gui_event.CliEventDispatcher()
             GUI = mist_cli.MistCli(event_dispatcher)
-            controller = MistController(GUI, version, event_dispatcher, mist_opts)
+            controller = MistController(GUI, version, event_dispatcher, scheduler, deliverer, mist_opts)
             GUI.set_listener(controller)
             GUI.start()
         else:
@@ -133,7 +141,7 @@ def main(argv=None):
             GUI = mist_gui.mistGUI(None, -1, "",
                                    style=wx.DEFAULT_FRAME_STYLE)
             event_dispatcher = gui_event.WxGuiEventDispatcher(GUI)
-            controller = MistController(GUI, version, event_dispatcher, mist_opts)
+            controller = MistController(GUI, version, event_dispatcher, scheduler, deliverer, mist_opts)
             GUI.init_frame(version, event_dispatcher)
             GUI.set_listener(controller)
             app.SetTopWindow(GUI)
