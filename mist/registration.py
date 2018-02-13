@@ -219,8 +219,8 @@ def getconf(code, filepath, url_string):
 
     # Controllo se nel file di configurazione e' presente il codice di attivazione. #
     if data.find(code) != -1 or data.find("username") != -1:
-        data2file = open(filepath, 'w')
-        data2file.write(data)
+        with open(filepath, 'w') as data2file:
+            data2file.write(data)
     else:
         raise Exception(data.replace(";", ""))
 
@@ -229,50 +229,51 @@ def getconf(code, filepath, url_string):
 
 def is_registered(code):
     if (len(code) < 4) or '|' in code:
-        reg_ok = False
-        logger.info("ClientID assente o di errata lunghezza, login richiesto")
-        show_dialog(RegInfo)
-        for retry in range(MAXretry):
-            # # Prendo un codice licenza valido sintatticamente    ##
-            logger.info('Tentativo di registrazione %s di %s' % (retry + 1, MAXretry))
-            title = "Tentativo %s di %s" % (retry + 1, MAXretry)
-            default = ""
-            dlg = Dialog(None, title, default, wx.ID_OK)
-            res = dlg.ShowModal()
-            code = dlg.get_value()
-            dlg.Destroy()
-            logger.info("Codici di accesso inseriti dall'utente: %s" % code)
-            if res != wx.ID_OK:
-                logger.warning('Registration aborted at attempt number %d' % (retry + 1))
-                break
+        return False
 
-            filepath = paths.CONF_MAIN
-            try:
-                if code is not None and len(code) > 4:
-                    # Prendo il file di configurazione. #
-                    reg_ok = getconf(code, filepath, configurationServer)
-                    if reg_ok is True:
-                        logger.info('Configuration file successfully downloaded and saved')
-                        break
-                    else:
-                        logger.error('Configuration file not correctly saved')
-                        show_dialog(ErrorSave)
+
+def register():
+    reg_ok = False
+    logger.info("ClientID assente o di errata lunghezza, login richiesto")
+    show_dialog(RegInfo)
+    for retry in range(MAXretry):
+        # # Prendo un codice licenza valido sintatticamente    ##
+        logger.info('Tentativo di registrazione %s di %s', retry + 1, MAXretry)
+        title = "Tentativo %s di %s" % (retry + 1, MAXretry)
+        default = ""
+        dlg = Dialog(None, title, default, wx.ID_OK)
+        res = dlg.ShowModal()
+        code = dlg.get_value()
+        dlg.Destroy()
+        logger.info("Codici di accesso inseriti dall'utente: %s", code)
+        if res != wx.ID_OK:
+            logger.warning('Registration aborted at attempt number %d', retry + 1)
+            break
+
+        filepath = paths.CONF_MAIN
+        try:
+            if code is not None and len(code) > 4:
+                # Prendo il file di configurazione. #
+                reg_ok = getconf(code, filepath, configurationServer)
+                if reg_ok is True:
+                    logger.info('Configuration file successfully downloaded and saved')
+                    break
                 else:
-                    logger.error('Wrong username/password')
-                    show_dialog(ErrorCode)
-            except Exception as error:
-                logger.error('Configuration file not downloaded or incorrect: %s' % error)
-                show_dialog(ErrorDownload, str(error))
+                    logger.error('Configuration file not correctly saved')
+                    show_dialog(ErrorSave)
+            else:
+                logger.error('Wrong username/password')
+                show_dialog(ErrorCode)
+        except Exception as error:
+            logger.error('Configuration file not downloaded or incorrect: %s', error)
+            show_dialog(ErrorDownload, str(error))
 
-            if not (retry + 1 < MAXretry):
-                show_dialog(ErrorRetry)
+        if retry >= MAXretry:
+            show_dialog(ErrorRetry)
 
-        if not reg_ok:
-            logger.info('Verifica della registrazione del software fallita')
-            show_dialog(ErrorRegistration)
-
-    else:
-        reg_ok = True
+    if not reg_ok:
+        logger.info('Verifica della registrazione del software fallita')
+        show_dialog(ErrorRegistration)
 
     return reg_ok
 

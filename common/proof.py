@@ -20,7 +20,12 @@
 class Proof(object):
 
     def __init__(self, test_type, start_time, duration, bytes_nem=0, bytes_tot=0, spurious=0, errorcode=0):
-        self._type = test_type
+        if 'down' in test_type:
+            self._type = 'download'
+        elif 'up' in test_type:
+            self._type = 'upload'
+        else:
+            self._type = test_type
         self._start = start_time
         self._duration = duration
         self._bytes_nem = bytes_nem

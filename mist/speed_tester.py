@@ -226,7 +226,10 @@ class SpeedTester(Thread):
             chosen_server = None
         try:
             my_task = self._scheduler.download_task(server=chosen_server)
-
+            if my_task.is_wait:
+                logger.warn('Got wait task, message: %s', my_task.message)
+                self._event_dispatcher.postEvent(gui_event.ErrorEvent(my_task.message))
+                my_task = None
         except TaskException as e:
             logger.warn(e)
             self._event_dispatcher.postEvent(
@@ -279,7 +282,6 @@ class SpeedTester(Thread):
 
                 stop_time = datetime.fromtimestamp(ntptime.timestamp())
                 measure.savetime(start_time, stop_time)
-                logger.debug(measure)
 
                 # # Salvataggio della misura ##
                 self._progress += self._progress_step

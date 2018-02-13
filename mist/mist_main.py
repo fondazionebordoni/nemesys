@@ -121,7 +121,10 @@ def main(argv=None):
                 return
             # Check/do registration, exit if fails
             if not registration.is_registered(file_opts.clientid):
-                return
+                if not registration.register():
+                    return
+                # Reload opts with new config
+                (file_opts, _, md5conf) = mist_options.parse(version)
         mist_opts = mist_options.MistOptions(file_opts, md5conf)
         scheduler = Scheduler(scheduler_url=mist_opts.scheduler,
                               client=mist_opts.client,

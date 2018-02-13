@@ -41,18 +41,20 @@ logger = logging.getLogger(__name__)
 class Deliverer(object):
     def __init__(self, url, certificate, timeout=60):
         self._url = url
-        self._certificate = certificate
         self._timeout = timeout
-        try:
-            with open(self._certificate, "rb") as key_file:
-                self.private_key = serialization.load_pem_private_key(
-                    key_file.read(),
-                    password=None,
-                    backend=default_backend()
-                )
-        except Exception as e:
-            logger.warn('Impossibile inizializzare chiave privata, i file non verranno firmate: %s', e)
-            self.private_key = None
+        self._private_key = None
+        if certificate:
+            logger.info("Carico certificato da %s", certificate)
+            try:
+                with open(certificate, "rb") as key_file:
+                    self._private_key = serialization.load_pem_private_key(
+                        key_file.read(),
+                        password=None,
+                        backend=default_backend()
+                    )
+            except Exception as e:
+                logger.warn('Impossibile inizializzare chiave privata, i file non verranno firmate: %s', e)
+        self._certificate = certificate
 
     def upload(self, filename):
         """
@@ -95,13 +97,13 @@ class Deliverer(object):
 
         # Gestione della firma del file
         signature_file = None
-        if self.private_key:
+        if self._private_key:
             # Crea il file della firma
             with open(filename, 'rb') as data_file:
                 data = data_file.read()
-                signature = self.private_key.sign(data,
-                                                  padding.PKCS1v15(),
-                                                  hashes.SHA1())
+                signature = self._private_key.sign(data,
+                                                   padding.PKCS1v15(),
+                                                   hashes.SHA1())
             with open('%s.sign' % filename[0:-4], 'wb') as signature_file:
                 signature_file.write(signature)
 

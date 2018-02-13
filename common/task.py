@@ -118,6 +118,7 @@ def xml2task(xml):
     try:
         xml_dict = xmltodict.parse(xml)
     except Exception as e:
+        logger.error('Impossibile fare parsing del task: %s', xml)
         raise TaskException("Impossibile fare il "
                             "parsing del task ricevuto: %s" % e)
 

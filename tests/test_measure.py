@@ -51,6 +51,8 @@ class TestMeasure(unittest.TestCase):
                   bytes_tot=1048579,
                   spurious=0.01)
         m.savetest(p)
+        xml_string = str(m)
+        self.assertIsNotNone(xml_string)
 
     def testPing(self):
         c = Client('fub0010000001',
