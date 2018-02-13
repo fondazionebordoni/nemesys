@@ -52,7 +52,7 @@ class Scheduler(object):
             version=self._version,
             conf_id=self._md5conf)
         if server:
-            request_string = '{str}&server={server}'.format(str=request_string, server=server)
+            request_string = '{str}&server={server}'.format(str=request_string, server=server.ip)
         connection = None
         try:
             connection = httputils.get_verified_connection(url=url,
