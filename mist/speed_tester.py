@@ -18,13 +18,13 @@
 # TODO fix use of parameter _running
 
 import logging
+import os
 from datetime import datetime
 from threading import Thread
 from time import sleep
 
 from common import iptools, ntptime
 from common import server
-from common.deliverer import Deliverer
 from common.nem_exceptions import MeasurementException, TaskException
 from common.tester import Tester
 from mist import gui_event
@@ -202,7 +202,7 @@ class SpeedTester(Thread):
             self._running = False
             return
 
-        os = self._profiler.get_os()
+        operating_system = self._profiler.get_os()
         self._profiler.profile_in_background(
             {system_resource.RES_CPU, system_resource.RES_RAM, system_resource.RES_ETH, system_resource.RES_WIFI})
         self._progress += 0.01
@@ -254,7 +254,7 @@ class SpeedTester(Thread):
 
                 tester = Tester(dev=dev, host=my_task.server, timeout=self._testtimeout)
 
-                measure = Measure(self._client, start_time, my_task.server, ip, os, mac, self._version)
+                measure = Measure(self._client, start_time, my_task.server, ip, operating_system, mac, self._version)
 
                 profiler_result = self._profiler.profile_once({system_resource.RES_HOSTS, system_resource.RES_TRAFFIC})
                 self._progress += self._progress_step
