@@ -130,7 +130,7 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
             # ip_table = arp.do_arping(dev_ip_address, netmask, real_subnet)
             ip_table = arp.do_arping(ip_destinations)
         except Exception as e:
-            logger.warn('Errore durante la ricerca host con ARP: %s', e)
+            logger.warn('Errore durante la ricerca dispositivi con ARP: %s', e)
             return 0
         hosts = 'HOSTS: '
         for key in ip_table:
@@ -149,7 +149,7 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
                 ping_thread.start()
                 ping_threads.append(ping_thread)
             except Exception as e:
-                logger.warn('Errore durante la ricerca host con PING: %s', e)
+                logger.warn('Errore durante la ricerca dispositivi con PING: %s', e)
                 break
             if i == MAX_PING_HOSTS:
                 break
@@ -158,7 +158,7 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
             ping_thread.join()
 
             if ping_thread.status:
-                logger.info('Trovato host: %s (in %.2f ms)', ping_thread.ip, ping_thread.elapsed * 1000)
+                logger.info('Trovato dispositivi: %s (in %.2f ms)', ping_thread.ip, ping_thread.elapsed * 1000)
                 n_hosts += 1
 
     if not real_subnet:

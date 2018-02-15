@@ -155,26 +155,28 @@ class SysMonitor(object):
 
             if iptools.is_public_ip(ip):
                 status = True
-                info = 'La scheda di rete in uso ha un IP pubblico. Non controllo il numero degli altri host in rete.'
+                info = 'La scheda di rete in uso ha un IP pubblico. Non controllo il numero di dispositivi in rete.'
             else:
                 if mask != 0:
                     value = checkhost.count_hosts(ip, mask, self._bw_up, self._bw_down, self._ispid, use_arp)
-                    logger.info('Trovati %d host in rete.' % value)
+                    logger.info('Trovati %d dispositivi in rete.', value)
                     if value < 0:
-                        raise SysmonitorException('impossibile determinare il numero di host in rete.',
+                        raise SysmonitorException('Impossibile determinare il numero di dispositivi in rete.',
                                                   nem_exceptions.BADHOST)
                     elif value == 0:
                         if use_arp:
-                            logger.warning("Passaggio a PING per controllo host in rete")
+                            logger.warning("Passaggio a PING per controllo dispositivi in rete")
                             return self.checkhosts(False)
                         else:
-                            raise SysmonitorException('impossibile determinare il numero di host in rete.',
+                            raise SysmonitorException('Non risulta nessun dispositivo collegato in rete, '
+                                                      'verifica connessione al router.',
                                                       nem_exceptions.BADHOST)
                     elif value > TH_HOST:
-                        raise SysmonitorException('Presenza altri host in rete.', nem_exceptions.TOOHOST)
+                        raise SysmonitorException('Ci sono {} altri dispositivi collegati alla tua '
+                                                  'rete, scollegali.'.format(value - 1), nem_exceptions.TOOHOST)
                     else:
                         status = True
-                        info = 'Trovati %d host in rete.' % value
+                        info = 'Trovati %d dispositivi in rete.' % value
                 else:
                     raise SysmonitorException('Impossibile recuperare il valore della maschera dell\'IP: %s' % ip,
                                               nem_exceptions.BADMASK)
