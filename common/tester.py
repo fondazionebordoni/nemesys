@@ -21,7 +21,7 @@ import socket
 from datetime import datetime
 from optparse import OptionParser
 
-from common import iptools
+from common import iptools, utils
 from common import nem_exceptions
 from common import ntptime
 from common import ping
@@ -62,7 +62,10 @@ class Tester(object):
             tcp_window_size = 65 * 1024
         else:
             num_sessions = 1
-            tcp_window_size = -1
+            if utils.is_windows():
+                tcp_window_size = 256 * 1024
+            else:
+                tcp_window_size = -1
         return self._testerhttpup.test(url, callback_update_speed, num_sessions=num_sessions,
                                        tcp_window_size=tcp_window_size)
 
