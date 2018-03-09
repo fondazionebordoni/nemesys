@@ -34,6 +34,7 @@ from common.testerhttpup import HttpTesterUp
 HTTP_BUFF = 8 * 1024
 BW_3M = 3000000
 BW_100M = 100000000
+BW_500M = 500000000
 logger = logging.getLogger(__name__)
 
 
@@ -45,12 +46,19 @@ class Tester(object):
         self._testerhttpup = HttpTesterUp(dev)
         self._testerhttpdown = HttpTesterDown(dev)
 
-    def testhttpdown(self, callback_update_speed=None, num_sessions=7):
+    def testhttpdown(self, callback_update_speed=None, bw=BW_100M):
         url = "http://%s/file.rnd" % self._host.ip
-        return self._testerhttpdown.test(url, callback_update_speed, num_sessions=num_sessions)
+        if bw >= BW_500M and utils.is_darwin():
+            num_sessions = 1
+            buffer_size = 2 * 8192
+        else:
+            num_sessions = 7
+            buffer_size = 8192
+        return self._testerhttpdown.test(url, callback_update_speed, num_sessions=num_sessions, buffer_size=buffer_size)
 
     def testhttpup(self, callback_update_speed=None, bw=BW_100M):
         url = "http://%s:8080/file.rnd" % self._host.ip
+        buffer_size = 8192
         if bw < BW_3M:
             num_sessions = 1
             tcp_window_size = 22 * 1024
@@ -66,8 +74,10 @@ class Tester(object):
                 tcp_window_size = 256 * 1024
             else:
                 tcp_window_size = -1
+                if utils.is_darwin():
+                    buffer_size = 3 * 8129
         return self._testerhttpup.test(url, callback_update_speed, num_sessions=num_sessions,
-                                       tcp_window_size=tcp_window_size)
+                                       tcp_window_size=tcp_window_size, buffer_size=buffer_size)
 
     def testping(self, timeout=10):
         # si utilizza funzione ping.py
@@ -144,7 +154,7 @@ def main():
                 print("Error: [%d] %s" % (e.errorcode, str(e)))
         else:
             try:
-                res = t.testhttpdown(None)
+                res = t.testhttpdown(bw=bw)
                 printout_http(res)
             except MeasurementException as e:
                 print("Error: %s" % str(e))

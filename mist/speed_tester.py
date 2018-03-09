@@ -129,7 +129,8 @@ class SpeedTester(Thread):
                         best_testres_profiler = profiler_result
                 else:
                     if test_type.is_http_down(t_type):
-                        proof = tester.testhttpdown(self.receive_partial_results_down)
+                        proof = tester.testhttpdown(self.receive_partial_results_down,
+                                                    bw=self._client.profile.download * 1000)
                     elif test_type.is_http_up(t_type):
                         proof = tester.testhttpup(self.receive_partial_results_up,
                                                   bw=self._client.profile.upload * 1000)

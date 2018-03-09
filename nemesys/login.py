@@ -300,7 +300,7 @@ def main():
         try:
             _prop = read_properties(config_file)
         except Exception as e:
-            logger.error('Impossibile leggere il file di configuraizone da %s: %s', config_file, e)
+            logger.error('Impossibile leggere il file di configurazione da %s: %s', config_file, e)
             ErrorDialog('File di configurazione non trovata in {}, '
                         'impossibile procedere con l\'installazione'.format(config_file))
             sys.exit(1)
@@ -314,7 +314,7 @@ def main():
             logger.info('File di configurazione gia\' scaricato precedentemente')
         else:
             logger.error('Login fallito precedentemente, bisogna reinstallare Nemesys')
-            # Dialog to unistall and retry
+            # Dialog to uninstall and retry
             MaxError()
     else:
         try:

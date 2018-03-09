@@ -37,8 +37,7 @@ RAMPUP_SECS = 2
 # Long timeout since needed in some cases
 TEST_TIMEOUT = 18
 # 1 Gbps for 15 seconds
-MAX_TRANSFERED_BYTES = 1000 * 1000000 * 15 / 8
-BUFSIZE = 8192
+MAX_TRANSFERRED_BYTES = 1000 * 1000000 * 20 / 8
 
 logger = logging.getLogger(__name__)
 
@@ -72,27 +71,29 @@ def test_from_server_response(response):
 
 
 class ChunkGenerator(object):
-    def __init__(self, fakefile, stop_event):
+    def __init__(self, fakefile, buffer_size, stop_event):
         self.fakefile = fakefile
+        self.buffer_size = buffer_size
         self.stop_event = stop_event
 
     def gen_chunk(self):
         while not self.stop_event.isSet():
-            yield self.fakefile.read(BUFSIZE)
+            yield self.fakefile.read(self.buffer_size)
 
 
 class Uploader(threading.Thread):
-    def __init__(self, url, stop_event, result_queue, measurement_id, tcp_window_size):
+    def __init__(self, url, stop_event, result_queue, measurement_id, tcp_window_size, buffer_size):
         threading.Thread.__init__(self)
         self.url = url
         self.stop_event = stop_event
         self.result_queue = result_queue
         self.measurement_id = measurement_id
         self.tcp_window_size = tcp_window_size
+        self.buffer_size = buffer_size
 
     def run(self):
-        fakefile = Fakefile(MAX_TRANSFERED_BYTES)
-        chunk_generator = ChunkGenerator(fakefile, self.stop_event)
+        fakefile = Fakefile(MAX_TRANSFERRED_BYTES)
+        chunk_generator = ChunkGenerator(fakefile, self.buffer_size, self.stop_event)
         response = None
         httpc = httpclient.HttpClient()
         try:
@@ -121,18 +122,20 @@ class Uploader(threading.Thread):
 
 
 class Producer(threading.Thread):
-    def __init__(self, url, stop_event, result_queue, num_sessions, tcp_window_size):
+    def __init__(self, url, stop_event, result_queue, num_sessions, tcp_window_size, buffer_size=8192):
         super(Producer, self).__init__()
         self.url = url
         self.stop_event = stop_event
         self.result_queue = result_queue
         self.num_sessions = num_sessions
         self.tcp_window_size = tcp_window_size
+        self.buffer_size = buffer_size
 
     def run(self):
         measurement_id = 'sess-%d' % random.randint(0, 100000)
         for _ in range(0, self.num_sessions):
-            thread = Uploader(self.url, self.stop_event, self.result_queue, measurement_id, self.tcp_window_size)
+            thread = Uploader(self.url, self.stop_event, self.result_queue, measurement_id,
+                              self.tcp_window_size, self.buffer_size)
             thread.start()
 
 

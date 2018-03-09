@@ -132,6 +132,7 @@ class Executer(object):
         proofs = []
         i = 1
         upload_bw = self._client.profile.upload * 1000
+        download_bw = self._client.profile.download * 1000
         while i <= n_reps:
             n_errors = 0
             while n_errors < MAX_ERRORS:
@@ -148,7 +149,7 @@ class Executer(object):
                         if i == n_reps:
                             self._gui_server.result(test_type, proof.duration)
                     elif test_type == 'download':
-                        proof = t.testhttpdown(self.callback_httptest)
+                        proof = t.testhttpdown(self.callback_httptest, bw=download_bw)
                         kbps = proof.bytes_tot * 8.0 / proof.duration
                         logger.info('Download result: %.3f kbps', kbps)
                         logger.info('Percentuale di traffico spurio: %.2f%%', proof.spurious * 100)
@@ -158,8 +159,7 @@ class Executer(object):
                                                 result=result,
                                                 spurious=proof.spurious)
                     else:
-                        proof = t.testhttpup(self.callback_httptest,
-                                             upload_bw)
+                        proof = t.testhttpup(self.callback_httptest, upload_bw)
                         kbps = proof.bytes_tot * 8.0 / proof.duration
                         logger.info('Upload result: %.3f kbps', kbps)
                         logger.info('Percentuale di traffico spurio: %.2f%%', proof.spurious * 100)

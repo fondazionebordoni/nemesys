@@ -30,11 +30,11 @@ class Fakefile(object):
     def read(self, bufsize=-1):
         if bufsize <= 0:
             bufsize = 8192
-        if (self._bytes < bufsize):
+        if self._bytes < bufsize:
             bufsize = self._bytes
         if bufsize <= 0:
             bufsize = 8192
-        if (self._bytes < bufsize):
+        if self._bytes < bufsize:
             bufsize = self._bytes
         if self._bytes <= 0:
             return None
