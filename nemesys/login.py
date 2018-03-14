@@ -22,16 +22,44 @@ import logging
 import os
 import sys
 import tkMessageBox
+import urllib2
 
+from common import httputils
 from common import utils
 from nemesys import log_conf
 from nemesys import paths
-from nemesys.getconf import getconf
+
+CANCEL_MESSAGE = '''L'autenticazione non e' andata a buon fine.
+Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \
+dopo aver controllato user-id e password che ti sono state invitate in fase \
+di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it.'''
+
+MAX_ERROR_MESSAGE = '''Le credenziali non sono corrette o la licenza non è più valida.
+Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \
+dopo aver controllato user-id e password che ti sono state invitate in fase \
+di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it.'''
+
+GENERIC_ERROR_MESSAGE = '''Si è verificato un errore. Controllare:
+
+- di avere accesso alla rete,
+- di aver digitato correttamente le credenziali di accesso,
+- di avere una licenza attiva,
+- di non aver ottenuto un certificato con Ne.Me.Sys. meno di 45 giorni antecedenti ad oggi.
+
+Dopo 5 tentativi di accesso falliti, sarà necessario disinstallare Ne.Me.Sys e reinstallarlo nuovamente.'''
+
+CONNECTION_ERROR_MESSAGE = '''Connessione fallita.
+Controllare di avere accesso alla rete.'''
+
+CODE_ERROR_MESSAGE = '''Autenticazione fallita o licenza non attiva.
+
+Controllare i dati di accesso e la presenza di una licenza attiva al sito www.misurainternet.it'''
+
+CLIENT_CONFIG = 'client.conf'
+BACKEND_URL = 'https://finaluser.agcom244.fub.it/Config'
+
 
 logger = logging.getLogger(__name__)
-
-_clientConfigurationFile = 'client.conf'
-_configurationServer = 'https://finaluser.agcom244.fub.it/Config'
 
 
 class LoginException(Exception):
@@ -78,7 +106,6 @@ def write_properties(filename, properties):
             inf.write("\r\n" + key + " = " + properties[key])
 
 
-### Activation code ###
 def getCode():
     """
     Apre una finestra che chiede il codice licenza. Resituisce il codice licenza e chiude la finestra.
@@ -89,75 +116,18 @@ def getCode():
     app = LoginGui(master=root)
     app.master.title("Attivazione Ne.Me.Sys")
     app.mainloop()
-    appresult = str(app.result)
+    serial_code = str(app.result)
     if root:
         root.destroy()
 
-    if appresult == 'Cancel':
+    if serial_code == 'Cancel':
         logger.info('Utente ha premuto Cancel')
         raise LoginCancelledException()
 
-    if appresult == 'None' or len(appresult) < 4:
+    if serial_code == 'None' or len(serial_code) < 4:
         raise LoginAuthenticationException('Nome utente o password sbagliato')
 
-    return appresult
-
-
-def CodeError():
-    """
-    Errore in caso di credenziali errate
-    """
-    message = '''Autenticazione fallita o licenza non attiva.
-
-Controllare i dati di accesso e la presenza di una licenza attiva al sito www.misurainternet.it'''
-    ErrorDialog(message)
-
-
-def ConnectionError():
-    """
-    Errore in caso di connessione fallita
-    """
-    message = '''Connessione fallita.
-Controllare di avere accesso alla rete.'''
-    ErrorDialog(message)
-
-
-def GenericError():
-    """
-    Errore in caso di tentativo di download non andato a buon fine
-    """
-    message = '''Si è verificato un errore. Controllare:
-
-- di avere accesso alla rete,
-- di aver digitato correttamente le credenziali di accesso,
-- di avere una licenza attiva,
-- di non aver ottenuto un certificato con Ne.Me.Sys. meno di 45 giorni antecedenti ad oggi.
-
-Dopo 5 tentativi di accesso falliti, sarà necessario disinstallare Ne.Me.Sys e reinstallarlo nuovamente.'''
-    ErrorDialog(message)
-
-
-def MaxError():
-    """
-    Errore in caso di quinto inserimento errato di credenziali
-    """
-    message = '''Le credenziali non sono corrette o la licenza non è più valida.
-Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \
-dopo aver controllato user-id e password che ti sono state invitate in fase \
-di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it.'''
-    ErrorDialog(message)
-
-
-def CancelError():
-    """
-    Utente e' uscito
-    """
-    message = '''L'autenticazione non e' andata a buon fine.
-Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \
-dopo aver controllato user-id e password che ti sono state invitate in fase \
-di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it.'''
-    ErrorDialog(message)
-    sys.exit()
+    return serial_code
 
 
 def ErrorDialog(message):
@@ -181,28 +151,34 @@ def OkDialog():
     root.destroy()
 
 
-### Function to Download Configuration File ###
-def getActivationFile(appresult, path):
+def getActivationFile(serial_code, path):
     """
       Scarica il file di configurazione.
     """
-    ac = appresult
-    logger.info('Codici ricevuti: %s', ac)
+    logger.info('Codici ricevuti: %s', serial_code)
 
     try:
-        download = getconf(ac, path, _clientConfigurationFile, _configurationServer)
-    except IOError as e:
-        logger.error('Impossible scrivere il file di configurazione: %s', e)
-        raise
+        url = '%s?clientid=%s' % (BACKEND_URL, serial_code)
+        resp = urllib2.urlopen(url, context=httputils.no_verify_ssl_context())
+        data = resp.read()
     except Exception as e:
         logger.error('impossibile scaricare il file di configurazione: %s', e)
         raise LoginConnectionException(str(e))
-    if download is not True:
+
+    if 'clientid' in str(data):
+        try:
+            with open('%s/%s' % (path, CLIENT_CONFIG), 'w') as myfile:
+                myfile.write(data)
+                logger.info('File di configurazione scaricato con successo')
+                OkDialog()
+        except IOError as e:
+            logger.error('Impossible scrivere il file di configurazione: %s', e)
+            raise LoginException('Impossibile scrivere il file di configurazione: %s' % e)
+    elif 'non valido' in str(data):
         logger.info('Ricevuto errore dal server, credenziali errati o licenza non attiva.')
         raise LoginAuthenticationException('')
     else:
-        logger.info('File di configurazione scaricato con successo')
-        OkDialog()
+        raise Exception('Errore nel file di configurazione')
 
 
 class LoginGui(Tkinter.Frame):
@@ -269,21 +245,24 @@ def try_to_activate():
     while j < 5:
         # Prendo un codice licenza valido sintatticamente
         try:
-            appresult = getCode()
-            getActivationFile(appresult, paths._CONF_DIR)
-            return appresult
+            serial_code = getCode()
+            getActivationFile(serial_code, paths._CONF_DIR)
+            return serial_code
         except LoginAuthenticationException:
             logger.warning('Errore di autenticazione n. %d', j)
-            errorfunc = CodeError
+            message = CODE_ERROR_MESSAGE
         except LoginConnectionException as e:
             logger.warning('Problema di connessione al server per l\'autenticazione: %s', e)
-            errorfunc = ConnectionError
+            message = CONNECTION_ERROR_MESSAGE
         except LoginCancelledException:
             raise
+        except LoginException as e:
+            logger.warning('Si e\' riscontrato un problema nel login: %s', e)
+            message = str(e)
         except Exception as e:
             logger.error('Si e\' riscontrato un problema scaricando il file di configurazione: %s', e)
-            errorfunc = GenericError
-        errorfunc()
+            message = GENERIC_ERROR_MESSAGE
+        ErrorDialog(message)
         j += 1
     raise MaxLoginException()
 
@@ -315,20 +294,18 @@ def main():
         else:
             logger.error('Login fallito precedentemente, bisogna reinstallare Nemesys')
             # Dialog to uninstall and retry
-            MaxError()
+            ErrorDialog(MAX_ERROR_MESSAGE)
     else:
         try:
             code = try_to_activate()
             logger.info('Autenticazione completato con successo')
+            write_properties(config_file, {'code': code, 'registered': 'ok'})
         except LoginCancelledException:
-            CancelError()
-            sys.exit(0)
+            ErrorDialog(CANCEL_MESSAGE)
         except MaxLoginException:
-            MaxError()
             logger.warning('Il massimo numero di tentativi di autenticazione raggiunto')
             write_properties(config_file, {'registered': 'nok'})
-            sys.exit(1)
-        write_properties(config_file, {'code': code, 'registered': 'ok'})
+            ErrorDialog(MAX_ERROR_MESSAGE)
 
 
 if __name__ == '__main__':

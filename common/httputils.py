@@ -26,6 +26,13 @@ import mimetypes
 import ssl
 
 
+def no_verify_ssl_context():
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    return context
+
+
 def verify_peer(url):
     # TODO: Verificare il certificato del server
     # s = socket()
@@ -51,9 +58,7 @@ def get_verified_connection(url, certificate=None, timeout=60):
         if certificate is not None:
             try:
                 '''python >= 2.7.9'''
-                context = ssl.create_default_context()
-                context.check_hostname = False
-                context.verify_mode = ssl.CERT_NONE
+                context = no_verify_ssl_context()
                 connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
                                                      timeout=timeout, context=context)
             except AttributeError:
@@ -63,9 +68,7 @@ def get_verified_connection(url, certificate=None, timeout=60):
         else:
             try:
                 '''python >= 2.7.9'''
-                context = ssl.create_default_context()
-                context.check_hostname = False
-                context.verify_mode = ssl.CERT_NONE
+                context = no_verify_ssl_context()
                 connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout, context=context)
             except AttributeError:
                 '''python < 2.7.9'''
