@@ -18,15 +18,15 @@
 
 import unittest
 
-from common.profiler import Profiler
+from common import profiler
 import nemesys.sysmonitor as sysmonitor
 
 
 class TestProfiler(unittest.TestCase):
-    '''
+    """
     Note: some of these tests are platform and/or
     configuration dependent!
-    '''
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -36,25 +36,24 @@ class TestProfiler(unittest.TestCase):
 
     def setUp(self):
         unittest.TestCase.setUp(self)
-        self.profiler = Profiler()
 
     def test_cpu_load(self):
-        cpu_load = self.profiler.cpuLoad()
+        cpu_load = profiler.cpu_load()
         self.assertGreaterEqual(cpu_load, 0)
         self.assertLessEqual(cpu_load, 100)
 
     def test_mem_total(self):
-        total_mem = self.profiler.total_memory()
+        total_mem = profiler.total_memory()
         self.assertGreater(total_mem, 0)
         self.assertGreater(total_mem, sysmonitor.TH_AV_MEM)
 
     def test_mem_usage(self):
-        usage = self.profiler.percentage_ram_usage()
+        usage = profiler.percentage_ram_usage()
         self.assertGreater(usage, 0)
         self.assertLess(usage, sysmonitor.TH_MEM_LOAD)
 
     def test_wireless(self):
-        is_active = self.profiler.is_wireless_active()
+        is_active = profiler.is_wireless_active()
         self.assertFalse(is_active)
 
 

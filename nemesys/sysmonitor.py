@@ -65,10 +65,9 @@ class SysProfiler(object):
             (RES_WIFI, self.checkwireless),
             (RES_HOSTS, self.checkhosts),
         ])
-        self._profiler = profiler.Profiler()
 
     def log_interfaces(self):
-        all_devices = self._profiler.get_all_devices()
+        all_devices = profiler.get_all_devices()
         for device in all_devices:
             logger.info('============================================')
             device_dict = device.dict()
@@ -103,7 +102,7 @@ class SysProfiler(object):
         return dev_name
 
     def checkcpu(self):
-        value = self._profiler.cpuLoad()
+        value = profiler.cpu_load()
         if value < 0 or value > 100:
             raise SysmonitorException('Valore di occupazione della cpu '
                                       'non conforme.', nem_exceptions.BADCPU)
@@ -112,7 +111,7 @@ class SysProfiler(object):
                                       nem_exceptions.WARNCPU)
 
     def checkmem(self):
-        av_mem = self._profiler.total_memory()
+        av_mem = profiler.total_memory()
         logger.debug('Memoria disponibile: %2f', av_mem)
         if av_mem < 0:
             raise SysmonitorException('Valore di memoria disponibile '
@@ -122,7 +121,7 @@ class SysProfiler(object):
                                       'non sufficiente.',
                                       nem_exceptions.LOWMEM)
 
-        mem_load = self._profiler.percentage_ram_usage()
+        mem_load = profiler.percentage_ram_usage()
         logger.debug('Memoria occupata: %d%%', mem_load)
         if mem_load < 0 or mem_load > 100:
             raise SysmonitorException('Valore di occupazione della memoria '
@@ -133,7 +132,7 @@ class SysProfiler(object):
                                       nem_exceptions.OVERMEM)
 
     def checkwireless(self):
-        if self._profiler.is_wireless_active():
+        if profiler.is_wireless_active():
             raise SysmonitorException('Wireless LAN attiva.',
                                       nem_exceptions.WARNWLAN)
 
