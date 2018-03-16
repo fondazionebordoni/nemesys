@@ -27,7 +27,7 @@ import urllib2
 from common import httputils
 from common import utils
 from nemesys import log_conf
-from nemesys import paths
+from common import paths
 
 CANCEL_MESSAGE = '''L'autenticazione non e' andata a buon fine.
 Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \

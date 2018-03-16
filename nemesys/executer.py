@@ -32,7 +32,7 @@ from common.scheduler import Scheduler
 from common.tester import Tester
 from nemesys import gui_server
 from nemesys import nem_options
-from nemesys import paths
+from common import paths
 from nemesys.measure import Measure
 from nemesys.sysmonitor import SysProfiler
 
@@ -57,8 +57,8 @@ class Executer(object):
         self._testtimeout = testtimeout
         self._isprobe = isprobe
 
-        self._outbox = paths.OUTBOX
-        self._sent = paths.SENT
+        self._outbox = paths.OUTBOX_DIR
+        self._sent = paths.SENT_DIR
         self._wakeup_event = Event()
 
         self._time_to_stop = False
@@ -70,6 +70,7 @@ class Executer(object):
             logger.info('Inizializzato software per misure d\'utente con ISP id = %s', client.isp.id)
             logger.info('Con profilo [%s]', client.profile)
             self._gui_server = gui_server.Communicator(serial=self._client.id,
+                                                       logdir=paths.LOG_DIR,
                                                        version=_generated_version.__version__)
             self._gui_server.start()
 
@@ -113,13 +114,13 @@ class Executer(object):
                     % datetime.fromtimestamp(ntptime.timestamp()).isoformat())
             f.close()
 
-            if not self._deliverer.upload_and_move(f.name,
-                                                   self._sent,
-                                                   (not self._isprobe)):
-                msg = ('Misura terminata ma un errore si è '
-                       'verificato durante il suo invio.')
+            try:
+                self._deliverer.upload_and_move(f.name,
+                                                self._sent,
+                                                (not self._isprobe))
+            except Exception as e:
                 self._gui_server.notification(nem_exceptions.DELIVERY_ERROR,
-                                              msg)
+                                              'Misura terminata ma non salvata. %s' % str(e))
             logger.info('Fine task di misura.')
 
         except Exception as e:
@@ -340,7 +341,7 @@ def main():
     logger.info('Avvio di Nemesys v.%s on %s', _generated_version.FULL_VERSION, platform.platform())
     logger.info('Pacchetto Nemesys generato su %s in data %s', _generated_version.PLATFORM,
                 _generated_version.__updated__)
-    paths.check_paths()
+    paths.create_nemesys_dirs()
     (options, _, md5conf) = nem_options.parse_args(_generated_version.__version__)
 
     c = client.getclient(options)

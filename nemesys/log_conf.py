@@ -19,11 +19,11 @@
 import logging.config
 import os
 
-from nemesys import paths
+from common import paths
 
 
 configfile = paths.CONF_LOG
-logfile = paths.LOG_FILE
+logfile = paths.NEMESYS_LOG_FILE
 
 default = '''
 [loggers]
@@ -89,7 +89,7 @@ datefmt=%b %d %H:%M:%S
 
 
 def init_log(level=logging.INFO, use_name='Nemesys'):
-    paths.check_paths()
+    paths.create_dirs(dirs=[paths.LOG_DIR, paths._CONF_DIR])
     if not os.path.isfile(configfile):
         with open(configfile, 'w') as f:
             s = str(default_no_stdout)

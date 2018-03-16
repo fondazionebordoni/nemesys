@@ -17,7 +17,6 @@
 import threading
 
 import gui_event
-import paths
 from speed_tester import SpeedTester
 from system_profiler import SystemProfiler
 
@@ -80,4 +79,4 @@ class MistController(object):
                             "Impossibile terminare il processo di misura %s" % str(thread.getName())))
 
     def exit(self):
-        paths.remove_temp_dirs()
+        pass

@@ -26,7 +26,7 @@ import os
 from ConfigParser import ConfigParser, NoOptionError
 from optparse import OptionParser
 
-from nemesys import paths
+from common import paths
 
 logger = logging.getLogger(__name__)
 

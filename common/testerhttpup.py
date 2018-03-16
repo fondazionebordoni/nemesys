@@ -210,12 +210,12 @@ class HttpTesterUp(object):
     def __init__(self, dev):
         self.dev = dev
 
-    def test(self, url, callback_update_speed=noop, num_sessions=1, tcp_window_size=-1):
+    def test(self, url, callback_update_speed=noop, num_sessions=1, tcp_window_size=-1, buffer_size=8192):
         start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
         stop_event = threading.Event()
         result_queue = Queue.Queue()
         netstat = Netstat(self.dev)
-        producer = Producer(url, stop_event, result_queue, num_sessions, tcp_window_size)
+        producer = Producer(url, stop_event, result_queue, num_sessions, tcp_window_size, buffer_size)
         consumer = Consumer(stop_event, result_queue, num_sessions)
         observer = Observer(stop_event, netstat, callback_update_speed)
         timeout = threading.Timer(TEST_TIMEOUT, lambda: stop_event.set())

@@ -137,3 +137,7 @@ class TaskException(NemesysException):
 class ProfilerException(NemesysException):
     """Exception from Profiler"""
     pass
+
+class DeliveryException(NemesysException):
+    """Exception from deliverer"""
+    pass
