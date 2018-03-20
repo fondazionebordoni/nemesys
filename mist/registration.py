@@ -230,6 +230,7 @@ def getconf(code, filepath, url_string):
 def is_registered(code):
     if (len(code) < 4) or '|' in code:
         return False
+    return True
 
 
 def register():
