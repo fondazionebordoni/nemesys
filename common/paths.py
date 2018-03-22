@@ -40,6 +40,7 @@ SENT_DIR = path.join(_APP_PATH, 'sent')
 _CONF_DIR = path.join(_APP_PATH, 'config')
 LOG_DIR = path.join(_APP_PATH, 'logs')
 NEMESYS_LOG_FILE = path.join(LOG_DIR, 'nemesys.log')
+NEMESYS_PID_FILE = '/var/run/nemesys_daemon.pid'
 MIST_LOG_FILE = path.join(LOG_DIR, 'misurainternet-speedtest.log')
 
 CONF_LOG = path.join(_CONF_DIR, 'log.conf')

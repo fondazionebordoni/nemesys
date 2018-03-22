@@ -22,9 +22,12 @@ from datetime import datetime
 from threading import Event
 from time import sleep
 
-from common import client, ntptime, _generated_version
+from daemon import daemon, pidfile
+
+from common import client, ntptime, _generated_version, utils
 from common import iptools
 from common import nem_exceptions
+from common import paths
 from common.deliverer import Deliverer
 from common.nem_exceptions import SysmonitorException, TaskException
 from common.proof import Proof
@@ -32,7 +35,6 @@ from common.scheduler import Scheduler
 from common.tester import Tester
 from nemesys import gui_server
 from nemesys import nem_options
-from common import paths
 from nemesys.measure import Measure
 from nemesys.sysmonitor import SysProfiler
 
@@ -307,13 +309,15 @@ class Executer(object):
             # Try to download task
             task = None
             tries = 0
-            while not task and tries < 3:
+            while not task:
                 try:
                     task = self._scheduler.download_task()
                 except TaskException as e:
                     tries += 1
                     if tries >= 3:
+                        logger.error('Impossibile scaricare il task: %s', e)
                         self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
+                        break
             if task:
                 # Task found, now do it
                 logger.info('Trovato task %s', task)
@@ -332,6 +336,18 @@ class Executer(object):
 
     def stop(self):
         self._time_to_stop = True
+
+
+def get_log_streams(from_logger):
+    """ Get a list of filehandle numbers from logger
+        to be handed to DaemonContext.files_preserve
+    """
+    handles = []
+    for handler in from_logger.handlers:
+        handles.append(handler.stream.fileno())
+    if from_logger.parent:
+        handles += get_log_streams(from_logger.parent)
+    return handles
 
 
 def main():
@@ -364,9 +380,23 @@ def main():
                  tasktimeout=options.tasktimeout,
                  testtimeout=options.testtimeout,
                  isprobe=isprobe)
-
-    logger.debug('Inizio il loop.')
-    e.loop()
+    if utils.is_windows():
+        logger.debug('Inizio il loop.')
+        e.loop()
+    else:
+        logger.info('Avvio il demone Nemesys')
+        pidf = pidfile.TimeoutPIDLockFile(options.pidfile, -1)
+        log_streams = get_log_streams(logger)
+        context = daemon.DaemonContext(
+            working_directory=paths._APP_DIR,
+            pidfile=pidf,
+            files_preserve=log_streams,
+        )
+        # TODO: context.signal_map = {signal.SIGTERM: do_exit}
+        # But need to fix sleep wakeup etc first
+        with context:
+            e.loop()
+            logger.info('Loop exit')
 
 
 if __name__ == '__main__':
