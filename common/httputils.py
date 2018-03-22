@@ -27,9 +27,14 @@ import ssl
 
 
 def no_verify_ssl_context():
-    context = ssl.create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
+    try:
+        '''python >= 2.7.9'''
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+    except AttributeError:
+        '''python < 2.7.9'''
+        context = None
     return context
 
 
@@ -56,23 +61,12 @@ def get_verified_connection(url, certificate=None, timeout=60):
         connection = httplib.HTTPConnection(host=url.hostname, timeout=timeout)
     elif verify_peer(url):
         if certificate is not None:
-            try:
-                '''python >= 2.7.9'''
-                context = no_verify_ssl_context()
-                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
-                                                     timeout=timeout, context=context)
-            except AttributeError:
-                '''python < 2.7.9'''
-                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
-                                                     timeout=timeout)
+            context = no_verify_ssl_context()
+            connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
+                                                 timeout=timeout, context=context)
         else:
-            try:
-                '''python >= 2.7.9'''
-                context = no_verify_ssl_context()
-                connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout, context=context)
-            except AttributeError:
-                '''python < 2.7.9'''
-                connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout)
+            context = no_verify_ssl_context()
+            connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout, context=context)
 
     return connection
 
