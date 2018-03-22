@@ -159,7 +159,7 @@ def getActivationFile(serial_code, path):
 
     try:
         url = '%s?clientid=%s' % (BACKEND_URL, serial_code)
-        resp = urllib2.urlopen(url, context=httputils.no_verify_ssl_context())
+        resp = httputils.do_get(url)
         data = resp.read()
     except Exception as e:
         logger.error('impossibile scaricare il file di configurazione: %s', e)
