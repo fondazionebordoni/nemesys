@@ -158,8 +158,7 @@ class Profiler(object):
         for (if_name, if_addrs) in psutil.net_if_addrs().items():
             device = Device(if_name)
             try:
-                if (if_name.startswith('eth') or if_name.startswith('en') or
-                        ('(LAN)' in if_name)):
+                if if_name.startswith('eth') or if_name.startswith('en') or '(LAN)' in if_name or 'Ethernet' in if_name:
                     device.set_type(IF_TYPE_ETHERNET)
                 for if_addr in if_addrs:
                     if if_addr.family == socket.AF_INET:
