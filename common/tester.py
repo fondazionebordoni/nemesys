@@ -138,7 +138,7 @@ def main():
         if i != 1:
             print "Sleeping...."
             print "-----------------------------------------------"
-            time.sleep(5)
+            time.sleep(10)
         print('test %d %s' % (i, options.testtype))
         if options.testtype == 'httpup':
             try:
