@@ -280,9 +280,18 @@ def main():
             _prop = read_properties(config_file)
         except Exception as e:
             logger.error('Impossibile leggere il file di configurazione da %s: %s', config_file, e)
-            ErrorDialog('File di configurazione non trovata in {}, '
-                        'impossibile procedere con l\'installazione'.format(config_file))
-            sys.exit(1)
+            try:
+                # If config file exists, remove it!
+                if os.path.exists(paths.CONF_MAIN):
+                    logger.info('Rimuovo: %s', paths.CONF_MAIN)
+                    os.remove(paths.CONF_MAIN)
+                logger.info('Rimuovo: %s', config_file)
+                os.remove(config_file)
+                _prop = []
+            except IOError:
+                ErrorDialog('File di configurazione danneggiata, '
+                            'impossibile procedere con l\'installazione'.format(config_file))
+                sys.exit(1)
     else:
         _prop = []
 
