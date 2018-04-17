@@ -15,17 +15,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-
+import plistlib
 import socket
 from collections import OrderedDict
 
+import os
 import psutil
 
-from common import iptools
+from common import iptools, utils
 
 IF_TYPE_ETHERNET = 'Ethernet 802.3'
-WIFI_WORDS = ['wireless', 'wifi', 'wi-fi', 'senzafili', 'wlan', 'fili']
+WIFI_WORDS = ['wireless', 'wifi', 'wi-fi', 'wlan', 'fili', 'airport']
+WIFI_START_WORDS = ['wl']
+NETWORK_INTERFACES_PLIST = '/Library/Preferences/SystemConfiguration/NetworkInterfaces.plist'
 
 
 class Device(object):
@@ -137,13 +139,33 @@ def percentage_ram_usage():
     return int(percentage)
 
 
+def is_wireless(if_name):
+    # On Mac we can get interface type from a plist file
+    if utils.is_darwin() and os.path.exists(NETWORK_INTERFACES_PLIST):
+        try:
+            res = plistlib.readPlist(NETWORK_INTERFACES_PLIST)
+            for network_if in res['Interfaces']:
+                if network_if['BSD Name'] == if_name and network_if['SCNetworkInterfaceType'] == 'IEEE80211':
+                    return True
+        except AttributeError:
+            pass
+    # On linux a wireless cars usually has a 'wireless' dir
+    elif utils.is_linux() and os.path.exists(os.path.join('/sys/class/net/', if_name, 'wireless')):
+        return True
+    # Fallback and for Windows
+    for wifi_word in WIFI_WORDS:
+        if wifi_word in str(if_name).lower():
+            return True
+    for wifi_word in WIFI_START_WORDS:
+        if str(if_name).lower().startswith(wifi_word):
+            return True
+
+
 def is_wireless_active():
     for (if_name, if_info) in psutil.net_if_stats().items():
         try:
-            if if_info.isup:
-                for wifi_word in WIFI_WORDS:
-                    if wifi_word in str(if_name).lower():
-                        return True
+            if if_info.isup and is_wireless(if_name):
+                return True
         except AttributeError:
             pass
 

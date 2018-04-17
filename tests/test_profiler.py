@@ -56,6 +56,11 @@ class TestProfiler(unittest.TestCase):
         is_active = profiler.is_wireless_active()
         self.assertFalse(is_active)
 
+    def test_wireless_name(self):
+        if_name = 'wlp000'
+        is_wireless = profiler.is_wireless(if_name)
+        self.assertTrue(is_wireless)
+
 
 if __name__ == '__main__':
     unittest.main()
