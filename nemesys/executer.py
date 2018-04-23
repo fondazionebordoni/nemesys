@@ -65,16 +65,6 @@ class Executer(object):
 
         self._time_to_stop = False
 
-        if self._isprobe:
-            logger.info('Inizializzato software per sonda.')
-            self._gui_server = gui_server.DummyGuiServer()
-        else:
-            logger.info('Inizializzato software per misure d\'utente con ISP id = %s', client.isp.id)
-            logger.info('Con profilo [%s]', client.profile)
-            self._gui_server = gui_server.Communicator(serial=self._client.id,
-                                                       logdir=paths.LOG_DIR,
-                                                       version=_generated_version.__version__)
-            self._gui_server.start()
 
     def _do_task(self, task, dev):
         """
@@ -295,6 +285,16 @@ class Executer(object):
         """
         Main loop.
         """
+        if self._isprobe:
+            logger.info('Inizializzato software per sonda.')
+            self._gui_server = gui_server.DummyGuiServer()
+        else:
+            logger.info('Inizializzato software per misure d\'utente con ISP id = %s', self._client.isp.id)
+            logger.info('Con profilo [%s]', self._client.profile)
+            self._gui_server = gui_server.Communicator(serial=self._client.id,
+                                                       logdir=paths.LOG_DIR,
+                                                       version=_generated_version.__version__)
+        self._gui_server.start()
         try:
             self._sys_profiler.log_interfaces()
         except Exception as e:
