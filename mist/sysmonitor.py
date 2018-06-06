@@ -49,7 +49,6 @@ class SysMonitor(object):
         self._bw_up = bw_up
         self._bw_down = bw_down
         self._ispid = ispid
-        self._profiler = profiler.Profiler()
         self._netstat = netstat.Netstat(iptools.get_dev())
         self._checks = OrderedDict([(system_resource.RES_OS, self.check_os),
                                     (system_resource.RES_CPU, self.checkcpu),
@@ -63,7 +62,7 @@ class SysMonitor(object):
         return self._checks[res]()
 
     def log_interfaces(self):
-        all_devices = self._profiler.get_all_devices()
+        all_devices = profiler.get_all_devices()
         for device in all_devices:
             logger.info("============================================")
             device_dict = device.dict()
@@ -85,7 +84,7 @@ class SysMonitor(object):
     def checkcpu(self):
         value = -1
         try:
-            value = self._profiler.cpuLoad()
+            value = profiler.cpu_load()
             if value < 0 or value > 100:
                 raise SysmonitorException('Valore di occupazione della cpu non conforme.', nem_exceptions.BADCPU)
 
@@ -100,7 +99,7 @@ class SysMonitor(object):
 
     def checkmem(self):
         try:
-            av_mem = self._profiler.total_memory()
+            av_mem = profiler.total_memory()
             if av_mem < th_avMem:
                 logger.debug("Memoria disponibile: %2f" % av_mem)
                 if av_mem < 0:
@@ -108,7 +107,7 @@ class SysMonitor(object):
                 else:
                     raise SysmonitorException('Memoria disponibile non sufficiente.', nem_exceptions.LOWMEM)
 
-            mem_load = self._profiler.percentage_ram_usage()
+            mem_load = profiler.percentage_ram_usage()
             if mem_load < 0 or mem_load > 100:
                 logger.debug("Memoria occupata: %d%%" % mem_load)
                 raise SysmonitorException('Valore di occupazione della memoria non conforme.',
@@ -127,7 +126,7 @@ class SysMonitor(object):
 
     def checkwireless(self):
         try:
-            if self._profiler.is_wireless_active():
+            if profiler.is_wireless_active():
                 raise SysmonitorException('Wireless LAN attiva.', nem_exceptions.WARNWLAN)
             else:
                 value = 0
@@ -190,7 +189,7 @@ class SysMonitor(object):
         status = False
         info = ''
         try:
-            devices = self._profiler.get_all_devices()
+            devices = profiler.get_all_devices()
             for device in devices:
                 dev_type = device.type
                 if dev_type == 'Ethernet 802.3':

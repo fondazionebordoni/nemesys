@@ -1,4 +1,5 @@
 /env
+/venv
 /outbox/
 *.pyc
 /logs/

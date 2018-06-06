@@ -23,8 +23,8 @@ import time
 from datetime import datetime
 
 from common import ntptime, backend_response
+from common import paths
 from mist import gui_event
-from mist import paths
 
 logger = logging.getLogger(__name__)
 MAX_SEND_RETRY = 3
@@ -45,75 +45,44 @@ def upload_one_file(deliverer, filename):
         logger.error('Errore durante la spedizione del file delle misure %s: %s', filename, e,
                      exc_info=True)
     finally:
-        if os.path.exists(filename) and upload_ok:
-            os.remove(filename)  # Elimino XML se esiste
         if zipname and os.path.exists(zipname):
             os.remove(zipname)  # Elimino ZIP se esiste
     return upload_ok
 
 
-def upload(event_dispatcher, deliverer, fname=None):
-    """
-    Cerca di spedire al repository entro il tempo messo a disposizione secondo il parametro httptimeout
-    uno o tutti i filename di misura che si trovano nella cartella d'uscita
-    """
-    if fname is not None:
-        filenames = [fname]
-    else:
-        filenames = []
-        for root, _, files in os.walk(paths.OUTBOX_DIR):
-            for xmlfile in files:
-                if re.search('measure_[0-9]{14}.xml', xmlfile):
-                    filenames.append(os.path.join(root, xmlfile))
-    len_filenames = len(filenames)
-    num_sent_files = 0
-    if len_filenames > 0:
-        event_dispatcher.postEvent(gui_event.UpdateEvent('Salvataggio delle misure in corso....'))
-        logger.info('Trovati %s file di misura da spedire.', len_filenames)
-        for filename in filenames:
-            if not os.path.exists(filename):
-                logger.warn('File %s non esiste, passo al prossimo', filename)
-                continue
-            upload_ok = False
-            retries = 0
-            while not upload_ok and retries < MAX_SEND_RETRY:
-                retries += 1
-                upload_ok = upload_one_file(deliverer, filename)
+def save_and_send_measure(measure, event_dispatcher, deliverer):
+    # Salva il file con le misure
+    filename = os.path.join(paths.OUTBOX_DIR, 'measure_%s.xml' % measure.id)
+    with open(filename, 'w') as f:
+        f.write(str(measure))
+        # Aggiungi la data di fine in fondo al file
+        f.write('\n<!-- [finished] %s -->' % datetime.fromtimestamp(ntptime.timestamp()).isoformat())
+    event_dispatcher.postEvent(gui_event.UpdateEvent('Salvataggio delle misure in corso....'))
+    logger.info('File di misura %s da spedire.', filename)
+    upload_ok = False
+    retries = 0
+    while not upload_ok and retries < MAX_SEND_RETRY:
+        retries += 1
+        upload_ok = upload_one_file(deliverer, filename)
 
-                if upload_ok:
-                    logger.info('File %s spedito con successo.', filename)
-                    num_sent_files += 1
-                else:
-                    logger.info('Errore nella spedizione del file %s.', filename)
-                    event_dispatcher.postEvent(gui_event.ErrorEvent(
-                        'Tentativo di salvataggio numero {} di {} fallito.'.format(retries, MAX_SEND_RETRY)))
-                    if retries >= MAX_SEND_RETRY:
-                        event_dispatcher.postEvent(gui_event.ErrorEvent('Impossibile salvare le misure.'))
-                        break
-                    else:
-                        sleep_time = 5 * retries
-                        event_dispatcher.postEvent(gui_event.ErrorEvent(
-                            'Nuovo tentativo fra {} secondi.'.format(sleep_time)))
-                        time.sleep(sleep_time)
-
-        for filename in filenames:
-            if os.path.exists(filename):
-                os.remove(filename)
-        if num_sent_files == len_filenames:
+        if upload_ok:
+            logger.info('File %s spedito con successo.', filename)
             event_dispatcher.postEvent(gui_event.UpdateEvent('Salvataggio completato con successo.',
                                                              gui_event.UpdateEvent.MAJOR_IMPORTANCE))
         else:
-            logger.warn('Num sent files (%d) less than num files (%d)', num_sent_files, len_filenames)
-    else:
-        logger.info('Nessun file di misura da spedire.')
-    return num_sent_files
+            logger.warn('Errore nella spedizione del file %s.', filename)
+            event_dispatcher.postEvent(gui_event.ErrorEvent(
+                'Tentativo di salvataggio numero {} di {} fallito.'.format(retries, MAX_SEND_RETRY)))
+            if retries >= MAX_SEND_RETRY:
+                event_dispatcher.postEvent(gui_event.ErrorEvent('Impossibile salvare le misure.'))
+                break
+            else:
+                sleep_time = 5 * retries
+                event_dispatcher.postEvent(gui_event.ErrorEvent(
+                    'Nuovo tentativo fra {} secondi.'.format(sleep_time)))
+                time.sleep(sleep_time)
+    try:
+        os.remove(filename)
+    except OSError:
+        logger.warning('File %s non rimosso: %s', filename, e)
 
-
-def save_and_send_measure(measure, event_dispatcher, deliverer):
-    # Salva il file con le misure
-    f = open(os.path.join(paths.OUTBOX_DAY_DIR, 'measure_%s.xml' % measure.id), 'w')
-    f.write(str(measure))
-    # Aggiungi la data di fine in fondo al file
-    f.write('\n<!-- [finished] %s -->' % datetime.fromtimestamp(ntptime.timestamp()).isoformat())
-    f.close()
-    return upload(event_dispatcher, deliverer)

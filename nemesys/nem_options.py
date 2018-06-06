@@ -26,7 +26,7 @@ import os
 from ConfigParser import ConfigParser, NoOptionError
 from optparse import OptionParser
 
-from nemesys import paths
+from common import paths
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def parse_args(version):
     """
     Parsing dei parametri da linea di comando
     """
-
+    # TODO pass config file path instead
     config = ConfigParser()
 
     if os.path.exists(paths.CONF_MAIN):
@@ -63,6 +63,14 @@ def parse_args(version):
     section = 'system'
     if not config.has_section(section):
         config.add_section(section)
+    option = 'pidfile'
+    value = paths.NEMESYS_PID_FILE
+    try:
+        value = config.get(section, option)
+    except (ValueError, NoOptionError):
+        config.set(section, option, value)
+    parser.add_option('--pidfile', dest=option, default=value,
+                      help='Location of pidfile [%s]' % value)
 
     # Task options
     # --------------------------------------------------------------------------

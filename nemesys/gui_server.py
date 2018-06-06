@@ -26,8 +26,6 @@ import urlparse
 import tornado.web
 from tornado.websocket import WebSocketHandler
 
-from nemesys import paths
-
 logger = logging.getLogger(__name__)
 
 WEBSOCKET_PORT = 54201
@@ -83,7 +81,7 @@ class Communicator(threading.Thread):
         Invia status alla gui.
     """
 
-    def __init__(self, serial, version):
+    def __init__(self, serial, logdir, version):
         threading.Thread.__init__(self)
         self.application = tornado.web.Application([(r'/ws', GuiWebSocket)])
         self.ioLoop = tornado.ioloop.IOLoop.current()
@@ -94,7 +92,7 @@ class Communicator(threading.Thread):
         global start_msg
         start_msg = GuiMessage(GuiMessage.START,
                                {'version': str(version),
-                                'logdir': paths.LOG_DIR}).dict()
+                                'logdir': logdir}).dict()
 
     def run(self):
         try:

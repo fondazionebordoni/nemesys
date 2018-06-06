@@ -34,6 +34,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 
 from common import ntptime, backend_response
 from common.httputils import post_multipart
+from common.nem_exceptions import DeliveryException
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +62,8 @@ class Deliverer(object):
         Effettua l'upload del file. Restituisce la risposta ricevuta dal repository o None se c'è stato un problema.
         """
         response = None
-        logger.info('Invio a WEB: %s' % self._url)
-        logger.info('Del file ZIP: %s' % filename)
+        logger.info('Invio a WEB: %s', self._url)
+        logger.info('Del file ZIP: %s', filename)
         try:
             with open(filename, 'rb') as myfile:
                 body = myfile.read()
@@ -76,11 +77,11 @@ class Deliverer(object):
 
         except HTTPException as e:
             os.remove(filename)
-            logger.error('Impossibile effettuare l\'invio del file delle misure. Errore: %s' % e)
+            logger.error('Impossibile effettuare l\'invio del file delle misure. Errore: %s', e)
 
         except SSLError as e:
             os.remove(filename)
-            logger.error('Errore SSL durante l\'invio del file delle misure: %s' % e)
+            logger.error('Errore SSL durante l\'invio del file delle misure: %s', e)
 
         return response
 
@@ -120,12 +121,12 @@ class Deliverer(object):
         # Controllo lo zip
         if zip_file.testzip() is not None:
             zip_file.close()
-            logger.error("Lo zip %s è corrotto. Lo elimino." % zipname)
+            logger.error('Lo zip %s è corrotto. Lo elimino.', zipname)
             os.remove(zipname)
             zipname = None
         else:
             zip_file.close()
-            logger.debug("File %s compresso correttamente in %s" % (filename, zipname))
+            logger.debug('File %s compresso correttamente in %s', filename, zipname)
 
         # A questo punto ho un xml e uno zip
         return zipname
@@ -136,45 +137,42 @@ class Deliverer(object):
         """
         file_pattern = 'measure_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].xml'
         for filename in glob.glob(os.path.join(directory, file_pattern)):
-            # logger.debug('Trovato il file %s da spedire' % filename)
-            self.upload_and_move(filename, to_dir, do_remove)
+            try:
+                self.upload_and_move(filename, to_dir, do_remove)
+                logger.debug('Inviato il file %s', filename)
+            except Exception as e:
+                logger.warning('Errore inviando il file %s: %s', filename, e)
 
     def upload_and_move(self, filename, to_dir, do_remove=True):
         """
         Spedisce il filename di misura al repository entro il tempo messo a
         disposizione secondo il parametro httptimeout
         """
-        result = False
-        zip_file_name = None
-        try:
-            # Crea il Deliverer che si occuperà della spedizione
-            logger.debug('Invio il file %s a %s' % (filename, self._url))
-            zip_file_name = self.pack(filename)
-            response = self.upload(zip_file_name)
+        logger.debug('Invio il file %s a %s', filename, self._url)
+        zip_file_name = self.pack(filename)
+        response = self.upload(zip_file_name)
+        # Elimino lo zip del file di misura temporaneo
+        if os.path.exists(zip_file_name):
+            os.remove(zip_file_name)
+        # Se non sono una sonda _devo_ cancellare il file di misura
+        if do_remove and os.path.exists(filename):
+            os.remove(filename)
 
-            if response is not None:
-                (code, message) = backend_response.parse(response)
-                code = int(code)
-                logger.info('Risposta dal server delle misure: [%d] %s' % (code, message))
-
-                # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
-                # Anche in caso di "duplicate entry", 506
-                if code == 0 or code == 506:
-                    os.remove(filename)
-                    _movefiles(zip_file_name, to_dir)
-
-                    result = True
-        except Exception as e:
-            logger.error('Errore durante la spedizione del file delle misure %s: %s' % (filename, e))
-        finally:
-            # Elimino lo zip del file di misura temporaneo
-            if os.path.exists(zip_file_name):
-                os.remove(zip_file_name)
-            # Se non sono una sonda _devo_ cancellare il file di misura
-            if do_remove and os.path.exists(filename):
+        if response is not None:
+            (code, message) = backend_response.parse(response)
+            code = int(code)
+            logger.info('Risposta dal server delle misure: [%d] %s', code, message)
+            # TODO se codice è [301] Misura ricevuta ma non salvata sul database
+            # dovrebbe specificarlo
+            # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
+            # Anche in caso di "duplicate entry", 506
+            if code == 0 or code == 506:
                 os.remove(filename)
-
-            return result
+                _movefiles(zip_file_name, to_dir)
+            else:
+                raise DeliveryException('Messaggio dal server: [%d] %s' % (code, message))
+        else:
+            raise DeliveryException('Errore durante la spedizione del file delle misure')
 
 
 def _movefiles(filename, to_dir):
@@ -186,9 +184,9 @@ def _movefiles(filename, to_dir):
             # Cercare tutti i file che iniziano per pattern
             if re.search(pattern, f) is not None:
                 # Spostarli tutti in self._sent
+                # TODO: use os.path.join e catch per ogni file
                 old = ('%s/%s' % (directory, f))
                 new = ('%s/%s' % (to_dir, f))
                 shutil.move(old, new)
-
     except Exception as e:
-        logger.error('Errore durante lo spostamento dei file di misura %s' % e)
+        logger.error('Errore durante lo spostamento dei file di misura %s', e)

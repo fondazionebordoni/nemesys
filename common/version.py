@@ -12,6 +12,8 @@ import platform
 import subprocess
 import time
 
+from os import path
+
 TAG_PREFIX = "release-"
 GENERATED_VERSION_PY = """
 # This file is originally generated from Git information by running 'python version.py
@@ -23,11 +25,12 @@ __updated__ = '%s'
 if __name__ == '__main__':
     print __version__
 """
-VERSION_FILE = "_generated_version.py"
+DIR = path.abspath(path.dirname(__file__))
+VERSION_FILE = os.path.join(DIR, "_generated_version.py")
 
 
 def update_version_py():
-    if not os.path.isdir("../.git"):
+    if not os.path.isdir(".git"):
         print "This does not appear to be a Git repository."
         return
     try:

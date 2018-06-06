@@ -26,7 +26,7 @@ from optparse import OptionParser
 from os import path
 
 from common import client
-from mist import paths
+from common import paths
 
 
 class MistOptions(object):

@@ -17,6 +17,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+
+import time
+
 from common.fakefile import Fakefile
 
 
@@ -32,15 +35,21 @@ class TestFakefile(unittest.TestCase):
         data = ff.read(1024)
         self.assertEqual(1024, len(data))
 
+    def test_mbyte_equal(self):
+        ff = Fakefile(2048)
+        data1 = ff.read(1024)
+        data2 = ff.read(1024)
+        self.assertEqual(data1, data2)
+
     def test_tcp_buf(self):
         num_iterations = 100000
-#         starttime = time.time()
+        start_time = time.time()
         ff = Fakefile(8 * 1024 * num_iterations)
         for _ in range(0, num_iterations):
             data = ff.read(8 * 1024)
             self.assertEqual(8 * 1024, len(data))
-#         endtime = time.time()
-#         print (endtime - starttime)/num_iterations
+        end_time = time.time()
+        print (end_time - start_time)/num_iterations
 
 
 def main():

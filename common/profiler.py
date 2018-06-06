@@ -15,23 +15,22 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-
-from collections import OrderedDict
-import psutil
+import plistlib
 import socket
+from collections import OrderedDict
 
-from common import iptools
+import os
+import psutil
 
+from common import iptools, utils
 
 IF_TYPE_ETHERNET = 'Ethernet 802.3'
-LINUX_RESOURCE_PATH = '/sys/class/net/'
-WIFI_WORDS = ['wireless', 'wifi', 'wi-fi', 'senzafili', 'wlan', 'fili']
-ERROR_NET_IF = 'Impossibile ottenere informazioni sulle interfacce di rete'
+WIFI_WORDS = ['wireless', 'wifi', 'wi-fi', 'wlan', 'fili', 'airport']
+WIFI_START_WORDS = ['wl']
+NETWORK_INTERFACES_PLIST = '/Library/Preferences/SystemConfiguration/NetworkInterfaces.plist'
 
 
 class Device(object):
-
     def __init__(self, name):
         self._name = name
         self._ipaddr = 'Unknown'
@@ -46,8 +45,8 @@ class Device(object):
     def __str__(self, *args, **kwargs):
         d = self.dict()
         s = ''
-        for key in d:
-            s += "%s : %s\n" % (key, d[key])
+        for k in d:
+            s += "%s : %s\n" % (k, d[k])
         return s
 
     def dict(self):
@@ -123,73 +122,81 @@ class Device(object):
         return self._duplex
 
 
-class Profiler(object):
+def cpu_load():
+    return psutil.cpu_percent(0.5)
 
-    def __init__(self):
-        self.ipaddr = ""
 
-    def cpuLoad(self):
-        return psutil.cpu_percent(0.5)
+def total_memory():
+    return psutil.virtual_memory().total
 
-    def total_memory(self):
-        return psutil.virtual_memory().total
 
-    def percentage_ram_usage(self):
-        mem_info = psutil.virtual_memory()
+def percentage_ram_usage():
+    mem_info = psutil.virtual_memory()
+    try:
+        percentage = mem_info.percent
+    except AttributeError:
+        percentage = float(mem_info.total - mem_info.available) / float(mem_info.total) * 100.0
+    return int(percentage)
+
+
+def is_wireless(if_name):
+    # On Mac we can get interface type from a plist file
+    if utils.is_darwin() and os.path.exists(NETWORK_INTERFACES_PLIST):
         try:
-            percentage = mem_info.percent
+            res = plistlib.readPlist(NETWORK_INTERFACES_PLIST)
+            for network_if in res['Interfaces']:
+                if network_if['BSD Name'] == if_name and network_if['SCNetworkInterfaceType'] == 'IEEE80211':
+                    return True
         except AttributeError:
-            percentage = float(mem_info.total - mem_info.available) / float(mem_info.total) * 100.0
-        return int(percentage)
-
-    def is_wireless_active(self):
-        for (if_name, if_info) in psutil.net_if_stats().items():
-            try:
-                if if_info.isup:
-                    for wifi_word in WIFI_WORDS:
-                        if wifi_word in str(if_name).lower():
-                            return True
-            except AttributeError:
-                pass
-
-    def get_all_devices(self):
-        self.ipaddr = iptools.getipaddr()
-        devices = []
-        for (if_name, if_addrs) in psutil.net_if_addrs().items():
-            device = Device(if_name)
-            try:
-                if if_name.startswith('eth') or if_name.startswith('en') or '(LAN)' in if_name or 'Ethernet' in if_name:
-                    device.set_type(IF_TYPE_ETHERNET)
-                for if_addr in if_addrs:
-                    if if_addr.family == socket.AF_INET:
-                        ip_addr = if_addr.address
-                        device.set_ipaddr(ip_addr)
-                        if ip_addr == self.ipaddr:
-                            device.set_active(True)
-                        device.set_netmask(if_addr.netmask)
-                    elif if_addr.family == psutil.AF_LINK:
-                        device.set_macaddr(if_addr.address)
-            except Exception as e:
-                device.set_type(str(e))
-            devices.append(device)
-
-        net_if_stats = psutil.net_if_stats()
-        for device in devices:
-            stats = net_if_stats.get(device.name)
-            if stats:
-                device.set_speed(stats.speed)
-                device.set_enabled(stats.isup)
-                device.set_duplex(stats.duplex)
-
-        return devices
+            pass
+    # On linux a wireless cars usually has a 'wireless' dir
+    elif utils.is_linux() and os.path.exists(os.path.join('/sys/class/net/', if_name, 'wireless')):
+        return True
+    # Fallback and for Windows
+    for wifi_word in WIFI_WORDS:
+        if wifi_word in str(if_name).lower():
+            return True
+    for wifi_word in WIFI_START_WORDS:
+        if str(if_name).lower().startswith(wifi_word):
+            return True
 
 
-if __name__ == '__main__':
-    profiler = Profiler()
-    all_devices = profiler.get_all_devices()
-    for device in all_devices:
-        print("============================================")
-        device_dict = device.dict()
-        for key in device_dict:
-            print("| %s : %s" % (key, device_dict[key]))
-    print("============================================")
+def is_wireless_active():
+    for (if_name, if_info) in psutil.net_if_stats().items():
+        try:
+            if if_info.isup and is_wireless(if_name):
+                return True
+        except AttributeError:
+            pass
+
+
+def get_all_devices():
+    active_ipaddr = iptools.getipaddr()
+    devices = []
+    for (if_name, if_addrs) in psutil.net_if_addrs().items():
+        dev = Device(if_name)
+        try:
+            if if_name.startswith('eth') or if_name.startswith('en') or '(LAN)' in if_name or 'Ethernet' in if_name:
+                dev.set_type(IF_TYPE_ETHERNET)
+            for if_addr in if_addrs:
+                if if_addr.family == socket.AF_INET:
+                    ip_addr = if_addr.address
+                    dev.set_ipaddr(ip_addr)
+                    if ip_addr == active_ipaddr:
+                        dev.set_active(True)
+                    dev.set_netmask(if_addr.netmask)
+                elif if_addr.family == psutil.AF_LINK:
+                    dev.set_macaddr(if_addr.address)
+        except Exception as e:
+            dev.set_type(str(e))
+        devices.append(dev)
+
+    net_if_stats = psutil.net_if_stats()
+    for dev in devices:
+        stats = net_if_stats.get(dev.name)
+        if stats:
+            dev.set_speed(stats.speed)
+            dev.set_enabled(stats.isup)
+            dev.set_duplex(stats.duplex)
+
+    return devices

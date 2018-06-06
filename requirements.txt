@@ -1,3 +1,4 @@
+python-daemon
 ipcalc
 ntplib
 psutil
