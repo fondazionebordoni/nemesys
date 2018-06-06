@@ -19,10 +19,10 @@
 import logging.config
 import os
 
-from mist import paths
+from common import paths
 
 configfile = paths.CONF_LOG
-logfile = paths.LOG_FILE
+logfile = paths.MIST_LOG_FILE
 
 default = '''
 [loggers]
@@ -88,7 +88,7 @@ datefmt=%b %d %H:%M:%S
 
 
 def init_log(level=logging.INFO, use_name='MIST'):
-    paths.check_paths()
+    paths.create_mist_dirs()
     if not os.path.isfile(configfile):
         with open(configfile, 'w') as f:
             s = str(default_no_stdout)

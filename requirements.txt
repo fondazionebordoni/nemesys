@@ -1,5 +1,5 @@
+python-daemon
 ipcalc
-netifaces
 ntplib
 psutil
 six

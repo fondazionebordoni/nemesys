@@ -1,7 +1,7 @@
 # paths.py
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
+# Copyright (c) 2018 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,32 +18,49 @@
 
 import logging
 import sys
-from os import mkdir, path, sep
+from os import mkdir, path
+
+from common import utils
 
 logger = logging.getLogger(__name__)
 
 if hasattr(sys, 'frozen'):
     # Dovrebbe darmi il percorso in cui sta eseguendo l'applicazione
-    _APP_PATH = path.dirname(sys.executable) + sep + '..'
+    _APP_DIR = path.dirname(sys.executable)
 else:
-    _APP_PATH = path.abspath(path.dirname(__file__)) + sep + '..'
+    _APP_DIR = path.abspath(path.dirname(__file__))
 
-_APP_PATH = path.normpath(_APP_PATH)
+_APP_PATH = path.normpath(path.join(_APP_DIR, '..'))
 
 # Resources path
-OUTBOX = path.join(_APP_PATH, 'outbox')
-SENT = path.join(_APP_PATH, 'sent')
+OUTBOX_DIR = path.join(_APP_PATH, 'outbox')
+SENT_DIR = path.join(_APP_PATH, 'sent')
 
 # Configuration dirs and files
 _CONF_DIR = path.join(_APP_PATH, 'config')
 LOG_DIR = path.join(_APP_PATH, 'logs')
-LOG_FILE = path.join(LOG_DIR, 'nemesys.log')
+NEMESYS_LOG_FILE = path.join(LOG_DIR, 'nemesys.log')
+NEMESYS_PID_FILE = '/var/run/nemesys_daemon.pid'
+MIST_LOG_FILE = path.join(LOG_DIR, 'misurainternet-speedtest.log')
+
 CONF_LOG = path.join(_CONF_DIR, 'log.conf')
 CONF_MAIN = path.join(_CONF_DIR, 'client.conf')
 
+# Resources path
+if utils.is_darwin():
+    ICONS = path.join(_APP_PATH, 'Resources', 'icons')
+else:
+    ICONS = path.join(_APP_PATH, 'mist', 'resources', 'icons')
 
-def check_paths():
-    dirs = [LOG_DIR, OUTBOX, SENT, _CONF_DIR]
+def create_nemesys_dirs():
+    create_dirs(dirs=[LOG_DIR, OUTBOX_DIR, SENT_DIR, _CONF_DIR])
+
+
+def create_mist_dirs():
+    create_dirs(dirs=[LOG_DIR, OUTBOX_DIR, _CONF_DIR])
+
+
+def create_dirs(dirs=[]):
     for d in dirs:
         if not path.exists(d):
             mkdir(d)

@@ -39,7 +39,6 @@ DOWNLOAD_TIMEOUT_DELAY = 15
 MAX_TRANSFERED_BYTES = 1000 * 1000000 * 12 / 8
 # 10 seconds timeout on open and read operations
 HTTP_TIMEOUT = 10.0
-BUFSIZE = 8192
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +55,13 @@ class Result(object):
 
 
 class Downloader(threading.Thread):
-    def __init__(self, url, stop_event, result_queue, measurement_id):
+    def __init__(self, url, stop_event, result_queue, measurement_id, buffer_size):
         super(Downloader, self).__init__()
         self.url = url
         self.result_queue = result_queue
         self.measurement_id = measurement_id
         self.stop_event = stop_event
+        self.buffer_size = buffer_size
 
     def run(self):
         try:
@@ -87,7 +87,7 @@ class Downloader(threading.Thread):
         received_end = False
         while not self.stop_event.isSet():
             try:
-                my_buffer = response.read(BUFSIZE)
+                my_buffer = response.read(self.buffer_size)
                 if my_buffer is None:
                     error = {'message': 'Non ricevuti dati sufficienti per completare la misura',
                              'code': nem_exceptions.SERVER_ERROR}
@@ -105,17 +105,18 @@ class Downloader(threading.Thread):
 
 
 class Producer(threading.Thread):
-    def __init__(self, url, stop_event, result_queue, num_sessions):
+    def __init__(self, url, stop_event, result_queue, num_sessions, buffer_size):
         super(Producer, self).__init__()
         self.url = url
         self.stop_event = stop_event
         self.result_queue = result_queue
         self.num_sessions = num_sessions
+        self.buffer_size = buffer_size
         self.measurement_id = 'sess-{}'.format(random.randint(0, 100000))
 
     def run(self):
         for i in range(0, self.num_sessions):
-            thread = Downloader(self.url, self.stop_event, self.result_queue, self.measurement_id)
+            thread = Downloader(self.url, self.stop_event, self.result_queue, self.measurement_id, self.buffer_size)
             thread.start()
 
 
@@ -185,12 +186,12 @@ class HttpTesterDown(object):
     def __init__(self, dev):
         self.dev = dev
 
-    def test(self, url, callback_update_speed=noop, num_sessions=7):
+    def test(self, url, callback_update_speed=noop, num_sessions=7, buffer_size=8192):
         start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
         stop_event = threading.Event()
         result_queue = Queue.Queue()
         netstat = Netstat(self.dev)
-        producer = Producer(url, stop_event, result_queue, num_sessions)
+        producer = Producer(url, stop_event, result_queue, num_sessions, buffer_size)
         consumer = Consumer(stop_event, result_queue, num_sessions)
         observer = Observer(stop_event, netstat, callback_update_speed)
         timeout = threading.Timer(MEASURE_TIME + RAMPUP_SECS + DOWNLOAD_TIMEOUT_DELAY, lambda: stop_event.set())

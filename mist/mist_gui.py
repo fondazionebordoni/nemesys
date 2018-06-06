@@ -19,18 +19,18 @@ Created on 12/ott/2015
 @author: ewedlund
 '''
 
-from collections import deque
-from datetime import datetime
 import logging
 import os
 import threading
 import wx
+from collections import deque
+from datetime import datetime
 
-import gui_event
-import mist_messages
-import paths
-from system_resource import SystemResource, RES_CPU, RES_RAM, RES_ETH, RES_WIFI, RES_HOSTS, RES_TRAFFIC
-import test_type
+from common import paths
+from mist import gui_event
+from mist import mist_messages
+from mist import test_type
+from mist.system_resource import SystemResource, RES_CPU, RES_RAM, RES_ETH, RES_WIFI, RES_HOSTS, RES_TRAFFIC
 
 TOTAL_STEPS = 1000
 MY_BLUE = (0x13, 0x45, 0x8f)

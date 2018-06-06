@@ -24,11 +24,11 @@ from threading import Thread
 from time import sleep
 
 from common import iptools, ntptime
+from common import paths
 from common import server
 from common.nem_exceptions import MeasurementException, TaskException
 from common.tester import Tester
 from mist import gui_event
-from mist import paths
 from mist import result_sender
 from mist import system_resource
 from mist import test_type
@@ -129,7 +129,8 @@ class SpeedTester(Thread):
                         best_testres_profiler = profiler_result
                 else:
                     if test_type.is_http_down(t_type):
-                        proof = tester.testhttpdown(self.receive_partial_results_down)
+                        proof = tester.testhttpdown(self.receive_partial_results_down,
+                                                    bw=self._client.profile.download * 1000)
                     elif test_type.is_http_up(t_type):
                         proof = tester.testhttpup(self.receive_partial_results_up,
                                                   bw=self._client.profile.upload * 1000)
@@ -286,8 +287,9 @@ class SpeedTester(Thread):
                 # # Salvataggio della misura ##
                 self._progress += self._progress_step
                 self._event_dispatcher.postEvent(gui_event.ProgressEvent(self._progress))
-                num_sent_files = result_sender.save_and_send_measure(measure, self._event_dispatcher, self._deliverer)
-                if (num_sent_files > 0) and self._client.is_oneshot():
+                result_sender.save_and_send_measure(measure, self._event_dispatcher, self._deliverer)
+                if self._client.is_oneshot():
+                    # Rimuovi configurazione per forzare il login al prossimo avvio
                     os.remove(paths.CONF_MAIN)
                 self._event_dispatcher.postEvent(gui_event.ProgressEvent(1))
                 # # Fine Salvataggio ##

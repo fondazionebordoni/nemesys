@@ -25,8 +25,8 @@ DELIVERY_ERROR = 1002
 # Profilazione
 FAILPROF = 5001
 FAILREADPARAM = 5002
-FAILVALUEPARAM = 5003
-FAILSTATUS = 5004
+# FAILVALUEPARAM = 5003
+# FAILSTATUS = 5004
 BADMASK = 5005
 LOOPBACK = 5006
 UNKDEV = 5008
@@ -36,13 +36,13 @@ BADMEM = 5021
 LOWMEM = 5022
 INVALIDMEM = 5024
 OVERMEM = 5025
-BADPROC = 5031
-WARNPROC = 5032
-WARNCONN = 5041
-WARNFW = 5052
+# BADPROC = 5031
+# WARNPROC = 5032
+# WARNCONN = 5041
+# WARNFW = 5052
 WARNWLAN = 5063
 WARNETH = 5064
-UNKIP = 5071
+# UNKIP = 5071
 BADHOST = 5082
 TOOHOST = 5081
 
@@ -50,16 +50,14 @@ TOOHOST = 5081
 BROKEN_CONNECTION = 80001
 COUNTER_RESET = 80002
 CONNECTION_FAILED = 80003
-MISSING_SESSION = 80004
+# MISSING_SESSION = 80004
 ZERO_SPEED = 80005
 SERVER_ERROR = 80006
 PING_ERROR = 80007
 PING_TIMEOUT = 99997
 
 
-'''
-These are the old codes
-'''
+# These are the old codes
 CODE_MAPPING = {
     '10013': 99977,
     '425 security: bad ip connecting.': 99978,
@@ -138,4 +136,8 @@ class TaskException(NemesysException):
 
 class ProfilerException(NemesysException):
     """Exception from Profiler"""
+    pass
+
+class DeliveryException(NemesysException):
+    """Exception from deliverer"""
     pass

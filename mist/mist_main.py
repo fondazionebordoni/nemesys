@@ -27,6 +27,7 @@ from optparse import OptionParser
 from time import sleep
 
 from common import _generated_version
+from common import paths
 from common.deliverer import Deliverer
 from common.scheduler import Scheduler
 from mist import check_software
@@ -34,7 +35,6 @@ from mist import gui_event, registration
 from mist import mist_cli
 from mist import mist_gui
 from mist import mist_options
-from mist import paths
 from mist import sysmonitor
 from mist.mist_controller import MistController
 
@@ -85,9 +85,9 @@ def main(argv=None):
         sys.exit()
 
     try:
-        paths.check_paths()
         import log_conf
         log_conf.init_log()
+        paths.create_mist_dirs()
     except IOError:
         print ("Impossibile inizializzare il logging, assicurarsi che il programma stia girando con "
                "i permessi di amministratore.")
