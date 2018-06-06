@@ -1,5 +1,4 @@
 ipcalc
-netifaces
 ntplib
 psutil
 six
