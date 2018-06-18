@@ -22,8 +22,6 @@ from datetime import datetime
 from threading import Event
 from time import sleep
 
-from daemon import daemon, pidfile
-
 from common import client, ntptime, _generated_version, utils
 from common import iptools
 from common import nem_exceptions
@@ -37,6 +35,10 @@ from nemesys import gui_server
 from nemesys import nem_options
 from nemesys.measure import Measure
 from nemesys.sysmonitor import SysProfiler
+
+
+if not utils.is_windows():
+    from daemon import daemon, pidfile
 
 logger = logging.getLogger(__name__)
 
