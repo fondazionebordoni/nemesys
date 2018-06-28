@@ -1,8 +1,8 @@
-python-daemon; sys_platform == 'win32'
-ipcalc
-ntplib
-psutil
-six
-xmltodict
-tornado
-cryptography
+python-daemon==2.1.2; sys_platform == 'win32'
+ipcalc==1.99.0
+ntplib==0.3.3
+psutil==5.4.3
+six==1.11.0
+xmltodict==0.11.0
+tornado==4.5.3
+cryptography==2.1.4
