@@ -296,7 +296,7 @@ class Executer(object):
             self._gui_server = gui_server.Communicator(serial=self._client.id,
                                                        logdir=paths.LOG_DIR,
                                                        version=_generated_version.__version__)
-        self._gui_server.start()
+            self._gui_server.start()
         try:
             self._sys_profiler.log_interfaces()
         except Exception as e:
@@ -382,7 +382,7 @@ def main():
                  tasktimeout=options.tasktimeout,
                  testtimeout=options.testtimeout,
                  isprobe=isprobe)
-    if utils.is_windows():
+    if not utils.is_linux():
         logger.debug('Inizio il loop.')
         e.loop()
     else:
