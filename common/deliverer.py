@@ -167,7 +167,8 @@ class Deliverer(object):
             # Se tutto è andato bene sposto il file zip nella cartella "sent" e rimuovo l'xml
             # Anche in caso di "duplicate entry", 506
             if code == 0 or code == 506:
-                os.remove(filename)
+                if os.path.exists(filename):
+                    os.remove(filename)
                 _movefiles(zip_file_name, to_dir)
             else:
                 raise DeliveryException('Messaggio dal server: [%d] %s' % (code, message))
