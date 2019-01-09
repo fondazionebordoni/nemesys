@@ -1,6 +1,7 @@
 # sysmonitor.py
 # -*- coding: utf-8 -*-
 
+import os
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,17 +18,19 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 import plistlib
 import socket
+import subprocess
 from collections import OrderedDict
 
-import os
 import psutil
 
 from common import iptools, utils
+from common import nem_exceptions
 
 IF_TYPE_ETHERNET = 'Ethernet 802.3'
 WIFI_WORDS = ['wireless', 'wifi', 'wi-fi', 'wlan', 'fili', 'airport']
 WIFI_START_WORDS = ['wl']
 NETWORK_INTERFACES_PLIST = '/Library/Preferences/SystemConfiguration/NetworkInterfaces.plist'
+NETWORK_SETUP_CMD = 'networksetup'
 
 
 class Device(object):
@@ -139,18 +142,39 @@ def percentage_ram_usage():
     return int(percentage)
 
 
-def is_wireless(if_name):
+def is_wireless_active_darwin():
     # On Mac we can get interface type from a plist file
-    if utils.is_darwin() and os.path.exists(NETWORK_INTERFACES_PLIST):
-        try:
-            res = plistlib.readPlist(NETWORK_INTERFACES_PLIST)
-            for network_if in res['Interfaces']:
-                if network_if['BSD Name'] == if_name and network_if['SCNetworkInterfaceType'] == 'IEEE80211':
-                    return True
-        except AttributeError:
-            pass
-    # On linux a wireless cars usually has a 'wireless' dir
-    elif utils.is_linux() and os.path.exists(os.path.join('/sys/class/net/', if_name, 'wireless')):
+    try:
+        res = plistlib.readPlist(NETWORK_INTERFACES_PLIST)
+        for network_if in res['Interfaces']:
+            try:
+                if network_if['SCNetworkInterfaceType'] == 'IEEE80211':
+                    if_name = network_if['BSD Name']
+                    # Workaround for OSX (issue #2086)
+                    try:
+                        out = subprocess.check_output([NETWORK_SETUP_CMD, '-getairportpower', if_name])
+                        if out.endswith('On'):
+                            return True
+                    except subprocess.CalledProcessError:
+                        # Not a WiFi or unknown interface
+                        pass
+                    except OSError:
+                        # Command not found, what to do?
+                        raise nem_exceptions.NemesysException(
+                            'Impossibile determinare se il Wi-Fi e\' attivo, comando \'{}\' mancante'.format(
+                                NETWORK_SETUP_CMD), nem_exceptions.WARNWLAN)
+            except AttributeError:
+                pass
+            return False
+    except IOError:
+        raise nem_exceptions.NemesysException(
+            'Impossibile ottenere trovare informazioni sull\'interfaccia Wi-Fi, file {} mancante'.format(
+                NETWORK_INTERFACES_PLIST), nem_exceptions.WARNWLAN)
+
+
+def is_wireless(if_name):
+    # On linux a wireless cards usually has a 'wireless' dir
+    if utils.is_linux() and os.path.exists(os.path.join('/sys/class/net/', if_name, 'wireless')):
         return True
     # Fallback and for Windows
     for wifi_word in WIFI_WORDS:
@@ -162,6 +186,8 @@ def is_wireless(if_name):
 
 
 def is_wireless_active():
+    if utils.is_darwin():
+        return is_wireless_active_darwin()
     for (if_name, if_info) in psutil.net_if_stats().items():
         try:
             if if_info.isup and is_wireless(if_name):
