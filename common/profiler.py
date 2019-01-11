@@ -153,7 +153,7 @@ def is_wireless_active_darwin():
                     # Workaround for OSX (issue #2086)
                     try:
                         out = subprocess.check_output([NETWORK_SETUP_CMD, '-getairportpower', if_name])
-                        if out.endswith('On'):
+                        if ': On' in out:
                             return True
                     except subprocess.CalledProcessError:
                         # Not a WiFi or unknown interface
@@ -168,7 +168,7 @@ def is_wireless_active_darwin():
             return False
     except IOError:
         raise nem_exceptions.NemesysException(
-            'Impossibile ottenere trovare informazioni sull\'interfaccia Wi-Fi, file {} mancante'.format(
+            'Impossibile ottenere informazioni sull\'interfaccia Wi-Fi, file {} mancante'.format(
                 NETWORK_INTERFACES_PLIST), nem_exceptions.WARNWLAN)
 
 
