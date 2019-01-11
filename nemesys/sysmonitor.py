@@ -81,7 +81,7 @@ class SysProfiler(object):
             iptools.get_network_mask(ip)
         except Exception as e:
             raise SysmonitorException('Impossibile ottenere indirizzo IP '
-                                      'della scheda di rete attiva: %s', e)
+                                      'della scheda di rete attiva: {}'.format(e), nem_exceptions.UNKDEV)
         if iptools.is_loopback_ip(ip):
             raise SysmonitorException('Indirizzo IP {0} punta sull\'interfaccia'
                                       ' di loopback - Firewall attivo?'
@@ -90,7 +90,7 @@ class SysProfiler(object):
             dev_name = iptools.get_dev(ip=ip)
         except Exception as e:
             raise SysmonitorException('Impossibile identificare '
-                                      'la scheda di rete attiva: %s', e)
+                                      'la scheda di rete attiva: {}'.format(e), nem_exceptions.UNKDEV)
         device_speed = iptools.get_if_speed(dev_name)
         if device_speed < (self._bw_download / 1000):
             raise SysmonitorException('La velocita\' della scheda di rete e\' '
@@ -144,7 +144,7 @@ class SysProfiler(object):
         except Exception as e:
             logger.error('Errore ottenendo informazioni sulla scheda di rete: %s', e)
             raise SysmonitorException('Impossibile ottenere informazioni '
-                                      'sulla scheda di rete attiva: %s' % e,
+                                      'sulla scheda di rete attiva: {}'.format(e),
                                       errorcode=nem_exceptions.UNKDEV)
         if iptools.is_loopback_ip(ip):
             raise SysmonitorException('Indirizzo IP {0} punta sull\'interfaccia'
@@ -196,4 +196,4 @@ class SysProfiler(object):
             if error_code:
                 raise SysmonitorException(error_msg, error_code)
             raise SysmonitorException('Profilazione del sistema fallito, '
-                                      'ultimo errore: %s' % e, nem_exceptions.FAILPROF)
+                                      'ultimo errore: {}'.format(e), nem_exceptions.FAILPROF)
