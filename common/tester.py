@@ -102,9 +102,9 @@ def main():
 
     parser = OptionParser(version="0.10.1.$Rev$",
                           description="A simple bandwidth tester able to perform HTTP upload/download and PING tests.")
-    parser.add_option("-t", "--type", choices=('httpdown', 'httpup', 'ftpup', 'ping'),
-                      dest="testtype", default="httpdown", type="choice",
-                      help="Choose the type of test to perform: httpdown (default), httpup, ping")
+    parser.add_option("-t", "--type", choices=('down', 'up', 'ping'),
+                      dest="testtype", default="down", type="choice",
+                      help="Choose the type of test to perform: down (default), up, ping")
     parser.add_option("-b", "--bandwidth", dest="bandwidth", default="100M", type="string",
                       help="The expected bandwith to measure, used in upload tests, e.g. 512k, 2M")
     parser.add_option("-n", "--num-tests", dest="num_tests", default="1", type="int",
@@ -140,7 +140,7 @@ def main():
             print "-----------------------------------------------"
             time.sleep(10)
         print('test %d %s' % (i, options.testtype))
-        if options.testtype == 'httpup':
+        if options.testtype == 'up':
             try:
                 res = t.testhttpup(None, bw=bw)
                 printout_http(res)
