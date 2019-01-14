@@ -209,16 +209,18 @@ class HttpTesterDown(object):
             logger.debug('Errors: {}'.format(consumer.errors))
             first_error = consumer.errors[0]
             raise nem_exceptions.MeasurementException(first_error.get('message'), first_error.get('code'))
+        if observer.starttime is None or observer.endtime is None:
+            raise nem_exceptions.MeasurementException('Misura non completata', nem_exceptions.BROKEN_CONNECTION)
+        duration = (observer.endtime - observer.starttime) * 1000.0
         total_sent_bytes = netstat.get_rx_bytes() - starttotalbytes
         if total_sent_bytes < 0:
-            raise nem_exceptions.MeasurementException('Ottenuto banda negativa, possibile azzeramento dei contatori.',
+            raise nem_exceptions.MeasurementException('Ottenuto banda negativa, possibile azzeramento dei contatori',
                                                       nem_exceptions.COUNTER_RESET)
         if (total_sent_bytes == 0) or (consumer.total_read_bytes == 0):
             raise nem_exceptions.MeasurementException('Ottenuto banda zero',
                                                       nem_exceptions.ZERO_SPEED)
         overhead = float(total_sent_bytes - consumer.total_read_bytes) / float(total_sent_bytes)
         logger.debug('Traffico spurio: %f', overhead)
-        duration = (observer.endtime - observer.starttime) * 1000.0
         bytes_nem = int(round(observer.measured_bytes * (1 - overhead)))
         return Proof(test_type='download_http',
                      start_time=start_timestamp,
