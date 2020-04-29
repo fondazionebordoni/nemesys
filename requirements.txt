@@ -1,6 +1,6 @@
 python-daemon==2.1.2; sys_platform == 'win32'
 ipcalc==1.99.0
-ntplib==0.3.3
+ntplib==0.3.4
 psutil==5.4.6
 six==1.11.0
 xmltodict==0.11.0
