@@ -24,6 +24,8 @@ HOSTS_NEW_TECHNICOLOR = {
     '192.168.1.254': 'e0:b9:e5:59:d6:22', '192.168.1.148': 'e2:b9:e5:59:d6:2b'}
 HOSTS_NEWER_TECHNICOLOR = {
     '192.168.1.24': 'a6:91:b1:17:7c:73', '192.168.1.1': 'a4:91:b1:17:7c:6a'}
+HOSTS_EVEN_NEWER_TECHNICOLOR = {
+    '192.168.1.24': '22:b0:01:9d:70:1', '192.168.1.1': '20:b0:01:9d:70:08'}
 HOSTS_NOT_TECHNICOLOR = {
     '192.168.1.254': 'f0:b9:e5:59:d6:22', '192.168.1.148': 'f2:b9:e5:59:d6:2b'}
 
@@ -39,6 +41,10 @@ class TestCheckhost(unittest.TestCase):
 
     def test_newer_technicolor(self):
         res = common.checkhost.filter_out_technicolor(HOSTS_NEWER_TECHNICOLOR)
+        self.assertEqual(1, res)
+
+    def test_even_newer_technicolor(self):
+        res = common.checkhost.filter_out_technicolor(HOSTS_EVEN_NEWER_TECHNICOLOR)
         self.assertEqual(1, res)
 
     def test_not_technicolor(self):
