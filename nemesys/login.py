@@ -198,26 +198,33 @@ class LoginGui(Tkinter.Frame):
         self.quit()
 
     def createWidgets(self):
-        self.Title = Tkinter.Label(self, padx=60, pady=8)
-        self.Title["text"] = '''Inserisci i codici di accesso (username e password)
-        che hai usato per accedere all'area personale'''
+        self.Title = Tkinter.Label(self, padx=20, pady=8)
+        self.Title["text"] = """
+Se sei registrato sul sito misurainternet.it con SPID
+inserisci codice fiscale e codice Ne.Me.Sys dell'utenza
+(visibile nell'area personale).
+
+Ma se ancora non hai migrato il tuo utente a SPID,
+usa i vecchi codici di autenticazione, email e password,
+che usi per accedere all'area personale.
+"""
         self.Title.grid(column=0, row=0, columnspan=2)
 
-        username_label = Tkinter.Label(self, text="username:")
+        username_label = Tkinter.Label(self, text="Cod. fiscale (o email):")
         username_label.grid(column=0, row=1)
 
-        self.username = Tkinter.Entry(self, width=30)
+        self.username = Tkinter.Entry(self, width=20)
         self.username.grid(column=1, row=1)
 
-        password_label = Tkinter.Label(self, text="password:")
+        password_label = Tkinter.Label(self, text="Cod. Ne.Me.Sys (o password):")
         password_label.grid(column=0, row=2)
 
-        self.password = Tkinter.Entry(self, width=30)
+        self.password = Tkinter.Entry(self, width=20)
         self.password["show"] = "*"
         self.password.grid(column=1, row=2)
 
         self.button_frame = Tkinter.Frame(self)
-        self.button_frame.grid(column=1, row=3, columnspan=2, pady=8)
+        self.button_frame.grid(column=0, row=3, columnspan=2, pady=8)
 
         self.invio = Tkinter.Button(self.button_frame)
         self.invio["text"] = "Accedi",
@@ -225,7 +232,7 @@ class LoginGui(Tkinter.Frame):
         self.invio.grid(column=0, row=0, padx=4)
 
         self.cancl = Tkinter.Button(self.button_frame)
-        self.cancl["text"] = "Cancel",
+        self.cancl["text"] = "Annulla",
         self.cancl["command"] = self.cancel
         self.cancl.grid(column=1, row=0, padx=4)
 
