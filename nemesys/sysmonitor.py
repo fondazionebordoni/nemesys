@@ -181,7 +181,7 @@ class SysProfiler(object):
         error_code = None
         error_msg = ''
 
-        for resource, check_method in self._checks.items():
+        for resource, check_method in list(self._checks.items()):
             try:
                 check_method()
                 if callback:

@@ -16,9 +16,9 @@
 
 import threading
 
-import gui_event
-from speed_tester import SpeedTester
-from system_profiler import SystemProfiler
+from . import gui_event
+from .speed_tester import SpeedTester
+from .system_profiler import SystemProfiler
 
 
 class MistController(object):

@@ -39,6 +39,6 @@ if __name__ == '__main__':
     h1 = Host('192.168.131.1', 'h1')
     h2 = Host(name='h2', ip="192.168.21.2")
     h3 = Host(ip='192.168.140.21')
-    print h1
-    print h2
-    print h3
+    print(h1)
+    print(h2)
+    print(h3)

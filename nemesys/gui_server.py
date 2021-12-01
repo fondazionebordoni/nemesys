@@ -21,7 +21,7 @@ import datetime
 import json
 import logging
 import threading
-import urlparse
+import urllib.parse
 
 import tornado.web
 from tornado.websocket import WebSocketHandler
@@ -246,7 +246,7 @@ class GuiWebSocket(WebSocketHandler):
         logger.info('GUI - connessione da: %s', origin)
         if not origin:
             return True
-        parsed_origin = urlparse.urlparse(origin)
+        parsed_origin = urllib.parse.urlparse(origin)
 
         if (not parsed_origin.netloc) or (parsed_origin.scheme == 'file'):
             return True

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # This setup.py comes from the project template
 #
-from __future__ import print_function
+
 
 import os
 import sys

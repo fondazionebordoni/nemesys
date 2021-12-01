@@ -54,7 +54,7 @@ class mistGUI(wx.Frame):
         panel_header_left = wx.Panel(panel_header, -1)
         panel_header_left.SetBackgroundColour((0x13, 0x45, 0x8f))
         bitmap_header_left = wx.StaticBitmap(panel_header_left, -1,
-                                             wx.Bitmap(os.path.join(paths.ICONS, u"logo_mist.png"), wx.BITMAP_TYPE_ANY),
+                                             wx.Bitmap(os.path.join(paths.ICONS, "logo_mist.png"), wx.BITMAP_TYPE_ANY),
                                              style=wx.NO_BORDER)
         label_ping = wx.StaticText(panel_header_left, -1, "Ping", style=wx.ALIGN_LEFT)
         label_ping.SetMinSize((w * 8, h))
@@ -97,7 +97,7 @@ class mistGUI(wx.Frame):
         panel_header_right = wx.Panel(panel_header, -1)
         panel_header_right.SetBackgroundColour('white')
         bitmap_header_right = wx.StaticBitmap(panel_header_right, -1,
-                                              wx.Bitmap(os.path.join(paths.ICONS, u"logo_mist_end.png"),
+                                              wx.Bitmap(os.path.join(paths.ICONS, "logo_mist_end.png"),
                                                         wx.BITMAP_TYPE_ANY))
         self.button_play = wx.Button(panel_header_right, -1, label="TEST")
         self.button_check = wx.Button(panel_header_right, -1, label="CHECK")
@@ -121,22 +121,22 @@ class mistGUI(wx.Frame):
         panel_main.SetBackgroundColour("white")
         self.gauge = wx.Gauge(panel_main, -1, TOTAL_STEPS, style=wx.GA_HORIZONTAL | wx.GA_SMOOTH)
         self.bitmap_cpu = wx.StaticBitmap(panel_main, -1,
-                                          wx.Bitmap(os.path.join(paths.ICONS, u"%s_gray.png" % RES_CPU.lower()),
+                                          wx.Bitmap(os.path.join(paths.ICONS, "%s_gray.png" % RES_CPU.lower()),
                                                     wx.BITMAP_TYPE_ANY))
         self.bitmap_ram = wx.StaticBitmap(panel_main, -1,
-                                          wx.Bitmap(os.path.join(paths.ICONS, u"%s_gray.png" % RES_RAM.lower()),
+                                          wx.Bitmap(os.path.join(paths.ICONS, "%s_gray.png" % RES_RAM.lower()),
                                                     wx.BITMAP_TYPE_ANY))
         self.bitmap_eth = wx.StaticBitmap(panel_main, -1,
-                                          wx.Bitmap(os.path.join(paths.ICONS, u"%s_gray.png" % RES_ETH.lower()),
+                                          wx.Bitmap(os.path.join(paths.ICONS, "%s_gray.png" % RES_ETH.lower()),
                                                     wx.BITMAP_TYPE_ANY))
         self.bitmap_wifi = wx.StaticBitmap(panel_main, -1,
-                                           wx.Bitmap(os.path.join(paths.ICONS, u"%s_gray.png" % RES_WIFI.lower()),
+                                           wx.Bitmap(os.path.join(paths.ICONS, "%s_gray.png" % RES_WIFI.lower()),
                                                      wx.BITMAP_TYPE_ANY))
         self.bitmap_hosts = wx.StaticBitmap(panel_main, -1,
-                                            wx.Bitmap(os.path.join(paths.ICONS, u"%s_gray.png" % RES_HOSTS.lower()),
+                                            wx.Bitmap(os.path.join(paths.ICONS, "%s_gray.png" % RES_HOSTS.lower()),
                                                       wx.BITMAP_TYPE_ANY))
         self.bitmap_traffic = wx.StaticBitmap(panel_main, -1,
-                                              wx.Bitmap(os.path.join(paths.ICONS, u"%s_gray.png" % RES_TRAFFIC.lower()),
+                                              wx.Bitmap(os.path.join(paths.ICONS, "%s_gray.png" % RES_TRAFFIC.lower()),
                                                         wx.BITMAP_TYPE_ANY))
         self.label_cpu = wx.StaticText(panel_main, -1, "%s\n- - - -" % RES_CPU, style=wx.ALIGN_CENTRE)
         self.label_ram = wx.StaticText(panel_main, -1, "%s\n- - - -" % RES_RAM, style=wx.ALIGN_CENTRE)
@@ -356,7 +356,7 @@ class mistGUI(wx.Frame):
             res_label = self.label_traffic
 
         if (res_bitmap is not None):
-            res_bitmap.SetBitmap(wx.Bitmap(os.path.join(paths.ICONS, u"%s_%s.png" % (resource.lower(), colour))))
+            res_bitmap.SetBitmap(wx.Bitmap(os.path.join(paths.ICONS, "%s_%s.png" % (resource.lower(), colour))))
 
         if (res_label is not None):
             if (info.value is not None):

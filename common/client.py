@@ -93,4 +93,4 @@ if __name__ == '__main__':
                Profile('fub00001', 512, 512),
                Isp('fub000', 'fub000.pem'),
                '41.843646,12.485726')
-    print c
+    print(c)

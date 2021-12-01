@@ -20,7 +20,7 @@
 # from xml.dom.minidom import parseString
 from string import Template
 
-import system_resource
+from . import system_resource
 
 XML_TEMPLATE = '''<?xml version="1.0" encoding="UTF-8"?>
 <measure id="$measure_id" start="$start_time" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \

@@ -20,7 +20,7 @@ Created on 13/giu/2016
 @author: ewedlund
 """
 import logging
-import urlparse
+import urllib.parse
 
 from common import httputils, task
 from common.nem_exceptions import TaskException
@@ -44,7 +44,7 @@ class Scheduler(object):
         """
         Download task from scheduler, returns a Task
         """
-        url = urlparse.urlparse(self._url)
+        url = urllib.parse.urlparse(self._url)
         certificate = self._client.isp.certificate
         request_string = '{path}?clientid={client_id}&version={version}&confid={conf_id}'.format(
             path=url.path,

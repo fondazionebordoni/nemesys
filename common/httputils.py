@@ -21,10 +21,10 @@
 # Original version by Wade Leftwich:
 #   -> http://code.activestate.com/recipes/146306-http-client-to-post-using-multipartform-data/
 
-import httplib
+import http.client
 import mimetypes
 import ssl
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 
 
 def no_verify_ssl_context():
@@ -54,26 +54,26 @@ def get_verified_connection(url, certificate=None, timeout=60):
     connection = None
 
     if url.scheme != 'https':
-        connection = httplib.HTTPConnection(host=url.hostname, timeout=timeout)
+        connection = http.client.HTTPConnection(host=url.hostname, timeout=timeout)
     elif verify_peer(url):
         if certificate is not None:
             try:
                 '''python >= 2.7.9'''
                 context = no_verify_ssl_context()
-                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
+                connection = http.client.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
                                                      timeout=timeout, context=context)
             except AttributeError:
                 '''python < 2.7.9'''
-                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
+                connection = http.client.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
                                                      timeout=timeout)
         else:
             try:
                 '''python >= 2.7.9'''
                 context = no_verify_ssl_context()
-                connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout, context=context)
+                connection = http.client.HTTPSConnection(host=url.hostname, timeout=timeout, context=context)
             except AttributeError:
                 '''python < 2.7.9'''
-                connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout)
+                connection = http.client.HTTPSConnection(host=url.hostname, timeout=timeout)
 
     return connection
 
@@ -81,10 +81,10 @@ def get_verified_connection(url, certificate=None, timeout=60):
 def do_get(url, ):
     try:
         '''python >= 2.7.9'''
-        resp = urllib2.urlopen(url, context=no_verify_ssl_context())
+        resp = urllib.request.urlopen(url, context=no_verify_ssl_context())
     except AttributeError:
         '''python < 2.7.9'''
-        resp = urllib2.urlopen(url)
+        resp = urllib.request.urlopen(url)
     return resp
 
 

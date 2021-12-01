@@ -23,9 +23,9 @@ import os
 import re
 import shutil
 import zipfile
-from httplib import HTTPException
+from http.client import HTTPException
 from ssl import SSLError
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes

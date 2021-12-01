@@ -61,7 +61,7 @@ class CliEventDispatcher(object):
     def unBind(self, event_type, listener):
         """Remove event listener."""
         # Remove the listener from the event type
-        if event_type in self._events.keys():
+        if event_type in list(self._events.keys()):
             listeners = self._events[event_type]
             if len(listeners) == 1:
                 del self._events[event_type]

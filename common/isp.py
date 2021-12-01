@@ -38,4 +38,4 @@ class Isp(object):
 
 if __name__ == '__main__':
     i = Isp('etl005')
-    print i
+    print(i)

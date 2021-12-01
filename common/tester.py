@@ -119,7 +119,7 @@ def main():
         try:
             dev = iptools.get_dev(host=options.host, port=80)
         except Exception:
-            print "Impossibile ottenere indirizzo e device, verificare la connessione all'host"
+            print("Impossibile ottenere indirizzo e device, verificare la connessione all'host")
             import sys
             sys.exit(2)
     t = Tester(dev, Host(options.host), timeout=10)
@@ -128,42 +128,42 @@ def main():
     elif options.bandwidth.endswith("k"):
         bw = int(options.bandwidth[:-1]) * 1000
     else:
-        print "Please specify bandwith in the form of 2M or 512k"
+        print("Please specify bandwith in the form of 2M or 512k")
         return
 
-    print "==============================================="
-    print ('Testing: %s' % options.host)
+    print("===============================================")
+    print(('Testing: %s' % options.host))
     for i in range(1, options.num_tests + 1):
-        print "-----------------------------------------------"
+        print("-----------------------------------------------")
         if i != 1:
-            print "Sleeping...."
-            print "-----------------------------------------------"
+            print("Sleeping....")
+            print("-----------------------------------------------")
             time.sleep(10)
-        print('test %d %s' % (i, options.testtype))
+        print(('test %d %s' % (i, options.testtype)))
         if options.testtype == 'up':
             try:
                 res = t.testhttpup(None, bw=bw)
                 printout_http(res)
             except MeasurementException as e:
-                print("Error: [%d] %s" % (e.errorcode, str(e)))
+                print(("Error: [%d] %s" % (e.errorcode, str(e))))
         elif options.testtype == 'ping':
             try:
                 res = t.testping()
-                print("Ping: %.2f milliseconds" % res.duration)
+                print(("Ping: %.2f milliseconds" % res.duration))
             except Exception as e:
-                print("Error: [%d] %s" % (e.errorcode, str(e)))
+                print(("Error: [%d] %s" % (e.errorcode, str(e))))
         else:
             try:
                 res = t.testhttpdown(bw=bw)
                 printout_http(res)
             except MeasurementException as e:
-                print("Error: %s" % str(e))
-    print "==============================================="
+                print(("Error: %s" % str(e)))
+    print("===============================================")
 
 
 def printout_http(res):
-    print("Medium speed: %d kbps" % (int(res.bytes_tot * 8 / float(res.duration))))
-    print("Spurious traffic: %.2f%%" % (res.spurious * 100.0))
+    print(("Medium speed: %d kbps" % (int(res.bytes_tot * 8 / float(res.duration)))))
+    print(("Spurious traffic: %.2f%%" % (res.spurious * 100.0)))
 
 
 if __name__ == '__main__':

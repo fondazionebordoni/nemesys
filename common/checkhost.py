@@ -18,7 +18,7 @@
 
 import ipcalc
 import logging
-import ping
+from . import ping
 import re
 import threading
 
@@ -178,10 +178,10 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
 
 if __name__ == '__main__':
     import log_conf
-    import iptools
+    from . import iptools
     log_conf.init_log()
     ip = iptools.getipaddr('www.fub.it', 80)
 
-    print "PING:", count_hosts(ip, 24, 200, 2000, 'fub001', False)
-    print "ARP:", count_hosts(ip, 24, 200, 2000, 'fub001', True)
+    print("PING:", count_hosts(ip, 24, 200, 2000, 'fub001', False))
+    print("ARP:", count_hosts(ip, 24, 200, 2000, 'fub001', True))
 #     print count_hosts(ip, 24, 2000, 2000, 'fst001', 4, 1)

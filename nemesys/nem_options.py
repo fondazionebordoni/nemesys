@@ -23,7 +23,7 @@ Created on 13/mag/2016
 import hashlib
 import logging
 import os
-from ConfigParser import ConfigParser, NoOptionError
+from configparser import ConfigParser, NoOptionError
 from optparse import OptionParser
 
 from common import paths

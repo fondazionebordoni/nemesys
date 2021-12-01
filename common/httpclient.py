@@ -22,7 +22,7 @@ TCP window size
 import logging
 import socket
 import threading
-import urlparse
+import urllib.parse
 
 
 END_STRING = '_ThisIsTheEnd_'
@@ -52,7 +52,7 @@ class HttpClient(object):
              data_source=None, timeout=18):
         self._response_received = False
         self._read_timeout = False
-        url_res = urlparse.urlparse(url)
+        url_res = urllib.parse.urlparse(url)
         server = url_res.hostname
         port = url_res.port
         if not port:
@@ -71,7 +71,7 @@ class HttpClient(object):
             post_request = "%s%s:%s\r\n" % (post_request,
                                             "X-Tcp-Window-Size",
                                             tcp_window_size)
-        for header in headers.items():
+        for header in list(headers.items()):
             post_request = "%s%s:%s\r\n" % (post_request, header[0], header[1])
         post_request = "%s\r\n" % post_request
         s.send(post_request)

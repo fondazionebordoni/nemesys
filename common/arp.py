@@ -20,7 +20,7 @@
 # Original version:
 #   -> https://pypi.python.org/pypi/arprequest
 
-import Queue
+import queue
 import logging
 import platform
 import re
@@ -112,7 +112,7 @@ def _pad_mac_string(mac_str):
 
 def do_win_arping(ip_destinations):
     """Windows ARP"""
-    result_queue = Queue.Queue()
+    result_queue = queue.Queue()
     threads = []
     for ip_dest in ip_destinations:
         t = Thread(target=_send_one_win_arp, args=(ip_dest, result_queue))
@@ -127,7 +127,7 @@ def do_win_arping(ip_destinations):
             ip, mac = result_queue.get_nowait()
             if ip not in arp_table:
                 arp_table[ip] = mac
-        except Queue.Empty:
+        except queue.Empty:
             break  # Should not happen
     return arp_table
 

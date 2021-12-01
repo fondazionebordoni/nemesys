@@ -49,7 +49,7 @@ class TestFakefile(unittest.TestCase):
             data = ff.read(8 * 1024)
             self.assertEqual(8 * 1024, len(data))
         end_time = time.time()
-        print (end_time - start_time)/num_iterations
+        print((end_time - start_time)/num_iterations)
 
 
 def main():

@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import Queue
+import queue
 import logging
 import random
 import socket
@@ -213,7 +213,7 @@ class HttpTesterUp(object):
     def test(self, url, callback_update_speed=noop, num_sessions=1, tcp_window_size=-1, buffer_size=8192):
         start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
         stop_event = threading.Event()
-        result_queue = Queue.Queue()
+        result_queue = queue.Queue()
         netstat = Netstat(self.dev)
         producer = Producer(url, stop_event, result_queue, num_sessions, tcp_window_size, buffer_size)
         consumer = Consumer(stop_event, result_queue, num_sessions)
@@ -270,7 +270,7 @@ class HttpTesterUp(object):
 def main():
     socket.setdefaulttimeout(10)
     dev = iptools.get_dev()
-    print HttpTesterUp(dev).test('http://{}:8080'.format('eagle2.fub.it'))
+    print(HttpTesterUp(dev).test('http://{}:8080'.format('eagle2.fub.it')))
 
 
 if __name__ == '__main__':
