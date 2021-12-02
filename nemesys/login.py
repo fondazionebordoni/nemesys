@@ -160,7 +160,7 @@ def getActivationFile(serial_code, path):
     try:
         url = '%s?clientid=%s' % (BACKEND_URL, serial_code)
         resp = httputils.do_get(url)
-        data = resp.read()
+        data = resp.read().decode('utf-8')
     except Exception as e:
         logger.error('impossibile scaricare il file di configurazione: %s', e)
         raise LoginConnectionException(str(e))
@@ -190,7 +190,10 @@ class LoginGui(tkinter.Frame):
         inserted_username = self.username.get()
         inserted_password = self.password.get()
         if inserted_username and inserted_password:
-            self.result = "{}|{}".format(self.username.get(), hashlib.sha1(self.password.get()).hexdigest())
+            self.result = "{}|{}".format(
+                self.username.get(),
+                hashlib.sha1(self.password.get().encode('utf-8')).hexdigest()
+            )
         self.quit()
 
     def cancel(self):

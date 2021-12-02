@@ -153,7 +153,7 @@ class TestTask(unittest.TestCase):
         self.assertNotEqual(None, res)
         self.assertEqual(20, res.delay)
         self.assertEqual(True, res.is_wait)
-        self.assertEqual('Ciao'.encode('UTF-8'), res.message)
+        self.assertEqual('Ciao', res.message)
 
     def test_wait_task_no_delay(self):
         xml = '''<?xml version="1.0" encoding="UTF-8"?>
