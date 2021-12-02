@@ -200,7 +200,7 @@ class Communicator(threading.Thread):
                     try:
                         handler.send_msg(status_dict)
                     except Exception as e:
-                        logger.warn('Errore inviando messaggio alla GUI: %s', e)
+                        logger.warning('Errore inviando messaggio alla GUI: %s', e)
 
 
 class GuiMessage(object):

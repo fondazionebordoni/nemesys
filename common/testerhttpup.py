@@ -248,7 +248,7 @@ class HttpTesterUp(object):
         if total_sent_bytes > consumer.total_read_bytes:
             overhead = (float(total_sent_bytes - consumer.total_read_bytes) / float(total_sent_bytes))
         else:
-            logger.warn('Byte di payload > tx_diff, uso calcolo alternativo di spurious traffic')
+            logger.warning('Byte di payload > tx_diff, uso calcolo alternativo di spurious traffic')
             # for thread in self._read_measure_threads:
             #     thread.join()
             overhead = (float(observer.measured_bytes - consumer.bytes_received) /

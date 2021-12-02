@@ -168,7 +168,7 @@ class Executer(object):
                 except Exception as e:
                     n_errors += 1
                     if n_errors >= MAX_ERRORS:
-                        logger.warn('Il massimo numero di errori è stato raggiunto, sospendo la misura')
+                        logger.warning('Il massimo numero di errori è stato raggiunto, sospendo la misura')
                         if self._isprobe:
                             proof = Proof(test_type=test_type,
                                           start_time=datetime.now(),
@@ -223,9 +223,9 @@ class Executer(object):
                     if dev:
                         self._do_task(task, dev)
                 else:
-                    logger.warn('Ricevuto task senza azioni da svolgere')
+                    logger.warning('Ricevuto task senza azioni da svolgere')
             else:
-                logger.warn('Tempo di attesa prima della misura anomalo: '
+                logger.warning('Tempo di attesa prima della misura anomalo: '
                             '%d minuti', secs_to_next_measurement / 60)
 
     def _profile_system(self, server_ip, port):

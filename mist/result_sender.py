@@ -70,7 +70,7 @@ def save_and_send_measure(measure, event_dispatcher, deliverer):
             event_dispatcher.postEvent(gui_event.UpdateEvent('Salvataggio completato con successo.',
                                                              gui_event.UpdateEvent.MAJOR_IMPORTANCE))
         else:
-            logger.warn('Errore nella spedizione del file %s.', filename)
+            logger.warning('Errore nella spedizione del file %s.', filename)
             event_dispatcher.postEvent(gui_event.ErrorEvent(
                 'Tentativo di salvataggio numero {} di {} fallito.'.format(retries, MAX_SEND_RETRY)))
             if retries >= MAX_SEND_RETRY:

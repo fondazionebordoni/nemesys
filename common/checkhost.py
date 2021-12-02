@@ -64,7 +64,7 @@ def filter_out_technicolor(ip_table):
     for ip_address in ip_table:
         mac_address = ip_table[ip_address]
         if re.search(TECHNICOLOR_MAC_REGEX, mac_address, re.I):
-            logger.warn('Trovato possibile router Technicolor: [%s, %s]', ip_address, mac_address)
+            logger.warning('Trovato possibile router Technicolor: [%s, %s]', ip_address, mac_address)
             temp_table.append(mac_address[3:14])
         else:
             temp_table.append(mac_address)
@@ -139,7 +139,7 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
             # ip_table = arp.do_arping(dev_ip_address, netmask, real_subnet)
             ip_table = arp.do_arping(ip_destinations)
         except Exception as e:
-            logger.warn('Errore durante la ricerca dispositivi con ARP: %s', e)
+            logger.warning('Errore durante la ricerca dispositivi con ARP: %s', e)
             return 0
         hosts = 'HOSTS: '
         for key in ip_table:
@@ -158,7 +158,7 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
                 ping_thread.start()
                 ping_threads.append(ping_thread)
             except Exception as e:
-                logger.warn('Errore durante la ricerca dispositivi con PING: %s', e)
+                logger.warning('Errore durante la ricerca dispositivi con PING: %s', e)
                 break
             if i == MAX_PING_HOSTS:
                 break

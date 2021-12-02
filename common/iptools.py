@@ -127,7 +127,7 @@ def get_network_mask(ip):
                     return _mask_conversion(addr_type.netmask)
                 except (ValueError, TypeError, AttributeError):
                     break
-    logger.warn("Impossibile calcolare il netmask, uso il default")
+    logger.warning("Impossibile calcolare il netmask, uso il default")
     return _mask_conversion(default_netmask)
 
 

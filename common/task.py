@@ -133,7 +133,7 @@ def xml2task(xml):
         if 'delay' in task_dict:
             delay = task_dict['delay']
         else:
-            logger.warn("Task di attesa, ma manca il tempo di attesa, "
+            logger.warning("Task di attesa, ma manca il tempo di attesa, "
                         "uso il default 5 minuti")
             delay = 5 * 60
         return new_wait_task(int(delay), message)

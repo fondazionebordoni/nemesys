@@ -54,7 +54,7 @@ class Deliverer(object):
                         backend=default_backend()
                     )
             except Exception as e:
-                logger.warn('Impossibile inizializzare chiave privata, i file non verranno firmate: %s', e)
+                logger.warning('Impossibile inizializzare chiave privata, i file non verranno firmate: %s', e)
         self._certificate = certificate
 
     def upload(self, filename):
