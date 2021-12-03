@@ -36,7 +36,8 @@ def update_version_py():
     try:
         p = subprocess.Popen(["git", "describe",
                               "--tags", "--always"],
-                             stdout=subprocess.PIPE)
+                             stdout=subprocess.PIPE,
+                             text=True)
     except EnvironmentError:
         print("unable to run git, leaving %s alone" % VERSION_FILE)
         return
