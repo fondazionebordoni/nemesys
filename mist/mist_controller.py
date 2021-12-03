@@ -71,7 +71,7 @@ class MistController(object):
         if self._speed_tester is not None and self._speed_tester.is_running():
             self._speed_tester.stop()
             for thread in threading.enumerate():
-                if thread.isAlive():
+                if thread.is_alive():
                     try:
                         thread._Thread__stop()
                     except Exception:

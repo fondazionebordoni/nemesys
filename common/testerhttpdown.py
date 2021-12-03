@@ -203,7 +203,7 @@ class HttpTesterDown(object):
         producer.join()
         consumer.join()
         observer.join()
-        if timeout.isAlive():
+        if timeout.is_alive():
             timeout.cancel()
         if consumer.errors:
             logger.debug('Errors: {}'.format(consumer.errors))
@@ -233,7 +233,7 @@ class HttpTesterDown(object):
 def main():
     socket.setdefaulttimeout(10)
     dev = iptools.get_dev()
-    res = HttpTesterDown(dev).test('http://{}:80'.format('eagle2.fub.it'))
+    res = HttpTesterDown(dev).test('http://{}:80'.format('193.104.137.133'))
     print(res)
 
 
