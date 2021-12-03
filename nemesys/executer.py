@@ -273,7 +273,7 @@ class Executer(object):
             status = 'error'
         logger.debug('Callback dal system profiler: %s, %s, %s', resource, status, info)
         self._gui_server.sys_res(resource, status, info)
-        if status is 'error':
+        if status == 'error':
             self._gui_server.notification(errorcode, message=info)
 
     def callback_httptest(self, second, speed):
