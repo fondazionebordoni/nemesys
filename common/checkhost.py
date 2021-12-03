@@ -167,7 +167,7 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
             ping_thread.join()
 
             if ping_thread.status:
-                logger.info('Trovato dispositivi: %s (in %.2f ms)', ping_thread.ip, ping_thread.elapsed * 1000)
+                logger.info('Trovato dispositivo: %s (in %.2f ms)', ping_thread.ip, ping_thread.elapsed * 1000)
                 n_hosts += 1
 
     if not real_subnet:

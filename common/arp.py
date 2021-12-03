@@ -90,14 +90,14 @@ def do_unix_arping(ip_destinations, timeout=0.01):
 
 def _send_one_mac_arp(ip_address, timeout=0.01):
     # Remove any existing entry
-    pid = Popen(["arp", "-d", ip_address], stdout=PIPE, stderr=PIPE)
+    pid = Popen(["arp", "-d", ip_address], stdout=PIPE, stderr=PIPE, text=True)
     pid.communicate()[0]
     # Now ping the destination
     try:
         ping.do_one("%s" % ip_address, timeout)
     except Exception:
         pass  # Timeout
-    pid = Popen(["arp", "-n", ip_address], stdout=PIPE, stderr=PIPE)
+    pid = Popen(["arp", "-n", ip_address], stdout=PIPE, stderr=PIPE, text=True)
     s = pid.communicate()[0]
     my_match = re.search(r"(([a-fA-F\d]{1,2}\:){5}[a-fA-F\d]{1,2})", s)
     if my_match:

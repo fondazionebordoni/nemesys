@@ -46,14 +46,14 @@ def checksum(source_string):
     countTo = len(source_string) / 2 * 2
     count = 0
     while count < countTo:
-        thisVal = ord(source_string[count + 1]) * \
-            256 + ord(source_string[count])
+        thisVal = source_string[count + 1] * \
+            256 + source_string[count]
         sum = sum + thisVal
         sum = sum & 0xffffffff  # Necessary?
         count = count + 2
 
     if countTo < len(source_string):
-        sum = sum + ord(source_string[len(source_string) - 1])
+        sum = sum + source_string[len(source_string) - 1]
         sum = sum & 0xffffffff  # Necessary?
 
     sum = (sum >> 16) + (sum & 65535)
@@ -126,7 +126,7 @@ def send_one_ping(my_socket, dest_addr, ID):
 
     header = struct.pack('bbHHh', ICMP_ECHO_REQUEST, 0, my_checksum, ID, 1)
     bytesInDouble = struct.calcsize('d')
-    data = (PACKET_SIZE - len(header) - bytesInDouble) * 'x'
+    data = (PACKET_SIZE - len(header) - bytesInDouble) * b'x'
 
     if IS_WIN:
         start = time.clock()

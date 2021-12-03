@@ -31,7 +31,10 @@ logger = logging.getLogger(__name__)
 def getipaddr(host='finaluser.agcom244.fub.it', port=443):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        print(f"PY3-HOST: {host}")
+        print(f"PY3-PORT: {port}")
         s.connect((host, port))
+        print("PY3-CONNECTED")
         ipaddr = s.getsockname()[0]
     except socket.gaierror:
         raise NemesysException("Impossibile ottenere indirizzo IP "
