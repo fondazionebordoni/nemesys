@@ -109,7 +109,7 @@ def main():
                       help="The expected bandwith to measure, used in upload tests, e.g. 512k, 2M")
     parser.add_option("-n", "--num-tests", dest="num_tests", default="1", type="int",
                       help="Number of tests to perform")
-    parser.add_option("-H", "--host", dest="host", default="eagle2.fub.it",
+    parser.add_option("-H", "--host", dest="host", default="193.104.137.133",
                       help="An ipaddress or FQDN of server host")
 
     (options, _) = parser.parse_args()
