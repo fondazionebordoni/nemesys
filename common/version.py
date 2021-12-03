@@ -23,7 +23,7 @@ FULL_VERSION = '%s'
 PLATFORM = '%s'
 __updated__ = '%s'
 if __name__ == '__main__':
-    print __version__
+    print(__version__)
 """
 DIR = path.abspath(path.dirname(__file__))
 VERSION_FILE = os.path.join(DIR, "_generated_version.py")
