@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import binascii
 import random
 
 
@@ -46,7 +47,7 @@ class Fakefile(object):
             # if hex number is e.g. 6, pad with one 0 to 06
             data = data.rjust(bufsize * 2, '0')
             # transform into a string
-            self.data = data.decode('hex')
+            self.data = binascii.unhexlify(data)
             self.data_len = len(self.data)
         self._bytes -= self.data_len
         return self.data
