@@ -65,9 +65,9 @@ class Downloader(threading.Thread):
 
     def run(self):
         try:
-            headers = ({'X-requested-file-size': MAX_TRANSFERED_BYTES,
-                        'X-requested-measurement-time': MEASURE_TIME + RAMPUP_SECS,
-                        'X-measurement-id': self.measurement_id})
+            headers = {'X-requested-file-size': str(MAX_TRANSFERED_BYTES),
+                        'X-requested-measurement-time': str(MEASURE_TIME + RAMPUP_SECS),
+                        'X-measurement-id': self.measurement_id}
             request = urllib.request.Request(self.url, headers=headers)
             response = urllib.request.urlopen(request, None, HTTP_TIMEOUT)
         except Exception as e:
@@ -95,7 +95,7 @@ class Downloader(threading.Thread):
                     self.stop_event.set()
                     return
                 filebytes += len(my_buffer)
-                if '_ThisIsTheEnd_' in my_buffer:
+                if b'_ThisIsTheEnd_' in my_buffer:
                     received_end = True
                     break
             except socket.timeout:
