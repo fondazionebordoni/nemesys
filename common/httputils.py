@@ -109,34 +109,43 @@ def post_multipart(url, fields, files, certificate=None, timeout=60):
     return response
 
 
+def _encode_if_string(s, encoding='utf-8'):
+    if isinstance(s, str):
+        return s.encode(encoding)
+    return s
+
+
 def encode_multipart_form_data(fields, files):
     """
     fields is a sequence of (name, value) elements for regular form fields.
     files is a sequence of (name, filename, value) elements for data to be uploaded as files
     Return (content_type, body) ready for httplib.HTTP instance
     """
-    boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
+    boundary = b'----------ThIs_Is_tHe_bouNdaRY_$'
     body_parts = []
 
     if fields is not None:
         for (key, value) in fields:
-            body_parts.append('--' + boundary)
-            body_parts.append('Content-Disposition: form-data; name="%s"' % key)
-            body_parts.append('')
+            body_parts.append(b'--' + boundary)
+            body_parts.append(b'Content-Disposition: form-data; name="%s"' % _encode_if_string(key))
+            body_parts.append(b'')
             body_parts.append(value)
 
     if files is not None:
         for (key, filename, value) in files:
-            body_parts.append('--' + boundary)
-            body_parts.append('Content-Disposition: form-data; name="%s"; filename="%s"' % (key, filename))
-            body_parts.append('Content-Type: %s' % get_content_type(filename))
-            body_parts.append('')
+            body_parts.append(b'--' + boundary)
+            body_parts.append(b'Content-Disposition: form-data; name="%s"; filename="%s"' % (
+                _encode_if_string(key),
+                _encode_if_string(filename),
+            ))
+            body_parts.append(b'Content-Type: %s' % get_content_type(filename).encode())
+            body_parts.append(b'')
             body_parts.append(value)
 
-    body_parts.append('--' + boundary + '--')
-    body_parts.append('')
-    content_type = 'multipart/form-data; boundary=%s' % boundary
-    return content_type, '\r\n'.join(body_parts)
+    body_parts.append(b'--' + boundary + b'--')
+    body_parts.append(b'')
+    content_type = b'multipart/form-data; boundary=%s' % boundary
+    return content_type, b'\r\n'.join(body_parts)
 
 
 def get_content_type(filename):

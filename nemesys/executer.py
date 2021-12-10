@@ -119,7 +119,7 @@ class Executer(object):
 
         except Exception as e:
             logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s',
-                         e.message, exc_info=True)
+                         str(e), exc_info=True)
             error_code = nem_exceptions.errorcode_from_exception(e)
             self._gui_server.notification(error_code, str(e))
 

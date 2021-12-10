@@ -60,7 +60,7 @@ def test_from_server_response(response):
     """
     logger.debug('Ricevuto risposta dal server: %s', response)
     try:
-        results = [int(num) for num in response.strip(']').strip('[').split(', ')]
+        results = [int(num) for num in response.strip(b']').strip(b'[').split(b', ')]
     except Exception:
         raise nem_exceptions.MeasurementException('Ricevuto risposta errata dal server',
                                                   nem_exceptions.SERVER_ERROR)
@@ -227,7 +227,7 @@ class HttpTesterUp(object):
         producer.join()
         consumer.join()
         observer.join()
-        if timeout.isAlive():
+        if timeout.is_alive():
             timeout.cancel()
         if consumer.errors:
             logger.debug('Errori: %s', consumer.errors)
@@ -270,7 +270,7 @@ class HttpTesterUp(object):
 def main():
     socket.setdefaulttimeout(10)
     dev = iptools.get_dev()
-    print(HttpTesterUp(dev).test('http://{}:8080'.format('eagle2.fub.it')))
+    print(HttpTesterUp(dev).test('http://{}:8080'.format('193.104.137.133')))
 
 
 if __name__ == '__main__':
