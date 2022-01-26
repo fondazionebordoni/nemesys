@@ -169,4 +169,4 @@ class Measure(object):
         return self._client
 
     def __str__(self):
-        return self._xml.toxml('UTF-8')
+        return self._xml.toxml()

@@ -48,7 +48,7 @@ class Netstat(object):
         else:
             raise NetstatException("Contatore non trovato per il device %s"
                                    % self.if_device)
-        return long(rx_bytes)
+        return int(rx_bytes)
 
     def get_tx_bytes(self):
         if not self.if_device:
@@ -63,12 +63,12 @@ class Netstat(object):
         else:
             raise NetstatException("Contatore non trovato per il device %s"
                                    % str(self.if_device))
-        return long(tx_bytes)
+        return int(tx_bytes)
 
 
 if __name__ == '__main__':
-    import iptools
+    from . import iptools
     dev = iptools.get_dev()
     my_netstat = Netstat(dev)
-    print "RX bytes", my_netstat.get_rx_bytes()
-    print "TX bytes", my_netstat.get_tx_bytes()
+    print("RX bytes", my_netstat.get_rx_bytes())
+    print("TX bytes", my_netstat.get_tx_bytes())

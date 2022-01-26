@@ -21,10 +21,10 @@
 # Original version by Wade Leftwich:
 #   -> http://code.activestate.com/recipes/146306-http-client-to-post-using-multipartform-data/
 
-import httplib
+import http.client
 import mimetypes
 import ssl
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 
 
 def no_verify_ssl_context():
@@ -54,26 +54,26 @@ def get_verified_connection(url, certificate=None, timeout=60):
     connection = None
 
     if url.scheme != 'https':
-        connection = httplib.HTTPConnection(host=url.hostname, timeout=timeout)
+        connection = http.client.HTTPConnection(host=url.hostname, timeout=timeout)
     elif verify_peer(url):
         if certificate is not None:
             try:
                 '''python >= 2.7.9'''
                 context = no_verify_ssl_context()
-                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
+                connection = http.client.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
                                                      timeout=timeout, context=context)
             except AttributeError:
                 '''python < 2.7.9'''
-                connection = httplib.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
+                connection = http.client.HTTPSConnection(host=url.hostname, key_file=certificate, cert_file=certificate,
                                                      timeout=timeout)
         else:
             try:
                 '''python >= 2.7.9'''
                 context = no_verify_ssl_context()
-                connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout, context=context)
+                connection = http.client.HTTPSConnection(host=url.hostname, timeout=timeout, context=context)
             except AttributeError:
                 '''python < 2.7.9'''
-                connection = httplib.HTTPSConnection(host=url.hostname, timeout=timeout)
+                connection = http.client.HTTPSConnection(host=url.hostname, timeout=timeout)
 
     return connection
 
@@ -81,10 +81,10 @@ def get_verified_connection(url, certificate=None, timeout=60):
 def do_get(url, ):
     try:
         '''python >= 2.7.9'''
-        resp = urllib2.urlopen(url, context=no_verify_ssl_context())
+        resp = urllib.request.urlopen(url, context=no_verify_ssl_context())
     except AttributeError:
         '''python < 2.7.9'''
-        resp = urllib2.urlopen(url)
+        resp = urllib.request.urlopen(url)
     return resp
 
 
@@ -109,34 +109,43 @@ def post_multipart(url, fields, files, certificate=None, timeout=60):
     return response
 
 
+def _encode_if_string(s, encoding='utf-8'):
+    if isinstance(s, str):
+        return s.encode(encoding)
+    return s
+
+
 def encode_multipart_form_data(fields, files):
     """
     fields is a sequence of (name, value) elements for regular form fields.
     files is a sequence of (name, filename, value) elements for data to be uploaded as files
     Return (content_type, body) ready for httplib.HTTP instance
     """
-    boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
+    boundary = b'----------ThIs_Is_tHe_bouNdaRY_$'
     body_parts = []
 
     if fields is not None:
         for (key, value) in fields:
-            body_parts.append('--' + boundary)
-            body_parts.append('Content-Disposition: form-data; name="%s"' % key)
-            body_parts.append('')
+            body_parts.append(b'--' + boundary)
+            body_parts.append(b'Content-Disposition: form-data; name="%s"' % _encode_if_string(key))
+            body_parts.append(b'')
             body_parts.append(value)
 
     if files is not None:
         for (key, filename, value) in files:
-            body_parts.append('--' + boundary)
-            body_parts.append('Content-Disposition: form-data; name="%s"; filename="%s"' % (key, filename))
-            body_parts.append('Content-Type: %s' % get_content_type(filename))
-            body_parts.append('')
+            body_parts.append(b'--' + boundary)
+            body_parts.append(b'Content-Disposition: form-data; name="%s"; filename="%s"' % (
+                _encode_if_string(key),
+                _encode_if_string(filename),
+            ))
+            body_parts.append(b'Content-Type: %s' % get_content_type(filename).encode())
+            body_parts.append(b'')
             body_parts.append(value)
 
-    body_parts.append('--' + boundary + '--')
-    body_parts.append('')
-    content_type = 'multipart/form-data; boundary=%s' % boundary
-    return content_type, '\r\n'.join(body_parts)
+    body_parts.append(b'--' + boundary + b'--')
+    body_parts.append(b'')
+    content_type = b'multipart/form-data; boundary=%s' % boundary
+    return content_type, b'\r\n'.join(body_parts)
 
 
 def get_content_type(filename):

@@ -23,7 +23,7 @@ Created on 13/mag/2016
 import hashlib
 import logging
 import os
-from ConfigParser import ConfigParser, NoOptionError
+from configparser import ConfigParser, NoOptionError
 from optparse import OptionParser
 
 from common import paths
@@ -231,10 +231,10 @@ def parse_args(version):
         config.set('client', 'clientid', options.clientid)
 
         check_required(parser, '--up')
-        config.set('profile', 'bandwidthup', options.bandwidthup)
+        config.set('profile', 'bandwidthup', str(options.bandwidthup))
 
         check_required(parser, '--down')
-        config.set('profile', 'bandwidthdown', options.bandwidthdown)
+        config.set('profile', 'bandwidthdown', str(options.bandwidthdown))
 
         check_required(parser, '--profileid')
         config.set('profile', 'profileid', options.profileid)
@@ -246,7 +246,7 @@ def parse_args(version):
         with open(paths.CONF_MAIN, 'w') as f:
             config.write(f)
 
-    with open(paths.CONF_MAIN, 'r') as f:
+    with open(paths.CONF_MAIN, 'rb') as f:
         md5 = hashlib.md5(f.read()).hexdigest()
 
     return options, args, md5

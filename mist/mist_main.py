@@ -85,7 +85,7 @@ def main(argv=None):
         sys.exit()
 
     try:
-        import log_conf
+        from . import log_conf
         log_conf.init_log()
         paths.create_mist_dirs()
     except IOError:
@@ -99,7 +99,7 @@ def main(argv=None):
     except Exception as e:
         logger.error("Impossibile trovare interfaccia attiva: %s" % e)
         if args_opts.text_based:
-            print "Impossibile trovare un interfaccia di rete attiva, verificare la connessione alla rete."
+            print("Impossibile trovare un interfaccia di rete attiva, verificare la connessione alla rete.")
         else:
             app = wx.App(False)
             msgBox = wx.MessageDialog(None,
@@ -150,7 +150,7 @@ def main(argv=None):
             app.SetTopWindow(GUI)
             GUI.Show()
             app.MainLoop()
-    except Exception, e:
+    except Exception as e:
         logging.critical("Impossibile avviare il programma", exc_info=True)
         sys.stderr.write(program_name + ": " + repr(e) + "\n")
         return 2

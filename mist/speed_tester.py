@@ -94,7 +94,7 @@ class SpeedTester(Thread):
         elif test_type.is_http_up(t_type):
             test_todo = my_task.upload
         else:
-            logger.warn("Tipo di test da effettuare non definito: %s" % test_type.get_string_type(t_type))
+            logger.warning("Tipo di test da effettuare non definito: %s" % test_type.get_string_type(t_type))
             test_todo = 0
 
         while (test_good < test_todo) and self._running:
@@ -228,11 +228,11 @@ class SpeedTester(Thread):
         try:
             my_task = self._scheduler.download_task(server=chosen_server)
             if my_task.is_wait:
-                logger.warn('Got wait task, message: %s', my_task.message)
+                logger.warning('Got wait task, message: %s', my_task.message)
                 self._event_dispatcher.postEvent(gui_event.ErrorEvent(my_task.message))
                 my_task = None
         except TaskException as e:
-            logger.warn(e)
+            logger.warning(e)
             self._event_dispatcher.postEvent(
                 gui_event.ErrorEvent("Impossibile eseguire ora i test di misura. Riprovare tra qualche secondo."))
             my_task = None

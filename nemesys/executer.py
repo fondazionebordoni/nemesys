@@ -119,7 +119,7 @@ class Executer(object):
 
         except Exception as e:
             logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s',
-                         e.message, exc_info=True)
+                         str(e), exc_info=True)
             error_code = nem_exceptions.errorcode_from_exception(e)
             self._gui_server.notification(error_code, str(e))
 
@@ -168,7 +168,7 @@ class Executer(object):
                 except Exception as e:
                     n_errors += 1
                     if n_errors >= MAX_ERRORS:
-                        logger.warn('Il massimo numero di errori è stato raggiunto, sospendo la misura')
+                        logger.warning('Il massimo numero di errori è stato raggiunto, sospendo la misura')
                         if self._isprobe:
                             proof = Proof(test_type=test_type,
                                           start_time=datetime.now(),
@@ -223,9 +223,9 @@ class Executer(object):
                     if dev:
                         self._do_task(task, dev)
                 else:
-                    logger.warn('Ricevuto task senza azioni da svolgere')
+                    logger.warning('Ricevuto task senza azioni da svolgere')
             else:
-                logger.warn('Tempo di attesa prima della misura anomalo: '
+                logger.warning('Tempo di attesa prima della misura anomalo: '
                             '%d minuti', secs_to_next_measurement / 60)
 
     def _profile_system(self, server_ip, port):
@@ -273,7 +273,7 @@ class Executer(object):
             status = 'error'
         logger.debug('Callback dal system profiler: %s, %s, %s', resource, status, info)
         self._gui_server.sys_res(resource, status, info)
-        if status is 'error':
+        if status == 'error':
             self._gui_server.notification(errorcode, message=info)
 
     def callback_httptest(self, second, speed):
@@ -353,7 +353,7 @@ def get_log_streams(from_logger):
 
 
 def main():
-    import log_conf
+    from . import log_conf
     log_conf.init_log()
 
     logger.info('Avvio di Nemesys v.%s on %s', _generated_version.FULL_VERSION, platform.platform())

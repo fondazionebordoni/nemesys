@@ -46,14 +46,14 @@ def checksum(source_string):
     countTo = len(source_string) / 2 * 2
     count = 0
     while count < countTo:
-        thisVal = ord(source_string[count + 1]) * \
-            256 + ord(source_string[count])
+        thisVal = source_string[count + 1] * \
+            256 + source_string[count]
         sum = sum + thisVal
         sum = sum & 0xffffffff  # Necessary?
         count = count + 2
 
     if countTo < len(source_string):
-        sum = sum + ord(source_string[len(source_string) - 1])
+        sum = sum + source_string[len(source_string) - 1]
         sum = sum & 0xffffffff  # Necessary?
 
     sum = (sum >> 16) + (sum & 65535)
@@ -126,7 +126,7 @@ def send_one_ping(my_socket, dest_addr, ID):
 
     header = struct.pack('bbHHh', ICMP_ECHO_REQUEST, 0, my_checksum, ID, 1)
     bytesInDouble = struct.calcsize('d')
-    data = (PACKET_SIZE - len(header) - bytesInDouble) * 'x'
+    data = (PACKET_SIZE - len(header) - bytesInDouble) * b'x'
 
     if IS_WIN:
         start = time.clock()
@@ -158,7 +158,8 @@ def do_one(dest_addr, timeout):
     try:
         my_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
         my_socket.settimeout(timeout)
-    except socket.error, (errno, msg):
+    except socket.error as xxx_todo_changeme:
+        (errno, msg) = xxx_todo_changeme.args
         if errno == 1:
             # Operation not permitted
 
@@ -187,20 +188,20 @@ def verbose_ping(dest_addr, timeout=20, count=4):
     the result.
     """
 
-    for i in xrange(count):
-        print 'ping %s...' % dest_addr,
+    for i in range(count):
+        print('ping %s...' % dest_addr, end=' ')
         try:
             delay = do_one(dest_addr, timeout)
-        except socket.gaierror, e:
-            print "failed. (socket error: '%s')" % e[1]
+        except socket.gaierror as e:
+            print("failed. (socket error: '%s')" % e[1])
             break
 
         if delay is None:
-            print 'failed. (timeout within %ssec.)' % timeout
+            print('failed. (timeout within %ssec.)' % timeout)
         else:
             delay = delay * 1000
-            print 'get ping in %0.4fms' % delay
-    print
+            print('get ping in %0.4fms' % delay)
+    print()
 
 
 if __name__ == '__main__':
@@ -208,7 +209,7 @@ if __name__ == '__main__':
         try:
             verbose_ping("192.168.208.%d" % i, 1, 1)
         except Exception as e:
-            print
+            print()
     verbose_ping('repubblica.it', 5)
     verbose_ping('google.com', 5)
     verbose_ping('a-test-url-taht-is-not-available.com', 5)

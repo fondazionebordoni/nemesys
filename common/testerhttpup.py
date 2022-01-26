@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import Queue
+import queue
 import logging
 import random
 import socket
@@ -60,7 +60,7 @@ def test_from_server_response(response):
     """
     logger.debug('Ricevuto risposta dal server: %s', response)
     try:
-        results = [int(num) for num in response.strip(']').strip('[').split(', ')]
+        results = [int(num) for num in response.strip(b']').strip(b'[').split(b', ')]
     except Exception:
         raise nem_exceptions.MeasurementException('Ricevuto risposta errata dal server',
                                                   nem_exceptions.SERVER_ERROR)
@@ -213,7 +213,7 @@ class HttpTesterUp(object):
     def test(self, url, callback_update_speed=noop, num_sessions=1, tcp_window_size=-1, buffer_size=8192):
         start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
         stop_event = threading.Event()
-        result_queue = Queue.Queue()
+        result_queue = queue.Queue()
         netstat = Netstat(self.dev)
         producer = Producer(url, stop_event, result_queue, num_sessions, tcp_window_size, buffer_size)
         consumer = Consumer(stop_event, result_queue, num_sessions)
@@ -227,7 +227,7 @@ class HttpTesterUp(object):
         producer.join()
         consumer.join()
         observer.join()
-        if timeout.isAlive():
+        if timeout.is_alive():
             timeout.cancel()
         if consumer.errors:
             logger.debug('Errori: %s', consumer.errors)
@@ -248,7 +248,7 @@ class HttpTesterUp(object):
         if total_sent_bytes > consumer.total_read_bytes:
             overhead = (float(total_sent_bytes - consumer.total_read_bytes) / float(total_sent_bytes))
         else:
-            logger.warn('Byte di payload > tx_diff, uso calcolo alternativo di spurious traffic')
+            logger.warning('Byte di payload > tx_diff, uso calcolo alternativo di spurious traffic')
             # for thread in self._read_measure_threads:
             #     thread.join()
             overhead = (float(observer.measured_bytes - consumer.bytes_received) /
@@ -270,7 +270,7 @@ class HttpTesterUp(object):
 def main():
     socket.setdefaulttimeout(10)
     dev = iptools.get_dev()
-    print HttpTesterUp(dev).test('http://{}:8080'.format('eagle2.fub.it'))
+    print(HttpTesterUp(dev).test('http://{}:8080'.format('193.104.137.133')))
 
 
 if __name__ == '__main__':

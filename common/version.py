@@ -23,7 +23,7 @@ FULL_VERSION = '%s'
 PLATFORM = '%s'
 __updated__ = '%s'
 if __name__ == '__main__':
-    print __version__
+    print(__version__)
 """
 DIR = path.abspath(path.dirname(__file__))
 VERSION_FILE = os.path.join(DIR, "_generated_version.py")
@@ -31,18 +31,19 @@ VERSION_FILE = os.path.join(DIR, "_generated_version.py")
 
 def update_version_py():
     if not os.path.isdir(".git"):
-        print "This does not appear to be a Git repository."
+        print("This does not appear to be a Git repository.")
         return
     try:
         p = subprocess.Popen(["git", "describe",
                               "--tags", "--always"],
-                             stdout=subprocess.PIPE)
+                             stdout=subprocess.PIPE,
+                             text=True)
     except EnvironmentError:
-        print "unable to run git, leaving %s alone" % VERSION_FILE
+        print("unable to run git, leaving %s alone" % VERSION_FILE)
         return
     stdout = p.communicate()[0]
     if p.returncode != 0:
-        print "unable to run git, leaving %s alone" % VERSION_FILE
+        print("unable to run git, leaving %s alone" % VERSION_FILE)
         return
     assert stdout.startswith(TAG_PREFIX)
     full_version = stdout[len(TAG_PREFIX):].strip()
@@ -53,7 +54,7 @@ def update_version_py():
     f = open(VERSION_FILE, "w")
     f.write(GENERATED_VERSION_PY % (strict_version, full_version, platform.platform(), time.strftime("%c")))
     f.close()
-    print "updated _generated_version.py to '%s'" % strict_version
+    print("updated _generated_version.py to '%s'" % strict_version)
 
 
 if __name__ == '__main__':

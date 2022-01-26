@@ -21,7 +21,7 @@ Created on 14/apr/2016
 """
 
 import hashlib
-from ConfigParser import ConfigParser, NoOptionError
+from configparser import ConfigParser, NoOptionError
 from optparse import OptionParser
 from os import path
 

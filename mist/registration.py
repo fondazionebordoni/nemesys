@@ -19,11 +19,11 @@
 
 
 import hashlib
-import httplib
+import http.client
 import logging
 import os
 import ssl
-import urlparse
+import urllib.parse
 import wx
 
 from common import iptools
@@ -196,7 +196,7 @@ def getconf(code, filepath, url_string):
     # # Scarica il file di configurazione dalla url (HTTPS) specificata, salvandolo nel file specificato. ##
     # # Solleva eccezioni in caso di problemi o file ricevuto non corretto. ##
 
-    url = urlparse.urlparse(url_string)
+    url = urllib.parse.urlparse(url_string)
     try:
         # TODO: This does not do any verification of the server's certificate. #
         try:
@@ -204,10 +204,10 @@ def getconf(code, filepath, url_string):
             context = ssl.create_default_context()
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
-            connection = httplib.HTTPSConnection(host=url.hostname, context=context)
+            connection = http.client.HTTPSConnection(host=url.hostname, context=context)
         except AttributeError:
             '''python < 2.7.9'''
-            connection = httplib.HTTPSConnection(host=url.hostname)
+            connection = http.client.HTTPSConnection(host=url.hostname)
 
         connection.request('GET', '%s?clientid=%s' % (url.path, code))
         logger.debug("Dati inviati: %s" % code)
@@ -280,8 +280,8 @@ def register():
 
 
 if __name__ == '__main__':
-    import log_conf
+    from . import log_conf
     log_conf.init_log()
     app = wx.App(False)
-    print is_registered("981a9f45d4e261e1cbc9921b457e5477")
+    print(is_registered("981a9f45d4e261e1cbc9921b457e5477"))
     # getconf('ab0cd1ef2gh3ij4kl5mn6op7qr8st9uv', './../config/client.conf', 'https://finaluser.agcom244.fub.it/Config')

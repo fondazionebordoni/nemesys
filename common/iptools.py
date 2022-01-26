@@ -90,7 +90,7 @@ def get_dev(host='finaluser.agcom244.fub.it', port=443, ip=None):
         raise nem_exceptions.SysmonitorException('Impossibile ottenere il dettaglio '
                                                  'dell\'interfaccia di rete: %s' % e,
                                                  nem_exceptions.UNKDEV)
-    for (if_name, if_info) in net_if_addrs.items():
+    for (if_name, if_info) in list(net_if_addrs.items()):
         for addr_type in if_info:
             if addr_type.family == socket.AF_INET:
                 if addr_type.address == local_ip_address:
@@ -120,14 +120,14 @@ def get_network_mask(ip):
     else:
         local_ip_address = ip
 
-    for (_, if_info) in psutil.net_if_addrs().items():
+    for (_, if_info) in list(psutil.net_if_addrs().items()):
         for addr_type in if_info:
             if addr_type.family == socket.AF_INET and addr_type.address == local_ip_address:
                 try:
                     return _mask_conversion(addr_type.netmask)
                 except (ValueError, TypeError, AttributeError):
                     break
-    logger.warn("Impossibile calcolare il netmask, uso il default")
+    logger.warning("Impossibile calcolare il netmask, uso il default")
     return _mask_conversion(default_netmask)
 
 

@@ -20,7 +20,7 @@
 # Original version:
 #   -> https://pypi.python.org/pypi/arprequest
 
-import Queue
+import queue
 import logging
 import platform
 import re
@@ -90,14 +90,14 @@ def do_unix_arping(ip_destinations, timeout=0.01):
 
 def _send_one_mac_arp(ip_address, timeout=0.01):
     # Remove any existing entry
-    pid = Popen(["arp", "-d", ip_address], stdout=PIPE, stderr=PIPE)
+    pid = Popen(["arp", "-d", ip_address], stdout=PIPE, stderr=PIPE, text=True)
     pid.communicate()[0]
     # Now ping the destination
     try:
         ping.do_one("%s" % ip_address, timeout)
     except Exception:
         pass  # Timeout
-    pid = Popen(["arp", "-n", ip_address], stdout=PIPE, stderr=PIPE)
+    pid = Popen(["arp", "-n", ip_address], stdout=PIPE, stderr=PIPE, text=True)
     s = pid.communicate()[0]
     my_match = re.search(r"(([a-fA-F\d]{1,2}\:){5}[a-fA-F\d]{1,2})", s)
     if my_match:
@@ -112,7 +112,7 @@ def _pad_mac_string(mac_str):
 
 def do_win_arping(ip_destinations):
     """Windows ARP"""
-    result_queue = Queue.Queue()
+    result_queue = queue.Queue()
     threads = []
     for ip_dest in ip_destinations:
         t = Thread(target=_send_one_win_arp, args=(ip_dest, result_queue))
@@ -127,7 +127,7 @@ def do_win_arping(ip_destinations):
             ip, mac = result_queue.get_nowait()
             if ip not in arp_table:
                 arp_table[ip] = mac
-        except Queue.Empty:
+        except queue.Empty:
             break  # Should not happen
     return arp_table
 

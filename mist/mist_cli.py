@@ -32,12 +32,12 @@ import os
 import platform
 import signal
 import sys
-import thread
+import _thread
 from threading import Event, Thread
 
-import gui_event
-import mist_messages
-import test_type
+from . import gui_event
+from . import mist_messages
+from . import test_type
 from common._generated_version import __version__
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ class MistCli(Thread):
         signal.signal(signal.SIGINT, self.signal_handler)
 
     def signal_handler(self, signal, frame):
-        print 'Ctrl-C, exiting...'
+        print('Ctrl-C, exiting...')
         sys.exit(0)
 
     def set_listener(self, listener):
@@ -111,7 +111,7 @@ class MistCli(Thread):
         try:
             str_length = len(string)
         except Exception:
-            print 'Could not get length!'
+            print('Could not get length!')
             return string
         if color is not None:
             string = color + string + bcolors.ENDC
@@ -167,9 +167,9 @@ class MistCli(Thread):
     def _update_messages(self, message, color=None, font=None):
         logger.info('Messaggio all\'utente: "%s"' % message)
         if color:
-            print color + message + bcolors.ENDC
+            print(color + message + bcolors.ENDC)
         else:
-            print message
+            print(message)
 
     def _on_result(self, result_event):
         result_test_type = result_event.getType()
@@ -225,21 +225,21 @@ class MistCli(Thread):
     def _print_greeting(self):
         (height, width) = self._get_height_width()
         frame_row = '+' + ('-' * (width - 2)) + '+'
-        print frame_row
+        print(frame_row)
         frame = '|'
-        print self._format_string('', frame=frame)
-        print self._format_string('Benvenuto in %s versione %s' % (mist_messages.SWN, __version__), frame=frame,
-                                  color=bcolors.BLUE)
-        print self._format_string('', frame=frame)
-        print self._format_string('Premendo il tasto C avvierai la profilazione della macchina per la misura.',
-                                  frame=frame, color=bcolors.YELLOW)
-        print self._format_string('', frame=frame)
-        print self._format_string('Premendo il tasto M avvierai una profilazione e il test di misura completo.',
-                                  frame=frame, color=bcolors.GREEN)
-        print self._format_string('', frame=frame)
-        print self._format_string('Per uscire premere il tasto Q.', frame=frame, color=bcolors.RED)
-        print self._format_string('', frame=frame)
-        print frame_row
+        print(self._format_string('', frame=frame))
+        print(self._format_string('Benvenuto in %s versione %s' % (mist_messages.SWN, __version__), frame=frame,
+                                  color=bcolors.BLUE))
+        print(self._format_string('', frame=frame))
+        print(self._format_string('Premendo il tasto C avvierai la profilazione della macchina per la misura.',
+                                  frame=frame, color=bcolors.YELLOW))
+        print(self._format_string('', frame=frame))
+        print(self._format_string('Premendo il tasto M avvierai una profilazione e il test di misura completo.',
+                                  frame=frame, color=bcolors.GREEN))
+        print(self._format_string('', frame=frame))
+        print(self._format_string('Per uscire premere il tasto Q.', frame=frame, color=bcolors.RED))
+        print(self._format_string('', frame=frame))
+        print(frame_row)
 
     def set_busy(self, busy=False):
         if busy:
@@ -251,13 +251,13 @@ class MistCli(Thread):
         while True:
             try:
                 self._idle.wait()
-                line = raw_input('C(heck)/M(isura)/Q(uit)> ').lower()
+                line = input('C(heck)/M(isura)/Q(uit)> ').lower()
             except KeyboardInterrupt:
-                print "Keyboard Interrupt"
-                thread.interrupt_main()
+                print("Keyboard Interrupt")
+                _thread.interrupt_main()
                 break
             except EOFError:
-                print ''
+                print('')
                 break
             if 'q' in line:
                 if self._listener:

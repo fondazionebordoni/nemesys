@@ -21,7 +21,7 @@ import datetime
 import json
 import logging
 import threading
-import urlparse
+import urllib.parse
 
 import tornado.web
 from tornado.websocket import WebSocketHandler
@@ -200,7 +200,7 @@ class Communicator(threading.Thread):
                     try:
                         handler.send_msg(status_dict)
                     except Exception as e:
-                        logger.warn('Errore inviando messaggio alla GUI: %s', e)
+                        logger.warning('Errore inviando messaggio alla GUI: %s', e)
 
 
 class GuiMessage(object):
@@ -246,7 +246,7 @@ class GuiWebSocket(WebSocketHandler):
         logger.info('GUI - connessione da: %s', origin)
         if not origin:
             return True
-        parsed_origin = urlparse.urlparse(origin)
+        parsed_origin = urllib.parse.urlparse(origin)
 
         if (not parsed_origin.netloc) or (parsed_origin.scheme == 'file'):
             return True

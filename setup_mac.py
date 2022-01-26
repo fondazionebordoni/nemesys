@@ -49,7 +49,7 @@ def sub_iceberg_file(f, ver):
 
 
 version = get_version()
-print "version: ", version
+print("version: ", version)
 
 COPYRIGHT = 'Copyright 2012-2017 Fondazione Ugo Bordoni'
 APP_MIST = ['mist/mist_main.py']

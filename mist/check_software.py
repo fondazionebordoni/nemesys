@@ -21,7 +21,7 @@ import logging
 import re
 import webbrowser
 import wx
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 from common import httputils
 
@@ -152,8 +152,8 @@ def do_check(version):
 
 
 if __name__ == '__main__':
-    import log_conf
+    from . import log_conf
 
     log_conf.init_log()
     app = wx.App(False)
-    print do_check('1.1.2')
+    print(do_check('1.1.2'))

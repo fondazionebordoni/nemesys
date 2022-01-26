@@ -16,13 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import Tkinter
+import tkinter
 import hashlib
 import logging
 import os
 import sys
-import tkMessageBox
-import urllib2
+import tkinter.messagebox
+import urllib.request, urllib.error, urllib.parse
 
 from common import httputils
 from common import utils
@@ -110,7 +110,7 @@ def getCode():
     """
     Apre una finestra che chiede il codice licenza. Resituisce il codice licenza e chiude la finestra.
     """
-    root = Tkinter.Tk()
+    root = tkinter.Tk()
     if utils.is_windows():
         root.wm_iconbitmap('Nemesys.ico')
     app = LoginGui(master=root)
@@ -131,23 +131,23 @@ def getCode():
 
 
 def ErrorDialog(message):
-    root = Tkinter.Tk()
+    root = tkinter.Tk()
     if utils.is_windows():
         root.wm_iconbitmap('Nemesys.ico')
     root.withdraw()
     title = 'Errore'
-    tkMessageBox.showerror(title, message, parent=root)
+    tkinter.messagebox.showerror(title, message, parent=root)
     root.destroy()
 
 
 def OkDialog():
-    root = Tkinter.Tk()
+    root = tkinter.Tk()
     if utils.is_windows():
         root.wm_iconbitmap('Nemesys.ico')
     root.withdraw()
     title = 'Ne.Me.Sys autenticazione corretta'
     message = 'Username e password corrette e verificate'
-    tkMessageBox.showinfo(title, message, parent=root)
+    tkinter.messagebox.showinfo(title, message, parent=root)
     root.destroy()
 
 
@@ -160,7 +160,7 @@ def getActivationFile(serial_code, path):
     try:
         url = '%s?clientid=%s' % (BACKEND_URL, serial_code)
         resp = httputils.do_get(url)
-        data = resp.read()
+        data = resp.read().decode('utf-8')
     except Exception as e:
         logger.error('impossibile scaricare il file di configurazione: %s', e)
         raise LoginConnectionException(str(e))
@@ -181,7 +181,7 @@ def getActivationFile(serial_code, path):
         raise Exception('Errore nel file di configurazione')
 
 
-class LoginGui(Tkinter.Frame):
+class LoginGui(tkinter.Frame):
     """
     finestra di codice licenza
     """
@@ -190,7 +190,10 @@ class LoginGui(Tkinter.Frame):
         inserted_username = self.username.get()
         inserted_password = self.password.get()
         if inserted_username and inserted_password:
-            self.result = "{}|{}".format(self.username.get(), hashlib.sha1(self.password.get()).hexdigest())
+            self.result = "{}|{}".format(
+                self.username.get(),
+                hashlib.sha1(self.password.get().encode('utf-8')).hexdigest()
+            )
         self.quit()
 
     def cancel(self):
@@ -198,7 +201,7 @@ class LoginGui(Tkinter.Frame):
         self.quit()
 
     def createWidgets(self):
-        self.Title = Tkinter.Label(self, padx=20, pady=8)
+        self.Title = tkinter.Label(self, padx=20, pady=8)
         self.Title["text"] = """
 Se sei registrato sul sito misurainternet.it con SPID
 inserisci codice fiscale e codice Ne.Me.Sys dell'utenza
@@ -210,34 +213,34 @@ che usi per accedere all'area personale.
 """
         self.Title.grid(column=0, row=0, columnspan=2)
 
-        username_label = Tkinter.Label(self, text="Cod. fiscale (o email):")
+        username_label = tkinter.Label(self, text="Cod. fiscale (o email):")
         username_label.grid(column=0, row=1)
 
-        self.username = Tkinter.Entry(self, width=20)
+        self.username = tkinter.Entry(self, width=20)
         self.username.grid(column=1, row=1)
 
-        password_label = Tkinter.Label(self, text="Cod. Ne.Me.Sys (o password):")
+        password_label = tkinter.Label(self, text="Cod. Ne.Me.Sys (o password):")
         password_label.grid(column=0, row=2)
 
-        self.password = Tkinter.Entry(self, width=20)
+        self.password = tkinter.Entry(self, width=20)
         self.password["show"] = "*"
         self.password.grid(column=1, row=2)
 
-        self.button_frame = Tkinter.Frame(self)
+        self.button_frame = tkinter.Frame(self)
         self.button_frame.grid(column=0, row=3, columnspan=2, pady=8)
 
-        self.invio = Tkinter.Button(self.button_frame)
+        self.invio = tkinter.Button(self.button_frame)
         self.invio["text"] = "Accedi",
         self.invio["command"] = self.sendMsg
         self.invio.grid(column=0, row=0, padx=4)
 
-        self.cancl = Tkinter.Button(self.button_frame)
+        self.cancl = tkinter.Button(self.button_frame)
         self.cancl["text"] = "Annulla",
         self.cancl["command"] = self.cancel
         self.cancl.grid(column=1, row=0, padx=4)
 
     def __init__(self, master=None):
-        Tkinter.Frame.__init__(self, master)
+        tkinter.Frame.__init__(self, master)
         self.config(width="800")
         if utils.is_windows():
             self.master.wm_iconbitmap('Nemesys.ico')

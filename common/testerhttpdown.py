@@ -16,13 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import Queue
+import queue
 import logging
 import random
 import socket
 import threading
 import time
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 from datetime import datetime
 
 from common import iptools
@@ -65,11 +65,11 @@ class Downloader(threading.Thread):
 
     def run(self):
         try:
-            headers = ({'X-requested-file-size': MAX_TRANSFERED_BYTES,
-                        'X-requested-measurement-time': MEASURE_TIME + RAMPUP_SECS,
-                        'X-measurement-id': self.measurement_id})
-            request = urllib2.Request(self.url, headers=headers)
-            response = urllib2.urlopen(request, None, HTTP_TIMEOUT)
+            headers = {'X-requested-file-size': str(MAX_TRANSFERED_BYTES),
+                        'X-requested-measurement-time': str(MEASURE_TIME + RAMPUP_SECS),
+                        'X-measurement-id': self.measurement_id}
+            request = urllib.request.Request(self.url, headers=headers)
+            response = urllib.request.urlopen(request, None, HTTP_TIMEOUT)
         except Exception as e:
             error = {'message': 'Impossibile creare connessione: {}'.format(e),
                      'code': nem_exceptions.CONNECTION_FAILED}
@@ -95,7 +95,7 @@ class Downloader(threading.Thread):
                     self.stop_event.set()
                     return
                 filebytes += len(my_buffer)
-                if '_ThisIsTheEnd_' in my_buffer:
+                if b'_ThisIsTheEnd_' in my_buffer:
                     received_end = True
                     break
             except socket.timeout:
@@ -189,7 +189,7 @@ class HttpTesterDown(object):
     def test(self, url, callback_update_speed=noop, num_sessions=7, buffer_size=8192):
         start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
         stop_event = threading.Event()
-        result_queue = Queue.Queue()
+        result_queue = queue.Queue()
         netstat = Netstat(self.dev)
         producer = Producer(url, stop_event, result_queue, num_sessions, buffer_size)
         consumer = Consumer(stop_event, result_queue, num_sessions)
@@ -203,7 +203,7 @@ class HttpTesterDown(object):
         producer.join()
         consumer.join()
         observer.join()
-        if timeout.isAlive():
+        if timeout.is_alive():
             timeout.cancel()
         if consumer.errors:
             logger.debug('Errors: {}'.format(consumer.errors))
@@ -233,7 +233,7 @@ class HttpTesterDown(object):
 def main():
     socket.setdefaulttimeout(10)
     dev = iptools.get_dev()
-    res = HttpTesterDown(dev).test('http://{}:80'.format('eagle2.fub.it'))
+    res = HttpTesterDown(dev).test('http://{}:80'.format('193.104.137.133'))
     print(res)
 
 

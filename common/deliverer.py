@@ -23,9 +23,9 @@ import os
 import re
 import shutil
 import zipfile
-from httplib import HTTPException
+from http.client import HTTPException
 from ssl import SSLError
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -54,7 +54,7 @@ class Deliverer(object):
                         backend=default_backend()
                     )
             except Exception as e:
-                logger.warn('Impossibile inizializzare chiave privata, i file non verranno firmate: %s', e)
+                logger.warning('Impossibile inizializzare chiave privata, i file non verranno firmate: %s', e)
         self._certificate = certificate
 
     def upload(self, filename):

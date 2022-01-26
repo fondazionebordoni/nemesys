@@ -188,7 +188,7 @@ def is_wireless(if_name):
 def is_wireless_active():
     if utils.is_darwin():
         return is_wireless_active_darwin()
-    for (if_name, if_info) in psutil.net_if_stats().items():
+    for (if_name, if_info) in list(psutil.net_if_stats().items()):
         try:
             if if_info.isup and is_wireless(if_name):
                 return True
@@ -199,7 +199,7 @@ def is_wireless_active():
 def get_all_devices():
     active_ipaddr = iptools.getipaddr()
     devices = []
-    for (if_name, if_addrs) in psutil.net_if_addrs().items():
+    for (if_name, if_addrs) in list(psutil.net_if_addrs().items()):
         dev = Device(if_name)
         try:
             if if_name.startswith('eth') or if_name.startswith('en') or '(LAN)' in if_name or 'Ethernet' in if_name:

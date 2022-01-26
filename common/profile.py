@@ -42,4 +42,4 @@ class Profile(object):
 
 if __name__ == '__main__':
     p = Profile('2mb1mb', 2048, 1024)
-    print p
+    print(p)

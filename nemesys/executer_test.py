@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 class MockScheduler(object):
     def __init__(self):
-        server = Server('fubsrvrmnmx03', 'eagle2.fub.it', 'Namex server')
+        server = Server('fubsrvrmnmx03', '193.104.137.133', 'Namex server')
         self.task_default = task.Task(now=True,
                                       server=server,
                                       upload=1,
@@ -88,8 +88,8 @@ class MockDeliverer(object):
 class MockDysfunctDeliverer(object):
     def uploadall_and_move(self, from_dir=None, to_dir=None, do_remove=False):
         logger.info("Move all from %s to %s, do remove is %s", from_dir, to_dir, do_remove)
-        msg = (u"Misura terminata ma "
-               u"un errore si è verificato durante il suo invio.")
+        msg = ("Misura terminata ma "
+               "un errore si è verificato durante il suo invio.")
         raise nem_exceptions.NemesysException(msg, nem_exceptions.DELIVERY_ERROR)
 
     def upload_and_move(self, f=None, to_dir=None, do_remove=False):
@@ -98,7 +98,7 @@ class MockDysfunctDeliverer(object):
 
 
 def main():
-    import log_conf
+    from . import log_conf
     log_conf.init_log()
 
     (options, _, md5conf) = nem_options.parse_args(_generated_version.__version__)
@@ -124,8 +124,8 @@ def main():
                    isprobe=False)
     loop_thread = threading.Thread(target=exe.loop)
     loop_thread.start()
-    raw_input("Press Enter to stop...")
-    print "Stopping..."
+    input("Press Enter to stop...")
+    print("Stopping...")
     exe.stop()
     loop_thread.join()
 

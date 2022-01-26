@@ -60,4 +60,4 @@ def timestamp():
 
 
 if __name__ == '__main__':
-    print timestamp()
+    print(timestamp())

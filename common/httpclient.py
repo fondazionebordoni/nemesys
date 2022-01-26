@@ -22,10 +22,10 @@ TCP window size
 import logging
 import socket
 import threading
-import urlparse
+import urllib.parse
 
 
-END_STRING = '_ThisIsTheEnd_'
+END_STRING = b'_ThisIsTheEnd_'
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class HttpClient(object):
              data_source=None, timeout=18):
         self._response_received = False
         self._read_timeout = False
-        url_res = urlparse.urlparse(url)
+        url_res = urllib.parse.urlparse(url)
         server = url_res.hostname
         port = url_res.port
         if not port:
@@ -65,16 +65,16 @@ class HttpClient(object):
         try:
             s.connect((server, port))
         except:
-            raise HttpException("Impossibile connettersi al server %s sulla porta %d" % (server, port))
+            raise HttpException(("Impossibile connettersi al server %s sulla porta %d" % (server, port)).encode('utf-8'))
         post_request = "POST /misurainternet.txt HTTP/1.0\r\n"
         if (tcp_window_size is not None) and (tcp_window_size > 0):
             post_request = "%s%s:%s\r\n" % (post_request,
                                             "X-Tcp-Window-Size",
                                             tcp_window_size)
-        for header in headers.items():
+        for header in list(headers.items()):
             post_request = "%s%s:%s\r\n" % (post_request, header[0], header[1])
         post_request = "%s\r\n" % post_request
-        s.send(post_request)
+        s.send(post_request.encode('utf-8'))
         receive_thread = threading.Thread(target=self._read_response,
                                           args=(s,))
         receive_thread.start()
@@ -94,15 +94,15 @@ class HttpClient(object):
                     break
                 if not data_chunk:
                     try:
-                        s.send("0\r\n")
-                        s.send("\r\n")
+                        s.send(b"0\r\n")
+                        s.send(b"\r\n")
                     except socket.error:
                         pass
                     break
                 try:
                     chunk_size = len(data_chunk)
-                    bytes_sent += s.send("%s\r\n" % hex(chunk_size)[2:])
-                    bytes_sent += s.send("%s\r\n" % data_chunk)
+                    bytes_sent += s.send(("%s\r\n" % hex(chunk_size)[2:]).encode())
+                    bytes_sent += s.send(b"%s\r\n" % data_chunk)
                 except Exception:
                     pass
         receive_thread.join()
@@ -113,7 +113,7 @@ class HttpClient(object):
         self._read_timeout = True
 
     def _read_response(self, sock):
-        all_data = ""
+        all_data = b""
         start_body_found = False
         sock.settimeout(2.0)
 
@@ -121,22 +121,22 @@ class HttpClient(object):
             try:
                 data = sock.recv(1)
                 if data is not None:
-                    all_data = "%s%s" % (all_data, data)
-                if '[' in data:
+                    all_data = b"%s%s" % (all_data, data)
+                if b'[' in data:
                     start_body_found = True
-                if ']' in data and start_body_found:
+                if b']' in data and start_body_found:
                     self._response_received = True
                     break
             except socket.timeout:
                 pass
             except Exception:
                 break
-        if all_data and '\n' in all_data:
-            lines = all_data.split('\n')
+        if all_data and b'\n' in all_data:
+            lines = all_data.split(b'\n')
             try:
                 response = lines[0].strip().split()
                 response_code = int(response[1])
-                response_cause = ' '.join(response[2:])
+                response_cause = b' '.join(response[2:])
             except IndexError:
                 logger.error("Could not parse response %s" % all_data)
                 response_code = 999
@@ -145,7 +145,7 @@ class HttpClient(object):
             # Find an empty line, the content is what comes after
             content = ""
             while i < len(lines):
-                if lines[i].strip() == "":
+                if lines[i].strip() == b"":
                     try:
                         content = lines[i + 1:][0]
                     except IndexError:
