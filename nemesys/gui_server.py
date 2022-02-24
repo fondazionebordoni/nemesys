@@ -21,12 +21,16 @@ import datetime
 import json
 import logging
 import threading
+import traceback
 import urllib.parse
 
 import tornado.web
 from tornado.websocket import WebSocketHandler
+from tornado.ioloop import IOLoop
 
 logger = logging.getLogger(__name__)
+
+ioloop = None
 
 WEBSOCKET_PORT = 54201
 
@@ -82,10 +86,9 @@ class Communicator(threading.Thread):
     """
 
     def __init__(self, serial, logdir, version):
-        threading.Thread.__init__(self)
-        self.application = tornado.web.Application([(r'/ws', GuiWebSocket)])
-        self.ioLoop = tornado.ioloop.IOLoop.current()
-        self.ioLoop.make_current()
+        super().__init__()
+        self.application = None
+        self.ioLoop = None # IOLoop.current()
         self._last_status = None
         self._lock = threading.Lock()
         self._serial = serial
@@ -96,8 +99,13 @@ class Communicator(threading.Thread):
 
     def run(self):
         try:
+            global ioloop
+            self.ioLoop = IOLoop()
+            self.ioLoop.make_current()
+            ioloop = self.ioLoop
+            self.application = tornado.web.Application([(r'/ws', GuiWebSocket)])
             self.application.listen(WEBSOCKET_PORT)
-            self.ioLoop.start()
+            IOLoop.current().start()
             # close() viene eseguito solo dopo che start esce dal loop,
             # ovvero dopo che riceve il comando stop(). Rilascia le risorse.
             self.ioLoop.close(all_fds=True)
@@ -268,7 +276,8 @@ class GuiWebSocket(WebSocketHandler):
     def send_msg(self, msg):
         try:
             json_string = json.dumps(msg)
-            self.write_message(json_string)
+            global ioloop
+            ioloop.add_callback(self.write_message, json_string)
         except Exception as e:
             logger.error('Errore inviando messaggio [%s] alla GUI: %s', msg, e)
 
