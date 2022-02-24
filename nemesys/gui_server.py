@@ -21,10 +21,12 @@ import datetime
 import json
 import logging
 import threading
+import traceback
 import urllib.parse
 
 import tornado.web
 from tornado.websocket import WebSocketHandler
+from tornado.ioloop import IOLoop
 
 logger = logging.getLogger(__name__)
 
@@ -82,10 +84,9 @@ class Communicator(threading.Thread):
     """
 
     def __init__(self, serial, logdir, version):
-        threading.Thread.__init__(self)
-        self.application = tornado.web.Application([(r'/ws', GuiWebSocket)])
-        self.ioLoop = tornado.ioloop.IOLoop.current()
-        self.ioLoop.make_current()
+        super().__init__()
+        self.application = None
+        self.ioLoop = None # IOLoop.current()
         self._last_status = None
         self._lock = threading.Lock()
         self._serial = serial
@@ -96,8 +97,11 @@ class Communicator(threading.Thread):
 
     def run(self):
         try:
+            self.ioLoop = IOLoop()
+            self.ioLoop.make_current()
+            self.application = tornado.web.Application([(r'/ws', gui_web_socket_factory(self.ioLoop))])
             self.application.listen(WEBSOCKET_PORT)
-            self.ioLoop.start()
+            IOLoop.current().start()
             # close() viene eseguito solo dopo che start esce dal loop,
             # ovvero dopo che riceve il comando stop(). Rilascia le risorse.
             self.ioLoop.close(all_fds=True)
@@ -237,53 +241,56 @@ last_status = None
 last_notifications = collections.deque()
 
 
-class GuiWebSocket(WebSocketHandler):
-    """ Handler per una connessione.
-        gestisce le richieste e le risposte.
-    """
+def gui_web_socket_factory(ioloop):
+    class GuiWebSocket(WebSocketHandler):
+        """ Handler per una connessione.
+            gestisce le richieste e le risposte.
+        """
 
-    def check_origin(self, origin):
-        logger.info('GUI - connessione da: %s', origin)
-        if not origin:
-            return True
-        parsed_origin = urllib.parse.urlparse(origin)
+        def check_origin(self, origin):
+            logger.info('GUI - connessione da: %s', origin)
+            if not origin:
+                return True
+            parsed_origin = urllib.parse.urlparse(origin)
 
-        if (not parsed_origin.netloc) or (parsed_origin.scheme == 'file'):
-            return True
-        # Strip port number if present from netloc
-        cleaned_netloc = parsed_origin.netloc.split(':')[0]
-        if (cleaned_netloc == '127.0.0.1') or (cleaned_netloc == 'localhost'):
-            return True
-        if ((cleaned_netloc == 'misurainternet.it') or
-                (cleaned_netloc.endswith('.misurainternet.it')) or
-                (cleaned_netloc.endswith('.fub.it'))):
-            return True
-        return False
+            if (not parsed_origin.netloc) or (parsed_origin.scheme == 'file'):
+                return True
+            # Strip port number if present from netloc
+            cleaned_netloc = parsed_origin.netloc.split(':')[0]
+            if (cleaned_netloc == '127.0.0.1') or (cleaned_netloc == 'localhost'):
+                return True
+            if ((cleaned_netloc == 'misurainternet.it') or
+                    (cleaned_netloc.endswith('.misurainternet.it')) or
+                    (cleaned_netloc.endswith('.fub.it'))):
+                return True
+            return False
 
-    def open(self):
-        with handler_lock:
-            handlers.append(self)
-        logger.info('Connessione a GUI aperta')
+        def open(self):
+            with handler_lock:
+                handlers.append(self)
+            logger.info('Connessione a GUI aperta')
 
-    def send_msg(self, msg):
-        try:
-            json_string = json.dumps(msg)
-            self.write_message(json_string)
-        except Exception as e:
-            logger.error('Errore inviando messaggio [%s] alla GUI: %s', msg, e)
+        def send_msg(self, msg):
+            try:
+                json_string = json.dumps(msg)
+                ioloop.add_callback(self.write_message, json_string)
+            except Exception as e:
+                logger.error('Errore inviando messaggio [%s] alla GUI: %s', msg, e)
 
-    def on_message(self, message):
-        msg_dict = json.loads(message)
-        logger.info('Ricevuto messaggio da GUI: %s', msg_dict)
-        if msg_dict['request'] == 'currentstatus':
-            if start_msg is not None:
-                self.send_msg(start_msg)
-            if last_status is not None:
-                self.send_msg(last_status)
-            for notification in list(last_notifications):
-                self.send_msg(notification)
+        def on_message(self, message):
+            msg_dict = json.loads(message)
+            logger.info('Ricevuto messaggio da GUI: %s', msg_dict)
+            if msg_dict['request'] == 'currentstatus':
+                if start_msg is not None:
+                    self.send_msg(start_msg)
+                if last_status is not None:
+                    self.send_msg(last_status)
+                for notification in list(last_notifications):
+                    self.send_msg(notification)
 
-    def on_close(self):
-        with handler_lock:
-            handlers.remove(self)
-            logger.info('Connessione a GUI chiusa')
+        def on_close(self):
+            with handler_lock:
+                handlers.remove(self)
+                logger.info('Connessione a GUI chiusa')
+
+    return GuiWebSocket
