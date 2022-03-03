@@ -56,14 +56,14 @@ def mac_straddr(mac, printable=False, delimiter=None):
     string delimited by the 3rd parameter
 
     Expect a list of length 2 returned by arp_query
-     """
+    """
     if len(mac) != 2:
         return -1
     if printable:
         if delimiter:
             m = ""
             for c in mac_straddr(mac):
-                m += "%02x" % ord(c) + delimiter
+                m += "%02x" % c + delimiter
             return m.rstrip(delimiter)
 
         return repr(mac_straddr(mac)).strip("\'")
@@ -136,9 +136,10 @@ def _send_one_win_arp(ip_address, result_queue):
     ip_address = str(ip_address)
     mac_addr = (ctypes.c_ulong * 2)()
     addr_len = ctypes.c_ulong(6)
-    ip_dest = ws2_32.inet_addr(ip_address)
+    ip_dest = ws2_32.inet_addr(bytes(ip_address, encoding='utf-8'))
 
-    ip_src = ws2_32.inet_addr(socket.gethostbyname(socket.gethostname()))
+    ip_src_str = socket.gethostbyname(socket.gethostname())
+    ip_src = ws2_32.inet_addr(bytes(ip_src_str, encoding='utf-8'))
 
     error = iphlpapi.SendARP(ip_dest, ip_src, ctypes.byref(mac_addr), ctypes.byref(addr_len))
 
