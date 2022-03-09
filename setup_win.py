@@ -81,10 +81,6 @@ setup(
     version=get_version(),
     service=[nemesys_service],
     windows=[
-        {'name': 'MisuraInternet Speed Test',
-         'script': '.\mist\mist_main.py',
-         'uac_info': 'requireAdministrator',
-         'icon_resources': [(1, '.\\icons\\mist.ico')]},
         {'name': 'Nemesys login',
          'script': os.path.join('nemesys', 'login.py'),
          'uac_info': 'requireAdministrator',
