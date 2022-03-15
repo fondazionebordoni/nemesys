@@ -63,6 +63,7 @@ Se non hai modificato il nome del file di installazione, verifica i dati di acce
 CLIENT_CONFIG = 'client.conf'
 BACKEND_URL = {
     None: 'https://finaluser.agcom244.fub.it/Config',
+    'MI': 'https://finaluser.agcom244.fub.it/Config',
     'PS': 'https://backend.pianoscuola.fub.it/Config',
 }
 
@@ -169,6 +170,9 @@ def getActivationFile(client_type, token, path):
         url = '%s?clientid=%s' % (BACKEND_URL[client_type], token)
         resp = httputils.do_get(url)
         data = resp.read().decode('utf-8')
+    except KeyError:
+        logger.error(f"Tipo client {client_type} non riconosciuto")
+        raise LoginAuthenticationException('')
     except Exception as e:
         logger.error('impossibile scaricare il file di configurazione: %s', e)
         raise LoginConnectionException(str(e))
@@ -178,7 +182,8 @@ def getActivationFile(client_type, token, path):
             with open('%s/%s' % (path, CLIENT_CONFIG), 'w') as myfile:
                 myfile.write(data)
                 logger.info('File di configurazione scaricato con successo')
-                OkDialog()
+                if client_type is None:
+                    OkDialog()
         except IOError as e:
             logger.error('Impossible scrivere il file di configurazione: %s', e)
             raise LoginException('Impossibile scrivere il file di configurazione: %s' % e)
@@ -270,7 +275,7 @@ def try_to_activate(credentials):
                 token = serial_code
             else:
                 client_type, token = credentials
-                serial_code = "$".join(credentials)
+                serial_code = "@".join(credentials)
             getActivationFile(client_type, token, paths._CONF_DIR)
             return serial_code
         except LoginAuthenticationException:
@@ -297,16 +302,21 @@ def extract_autoconf_credentials():
     Return autoconf credentials, if they are part of the filename
 
     Filename may have the following format:
-    Nemesys_VERSION$CLIENT_TYPE$TOKEN.exe
+    Nemesys_VERSION@CLIENT_TYPE@TOKEN.exe
 
     In that case return client_type, token
     Otherwise, return None
     """
-    file_path = sys.argv[0]
+    logger.info(f'Linea di comando: {" ".join(sys.argv)}')
+    if len(sys.argv) != 2:
+        logger.info('login.exe eseguito con un numero incorretto di parametri')
+        logger.info('Fallback in modalità di configurazione manuale')
+        return None
+    file_path = sys.argv[1]
     logger.info(f'Percorso del file: {file_path}')
     _, filename = os.path.split(file_path)
     name, ext = os.path.splitext(filename)
-    components = name.split('$')
+    components = name.split('@')
     if len(components) != 3:
         logger.info('Pacchetto non autoconfigurante')
         return None
