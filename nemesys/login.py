@@ -56,7 +56,8 @@ Verifica di avere accesso alla rete.'''
 
 CODE_ERROR_MESSAGE = '''Autenticazione fallita o licenza non attiva.
 
-Assicurati di non aver modificato il nome del file di installazione.
+Assicurati di non aver modificato il nome del file di installazione. \
+Se questo fosse il caso, effettua nuovamente il download.
 
 Se non hai modificato il nome del file di installazione, verifica i dati di accesso e la presenza di una licenza attiva al sito www.misurainternet.it'''
 
