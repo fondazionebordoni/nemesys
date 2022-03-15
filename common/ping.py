@@ -76,16 +76,13 @@ def receive_one_ping(my_socket, ID, timeout, dest_addr):
     timeLeft = timeout
 
     while True:
-        startedSelect = time.time()
+        startedSelect = time.perf_counter()
         whatReady = select.select([my_socket], [], [], timeLeft)
-        howLongInSelect = time.time() - startedSelect
+        howLongInSelect = time.perf_counter() - startedSelect
         if whatReady[0] == []:  # Timeout
             raise RuntimeWarning('Timeout during ICMP socket select')
-
-        if IS_WIN:
-            timeReceived = time.clock()
-        else:
-            timeReceived = time.time()
+        
+        timeReceived = time.perf_counter()
 
         (recPacket, addr) = my_socket.recvfrom(PACKET_SIZE + 64)
         icmpHeader = recPacket[20:28]
@@ -128,10 +125,7 @@ def send_one_ping(my_socket, dest_addr, ID):
     bytesInDouble = struct.calcsize('d')
     data = (PACKET_SIZE - len(header) - bytesInDouble) * b'x'
 
-    if IS_WIN:
-        start = time.clock()
-    else:
-        start = time.time()
+    start = time.perf_counter()
 
     data = struct.pack('d', start) + data
 
@@ -168,13 +162,6 @@ def do_one(dest_addr, timeout):
         raise  # raise the original error
 
     my_ID = random.randint(1, 65535) & 65535
-
-    if sys.platform[0:-2] == 'win':
-        IS_WIN = True
-        time.clock()
-    else:
-        IS_WIN = False
-
     send_one_ping(my_socket, dest_addr, my_ID)
     delay = receive_one_ping(my_socket, my_ID, timeout, dest_addr)
 
@@ -205,12 +192,12 @@ def verbose_ping(dest_addr, timeout=20, count=4):
 
 
 if __name__ == '__main__':
-    for i in range(1, 255):
+    for i in range(1, 4):
         try:
             verbose_ping("192.168.208.%d" % i, 1, 1)
         except Exception as e:
             print()
     verbose_ping('repubblica.it', 5)
     verbose_ping('google.com', 5)
-    verbose_ping('a-test-url-taht-is-not-available.com', 5)
+    #verbose_ping('a-test-url-taht-is-not-available.com', 5)
     verbose_ping('127.0.0.1', 5)

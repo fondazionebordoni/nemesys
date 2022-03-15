@@ -76,7 +76,7 @@ Filename: {sys}\netsh.exe; Parameters: " int ip set global taskoffload=disabled"
 Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\winservice.exe"" ""Nemesys"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable Nemesys traffic"; Flags: RunHidden RunAsCurrentUser; 
 Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\login.exe"" ""Nemesys"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable Nemesys login"; Flags: RunHidden RunAsCurrentUser; 
 ;Filename: {sys}\netsh.exe; Parameters: " advfirewall firewall add rule name=""Nemesys"" dir=out action=allow program=""{app}\dist\Nemesys.exe"" enable=yes"; Description: "Enable Nemesys traffic"; Flags: RunHidden RunAsCurrentUser; MinVersion: ,6.1.7600; 
-Filename: {app}\dist\login.exe; Parameters: ""; Description: "Autenticazione per il servizio Nemesys."; StatusMsg: "Autenticazione per il servizio Nemesys"; Flags: RunHidden RunAsCurrentUser; 
+Filename: {app}\dist\login.exe; Parameters: "{srcexe}"; Description: "Autenticazione per il servizio Nemesys."; StatusMsg: "Autenticazione per il servizio Nemesys"; Flags: RunHidden RunAsCurrentUser;
 Filename: {app}\dist\Nemesys.exe; Parameters: "--startup auto install"; Description: "Installazione del servizio Nemesys."; StatusMsg: "Installazione del servizio Nemesys"; Flags: RunHidden RunAsCurrentUser; 
 Filename: {app}\dist\Nemesys.exe; Parameters: start; Description: "Avvia il servizio Nemesys"; Flags: PostInstall RunHidden RunAsCurrentUser; StatusMsg: "Avvia il servizio Nemesys"; 
  

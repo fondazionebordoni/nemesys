@@ -34,29 +34,39 @@ Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \
 dopo aver controllato user-id e password che ti sono state invitate in fase \
 di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it.'''
 
-MAX_ERROR_MESSAGE = '''Le credenziali non sono corrette o la licenza non è più valida.
+MAX_ERROR_MESSAGE = '''Le credenziali non sono corrette, il nome del file di installazione \
+è stato modificato o la licenza non è più valida.
 Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \
 dopo aver controllato user-id e password che ti sono state invitate in fase \
 di registrazione o a richiedere una nuova licenza dalla tua area privata sul sito misurainternet.it.'''
 
-GENERIC_ERROR_MESSAGE = '''Si è verificato un errore. Controllare:
+GENERIC_ERROR_MESSAGE = '''Si è verificato un errore. Verifica:
 
 - di avere accesso alla rete,
-- di aver digitato correttamente le credenziali di accesso,
+- di non aver modificato il nome del file di installazione,
+- di aver digitato correttamente le credenziali di accesso (se richieste),
 - di avere una licenza attiva,
 - di non aver ottenuto un certificato con Ne.Me.Sys. meno di 45 giorni antecedenti ad oggi.
 
-Dopo 5 tentativi di accesso falliti, sarà necessario disinstallare Ne.Me.Sys e reinstallarlo nuovamente.'''
+Dopo 5 tentativi di accesso falliti, sarà necessario disinstallare \
+Ne.Me.Sys e reinstallarlo nuovamente.'''
 
 CONNECTION_ERROR_MESSAGE = '''Connessione fallita.
-Controllare di avere accesso alla rete.'''
+Verifica di avere accesso alla rete.'''
 
 CODE_ERROR_MESSAGE = '''Autenticazione fallita o licenza non attiva.
 
-Controllare i dati di accesso e la presenza di una licenza attiva al sito www.misurainternet.it'''
+Assicurati di non aver modificato il nome del file di installazione. \
+Se questo fosse il caso, effettua nuovamente il download.
+
+Se non hai modificato il nome del file di installazione, verifica i dati di accesso e la presenza di una licenza attiva al sito www.misurainternet.it'''
 
 CLIENT_CONFIG = 'client.conf'
-BACKEND_URL = 'https://finaluser.agcom244.fub.it/Config'
+BACKEND_URL = {
+    None: 'https://finaluser.agcom244.fub.it/Config',
+    'MI': 'https://finaluser.agcom244.fub.it/Config',
+    'PS': 'https://backend.pianoscuola.fub.it/Config',
+}
 
 
 logger = logging.getLogger(__name__)
@@ -151,16 +161,19 @@ def OkDialog():
     root.destroy()
 
 
-def getActivationFile(serial_code, path):
+def getActivationFile(client_type, token, path):
     """
       Scarica il file di configurazione.
     """
-    logger.info('Codici ricevuti: %s', serial_code)
+    logger.info(f'Codici ricevuti: {client_type}, {token}')
 
     try:
-        url = '%s?clientid=%s' % (BACKEND_URL, serial_code)
+        url = '%s?clientid=%s' % (BACKEND_URL[client_type], token)
         resp = httputils.do_get(url)
         data = resp.read().decode('utf-8')
+    except KeyError:
+        logger.error(f"Tipo client {client_type} non riconosciuto")
+        raise LoginAuthenticationException('')
     except Exception as e:
         logger.error('impossibile scaricare il file di configurazione: %s', e)
         raise LoginConnectionException(str(e))
@@ -170,7 +183,8 @@ def getActivationFile(serial_code, path):
             with open('%s/%s' % (path, CLIENT_CONFIG), 'w') as myfile:
                 myfile.write(data)
                 logger.info('File di configurazione scaricato con successo')
-                OkDialog()
+                if client_type is None:
+                    OkDialog()
         except IOError as e:
             logger.error('Impossible scrivere il file di configurazione: %s', e)
             raise LoginException('Impossibile scrivere il file di configurazione: %s' % e)
@@ -249,14 +263,21 @@ che usi per accedere all'area personale.
         self.result = None
 
 
-def try_to_activate():
+def try_to_activate(credentials):
     j = 0
-    # Al massimo faccio fare 5 tentativi di inserimento codice di licenza
-    while j < 5:
+    max_retries = 5 if credentials is None else 1
+    # Al massimo faccio fare 5 tentativi di inserimento manuale codice di licenza
+    while j < max_retries:
         # Prendo un codice licenza valido sintatticamente
         try:
-            serial_code = getCode()
-            getActivationFile(serial_code, paths._CONF_DIR)
+            if credentials is None:
+                client_type = None
+                serial_code = getCode()
+                token = serial_code
+            else:
+                client_type, token = credentials
+                serial_code = "@".join(credentials)
+            getActivationFile(client_type, token, paths._CONF_DIR)
             return serial_code
         except LoginAuthenticationException:
             logger.warning('Errore di autenticazione n. %d', j)
@@ -277,10 +298,39 @@ def try_to_activate():
     raise MaxLoginException()
 
 
+def extract_autoconf_credentials():
+    """
+    Return autoconf credentials, if they are part of the filename
+
+    Filename may have the following format:
+    Nemesys_VERSION@CLIENT_TYPE@TOKEN.exe
+
+    In that case return client_type, token
+    Otherwise, return None
+    """
+    logger.info(f'Linea di comando: {" ".join(sys.argv)}')
+    if len(sys.argv) != 2:
+        logger.info('login.exe eseguito con un numero incorretto di parametri')
+        logger.info('Fallback in modalità di configurazione manuale')
+        return None
+    file_path = sys.argv[1]
+    logger.info(f'Percorso del file: {file_path}')
+    _, filename = os.path.split(file_path)
+    name, ext = os.path.splitext(filename)
+    components = name.split('@')
+    if len(components) != 3:
+        logger.info('Pacchetto non autoconfigurante')
+        return None
+    nemesys, client_type, token = components
+    logger.info(f'Pacchetto autoconfigurante: tipo client {client_type}, token {token}')
+    return client_type, token
+
+
 def main():
     logger.info('Avvio del processo di autenticazione')
     #  READING PROPERTIES (if exist)
     app_dir = os.path.dirname(sys.argv[0])
+    credentials = extract_autoconf_credentials()
     config_dir = os.path.join(app_dir, 'cfg')
     if not os.path.exists(config_dir):
         os.mkdir(config_dir)
@@ -299,7 +349,7 @@ def main():
                 os.remove(config_file)
                 _prop = []
             except IOError:
-                ErrorDialog('File di configurazione danneggiata, '
+                ErrorDialog('File di configurazione danneggiato, '
                             'impossibile procedere con l\'installazione'.format(config_file))
                 sys.exit(1)
     else:
@@ -316,7 +366,7 @@ def main():
             ErrorDialog(MAX_ERROR_MESSAGE)
     else:
         try:
-            code = try_to_activate()
+            code = try_to_activate(credentials)
             logger.info('Autenticazione completato con successo')
             write_properties(config_file, {'code': code, 'registered': 'ok'})
         except LoginCancelledException:
