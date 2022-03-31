@@ -64,8 +64,7 @@ Se non hai modificato il nome del file di installazione, verifica i dati di acce
 CLIENT_CONFIG = 'client.conf'
 BACKEND_URL = {
     None: 'https://finaluser.agcom244.fub.it/Config',
-    'MI': 'https://finaluser.agcom244.fub.it/Config',
-    'PS': 'https://backend.pianoscuola.fub.it/Config',
+    'PS': 'https://services.pianoscuola.misurainternet.it/config',
 }
 
 
