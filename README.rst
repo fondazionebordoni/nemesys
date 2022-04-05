@@ -46,43 +46,48 @@ Here are some instructions to test or run parts of the project
 
 #. Install the project's development and runtime requirements::
 
-        pip install -r requirements-dev.txt
+        pip install -r requirements.txt
+        pip install python-daemon==2.1.2
+        pip install paver flake8 pytest
 
 #. We use a version generated from git, so after doing a clone or pull you should always do
 
-        cd common
-        python version.py
+        python -m common.version
 
 #. Run the tests::
 
-        paver test_all
+    Note that one of the tests checks the absence of WiFi connections, and fails if a WiFi connection is active. 
+    It is therefore recommended to disable WiFi before running the tests.
+
+        paver test
 
    You should see output similar to this::
 
-      $ paver test_all
-      ---> pavement.test_all
-      No style errors
-      ============================================================================================================= test session starts =============================================================================================================
-      platform linux2 -- Python 2.7.12 -- pytest-2.5.1
-      collected 41 items
+      $ paver test
+    >   pavement.test
+    =================== test session starts ===================
+        platform linux2 -- Python 3.8.10, pytest-4.6.11, py-1.11.0, pluggy-0.13.1
+        rootdir: /home/test/nemesys
+        collected 54 items
 
-      tests/test_checkhost.py ...
-      tests/test_exceptions.py ........
-      tests/test_fakefile.py ...
-      tests/test_getconf.py .
-      tests/test_measure.py ..
-      tests/test_mist_measure.py ..
-      tests/test_netstat.py ........
-      tests/test_profiler.py ....
-      tests/test_task.py ..........
+        tests/test_backend_response.py ......                [ 11%]
+        tests/test_checkhost.py ....                         [ 20%]
+        tests/test_exceptions.py .........                   [ 37%]
+        tests/test_fakefile.py ....                          [ 44%]
+        tests/test_measure.py ..                             [ 48%]
+        tests/test_mist_measure.py ..                        [ 51%]
+        tests/test_netstat.py ........                       [ 66%]
+        tests/test_profiler.py .....                         [ 75%]
+        tests/test_task.py .............                     [100%]
 
-      ========================================================================================================== 41 passed in 1.00 seconds ==========================================================================================================
+        ========================================================================================================== 41 passed in 1.00 seconds ==========================================================================================================
         ___  _   ___ ___ ___ ___
-       | _ \/_\ / __/ __| __|   \
-       |  _/ _ \\__ \__ \ _|| |) |
-       |_|/_/ \_\___/___/___|___/
+        | _ \/_\ / __/ __| __|   \
+        |  _/ _ \\__ \__ \ _|| |) |
+        |_|/_/ \_\___/___/___|___/
 
 
+    Also available is the `paver test_all` command which, in addition to unit tests, runs the linter to analyze the quality of the code.
 
 Using Paver
 -----------
@@ -111,7 +116,7 @@ To build the HTML documentation, then open it in a web browser::
 Supported Python Versions
 =========================
 
-For now we only support Python 2.7
+Python 3.8 and 3.10
 
 Licenses
 ========

@@ -145,7 +145,8 @@ def percentage_ram_usage():
 def is_wireless_active_darwin():
     # On Mac we can get interface type from a plist file
     try:
-        res = plistlib.readPlist(NETWORK_INTERFACES_PLIST)
+        with open(NETWORK_INTERFACES_PLIST, 'rb') as plist_file:
+            res = plistlib.load(plist_file)
         for network_if in res['Interfaces']:
             try:
                 if network_if['SCNetworkInterfaceType'] == 'IEEE80211':

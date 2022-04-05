@@ -1,6 +1,7 @@
 python-daemon==2.3.0; sys_platform == 'win32'
 pywin32==303; sys_platform == 'win32'
 py2exe==0.11.1.0; sys_platform == 'win32'
+py2app==0.27; sys_platform == 'darwin'
 ipcalc==1.99.0
 ntplib==0.4.0
 psutil==5.9.0
