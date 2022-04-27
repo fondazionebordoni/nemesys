@@ -361,12 +361,13 @@ def main():
                 _generated_version.__updated__)
     paths.create_nemesys_dirs()
     (options, _, md5conf) = nem_options.parse_args(_generated_version.__version__)
+    logger.debug(f"Ricevuta configurazione: {options}")
 
     c = client.getclient(options)
     isprobe = (c.isp.certificate is not None)
     sys_profiler = SysProfiler(c.profile.upload,
                                c.profile.download,
-                               c.isp.id)
+                               c.isp.id, bypass=options.killonerror)
 
     e = Executer(client=c,
                  scheduler=Scheduler(options.scheduler,

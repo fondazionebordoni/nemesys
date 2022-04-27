@@ -57,6 +57,14 @@ def parse_args(version):
     section = 'options'
     if not config.has_section(section):
         config.add_section(section)
+    option = 'killonerror'
+    value = False
+    try:
+        value = config.getboolean(section, option)
+    except (ValueError, NoOptionError):
+        config.set(section, option, value)
+    parser.add_option('--killonerror', dest=option, default=value,
+                      help='Kill measures upon profiling errors [%s]' % value)
 
     # System options
     # --------------------------------------------------------------------------
