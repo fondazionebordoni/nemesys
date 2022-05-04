@@ -317,10 +317,10 @@ def extract_autoconf_credentials():
     _, filename = os.path.split(file_path)
     name, ext = os.path.splitext(filename)
     components = name.split('@')
-    if len(components) != 3:
+    if len(components) != 3 and len(components) != 4:
         logger.info('Pacchetto non autoconfigurante')
         return None
-    nemesys, client_type, token = components
+    nemesys, client_type, token = components[:3]
     logger.info(f'Pacchetto autoconfigurante: tipo client {client_type}, token {token}')
     return client_type, token
 
