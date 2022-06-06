@@ -22,6 +22,7 @@ from datetime import datetime
 from threading import Event
 from time import sleep
 import traceback
+import os
 
 from common import client, ntptime, _generated_version, utils
 from common import iptools
@@ -34,6 +35,7 @@ from common.scheduler import Scheduler
 from common.tester import Tester
 from nemesys import gui_server
 from nemesys import nem_options
+from nemesys import restart
 from nemesys.measure import Measure
 from nemesys.sysmonitor import SysProfiler
 
@@ -340,6 +342,10 @@ class Executer(object):
         except Exception as e:
             logging.critical(f"Exception in main loop: {e}")
             logging.critical(traceback.format_exc())
+            logging.critical("Exiting in 5 seconds")
+            sleep(5)
+            os._exit(1)
+
 
     def stop(self):
         self._time_to_stop = True
@@ -388,6 +394,10 @@ def main():
                  tasktimeout=options.tasktimeout,
                  testtimeout=options.testtimeout,
                  isprobe=isprobe)
+
+    restart_scheduler = restart.RestartScheduler()
+    restart_scheduler.start()
+
     if not utils.is_linux():
         logger.debug('Inizio il loop.')
         e.loop()
