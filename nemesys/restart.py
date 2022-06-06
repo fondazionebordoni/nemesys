@@ -7,8 +7,8 @@ import os
 from common import utils
 
 
-RESTART_HOUR = 0
-RESTART_MINUTE = 55
+RESTART_HOUR = 1
+RESTART_MINUTE = 5
 
 
 class RestartScheduler(Thread):
