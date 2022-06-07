@@ -21,6 +21,8 @@ import platform
 from datetime import datetime
 from threading import Event
 from time import sleep
+import traceback
+import os
 
 from common import client, ntptime, _generated_version, utils
 from common import iptools
@@ -33,6 +35,7 @@ from common.scheduler import Scheduler
 from common.tester import Tester
 from nemesys import gui_server
 from nemesys import nem_options
+from nemesys import restart
 from nemesys.measure import Measure
 from nemesys.sysmonitor import SysProfiler
 
@@ -287,54 +290,62 @@ class Executer(object):
         """
         Main loop.
         """
-        if self._isprobe:
-            logger.info('Inizializzato software per sonda.')
-            self._gui_server = gui_server.DummyGuiServer()
-        else:
-            logger.info('Inizializzato software per misure d\'utente con ISP id = %s', self._client.isp.id)
-            logger.info('Con profilo [%s]', self._client.profile)
-            self._gui_server = gui_server.Communicator(serial=self._client.id,
-                                                       logdir=paths.LOG_DIR,
-                                                       version=_generated_version.__version__)
-            self._gui_server.start()
         try:
-            self._sys_profiler.log_interfaces()
-        except Exception as e:
-            msg = 'Impossibile rilevare le schede di rete: {}'.format(e)
-            logger.error(msg, exc_info=True)
-            self._gui_server.notification(nem_exceptions.FAILPROF, message=msg)
-        while not self._time_to_stop:
-            logger.debug('Inizio del loop principale')
             if self._isprobe:
-                # Try to send any unsent measures (only probe)
-                self._deliverer.uploadall_and_move(self._outbox, self._sent, do_remove=False)
-            # Try to download task
-            task = None
-            tries = 0
-            while not task:
-                try:
-                    task = self._scheduler.download_task()
-                except TaskException as e:
-                    tries += 1
-                    if tries >= 3:
-                        logger.error('Impossibile scaricare il task: %s', e)
+                logger.info('Inizializzato software per sonda.')
+                self._gui_server = gui_server.DummyGuiServer()
+            else:
+                logger.info('Inizializzato software per misure d\'utente con ISP id = %s', self._client.isp.id)
+                logger.info('Con profilo [%s]', self._client.profile)
+                self._gui_server = gui_server.Communicator(serial=self._client.id,
+                                                           logdir=paths.LOG_DIR,
+                                                           version=_generated_version.__version__)
+                self._gui_server.start()
+            try:
+                self._sys_profiler.log_interfaces()
+            except Exception as e:
+                msg = 'Impossibile rilevare le schede di rete: {}'.format(e)
+                logger.error(msg, exc_info=True)
+                self._gui_server.notification(nem_exceptions.FAILPROF, message=msg)
+            while not self._time_to_stop:
+                logger.debug('Inizio del loop principale')
+                if self._isprobe:
+                    # Try to send any unsent measures (only probe)
+                    self._deliverer.uploadall_and_move(self._outbox, self._sent, do_remove=False)
+                # Try to download task
+                task = None
+                tries = 0
+                while not task:
+                    try:
+                        task = self._scheduler.download_task()
+                    except TaskException as e:
+                        tries += 1
+                        if tries >= 3:
+                            logger.error('Impossibile scaricare il task: %s', e)
+                            self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
+                            break
+                if task:
+                    # Task found, now do it
+                    logger.info('Trovato task %s', task)
+                    try:
+                        self._handle_task(task)
+                    except Exception as e:
+                        logger.error('Errore durante la gestione del task per le misure: %s', e, exc_info=True)
                         self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
-                        break
-            if task:
-                # Task found, now do it
-                logger.info('Trovato task %s', task)
-                try:
-                    self._handle_task(task)
-                except Exception as e:
-                    logger.error('Errore durante la gestione del task per le misure: %s', e, exc_info=True)
-                    self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
-            # TODO: check if this is how it is supposed to be
-            self._gui_server.wait(SLEEP_SECS_AFTER_TASK,
-                                  'Aspetto {} secondi prima di continuare'.format(SLEEP_SECS_AFTER_TASK))
-            sleep(SLEEP_SECS_AFTER_TASK)
-        logger.info('Uscita dal loop')
-        if self._gui_server:
-            self._gui_server.stop(5.0)
+                # TODO: check if this is how it is supposed to be
+                self._gui_server.wait(SLEEP_SECS_AFTER_TASK,
+                                      'Aspetto {} secondi prima di continuare'.format(SLEEP_SECS_AFTER_TASK))
+                sleep(SLEEP_SECS_AFTER_TASK)
+            logger.info('Uscita dal loop')
+            if self._gui_server:
+                self._gui_server.stop(5.0)
+        except Exception as e:
+            logging.critical(f"Exception in main loop: {e}")
+            logging.critical(traceback.format_exc())
+            logging.critical("Exiting in 5 seconds")
+            sleep(5)
+            os._exit(1)
+
 
     def stop(self):
         self._time_to_stop = True
@@ -383,6 +394,10 @@ def main():
                  tasktimeout=options.tasktimeout,
                  testtimeout=options.testtimeout,
                  isprobe=isprobe)
+
+    restart_scheduler = restart.RestartScheduler()
+    restart_scheduler.start()
+
     if not utils.is_linux():
         logger.debug('Inizio il loop.')
         e.loop()
