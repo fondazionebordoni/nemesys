@@ -364,7 +364,7 @@ def get_log_streams(from_logger):
 
 
 def main():
-    from . import log_conf
+    from nemesys import log_conf
     log_conf.init_log()
 
     logger.info('Avvio di Nemesys v.%s on %s', _generated_version.FULL_VERSION, platform.platform())
