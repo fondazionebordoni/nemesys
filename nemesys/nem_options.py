@@ -197,6 +197,24 @@ def parse_args(version):
     parser.add_option('--down', dest=option, default=value, type='int',
                       help='download bandwidth [%s]' % value)
 
+    option = 'bandwidthup_min'
+    value = None
+    try:
+        value = config.getint(section, option)
+    except (ValueError, NoOptionError):
+        pass
+    parser.add_option('--up_min', dest=option, default=value, type='int',
+                      help='upload guaranteed minimum bandwidth [%s]' % value)
+
+    option = 'bandwidthdown_min'
+    value = None
+    try:
+        value = config.getint(section, option)
+    except (ValueError, NoOptionError):
+        pass
+    parser.add_option('--down_min', dest=option, default=value, type='int',
+                      help='download guaranteed minimum bandwidth [%s]' % value)
+
     # Isp options
     # --------------------------------------------------------------------------
     section = 'isp'

@@ -19,10 +19,12 @@
 
 class Profile(object):
 
-    def __init__(self, profile_id, upload, download):
+    def __init__(self, profile_id, upload, download, upload_min=None, download_min=None):
         self._id = profile_id
         self._upload = upload
         self._download = download
+        self._upload_min = upload_min
+        self._download_min = download_min
 
     @property
     def id(self):
@@ -36,10 +38,20 @@ class Profile(object):
     def download(self):
         return self._download
 
+    @property
+    def upload_min(self):
+        return self._upload_min
+
+    @property
+    def download_min(self):
+        return self._download_min
+
     def __str__(self):
-        return 'id: %s; up: %d; down: %d' % (self.id, self.upload, self.download)
+        return 'id: %s; up: %d; down: %d; up_min: %d; down_min: %d' % (
+            self.id, self.upload, self.download, self.upload_min, self.download_min
+        )
 
 
 if __name__ == '__main__':
-    p = Profile('2mb1mb', 2048, 1024)
+    p = Profile('2mb1mb', 2048, 1024, 512, 256)
     print(p)
