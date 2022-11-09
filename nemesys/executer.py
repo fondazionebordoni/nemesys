@@ -378,7 +378,10 @@ def main():
     isprobe = (c.isp.certificate is not None)
     sys_profiler = SysProfiler(c.profile.upload,
                                c.profile.download,
-                               c.isp.id, bypass=not options.killonerror)
+                               c.isp.id,
+                               bypass=not options.killonerror,
+                               bw_upload_min=c.profile.upload_min,
+                               bw_download_min=c.profile.download_min)
 
     e = Executer(client=c,
                  scheduler=Scheduler(options.scheduler,

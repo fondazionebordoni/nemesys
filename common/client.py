@@ -79,7 +79,9 @@ def getclient(options):
         geocode = None
     profile = Profile(profile_id=profile_id,
                       upload=options.bandwidthup,
-                      download=options.bandwidthdown)
+                      download=options.bandwidthdown,
+                      upload_min=options.bandwidthup_min,
+                      download_min=options.bandwidthdown_min)
     isp = Isp(isp_id=options.ispid,
               certificate=certificate)
     return Client(client_id=options.clientid,
@@ -90,7 +92,7 @@ def getclient(options):
 
 if __name__ == '__main__':
     c = Client('fub0000000001',
-               Profile('fub00001', 512, 512),
+               Profile('fub00001', 512, 512, 256, 256),
                Isp('fub000', 'fub000.pem'),
                '41.843646,12.485726')
     print(c)

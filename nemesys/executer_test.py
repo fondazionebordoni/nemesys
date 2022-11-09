@@ -111,7 +111,9 @@ def main():
     sys_profiler = SysProfiler(c.profile.upload,
                                c.profile.download,
                                c.isp.id,
-                               bypass=True)
+                               bypass=True,
+                               bw_upload_min=c.profile.upload_min,
+                               bw_download_min=c.profile.download_min)
     # d = MockDeliverer()
     #     d = MockDysfunctDeliverer()
     d = Deliverer(options.repository,

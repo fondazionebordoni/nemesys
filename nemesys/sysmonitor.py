@@ -52,10 +52,11 @@ RES_TRAFFIC = 'Traffic'
 
 
 class SysProfiler(object):
-
-    def __init__(self, bw_upload, bw_download, isp_id, bypass=False):
+    def __init__(self, bw_upload, bw_download, isp_id, bypass=False, bw_upload_min=None, bw_download_min=None):
         self._bw_upload = bw_upload
+        self._bw_upload_min = bw_upload_min
         self._bw_download = bw_download
+        self._bw_download_min = bw_download_min
         self._isp_id = isp_id
         self._bypass = bypass
         self._checks = OrderedDict([
@@ -92,7 +93,16 @@ class SysProfiler(object):
             raise SysmonitorException('Impossibile identificare '
                                       'la scheda di rete attiva: {}'.format(e), nem_exceptions.UNKDEV)
         device_speed = iptools.get_if_speed(dev_name)
-        if device_speed < (self._bw_download / 1000):
+
+        if self._bw_download_min is not None:
+          if device_speed < (self._bw_download_min / 1000):
+              raise SysmonitorException('La velocita\' della scheda di rete e\' '
+                                        '{0} Mb/s, che e\' minore della '
+                                        'velocita\' minima garantita del profilo: {1} Mb/s'
+                                        .format(device_speed,
+                                                self._bw_download_min / 1000))
+
+        elif device_speed < (self._bw_download / 1000):
             raise SysmonitorException('La velocita\' della scheda di rete e\' '
                                       '{0} Mb/s, che e\' minore della '
                                       'velocita\' del profilo: {1} Mb/s'
