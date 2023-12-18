@@ -219,14 +219,23 @@ class HttpTesterDown(object):
         if (total_sent_bytes == 0) or (consumer.total_read_bytes == 0):
             raise nem_exceptions.MeasurementException('Ottenuto banda zero',
                                                       nem_exceptions.ZERO_SPEED)
+        
         overhead = float(total_sent_bytes - consumer.total_read_bytes) / float(total_sent_bytes)
-        logger.debug('Traffico spurio: %f', overhead)
         bytes_nem = int(round(observer.measured_bytes * (1 - overhead)))
+        bytes_tot = observer.measured_bytes
+
+        logger.debug(f"Netstat: dati letti sulla scheda di rete: {total_sent_bytes}")
+        logger.debug(f"Observer: dati letti sulla scheda di rete: {observer.measured_bytes}")
+        logger.debug(f"Consumer: dati ricevuti dal server di misura: {consumer.total_read_bytes}")
+        logger.debug(f"Traffico spurio: {overhead}")
+        logger.debug(f"Dati totali: {bytes_tot}")
+        logger.debug(f"Dati di misura (observer - overhead): {bytes_nem}")
+
         return Proof(test_type='download_http',
                      start_time=start_timestamp,
                      duration=duration,
                      bytes_nem=bytes_nem,
-                     bytes_tot=observer.measured_bytes,
+                     bytes_tot=bytes_tot,
                      spurious=overhead)
 
 

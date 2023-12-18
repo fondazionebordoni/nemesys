@@ -249,20 +249,26 @@ class HttpTesterUp(object):
             overhead = (float(total_sent_bytes - consumer.total_read_bytes) / float(total_sent_bytes))
         else:
             logger.warning('Byte di payload > tx_diff, uso calcolo alternativo di spurious traffic')
-            # for thread in self._read_measure_threads:
-            #     thread.join()
             overhead = (float(observer.measured_bytes - consumer.bytes_received) /
                         float(observer.measured_bytes))
         if (total_sent_bytes == 0) or (consumer.total_read_bytes == 0):
             raise nem_exceptions.MeasurementException('Ottenuto banda zero',
                                                       nem_exceptions.ZERO_SPEED)
-        #   = (observer.endtime - observer.starttime) * 1000.0
-        # int(round(consumer.bytes_received * (1 - overhead)))
+
+        bytes_nem = consumer.bytes_received
         bytes_tot = int(consumer.bytes_received * (1 + overhead))
+        
+        logger.debug(f"Netstat: dati letti sulla scheda di rete: {total_sent_bytes}")
+        logger.debug(f"Observer: dati letti sulla scheda di rete: {observer.measured_bytes}")
+        logger.debug(f"Consumer: dati ricevuti dal server di misura: {consumer.total_read_bytes}")
+        logger.debug(f"Traffico spurio: {overhead}")
+        logger.debug(f"Dati totali: {bytes_tot}")
+        logger.debug(f"Dati di misura (observer - overhead): {bytes_nem}")
+
         return Proof(test_type='upload_http',
                      start_time=start_timestamp,
                      duration=consumer.duration,
-                     bytes_nem=consumer.bytes_received,
+                     bytes_nem=bytes_nem,
                      bytes_tot=bytes_tot,
                      spurious=overhead)
 
