@@ -202,7 +202,7 @@ class Observer(threading.Thread):
             rate_tot = float(tx_diff * 8) / float(elapsed)
             last_tx_bytes = new_tx_bytes
             last_measured_time = measuring_time
-            logger.debug('[HTTP] secondo = %d, velocita\' = %d', measure_count, int(rate_tot))
+            logger.debug(f"[HTTP] secondo = {measure_count}, velocita = {int(rate_tot):,}")
             self.callback(second=measure_count, speed=rate_tot)
 
 

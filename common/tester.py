@@ -83,52 +83,28 @@ class Tester(object):
 
     def testhttpup(self, callback_update_speed=None, bw=BW_100M):
         url = "http://%s:8080/file.rnd" % self._host.ip
-        buffer_size = 8192
+
         if bw < BW_3M:
             num_sessions = 1
-            tcp_window_size = 22 * 1024
+            tcp_window_size = 1024 * num_sessions
+            buffer_size = 8192 * num_sessions
         elif bw == BW_3M:
-            num_sessions = 1
-            tcp_window_size = 65 * 1024
+            num_sessions = 3
+            tcp_window_size = 1024 * num_sessions
+            buffer_size = 8192 * num_sessions
         elif bw <= BW_100M:
             num_sessions = 6
-            tcp_window_size = 65 * 1024
-        elif bw <= BW_1000M:
-            num_sessions = 7
-            tcp_window_size = -1
-            buffer_size = 8192
-            if utils.is_darwin():
-                num_sessions = 4
-                buffer_size = 3 * 1024
-                tcp_window_size = -1
-            if utils.is_windows():
-                num_sessions = 7
-                buffer_size = 8192
-                tcp_window_size = 1024 * 1024
-        elif bw <= BW_2000M:
-            num_sessions = 9
-            buffer_size = 8192
-            tcp_window_size = -1
-            if utils.is_windows():
-                num_sessions = 5
-                buffer_size = 4 * 8192
-                tcp_window_size = 1024 * 1024
-            if utils.is_darwin():
-                num_sessions = 3
-                tcp_window_size = -1
-                buffer_size = 5 * 1024
-
+            tcp_window_size = 1024 * num_sessions
+            buffer_size = 8192 * num_sessions
         else:
-            num_sessions = 3
-            tcp_window_size = -1
-            if utils.is_windows():
-                buffer_size = 8 * 1024
-                num_sessions = 3
-                tcp_window_size = 256 * 1024
             if utils.is_darwin():
                 num_sessions = 3
-                tcp_window_size = -1
-                buffer_size = 5 * 1024
+            elif utils.is_windows():
+                num_sessions = 3
+            else:
+                num_sessions = 12
+            tcp_window_size = -1
+            buffer_size = 8192 * num_sessions
 
         logger.debug(
             f"Variabili di misura num_session={num_sessions}, tcp_window_size={tcp_window_size}, buffer_size={buffer_size}"
@@ -231,7 +207,8 @@ def main():
 
 
 def printout_http(res):
-    print("Medium speed: %d kbps" % (int(res.bytes_tot * 8 / float(res.duration))))
+    speed = int(res.bytes_tot * 8 / float(res.duration))
+    print(f"Medium speed: {speed:,} kbps")
     print("Spurious traffic: %.2f%%" % (res.spurious * 100.0))
 
 
