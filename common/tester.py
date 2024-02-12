@@ -32,8 +32,12 @@ from common.testerhttpdown import HttpTesterDown
 from common.testerhttpup import HttpTesterUp
 
 HTTP_BUFF = 8 * 1024
+BW_1M = 1 * 10**6
 BW_3M = 3 * 10**6
+BW_5M = 5 * 10**6
+BW_25M = 25 * 10**6
 BW_100M = 100 * 10**6
+BW_300M = 300 * 10**6
 BW_500M = 500 * 10**6
 BW_1000M = 1 * 10**9
 BW_2000M = 2 * 10**9
@@ -53,61 +57,43 @@ class Tester(object):
 
     def testhttpdown(self, callback_update_speed=None, bw=BW_100M):
         url = "http://%s/file.rnd" % self._host.ip
-        if bw <= BW_500M and utils.is_darwin():
+        if bw <= BW_1M:
             num_sessions = 1
-            buffer_size = 2 * 8192
-        elif bw <= BW_2500M:
-            num_sessions = 7
-            buffer_size = 8192
-        elif bw <= BW_5000M:
-            num_sessions = 10
-            buffer_size = 3 * 8192
-            if utils.is_windows():
-                num_sessions = 12
-                buffer_size = 3 * 8192
-            if utils.is_darwin():
-                num_sessions = 8
-                buffer_size = 3 * 8192
+        elif bw <= BW_5M:
+            num_sessions = 4
+        elif bw <= BW_100M:
+            num_sessions = 8
+        elif bw <= BW_500M:
+            num_sessions = 16
+        elif bw <= BW_1000M:
+            num_sessions = 20
         else:
-            num_sessions = 14
-            buffer_size = 8 * 8192
-            if utils.is_windows():
-                num_sessions = 11
-                buffer_size = 11 * 8192
-            if utils.is_darwin():
-                num_sessions = 16
-                buffer_size = 8 * 8192
+            num_sessions = 24
 
-        logger.debug(f"Variabili di misura num_session={num_sessions}, buffer_size={buffer_size}")
+        buffer_size = int(bw / (4 * 10**3))
+
+        logger.debug(
+            f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, buffer_size={buffer_size:,}"
+        )
         return self._testerhttpdown.test(url, callback_update_speed, num_sessions=num_sessions, buffer_size=buffer_size)
 
     def testhttpup(self, callback_update_speed=None, bw=BW_100M):
         url = "http://%s:8080/file.rnd" % self._host.ip
 
-        if bw < BW_3M:
+        if bw <= BW_1M:
             num_sessions = 1
-            tcp_window_size = 1024 * num_sessions
-            buffer_size = 8192 * num_sessions
-        elif bw == BW_3M:
-            num_sessions = 3
-            tcp_window_size = 1024 * num_sessions
-            buffer_size = 8192 * num_sessions
-        elif bw <= BW_100M:
-            num_sessions = 6
-            tcp_window_size = 1024 * num_sessions
-            buffer_size = 8192 * num_sessions
+        elif bw <= BW_5M:
+            num_sessions = 4
+        elif bw <= BW_500M:
+            num_sessions = 12
         else:
-            if utils.is_darwin():
-                num_sessions = 3
-            elif utils.is_windows():
-                num_sessions = 3
-            else:
-                num_sessions = 12
-            tcp_window_size = -1
-            buffer_size = 8192 * num_sessions
+            num_sessions = 16
+
+        tcp_window_size = -1
+        buffer_size = int(bw / (2 * 10**3))
 
         logger.debug(
-            f"Variabili di misura num_session={num_sessions}, tcp_window_size={tcp_window_size}, buffer_size={buffer_size}"
+            f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, tcp_window_size={tcp_window_size}, buffer_size={buffer_size:,}"
         )
         return self._testerhttpup.test(
             url, callback_update_speed, num_sessions=num_sessions, tcp_window_size=tcp_window_size, buffer_size=buffer_size
