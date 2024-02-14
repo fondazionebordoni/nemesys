@@ -69,6 +69,8 @@ class Tester(object):
             num_sessions = 20
         else:
             num_sessions = 24
+            if utils.is_darwin():
+                num_sessions = 32
 
         buffer_size = int(bw / (4 * 10**3))
 
@@ -88,6 +90,8 @@ class Tester(object):
             num_sessions = 12
         else:
             num_sessions = 16
+            if utils.is_darwin():
+                num_sessions = 24
 
         tcp_window_size = -1
         buffer_size = int(bw / (2 * 10**3))
