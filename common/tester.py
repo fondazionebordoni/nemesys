@@ -86,8 +86,10 @@ class Tester(object):
             num_sessions = 4
         elif bw <= BW_500M:
             num_sessions = 12
-        else:
+        elif bw <= BW_2000M:
             num_sessions = 16
+        else:
+            num_sessions = 24
 
         tcp_window_size = -1
         buffer_size = int(bw / (2 * 10**3))
