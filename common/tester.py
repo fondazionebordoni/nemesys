@@ -56,7 +56,7 @@ class Tester(object):
         self._testerhttpdown = HttpTesterDown(dev)
 
     def testhttpdown(self, callback_update_speed=None, bw=BW_100M):
-        url = "http://%s/file.rnd" % self._host.ip
+        url = f"http://{self._host.ip}:{self._host.port}/file.rnd"
         if bw <= BW_1M:
             num_sessions = 1
         elif bw <= BW_5M:
@@ -80,7 +80,7 @@ class Tester(object):
         return self._testerhttpdown.test(url, callback_update_speed, num_sessions=num_sessions, buffer_size=buffer_size)
 
     def testhttpup(self, callback_update_speed=None, bw=BW_100M):
-        url = "http://%s:8080/file.rnd" % self._host.ip
+        url = f"http://{self._host.ip}:{self._host.port}/file.rnd"
 
         if bw <= BW_1M:
             num_sessions = 1
@@ -149,6 +149,7 @@ def main():
     )
     parser.add_option("-n", "--num-tests", dest="num_tests", default="1", type="int", help="Number of tests to perform")
     parser.add_option("-H", "--host", dest="host", default="193.104.137.133", help="An ipaddress or FQDN of server host")
+    parser.add_option("-P", "--port", dest="port", default="80", help="Port number of server host")
 
     (options, _) = parser.parse_args()
     try:
@@ -159,7 +160,7 @@ def main():
 
         sys.exit(2)
     print(f"Misure su interfaccia: {dev}")
-    t = Tester(dev, Host(options.host), timeout=10)
+    t = Tester(dev, Host(options.host, options.port), timeout=10)
     if options.bandwidth.endswith("M"):
         bw = int(options.bandwidth[:-1]) * 1000000
     elif options.bandwidth.endswith("k"):
