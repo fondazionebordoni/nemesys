@@ -45,6 +45,7 @@ BW_2500M = 2.5 * 10**9
 BW_5000M = 5 * 10**9
 
 logger = logging.getLogger(__name__)
+logger_csv = logging.getLogger("csv")
 
 
 class Tester(object):
@@ -74,9 +75,8 @@ class Tester(object):
 
         buffer_size = int(bw / (4 * 10**3))
 
-        logger.debug(
-            f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, buffer_size={buffer_size:,}"
-        )
+        logger.debug(f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, buffer_size={buffer_size:,}")
+        logger_csv.debug(f"down;{bw:,};{num_sessions};{buffer_size:,}")
         return self._testerhttpdown.test(url, callback_update_speed, num_sessions=num_sessions, buffer_size=buffer_size)
 
     def testhttpup(self, callback_update_speed=None, bw=BW_100M):
@@ -91,7 +91,7 @@ class Tester(object):
         elif bw <= BW_2000M:
             num_sessions = 16
             if utils.is_darwin():
-                num_sessions = 24            
+                num_sessions = 24
         else:
             num_sessions = 24
 
@@ -101,6 +101,7 @@ class Tester(object):
         logger.debug(
             f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, tcp_window_size={tcp_window_size}, buffer_size={buffer_size:,}"
         )
+        logger_csv.debug(f"up;{bw:,};{num_sessions};{buffer_size:,}")
         return self._testerhttpup.test(
             url, callback_update_speed, num_sessions=num_sessions, tcp_window_size=tcp_window_size, buffer_size=buffer_size
         )
@@ -188,6 +189,7 @@ def main():
             try:
                 res = t.testping()
                 print("Ping: %.2f milliseconds" % res.duration)
+                logger_csv.debug("ping;;;;%.2f;;;;;;;;;;;;;;;;;;;" % res.duration)
             except Exception as e:
                 print("Error: [%d] %s" % (e.errorcode, str(e)))
         else:
@@ -203,6 +205,8 @@ def printout_http(res):
     speed = int(res.bytes_tot * 8 / float(res.duration))
     print(f"Medium speed: {speed:,} kbps")
     print("Spurious traffic: %.2f%%" % (res.spurious * 100.0))
+    logger_csv.debug(f";{speed:,}")
+    logger_csv.debug(";%.2f%%" % (res.spurious * 100.0))
 
 
 if __name__ == "__main__":

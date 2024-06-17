@@ -42,6 +42,7 @@ HTTP_TIMEOUT = 2.0
 END_STRING = b"_ThisIsTheEnd_"
 
 logger = logging.getLogger(__name__)
+logger_csv = logging.getLogger("csv")
 
 
 def noop(*args, **kwargs):
@@ -292,6 +293,7 @@ class Observer(threading.Thread):
 
             self.callback(second=measure_count, speed=rate_tot)
             logger.debug(f"[HTTP] {status} Count = {measure_count:>2}; Speed = {int(rate_tot):,}.0 kbps")
+            logger_csv.debug(";%d" % int(rate_tot))
 
 
 class HttpTesterDown(object):
@@ -362,7 +364,9 @@ class HttpTesterDown(object):
         logger.debug(f"Observer: dati misurati (al netto della rampa): {observer.measured_bytes:,} bytes")
         logger.debug(f"Observer: tempo di misura: {duration:,.2f} ms")
         logger.debug(f"Dati di misura (observer - overhead): {bytes_nem:,} bytes")
-
+        
+        logger_csv.debug(f";{total_sent_bytes};{observer.measured_bytes};{consumer.total_read_bytes};{overhead};{bytes_tot};{bytes_nem}")
+        
         return Proof(
             test_type="download_http",
             start_time=start_timestamp,
