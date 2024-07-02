@@ -86,7 +86,7 @@ class Tester(object):
             num_sessions = 1
         elif bw <= BW_5M:
             num_sessions = 4
-        elif bw <= BW_500M:
+        elif bw <= BW_300M:
             num_sessions = 12
         elif bw <= BW_2000M:
             num_sessions = 16
@@ -96,7 +96,7 @@ class Tester(object):
             num_sessions = 24
 
         tcp_window_size = -1
-        buffer_size = int(bw / (2 * 10**3))
+        buffer_size = int(bw / (2 * 10**3)) * 4
 
         logger.debug(
             f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, tcp_window_size={tcp_window_size}, buffer_size={buffer_size:,}"
@@ -203,8 +203,8 @@ def main():
 
 def printout_http(res):
     speed = int(res.bytes_tot * 8 / float(res.duration))
-    print(f"Medium speed: {speed:,} kbps")
-    print("Spurious traffic: %.2f%%" % (res.spurious * 100.0))
+    logger.info(f"Medium speed: {speed:,} kbps")
+    logger.info("Spurious traffic: %.2f%%" % (res.spurious * 100.0))
     logger_csv.debug(f";{speed:,}")
     logger_csv.debug(";%.2f%%" % (res.spurious * 100.0))
 
