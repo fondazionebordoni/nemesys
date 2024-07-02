@@ -324,9 +324,10 @@ class HttpTesterUp(object):
         logger.debug(f"Netstat: dati letti sulla scheda di rete: {total_bytes:,} bytes")
         logger.debug(f"Observer: dati prodotti dal generatore: {observer.total_bytes:,} bytes")
         logger.debug(f"Consumer: dati ricevuti dal server di misura: {consumer.bytes_transferred:,} bytes")
+        logger.debug(f"Consumer: tempo di misura: {consumer.duration:,} s")
         logger.debug(f"Dati di misura: {bytes_nem:,} bytes")
         logger.debug(f"Traffico spurio: {overhead*100:.2f}%")
-        logger.debug(f"Dati totali (misura + overhead): {bytes_tot:,}bytes")
+        logger.debug(f"Dati totali (misura + overhead): {bytes_tot:,} bytes")
 
         logger_csv.debug(
             f";;{total_bytes};{observer.total_bytes};{consumer.bytes_transferred};{overhead};{bytes_tot};{bytes_nem}"
