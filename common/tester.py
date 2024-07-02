@@ -37,6 +37,7 @@ BW_3M = 3 * 10**6
 BW_5M = 5 * 10**6
 BW_25M = 25 * 10**6
 BW_100M = 100 * 10**6
+BW_200M = 200 * 10**6
 BW_300M = 300 * 10**6
 BW_500M = 500 * 10**6
 BW_1000M = 1 * 10**9
@@ -86,17 +87,23 @@ class Tester(object):
             num_sessions = 1
         elif bw <= BW_5M:
             num_sessions = 4
+        elif bw <= BW_100M:
+            num_sessions = 8
         elif bw <= BW_300M:
+            num_sessions = 10
+        elif bw <= BW_500M:
             num_sessions = 12
-        elif bw <= BW_2000M:
+        elif bw <= BW_1000M:
             num_sessions = 16
-            if utils.is_darwin():
-                num_sessions = 24
-        else:
+        elif bw <= BW_2000M:
+            num_sessions = 18
+        elif bw <= BW_5000M:
             num_sessions = 24
+        else:
+            num_sessions = 32
 
         tcp_window_size = -1
-        buffer_size = int(bw / (2 * 10**3)) * 4
+        buffer_size = int(bw / (2 * 10**3)) * int(32 / num_sessions)
 
         logger.debug(
             f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, tcp_window_size={tcp_window_size}, buffer_size={buffer_size:,}"
