@@ -100,7 +100,7 @@ class Writer(threading.Thread):
             data = b"A" * self.chunk_generator.maxsize
             self.chunk_generator.write(data)
             self.live_queue.put(len(data))
-            time.sleep(0.2)
+            time.sleep(0.1)
 
         self.chunk_generator.close()
 
