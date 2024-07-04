@@ -98,10 +98,6 @@ class Tester(object):
             num_sessions = 13
         elif bw <= BW_1000M:
             num_sessions = 16
-        elif bw <= BW_2000M:
-            num_sessions = 18
-        elif bw <= BW_5000M:
-            num_sessions = 24
         else:
             num_sessions = 32
 
