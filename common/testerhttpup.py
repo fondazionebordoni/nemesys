@@ -38,7 +38,7 @@ RAMPUP_SECS = 2
 TIMEOUT_DELAY = 5
 # 10 Gbps for measuring time seconds
 MAX_TRANSFERED_BYTES = 10 * 1000000 * 1000 * (MEASURE_TIME + RAMPUP_SECS + TIMEOUT_DELAY) / 8
-HTTP_TIMEOUT = 5
+HTTP_TIMEOUT = 8
 END_STRING = b"_ThisIsTheEnd_"
 
 logger = logging.getLogger(__name__)
