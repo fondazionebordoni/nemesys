@@ -190,6 +190,7 @@ class Observer(threading.Thread):
         self.total_bytes = 0
 
     def run(self):
+        start_measure_time = time.time()
         last_measured_time = time.time()
         measure_count = 0
 
@@ -209,10 +210,12 @@ class Observer(threading.Thread):
             last_measured_time = current_time
 
             logger.debug(f"[HTTP] Sending... Count = {measure_count}; Speed = {int(rate_tot):,} kbps")
-
             logger_csv.debug(";%d" % int(rate_tot))
 
             self.callback(second=measure_count, speed=rate_tot)
+
+            if current_time - start_measure_time >= MEASURE_TIME + RAMPUP_SECS:
+                self.stop_event.set()
 
         logger.debug("Observer thread stopped")
 
