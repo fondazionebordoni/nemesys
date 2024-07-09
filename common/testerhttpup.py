@@ -336,6 +336,15 @@ class HttpTesterUp(object):
             f";;{total_bytes};{observer.total_bytes};{consumer.bytes_transferred};{overhead};{bytes_tot};{bytes_nem}"
         )
 
+        if overhead < 0:
+            raise nem_exceptions.MeasurementException("Traffico spurio negativo", nem_exceptions.NEGATIVE_SPEED)
+        
+        if bytes_nem < 0:
+            raise nem_exceptions.MeasurementException("Byte di misura trasferiti negativi", nem_exceptions.NEGATIVE_SPEED)
+        
+        if bytes_tot < 0:
+            raise nem_exceptions.MeasurementException("Byte totali trasferiti negativi", nem_exceptions.NEGATIVE_SPEED)
+
         return Proof(
             test_type="upload_http",
             start_time=start_timestamp,
