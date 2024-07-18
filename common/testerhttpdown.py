@@ -22,7 +22,9 @@ import random
 import socket
 import threading
 import time
-import urllib.request, urllib.error, urllib.parse
+import urllib.request
+import urllib.error
+import urllib.parse
 from datetime import datetime
 
 from common import iptools
@@ -33,14 +35,16 @@ from common.proof import Proof
 
 MEASURE_TIME = 10
 RAMPUP_SECS = 2
-# Wait another 15 secs in case end of file has not arrived
-DOWNLOAD_TIMEOUT_DELAY = 15
-# 1000 Mbps for 12 seconds
-MAX_TRANSFERED_BYTES = 1000 * 1000000 * 12 / 8
+# Wait another secs in case end of file has not arrived
+TIMEOUT_DELAY = 5
+# 10 Gbps for measuring time seconds
+MAX_TRANSFERED_BYTES = 10 * 1000000 * 1000 * (MEASURE_TIME + RAMPUP_SECS + TIMEOUT_DELAY) / 8
 # 10 seconds timeout on open and read operations
-HTTP_TIMEOUT = 10.0
+HTTP_TIMEOUT = 2.0
+END_STRING = b"_ThisIsTheEnd_"
 
 logger = logging.getLogger(__name__)
+logger_csv = logging.getLogger("csv")
 
 
 def noop(*args, **kwargs):
@@ -55,8 +59,23 @@ class Result(object):
 
 
 class Downloader(threading.Thread):
+    """
+    Downloader is a subclass of threading.Thread that downloads a file from a given URL over HTTP.
+    """
+
     def __init__(self, url, stop_event, result_queue, measurement_id, buffer_size):
-        super(Downloader, self).__init__()
+        """
+        Initializes a Downloader object.
+
+        Args:
+            url (str): The URL to download the file from.
+            stop_event (threading.Event): The event used to stop the download.
+            result_queue (Queue): The queue to store the download results.
+            measurement_id (str): The ID of the measurement.
+            buffer_size (int): The size of the buffer used for reading the file.
+        """
+        threading.Thread.__init__(self)
+
         self.url = url
         self.result_queue = result_queue
         self.measurement_id = measurement_id
@@ -64,65 +83,132 @@ class Downloader(threading.Thread):
         self.buffer_size = buffer_size
 
     def run(self):
+        """
+        Runs the Downloader thread.
+
+        This method attempts to establish a connection to the specified URL with the given headers.
+        If the connection fails, it adds an error message to the result queue and stops the event.
+        If the connection is successful but the response code is not 200, it adds another error message to the result queue and stops the event.
+        Otherwise, it reads data from the response until it encounters the end of file marker or the stop event is set.
+        It keeps track of the number of bytes received and whether the end of file marker was received.
+        Finally, it puts the result containing the number of bytes received and whether the end of file marker was received into the result queue and stops the event.
+        """
+
         try:
-            headers = {'X-requested-file-size': str(MAX_TRANSFERED_BYTES),
-                        'X-requested-measurement-time': str(MEASURE_TIME + RAMPUP_SECS),
-                        'X-measurement-id': self.measurement_id}
+            headers = {
+                "X-requested-file-size": str(MAX_TRANSFERED_BYTES),
+                "X-requested-measurement-time": str(MEASURE_TIME + RAMPUP_SECS),
+                "X-measurement-id": self.measurement_id,
+            }
             request = urllib.request.Request(self.url, headers=headers)
             response = urllib.request.urlopen(request, None, HTTP_TIMEOUT)
         except Exception as e:
-            error = {'message': 'Impossibile creare connessione: {}'.format(e),
-                     'code': nem_exceptions.CONNECTION_FAILED}
+            error = {
+                "message": "Impossibile creare connessione: {}".format(e),
+                "code": nem_exceptions.CONNECTION_FAILED,
+            }
             self.result_queue.put(Result(error=error))
-            self.stop_event.set()
             return
+
         response_code = response.getcode()
         if response_code != 200:
-            error = {'message': 'Connessione HTTP fallita, codice di errore ricevuto: {}'.format(response_code),
-                     'code': nem_exceptions.CONNECTION_FAILED}
+            error = {
+                "message": "Connessione HTTP fallita, codice di errore ricevuto: {}".format(response_code),
+                "code": nem_exceptions.CONNECTION_FAILED,
+            }
             self.result_queue.put(Result(error=error))
-            self.stop_event.set()
             return
+
         filebytes = 0
-        received_end = False
+        my_buffer = bytearray(self.buffer_size)
+        # Read from socket until the stop event is set
         while not self.stop_event.isSet():
             try:
-                my_buffer = response.read(self.buffer_size)
-                if my_buffer is None:
-                    error = {'message': 'Non ricevuti dati sufficienti per completare la misura',
-                             'code': nem_exceptions.SERVER_ERROR}
-                    self.result_queue.put(Result(error=error))
-                    self.stop_event.set()
+                filebytes += response.readinto(my_buffer)
+
+                if filebytes <= 0:
+                    error = {
+                        "message": "Non ricevuti dati sufficienti per completare la misura",
+                        "code": nem_exceptions.SERVER_ERROR,
+                    }
+                    self.result_queue.put(Result(n_bytes=filebytes, error=error))
                     return
-                filebytes += len(my_buffer)
-                if b'_ThisIsTheEnd_' in my_buffer:
-                    received_end = True
-                    break
+
+                if END_STRING in my_buffer:
+                    # Put the result in the queue and send the stop event for all other threads
+                    self.stop_event.set()
+                    self.result_queue.put(Result(n_bytes=filebytes, received_end=True))
+                    return
+
             except socket.timeout:
-                pass
-        self.result_queue.put(Result(n_bytes=filebytes, received_end=received_end))
-        self.stop_event.set()
+                # Exit the loop if the timeout is reached
+                error = {
+                    "message": "Non ricevuti dati sufficienti per completare la misura",
+                    "code": nem_exceptions.SERVER_ERROR,
+                }
+                self.result_queue.put(Result(n_bytes=filebytes, error=error))
+                return
+
+        # If a stop event was fired, put the result in the queue and exit
+        self.result_queue.put(Result(n_bytes=filebytes))
+        return
 
 
 class Producer(threading.Thread):
+    """
+    Producer is a subclass of threading.Thread that creates a set of Downloader
+    threads (based on the number of sessions requested), and then starts them.
+    """
+
     def __init__(self, url, stop_event, result_queue, num_sessions, buffer_size):
-        super(Producer, self).__init__()
+        """
+        Initializes a Producer object.
+
+        Args:
+            url (str): The URL to be used.
+            stop_event (threading.Event): The event used to stop the producer.
+            result_queue (Queue): The queue to store results.
+            num_sessions (int): The number of sessions to be created.
+            buffer_size (int): The size of the buffer for each session.
+
+        Returns:
+            None
+        """
+        threading.Thread.__init__(self)
+
         self.url = url
         self.stop_event = stop_event
         self.result_queue = result_queue
         self.num_sessions = num_sessions
         self.buffer_size = buffer_size
-        self.measurement_id = 'sess-{}'.format(random.randint(0, 100000))
+        self.measurement_id = "sess-{}".format(random.randint(0, 100000))
 
     def run(self):
+        """
+        Runs a set of Downloader threads based on the number of sessions requested.
+
+        This method initializes a Downloader thread for each session and starts it.
+        The Downloader threads are responsible for downloading a file from a given URL over HTTP.
+        """
         for i in range(0, self.num_sessions):
-            thread = Downloader(self.url, self.stop_event, self.result_queue, self.measurement_id, self.buffer_size)
+            thread = Downloader(
+                self.url,
+                self.stop_event,
+                self.result_queue,
+                self.measurement_id,
+                self.buffer_size,
+            )
             thread.start()
 
 
 class Consumer(threading.Thread):
+    """
+    Consumer attende i risultati dai vari thread di Downloader avviati da Producer e analizza i risultati ottenuti da ciascuno
+    """
+
     def __init__(self, stop_event, result_queue, num_sessions):
-        super(Consumer, self).__init__()
+        threading.Thread.__init__(self)
+
         self.stop_event = stop_event
         self.result_queue = result_queue
         self.num_sessions = num_sessions
@@ -130,24 +216,46 @@ class Consumer(threading.Thread):
         self.errors = []
 
     def run(self):
+        """
+        Runs the function to process results from multiple sessions:
+        - Loops through the number of sessions specified
+        - Await for a result being created in the result queue and processes it
+        - Appends errors if encountered
+        - Updates total read bytes and end reception status
+        - Appends an error message if the communication was interrupted before the end signal
+        """
+
         finished = 0
         has_received_end = False
+
         while finished < self.num_sessions:
-            res = self.result_queue.get(True)
-            if res.error:
-                self.errors.append(res.error)
+            # Wait for a result to be available
+            result = self.result_queue.get(True)
+
+            if result.error:
+                self.errors.append(result.error)
+
             else:
-                self.total_read_bytes += res.n_bytes
-                if res.received_end:
-                    has_received_end = True
+                self.total_read_bytes += result.n_bytes
+                has_received_end = has_received_end or result.received_end
+
             finished += 1
+
         if not has_received_end and len(self.errors) == 0:
-            self.errors.append({'message': 'Connessione interrotta', 'code': nem_exceptions.BROKEN_CONNECTION})
+            self.errors.append(
+                {
+                    "message": "Connessione interrotta prima del segnale di fine di misura",
+                    "code": nem_exceptions.BROKEN_CONNECTION,
+                }
+            )
+
+        self.stop_event.set()
 
 
 class Observer(threading.Thread):
     def __init__(self, stop_event, netstat, callback=noop):
-        super(Observer, self).__init__()
+        threading.Thread.__init__(self)
+
         self.stop_event = stop_event
         self.netstat = netstat
         if callback:
@@ -161,7 +269,10 @@ class Observer(threading.Thread):
     def run(self):
         last_measured_time = time.time()
         measure_count = 0
-        last_rx_bytes = self.netstat.get_rx_bytes()
+        start_rx_bytes = self.netstat.get_rx_bytes()
+        last_rx_bytes = start_rx_bytes
+        status = "Waiting"
+
         while not self.stop_event.isSet():
             time.sleep(1.0)
             measure_count += 1
@@ -172,14 +283,22 @@ class Observer(threading.Thread):
             rx_diff = new_rx_bytes - last_rx_bytes
             rate_tot = float(rx_diff * 8) / float(elapsed)
             last_rx_bytes = new_rx_bytes
+
             if MEASURE_TIME + RAMPUP_SECS >= measure_count > RAMPUP_SECS:
+                status = "Measuring."
                 self.measured_bytes += rx_diff
                 if measure_count == MEASURE_TIME + RAMPUP_SECS:
                     self.endtime = measuring_time
-            elif measure_count == RAMPUP_SECS:
+
+            elif measure_count <= RAMPUP_SECS:
+                status = "Waiting..."
                 self.starttime = measuring_time
+
             self.callback(second=measure_count, speed=rate_tot)
-            logger.debug('[HTTP] Reading... count = %d, speed = %d', measure_count, int(rate_tot))
+            logger.debug(f"[HTTP] {status} Count = {measure_count:>2}; Speed = {int(rate_tot):,}.0 kbps")
+            logger_csv.debug(";%d" % int(rate_tot))
+
+        self.total_observed_bytes = self.netstat.get_rx_bytes() - start_rx_bytes
 
 
 class HttpTesterDown(object):
@@ -187,64 +306,98 @@ class HttpTesterDown(object):
         self.dev = dev
 
     def test(self, url, callback_update_speed=noop, num_sessions=7, buffer_size=8192):
-        start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
+        
+        # Prepare the measurement
         stop_event = threading.Event()
         result_queue = queue.Queue()
-        netstat = Netstat(self.dev)
         producer = Producer(url, stop_event, result_queue, num_sessions, buffer_size)
         consumer = Consumer(stop_event, result_queue, num_sessions)
-        observer = Observer(stop_event, netstat, callback_update_speed)
-        timeout = threading.Timer(MEASURE_TIME + RAMPUP_SECS + DOWNLOAD_TIMEOUT_DELAY, lambda: stop_event.set())
-        starttotalbytes = netstat.get_rx_bytes()
+        observer = Observer(stop_event, Netstat(self.dev), callback_update_speed)
+
+        # Prepare an alarm to stop the measurement if it takes too long
+        timeout = threading.Timer(
+            MEASURE_TIME + RAMPUP_SECS + TIMEOUT_DELAY,
+            lambda: stop_event.set(),
+        )
+
+        # Start the timers and counters for overall measurement
+        start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
+
+        # Start the measurement
         producer.start()
         consumer.start()
         observer.start()
+
+        # Activate the alarm
         timeout.start()
+
+        # Wait for the measurement to finish
         producer.join()
         consumer.join()
         observer.join()
+
+        # Deactivate the alarm for stopping the measurement (at this point the measuremente has finished)
         if timeout.is_alive():
             timeout.cancel()
+
         if consumer.errors:
-            logger.debug('Errors: {}'.format(consumer.errors))
+            logger.debug("Errori: %s", consumer.errors)
             first_error = consumer.errors[0]
-            raise nem_exceptions.MeasurementException(first_error.get('message'), first_error.get('code'))
+            raise nem_exceptions.MeasurementException(first_error.get("message"), first_error.get("code"))
+
         if observer.starttime is None or observer.endtime is None:
-            raise nem_exceptions.MeasurementException('Misura non completata', nem_exceptions.BROKEN_CONNECTION)
+            raise nem_exceptions.MeasurementException("Misura non completata", nem_exceptions.BROKEN_CONNECTION)
+
+        if observer.total_observed_bytes < 0:
+            raise nem_exceptions.MeasurementException(
+                "Ottenuto banda negativa, possibile azzeramento dei contatori",
+                nem_exceptions.COUNTER_RESET,
+            )
+        if (observer.total_observed_bytes == 0) or (consumer.total_read_bytes == 0):
+            raise nem_exceptions.MeasurementException("Ottenuto banda zero", nem_exceptions.ZERO_SPEED)
+
         duration = (observer.endtime - observer.starttime) * 1000.0
-        total_sent_bytes = netstat.get_rx_bytes() - starttotalbytes
-        if total_sent_bytes < 0:
-            raise nem_exceptions.MeasurementException('Ottenuto banda negativa, possibile azzeramento dei contatori',
-                                                      nem_exceptions.COUNTER_RESET)
-        if (total_sent_bytes == 0) or (consumer.total_read_bytes == 0):
-            raise nem_exceptions.MeasurementException('Ottenuto banda zero',
-                                                      nem_exceptions.ZERO_SPEED)
+        overhead = float(observer.total_observed_bytes - consumer.total_read_bytes) / float(observer.total_observed_bytes)
+        bytes_nem = observer.measured_bytes
+        bytes_tot = int(bytes_nem * (1 + overhead))
+
+        logger.debug(f"Observer: dati totali letti sulla scheda di rete: {observer.total_observed_bytes:,} bytes")
+        logger.debug(f"Consumer: dati totali ricevuti dal server di misura: {consumer.total_read_bytes:,} bytes")
+        logger.debug(f"Traffico spurio: {overhead*100:.2f}%")
+
+        logger.debug(f"Observer: dati misurati (al netto della rampa): {observer.measured_bytes:,} bytes")
+        logger.debug(f"Observer: tempo di misura: {duration:,.2f} ms")
+
+        logger.debug(f"Dati di misura: {bytes_nem:,} bytes")
+        logger.debug(f"Dati totali (misura + overhead): {bytes_tot:,} bytes")
         
-        overhead = float(total_sent_bytes - consumer.total_read_bytes) / float(total_sent_bytes)
-        bytes_nem = int(round(observer.measured_bytes * (1 - overhead)))
-        bytes_tot = observer.measured_bytes
+        logger_csv.debug(f";{observer.total_observed_bytes};{observer.measured_bytes};{consumer.total_read_bytes};{overhead};{bytes_tot};{bytes_nem}")
 
-        logger.debug(f"Netstat: dati letti sulla scheda di rete: {total_sent_bytes}")
-        logger.debug(f"Observer: dati letti sulla scheda di rete: {observer.measured_bytes}")
-        logger.debug(f"Consumer: dati ricevuti dal server di misura: {consumer.total_read_bytes}")
-        logger.debug(f"Traffico spurio: {overhead}")
-        logger.debug(f"Dati totali: {bytes_tot}")
-        logger.debug(f"Dati di misura (observer - overhead): {bytes_nem}")
+        if overhead < 0:
+            raise nem_exceptions.MeasurementException("Traffico spurio negativo", nem_exceptions.NEGATIVE_SPEED)
+        
+        if bytes_nem < 0:
+            raise nem_exceptions.MeasurementException("Byte di misura trasferiti negativi", nem_exceptions.NEGATIVE_SPEED)
+        
+        if bytes_tot < 0:
+            raise nem_exceptions.MeasurementException("Byte totali trasferiti negativi", nem_exceptions.NEGATIVE_SPEED)
 
-        return Proof(test_type='download_http',
-                     start_time=start_timestamp,
-                     duration=duration,
-                     bytes_nem=bytes_nem,
-                     bytes_tot=bytes_tot,
-                     spurious=overhead)
+        return Proof(
+            test_type="download_http",
+            start_time=start_timestamp,
+            duration=duration,
+            bytes_nem=bytes_nem,
+            bytes_tot=bytes_tot,
+            spurious=overhead,
+        )
 
 
 def main():
     socket.setdefaulttimeout(10)
     dev = iptools.get_dev()
-    res = HttpTesterDown(dev).test('http://{}:80'.format('193.104.137.133'))
-    print(res)
+    result = HttpTesterDown(dev).test("http://{}:80".format("193.104.137.133"))
+    print(result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

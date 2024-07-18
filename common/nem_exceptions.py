@@ -54,34 +54,34 @@ CONNECTION_FAILED = 80003
 ZERO_SPEED = 80005
 SERVER_ERROR = 80006
 PING_ERROR = 80007
+NEGATIVE_SPEED = 80008
 PING_TIMEOUT = 99997
 
 
 # These are the old codes
 CODE_MAPPING = {
-    '10013': 99977,
-    '425 security: bad ip connecting.': 99978,
-    'host unreachable': 99979,
-    '10051': 99980,
-    '530 login incorrect.': 99981,
-    '113': 99982,
-    '111': 99983,
-    '110': 99984,
-    '10053': 99985,
-    '104': 99986,
-    'port unreachable': 99987,
-    '10061': 99988,
-    '10054': 99989,
-    '10065': 99990,
-    '35': 99991,
-    '530 this ftp server is anonymous only.': 99992,
-    '553 could not create file.': 99993,
-    'timed out': 99994,
-    '10060': 99995,
-    '550 failed to open file.': 99996,
-    'timeout during icmp socket select': 99997,
-    ('operation not permitted - note that icmp messages can only be sent '
-     'from processes running as root.'): 99998
+    "10013": 99977,
+    "425 security: bad ip connecting.": 99978,
+    "host unreachable": 99979,
+    "10051": 99980,
+    "530 login incorrect.": 99981,
+    "113": 99982,
+    "111": 99983,
+    "110": 99984,
+    "10053": 99985,
+    "104": 99986,
+    "port unreachable": 99987,
+    "10061": 99988,
+    "10054": 99989,
+    "10065": 99990,
+    "35": 99991,
+    "530 this ftp server is anonymous only.": 99992,
+    "553 could not create file.": 99993,
+    "timed out": 99994,
+    "10060": 99995,
+    "550 failed to open file.": 99996,
+    "timeout during icmp socket select": 99997,
+    ("operation not permitted - note that icmp messages can only be sent " "from processes running as root."): 99998,
 }
 
 
@@ -93,9 +93,9 @@ def errorcode_from_exception(exception):
     if isinstance(exception, NemesysException):
         return exception.errorcode
     try:
-        error = str(exception.args[0]).replace(':', ',')
+        error = str(exception.args[0]).replace(":", ",")
     except (AttributeError, IndexError):
-        error = str(exception).replace(':', ',')
+        error = str(exception).replace(":", ",")
 
     try:
         errorcode = CODE_MAPPING[error]
@@ -105,7 +105,6 @@ def errorcode_from_exception(exception):
 
 
 class NemesysException(Exception):
-
     def __init__(self, message, errorcode=UNKNOWN):
         Exception.__init__(self, message)
         try:
@@ -127,7 +126,6 @@ class SysmonitorException(NemesysException):
 
 
 class TaskException(NemesysException):
-
     def __init__(self, message, errorcode=UNKNOWN):
         NemesysException.__init__(self, message, errorcode)
         if errorcode == UNKNOWN:
@@ -136,8 +134,11 @@ class TaskException(NemesysException):
 
 class ProfilerException(NemesysException):
     """Exception from Profiler"""
+
     pass
+
 
 class DeliveryException(NemesysException):
     """Exception from deliverer"""
+
     pass

@@ -73,7 +73,6 @@ Here are some instructions to test or run parts of the project
         tests/test_backend_response.py ......                [ 11%]
         tests/test_checkhost.py ....                         [ 20%]
         tests/test_exceptions.py .........                   [ 37%]
-        tests/test_fakefile.py ....                          [ 44%]
         tests/test_measure.py ..                             [ 48%]
         tests/test_mist_measure.py ..                        [ 51%]
         tests/test_netstat.py ........                       [ 66%]

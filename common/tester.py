@@ -36,7 +36,9 @@ BW_1M = 1 * 10**6
 BW_3M = 3 * 10**6
 BW_5M = 5 * 10**6
 BW_25M = 25 * 10**6
+BW_50M = 50 * 10**6
 BW_100M = 100 * 10**6
+BW_200M = 200 * 10**6
 BW_300M = 300 * 10**6
 BW_500M = 500 * 10**6
 BW_1000M = 1 * 10**9
@@ -45,6 +47,7 @@ BW_2500M = 2.5 * 10**9
 BW_5000M = 5 * 10**9
 
 logger = logging.getLogger(__name__)
+logger_csv = logging.getLogger("csv")
 
 
 class Tester(object):
@@ -56,7 +59,7 @@ class Tester(object):
         self._testerhttpdown = HttpTesterDown(dev)
 
     def testhttpdown(self, callback_update_speed=None, bw=BW_100M):
-        url = "http://%s/file.rnd" % self._host.ip
+        url = f"http://{self._host.ip}:{self._host.port}/file.rnd"
         if bw <= BW_1M:
             num_sessions = 1
         elif bw <= BW_5M:
@@ -69,32 +72,42 @@ class Tester(object):
             num_sessions = 20
         else:
             num_sessions = 24
+            if utils.is_darwin():
+                num_sessions = 32
 
         buffer_size = int(bw / (4 * 10**3))
 
-        logger.debug(
-            f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, buffer_size={buffer_size:,}"
-        )
+        logger.debug(f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, buffer_size={buffer_size:,}")
+        logger_csv.debug(f"down;{bw:,};{num_sessions};{buffer_size:,}")
         return self._testerhttpdown.test(url, callback_update_speed, num_sessions=num_sessions, buffer_size=buffer_size)
 
     def testhttpup(self, callback_update_speed=None, bw=BW_100M):
-        url = "http://%s:8080/file.rnd" % self._host.ip
+        url = f"http://{self._host.ip}:{self._host.port}/file.rnd"
 
         if bw <= BW_1M:
             num_sessions = 1
         elif bw <= BW_5M:
             num_sessions = 4
+        elif bw <= BW_50M:
+            num_sessions = 6
+        elif bw <= BW_100M:
+            num_sessions = 8
+        elif bw <= BW_300M:
+            num_sessions = 10
         elif bw <= BW_500M:
-            num_sessions = 12
-        else:
+            num_sessions = 13
+        elif bw <= BW_1000M:
             num_sessions = 16
+        else:
+            num_sessions = 32
 
         tcp_window_size = -1
-        buffer_size = int(bw / (2 * 10**3))
+        buffer_size = int(bw / (2 * 10**3)) * int(32 / num_sessions)
 
         logger.debug(
             f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, tcp_window_size={tcp_window_size}, buffer_size={buffer_size:,}"
         )
+        logger_csv.debug(f"up;{bw:,};{num_sessions};{buffer_size:,}")
         return self._testerhttpup.test(
             url, callback_update_speed, num_sessions=num_sessions, tcp_window_size=tcp_window_size, buffer_size=buffer_size
         )
@@ -143,6 +156,7 @@ def main():
     )
     parser.add_option("-n", "--num-tests", dest="num_tests", default="1", type="int", help="Number of tests to perform")
     parser.add_option("-H", "--host", dest="host", default="193.104.137.133", help="An ipaddress or FQDN of server host")
+    parser.add_option("-P", "--port", dest="port", default="80", help="Port number of server host")
 
     (options, _) = parser.parse_args()
     try:
@@ -153,7 +167,7 @@ def main():
 
         sys.exit(2)
     print(f"Misure su interfaccia: {dev}")
-    t = Tester(dev, Host(options.host), timeout=10)
+    t = Tester(dev, Host(options.host, options.port), timeout=10)
     if options.bandwidth.endswith("M"):
         bw = int(options.bandwidth[:-1]) * 1000000
     elif options.bandwidth.endswith("k"):
@@ -181,6 +195,7 @@ def main():
             try:
                 res = t.testping()
                 print("Ping: %.2f milliseconds" % res.duration)
+                logger_csv.debug("ping;;;;%.2f;;;;;;;;;;;;;;;;;;;" % res.duration)
             except Exception as e:
                 print("Error: [%d] %s" % (e.errorcode, str(e)))
         else:
@@ -194,8 +209,10 @@ def main():
 
 def printout_http(res):
     speed = int(res.bytes_tot * 8 / float(res.duration))
-    print(f"Medium speed: {speed:,} kbps")
-    print("Spurious traffic: %.2f%%" % (res.spurious * 100.0))
+    logger.info(f"Medium speed: {speed:,} kbps")
+    logger.info("Spurious traffic: %.2f%%" % (res.spurious * 100.0))
+    logger_csv.debug(f";{speed:,}")
+    logger_csv.debug(";%.2f%%" % (res.spurious * 100.0))
 
 
 if __name__ == "__main__":

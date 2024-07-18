@@ -23,23 +23,26 @@ import socket
 import threading
 import time
 from datetime import datetime
+import requests
 
-from common import httpclient
 from common import iptools
 from common import nem_exceptions
 from common import ntptime
-from common.fakefile import Fakefile
 from common.netstat import Netstat
 from common.proof import Proof
 
+
 MEASURE_TIME = 10
 RAMPUP_SECS = 2
-# Long timeout since needed in some cases
-TEST_TIMEOUT = 18
-# 1 Gbps for 15 seconds
-MAX_TRANSFERRED_BYTES = 1000 * 1000000 * 20 / 8
+# Wait another secs in case end of file has not arrived
+TIMEOUT_DELAY = 5
+# 10 Gbps for measuring time seconds
+MAX_TRANSFERED_BYTES = 10 * 1000000 * 1000 * (MEASURE_TIME + RAMPUP_SECS + TIMEOUT_DELAY) / 8
+HTTP_TIMEOUT = 8
+END_STRING = b"_ThisIsTheEnd_"
 
 logger = logging.getLogger(__name__)
+logger_csv = logging.getLogger("csv")
 
 
 def noop(*args, **kwargs):
@@ -47,8 +50,7 @@ def noop(*args, **kwargs):
 
 
 class Result(object):
-    def __init__(self, n_bytes=0, response=None, error=None):
-        self.n_bytes = n_bytes
+    def __init__(self, response=None, error=None):
         self.response = response
         self.error = error
 
@@ -58,226 +60,306 @@ def test_from_server_response(response):
     Server response is a comma separated string containing:
     <total_bytes received 10th second>, <total_bytes received 9th second>, ...
     """
-    logger.debug('Ricevuto risposta dal server: %s', response)
+    logger.debug("Ricevuto risposta dal server: %s", response)
+
     try:
-        results = [int(num) for num in response.strip(b']').strip(b'[').split(b', ')]
+        results = [int(num.strip()) for num in response.strip(b"]").strip(b"[").split(b",")]
     except Exception:
-        raise nem_exceptions.MeasurementException('Ricevuto risposta errata dal server',
-                                                  nem_exceptions.SERVER_ERROR)
+        raise nem_exceptions.MeasurementException("Ricevuto risposta errata dal server", nem_exceptions.SERVER_ERROR)
+
     testtime = len(results) * 1000
     partial_bytes = [float(x) for x in results]
     bytes_received = int(sum(partial_bytes))
+
     return testtime, bytes_received
 
 
-class ChunkGenerator(object):
-    def __init__(self, fakefile, buffer_size, stop_event):
-        self.fakefile = fakefile
-        self.buffer_size = buffer_size
-        self.stop_event = stop_event
+class ChunkGenerator(queue.Queue):
+    def write(self, data):
+        # An empty string would be interpreted as EOF by the receiving server
+        if data:
+            self.put(data)
 
-    def gen_chunk(self):
+    def __iter__(self):
+        return iter(self.get, None)
+
+    def close(self):
+        self.put(END_STRING)
+        self.put(None)
+
+
+class Writer(threading.Thread):
+    def __init__(self, stop_event, chunk_generator, live_queue):
+        threading.Thread.__init__(self)
+        self.stop_event = stop_event
+        self.chunk_generator = chunk_generator
+        self.live_queue = live_queue
+
+    def run(self):
         while not self.stop_event.isSet():
-            yield self.fakefile.read(self.buffer_size)
+            data = b"A" * self.chunk_generator.maxsize
+            self.chunk_generator.write(data)
+            self.live_queue.put(len(data))
+            time.sleep(0.1)
+
+        self.chunk_generator.close()
 
 
 class Uploader(threading.Thread):
-    def __init__(self, url, stop_event, result_queue, measurement_id, tcp_window_size, buffer_size):
+    def __init__(self, stop_event, url, measurement_id, result_queue, tcp_window_size, chunk_generator):
         threading.Thread.__init__(self)
-        self.url = url
         self.stop_event = stop_event
-        self.result_queue = result_queue
+        self.url = url
         self.measurement_id = measurement_id
+        self.result_queue = result_queue
         self.tcp_window_size = tcp_window_size
-        self.buffer_size = buffer_size
+        self.chunk_generator = chunk_generator
 
     def run(self):
-        fakefile = Fakefile(MAX_TRANSFERRED_BYTES)
-        chunk_generator = ChunkGenerator(fakefile, self.buffer_size, self.stop_event)
         response = None
-        httpc = httpclient.HttpClient()
         try:
-            headers = {'X-measurement-id': self.measurement_id}
-            response = httpc.post(self.url,
-                                  data_source=chunk_generator.gen_chunk(),
-                                  headers=headers,
-                                  tcp_window_size=self.tcp_window_size,
-                                  timeout=TEST_TIMEOUT)
-            if response is None:
-                self.result_queue.put(Result(error={'message': 'Nessuna risposta dal server',
-                                                    'code': nem_exceptions.BROKEN_CONNECTION}))
-            elif response.status_code != 200:
-                self.result_queue.put(Result(error={'message': 'Errore: {}'.format(response.status),
-                                                    'code': nem_exceptions.CONNECTION_FAILED}))
-            else:
-                self.result_queue.put(Result(n_bytes=fakefile.get_bytes_read(),
-                                             response=response.content))
-        except Exception as e:
-            self.result_queue.put(Result(error={'message': 'Errore di connessione: {}'.format(e),
-                                                'code': nem_exceptions.CONNECTION_FAILED}))
-        finally:
+            headers = {"X-measurement-id": self.measurement_id}
+            response = requests.post(self.url, data=self.chunk_generator, headers=headers, timeout=HTTP_TIMEOUT, stream=True)
+
+            logger.debug("Upload completed! Sending stop signal")
             self.stop_event.set()
+
+            if response is None:
+                self.result_queue.put(
+                    Result(error={"message": "Nessuna risposta dal server", "code": nem_exceptions.BROKEN_CONNECTION})
+                )
+
+            elif response.status_code != 200:
+                self.result_queue.put(
+                    Result(
+                        error={
+                            "message": f"Errore: [{response.status_code}] {response.status}",
+                            "code": nem_exceptions.CONNECTION_FAILED,
+                        }
+                    )
+                )
+
+            else:
+                logger.debug("Risposta dal server: %s", response.content)
+                self.result_queue.put(Result(response=response.content))
+
+        except Exception as e:
+            self.result_queue.put(Result(error={"message": f"Errore: {e}", "code": nem_exceptions.CONNECTION_FAILED}))
+        finally:
             if response:
                 response.close()
 
+        logger.debug("Uploader thread stopped")
+
 
 class Producer(threading.Thread):
-    def __init__(self, url, stop_event, result_queue, num_sessions, tcp_window_size, buffer_size=8192):
+    def __init__(self, url, stop_event, live_queue, result_queue, num_sessions, tcp_window_size, buffer_size=8192):
         super(Producer, self).__init__()
         self.url = url
         self.stop_event = stop_event
+        self.live_queue = live_queue
         self.result_queue = result_queue
         self.num_sessions = num_sessions
         self.tcp_window_size = tcp_window_size
         self.buffer_size = buffer_size
 
     def run(self):
-        measurement_id = 'sess-%d' % random.randint(0, 100000)
+        measurement_id = "sess-%d" % random.randint(0, 100000)
         for _ in range(0, self.num_sessions):
-            thread = Uploader(self.url, self.stop_event, self.result_queue, measurement_id,
-                              self.tcp_window_size, self.buffer_size)
-            thread.start()
+            chunk_generator = ChunkGenerator(self.buffer_size)
+            writer = Writer(self.stop_event, chunk_generator, self.live_queue)
+            uploader = Uploader(
+                self.stop_event, self.url, measurement_id, self.result_queue, self.tcp_window_size, chunk_generator
+            )
+
+            writer.start()
+            uploader.start()
+
+            time.sleep(0.05)
+
+
+class Observer(threading.Thread):
+    def __init__(self, stop_event, live_queue, callback=noop):
+        super(Observer, self).__init__()
+        self.stop_event = stop_event
+        self.live_queue = live_queue
+        if callback:
+            self.callback = callback
+        else:
+            self.callback = noop
+        self.total_bytes = 0
+
+    def run(self):
+        start_measure_time = time.time()
+        last_measured_time = time.time()
+        measure_count = 0
+
+        while not self.stop_event.isSet():
+            time.sleep(1.0)
+            current_time = time.time()
+            elapsed = current_time - last_measured_time
+            measure_count += 1
+
+            tx_bytes = 0
+            while not self.live_queue.empty():
+                tx_bytes += self.live_queue.get()
+
+            self.total_bytes += tx_bytes
+
+            rate_tot = float(tx_bytes * 8) / float(elapsed * 1000)
+            last_measured_time = current_time
+
+            logger.debug(f"[HTTP] Sending... Count = {measure_count}; Speed = {int(rate_tot):,} kbps")
+            logger_csv.debug(";%d" % int(rate_tot))
+
+            self.callback(second=measure_count, speed=rate_tot)
+
+            if current_time - start_measure_time >= MEASURE_TIME + RAMPUP_SECS:
+                self.stop_event.set()
+
+        logger.debug("Observer thread stopped")
 
 
 class Consumer(threading.Thread):
     def __init__(self, stop_event, result_queue, num_sessions):
         super(Consumer, self).__init__()
+
         self.stop_event = stop_event
         self.result_queue = result_queue
         self.num_sessions = num_sessions
-        self.total_read_bytes = 0
         self.errors = []
-        self.duration = None
-        self.bytes_received = None
+
+        # Data from server response at the end of the measurement
+        self.duration = 0
+        self.bytes_transferred = 0
 
     def run(self):
         finished = 0
         response_data = None
+
         while finished < self.num_sessions:
-            res = self.result_queue.get(True)
-            if res.error:
-                self.errors.append(res.error)
+            # Wait for a result to be available
+            result = self.result_queue.get()
+
+            if result.error:
+                self.errors.append(result.error)
+
             else:
-                if res.response:
-                    response_data = res.response
-                self.total_read_bytes += res.n_bytes
+                if result.response:
+                    response_data = result.response
+
             finished += 1
+
         if not response_data and len(self.errors) == 0:
-            self.errors.append({'message': 'Nessuna risposta dal server', 'code': nem_exceptions.BROKEN_CONNECTION})
+            self.errors.append({"message": "Nessuna risposta dal server", "code": nem_exceptions.BROKEN_CONNECTION})
         else:
             try:
-                (self.duration, self.bytes_received) = test_from_server_response(response_data)
+                (self.duration, self.bytes_transferred) = test_from_server_response(response_data)
             except nem_exceptions.MeasurementException as e:
-                self.errors.append({'message': e.message, 'code': e.errorcode})
+                self.errors.append({"message": e.message, "code": e.errorcode})
             except Exception as e:
-                self.errors.append({'message': e.message, 'code': nem_exceptions.errorcode_from_exception(e)})
+                self.errors.append({"message": e.message, "code": nem_exceptions.errorcode_from_exception(e)})
 
-
-class Observer(threading.Thread):
-    def __init__(self, stop_event, netstat, callback=noop):
-        super(Observer, self).__init__()
-        self.stop_event = stop_event
-        self.netstat = netstat
-        if callback:
-            self.callback = callback
-        else:
-            self.callback = noop
-        self.starttime = None
-        self.endtime = None
-        self.measured_bytes = 0
-
-    def run(self):
-        last_measured_time = time.time()
-        measure_count = 0
-        last_tx_bytes = self.netstat.get_tx_bytes()
-        while not self.stop_event.isSet():
-            time.sleep(1.0)
-            measure_count += 1
-            measuring_time = time.time()
-            elapsed = (measuring_time - last_measured_time) * 1000.0
-            new_tx_bytes = self.netstat.get_tx_bytes()
-            tx_diff = new_tx_bytes - last_tx_bytes
-            if MEASURE_TIME + RAMPUP_SECS >= measure_count > RAMPUP_SECS:
-                self.measured_bytes += tx_diff
-            rate_tot = float(tx_diff * 8) / float(elapsed)
-            last_tx_bytes = new_tx_bytes
-            last_measured_time = measuring_time
-            logger.debug(f"[HTTP] secondo = {measure_count}, velocita = {int(rate_tot):,}")
-            self.callback(second=measure_count, speed=rate_tot)
+        logger.debug("Consumer thread stopped")
 
 
 class HttpTesterUp(object):
     def __init__(self, dev):
         self.dev = dev
+        self.netstat = Netstat(self.dev)
 
     def test(self, url, callback_update_speed=noop, num_sessions=1, tcp_window_size=-1, buffer_size=8192):
-        start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
+        # Prepare the measurement
         stop_event = threading.Event()
         result_queue = queue.Queue()
-        netstat = Netstat(self.dev)
-        producer = Producer(url, stop_event, result_queue, num_sessions, tcp_window_size, buffer_size)
+        live_queue = queue.Queue()
+
+        producer = Producer(url, stop_event, live_queue, result_queue, num_sessions, tcp_window_size, buffer_size)
         consumer = Consumer(stop_event, result_queue, num_sessions)
-        observer = Observer(stop_event, netstat, callback_update_speed)
-        timeout = threading.Timer(TEST_TIMEOUT, lambda: stop_event.set())
-        starttotalbytes = netstat.get_tx_bytes()
+        observer = Observer(stop_event, live_queue, callback_update_speed)
+
+        # Prepare an alarm to stop the measurement if it takes too long
+        timeout = threading.Timer(
+            MEASURE_TIME + RAMPUP_SECS + TIMEOUT_DELAY,
+            lambda: stop_event.set(),
+        )
+
+        # Start the timers and counters for overall measurement
+        start_bytes = self.netstat.get_tx_bytes()
+        start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
+
+        # Start the measurement
         producer.start()
         consumer.start()
         observer.start()
+
+        # Activate the alarm
         timeout.start()
+
+        # Wait for the measurement to finish
         producer.join()
         consumer.join()
         observer.join()
+
+        # Deactivate the alarm for stopping the measurement (at this point the measuremente has finished)
         if timeout.is_alive():
+            logger.debug("Timeout terminato")
             timeout.cancel()
+
         if consumer.errors:
-            logger.debug('Errori: %s', consumer.errors)
-            first_error = consumer.errors[0]
-            raise nem_exceptions.MeasurementException(first_error.get('message'), first_error.get('code'))
-        total_sent_bytes = netstat.get_tx_bytes() - starttotalbytes
+            logger.debug("Errori: %s", consumer.errors)
+            # first_error = consumer.errors[0]
+            # raise nem_exceptions.MeasurementException(first_error.get("message"), first_error.get("code"))
+
         if consumer.duration < (MEASURE_TIME * 1000) - 1:
-            raise nem_exceptions.MeasurementException('Test non risucito - tempo ritornato dal server non '
-                                                      'corrisponde al tempo richiesto.',
-                                                      nem_exceptions.SERVER_ERROR)
-        if total_sent_bytes < 0:
-            raise nem_exceptions.MeasurementException('Ottenuto banda negativa, possibile '
-                                                      'azzeramento dei contatori.',
-                                                      nem_exceptions.COUNTER_RESET)
-        if (consumer.total_read_bytes == 0) or (total_sent_bytes == 0):
-            raise nem_exceptions.MeasurementException('Ottenuto banda zero',
-                                                      nem_exceptions.ZERO_SPEED)
-        if total_sent_bytes > consumer.total_read_bytes:
-            overhead = (float(total_sent_bytes - consumer.total_read_bytes) / float(total_sent_bytes))
-        else:
-            logger.warning('Byte di payload > tx_diff, uso calcolo alternativo di spurious traffic')
-            overhead = (float(observer.measured_bytes - consumer.bytes_received) /
-                        float(observer.measured_bytes))
-        if (total_sent_bytes == 0) or (consumer.total_read_bytes == 0):
-            raise nem_exceptions.MeasurementException('Ottenuto banda zero',
-                                                      nem_exceptions.ZERO_SPEED)
+            raise nem_exceptions.MeasurementException("Durata del test insufficiente", nem_exceptions.SERVER_ERROR)
 
-        bytes_nem = consumer.bytes_received
-        bytes_tot = int(consumer.bytes_received * (1 + overhead))
+        if consumer.bytes_transferred <= 0:
+            raise nem_exceptions.MeasurementException("Ottenuto banda zero", nem_exceptions.ZERO_SPEED)
+
+        total_bytes = self.netstat.get_tx_bytes() - start_bytes
+        produced_bytes = observer.total_bytes
+        overhead = max(float(total_bytes - produced_bytes) / float(total_bytes), 0)
+
+        bytes_nem = consumer.bytes_transferred
+        bytes_tot = int(bytes_nem * (1 + overhead))
+
+        logger.debug(f"Netstat: dati letti sulla scheda di rete: {total_bytes:,} bytes")
+        logger.debug(f"Observer: dati prodotti dal generatore: {observer.total_bytes:,} bytes")
+        logger.debug(f"Consumer: dati ricevuti dal server di misura: {consumer.bytes_transferred:,} bytes")
+        logger.debug(f"Consumer: tempo di misura: {consumer.duration:,} s")
+        logger.debug(f"Dati di misura: {bytes_nem:,} bytes")
+        logger.debug(f"Traffico spurio: {overhead*100:.2f}%")
+        logger.debug(f"Dati totali (misura + overhead): {bytes_tot:,} bytes")
+
+        logger_csv.debug(
+            f";;{total_bytes};{observer.total_bytes};{consumer.bytes_transferred};{overhead};{bytes_tot};{bytes_nem}"
+        )
+
+        if overhead < 0:
+            raise nem_exceptions.MeasurementException("Traffico spurio negativo", nem_exceptions.NEGATIVE_SPEED)
         
-        logger.debug(f"Netstat: dati letti sulla scheda di rete: {total_sent_bytes}")
-        logger.debug(f"Observer: dati letti sulla scheda di rete: {observer.measured_bytes}")
-        logger.debug(f"Consumer: dati ricevuti dal server di misura: {consumer.total_read_bytes}")
-        logger.debug(f"Traffico spurio: {overhead}")
-        logger.debug(f"Dati totali: {bytes_tot}")
-        logger.debug(f"Dati di misura (observer - overhead): {bytes_nem}")
+        if bytes_nem < 0:
+            raise nem_exceptions.MeasurementException("Byte di misura trasferiti negativi", nem_exceptions.NEGATIVE_SPEED)
+        
+        if bytes_tot < 0:
+            raise nem_exceptions.MeasurementException("Byte totali trasferiti negativi", nem_exceptions.NEGATIVE_SPEED)
 
-        return Proof(test_type='upload_http',
-                     start_time=start_timestamp,
-                     duration=consumer.duration,
-                     bytes_nem=bytes_nem,
-                     bytes_tot=bytes_tot,
-                     spurious=overhead)
+        return Proof(
+            test_type="upload_http",
+            start_time=start_timestamp,
+            duration=consumer.duration,
+            bytes_nem=bytes_nem,
+            bytes_tot=bytes_tot,
+            spurious=overhead,
+        )
 
 
 def main():
     socket.setdefaulttimeout(10)
     dev = iptools.get_dev()
-    print(HttpTesterUp(dev).test('http://{}:8080'.format('193.104.137.133')))
+    print(HttpTesterUp(dev).test("http://{}:8080".format("193.104.137.133")))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
