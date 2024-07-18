@@ -19,7 +19,7 @@
 
 class Host(object):
 
-    def __init__(self, ip, port=None, name=None):
+    def __init__(self, ip, port=80, name=None):
         self._ip = ip
         self._name = name
         self._port = port
