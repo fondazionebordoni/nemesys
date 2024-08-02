@@ -24,6 +24,8 @@ import threading
 import time
 from datetime import datetime
 import requests
+import re
+import json
 
 from common import iptools
 from common import nem_exceptions
@@ -53,25 +55,6 @@ class Result(object):
     def __init__(self, response=None, error=None):
         self.response = response
         self.error = error
-
-
-def test_from_server_response(response):
-    """
-    Server response is a comma separated string containing:
-    <total_bytes received 10th second>, <total_bytes received 9th second>, ...
-    """
-    logger.debug("Ricevuto risposta dal server: %s", response)
-
-    try:
-        results = [int(num.strip()) for num in response.strip(b"]").strip(b"[").split(b",")]
-    except Exception:
-        raise nem_exceptions.MeasurementException("Ricevuto risposta errata dal server", nem_exceptions.SERVER_ERROR)
-
-    testtime = len(results) * 1000
-    partial_bytes = [float(x) for x in results]
-    bytes_received = int(sum(partial_bytes))
-
-    return testtime, bytes_received
 
 
 class ChunkGenerator(queue.Queue):
@@ -140,8 +123,9 @@ class Uploader(threading.Thread):
                 )
 
             else:
-                logger.debug("Risposta dal server: %s", response.content)
-                self.result_queue.put(Result(response=response.content))
+                content = response.content.decode("utf-8")
+                logger.debug("Risposta dal server: %s", content)
+                self.result_queue.put(Result(response=content))
 
         except Exception as e:
             self.result_queue.put(Result(error={"message": f"Errore: {e}", "code": nem_exceptions.CONNECTION_FAILED}))
@@ -220,6 +204,26 @@ class Observer(threading.Thread):
         logger.debug("Observer thread stopped")
 
 
+def parse_response(response):
+    pattern = r"\[(\s*(\d+)\s*,?)+\]"
+    match = re.match(pattern, response)
+    if match:
+        # Gestisci le risposte del server Python del tipo [<>, <>, <>]
+        pattern = r"(?P<bytes>\d+)"
+
+        matches = re.finditer(pattern, response)
+        bytes_array = [int(match.group("bytes")) for match in matches]
+        bytes_transferred = sum(bytes_array)
+        duration = len(bytes_array) * 1000
+        logger.debug("Risultato ottenuto: %d bytes in %d ms", bytes_transferred, duration)
+        return duration, bytes_transferred, False
+
+    # Gestisci le risposte JSON del tipo {"received": <>, "responseTime": <>, "speed": <>}
+    result = json.loads(response)
+    logger.debug("Risultato ottenuto: %s", result)
+    return result["responseTime"], result["received"], True
+
+
 class Consumer(threading.Thread):
     def __init__(self, stop_event, result_queue, num_sessions):
         super(Consumer, self).__init__()
@@ -234,31 +238,33 @@ class Consumer(threading.Thread):
         self.bytes_transferred = 0
 
     def run(self):
-        finished = 0
-        response_data = None
-
-        while finished < self.num_sessions:
-            # Wait for a result to be available
+        for _ in range(self.num_sessions):
             result = self.result_queue.get()
 
             if result.error:
                 self.errors.append(result.error)
+            elif result.response:
+                try:
+                    duration, bytes_transferred, incremental = parse_response(result.response)
+
+                    if duration and bytes_transferred:
+                        self.duration = max(self.duration, duration)
+                        if incremental:
+                            self.bytes_transferred += bytes_transferred
+                        else:
+                            self.bytes_transferred = max(self.bytes_transferred, bytes_transferred)
+
+                except nem_exceptions.MeasurementException as e:
+                    self.errors.append({"message": e.message, "code": e.errorcode})
+                except Exception as exception:
+                    error_code = nem_exceptions.errorcode_from_exception(exception)
+                    self.errors.append({"message": exception.message, "code": error_code})
 
             else:
-                if result.response:
-                    response_data = result.response
+                self.errors.append({"message": "No response from server", "code": nem_exceptions.BROKEN_CONNECTION})
 
-            finished += 1
-
-        if not response_data and len(self.errors) == 0:
-            self.errors.append({"message": "Nessuna risposta dal server", "code": nem_exceptions.BROKEN_CONNECTION})
-        else:
-            try:
-                (self.duration, self.bytes_transferred) = test_from_server_response(response_data)
-            except nem_exceptions.MeasurementException as e:
-                self.errors.append({"message": e.message, "code": e.errorcode})
-            except Exception as e:
-                self.errors.append({"message": e.message, "code": nem_exceptions.errorcode_from_exception(e)})
+        if self.errors:
+            logger.error("Consumer thread stopped with errors: %s" % self.errors)
 
         logger.debug("Consumer thread stopped")
 
@@ -338,10 +344,10 @@ class HttpTesterUp(object):
 
         if overhead < 0:
             raise nem_exceptions.MeasurementException("Traffico spurio negativo", nem_exceptions.NEGATIVE_SPEED)
-        
+
         if bytes_nem < 0:
             raise nem_exceptions.MeasurementException("Byte di misura trasferiti negativi", nem_exceptions.NEGATIVE_SPEED)
-        
+
         if bytes_tot < 0:
             raise nem_exceptions.MeasurementException("Byte totali trasferiti negativi", nem_exceptions.NEGATIVE_SPEED)
 
