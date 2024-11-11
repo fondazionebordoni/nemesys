@@ -20,7 +20,7 @@ Created on 13/giu/2016
 @author: ewedlund
 """
 import logging
-import urllib.parse
+from urllib.parse import urlparse
 
 from common import httputils, task
 from common.nem_exceptions import TaskException
@@ -33,8 +33,8 @@ class Scheduler(object):
     Handles the download of tasks
     """
 
-    def __init__(self, scheduler_url, client, md5conf, version, timeout):
-        self._url = scheduler_url
+    def __init__(self, url, client, md5conf, version, timeout):
+        self._url = url
         self._client = client
         self._md5conf = md5conf
         self._version = version
@@ -44,7 +44,7 @@ class Scheduler(object):
         """
         Download task from scheduler, returns a Task
         """
-        url = urllib.parse.urlparse(self._url)
+        url = urlparse(self._url)
         certificate = self._client.isp.certificate
         request_string = '{path}?clientid={client_id}&version={version}&confid={conf_id}'.format(
             path=url.path,
@@ -69,4 +69,7 @@ class Scheduler(object):
                     connection.close()
                 except Exception:
                     pass
+
+        # TODO 
+        logger.debug('Task scaricato: %s', data)
         return task.xml2task(data)
