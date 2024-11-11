@@ -46,7 +46,7 @@ class Chooser(object):
         try:
             data = response.json()
             for server in data:
-                servers.append(Server(id=server["id"], ip=server["ip"], name=server["fqdn"]))
+                servers.append(Server(uuid=server["uuid"], ip=server["ip"], name=server["fqdn"]))
         except Exception as e:
             logger.warning("Failed to decode servers list from %s: %s", data, e)
 

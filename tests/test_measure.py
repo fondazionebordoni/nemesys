@@ -41,7 +41,7 @@ class TestMeasure(unittest.TestCase):
                    Isp('fub001'),
                    'geo')
         m = Measure(1,
-                    Server(server_id='fubsrvnmx01', ip='127.0.0.1'),
+                    Server(uuid='fubsrvnmx01', ip='127.0.0.1', name='Test server'),
                     c)
         start_time = datetime.utcnow()
         p = Proof(test_type='download_http',
@@ -59,7 +59,7 @@ class TestMeasure(unittest.TestCase):
                    Profile('1mb512kb', 1024, 512),
                    Isp('fub001'), 'geo')
         m = Measure(1,
-                    Server(server_id='fubsrvnmx01', ip='127.0.0.1'),
+                    Server(uuid='fubsrvnmx01', ip='127.0.0.1', name='Test server'),
                     c)
         start_time = datetime.utcnow()
         p = Proof(test_type='download_http',

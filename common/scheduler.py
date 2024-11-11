@@ -19,6 +19,7 @@ Created on 13/giu/2016
 
 @author: ewedlund
 """
+
 import logging
 from urllib.parse import urlparse
 
@@ -46,23 +47,17 @@ class Scheduler(object):
         """
         url = urlparse(self._url)
         certificate = self._client.isp.certificate
-        request_string = '{path}?clientid={client_id}&version={version}&confid={conf_id}'.format(
-            path=url.path,
-            client_id=self._client.id,
-            version=self._version,
-            conf_id=self._md5conf)
+        request_string = f"{url.path}?clientid={self._client.id}&version={self._version}&confid={self._md5conf}"
         if server:
-            request_string = '{str}&server={server}'.format(str=request_string, server=server.ip)
+            request_string = f"{request_string}&serverUuid={server.uuid}"
         connection = None
         try:
-            connection = httputils.get_verified_connection(url=url,
-                                                           certificate=certificate,
-                                                           timeout=self._httptimeout)
-            connection.request('GET', request_string)
+            connection = httputils.get_verified_connection(url=url, certificate=certificate, timeout=self._httptimeout)
+            connection.request("GET", request_string)
             data = connection.getresponse().read()
         except Exception as e:
-            logger.error('Impossibile scaricare lo scheduling: %s', e)
-            raise TaskException('Download del task fallito')
+            logger.error("Impossibile scaricare lo scheduling: %s", e)
+            raise TaskException("Download del task fallito")
         finally:
             if connection:
                 try:
@@ -70,6 +65,6 @@ class Scheduler(object):
                 except Exception:
                     pass
 
-        # TODO 
-        logger.debug('Task scaricato: %s', data)
+        # TODO
+        logger.debug("Task scaricato: %s", data)
         return task.xml2task(data)

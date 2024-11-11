@@ -172,7 +172,7 @@ def xml2task(xml):
     else:
         srvip = task_dict.get('srvip')
     srvname = task_dict.get('srvname')
-    server = Server(srvid, srvip, srvname)
+    server = Server(uuid=srvid, ip=srvip, name=srvname)
     return Task(start=starttime,
                 server=server,
                 upload=int(nup),

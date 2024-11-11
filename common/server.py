@@ -21,21 +21,13 @@ from common.host import Host
 
 
 class Server(Host):
-    def __init__(self, id, ip, name=None, location=None):
+    def __init__(self, uuid, ip, name=None, location=None):
         Host.__init__(self, ip=ip, name=name)
-        self._id = id
-        self._location = location
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
-    def location(self):
-        return self._location
+        self.uuid = uuid
+        self.location = location
 
     def __str__(self):
-        return "id: %s; ip: %s; name: %s; location: %s" % (self.id, self.ip, self.name, self.location)
+        return f"uuid: {self.uuid}; ip: {self.ip}; name: {self.name}; location: {self.location}"
 
 
 if __name__ == "__main__":
