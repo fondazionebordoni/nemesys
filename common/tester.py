@@ -21,10 +21,25 @@ import socket
 from datetime import datetime
 from optparse import OptionParser
 
-from common import iptools, utils
+from common import iptools
 from common import nem_exceptions
 from common import ntptime
 from common import ping
+from common.profile import (
+    BW_1M,
+    BW_3M,
+    BW_5M,
+    BW_25M,
+    BW_50M,
+    BW_100M,
+    BW_200M,
+    BW_300M,
+    BW_500M,
+    BW_1000M,
+    BW_2000M,
+    BW_2500M,
+    BW_5000M,
+)
 from common.host import Host
 from common.nem_exceptions import MeasurementException
 from common.proof import Proof
@@ -32,19 +47,6 @@ from common.testerhttpdown import HttpTesterDown
 from common.testerhttpup import HttpTesterUp
 
 HTTP_BUFF = 8 * 1024
-BW_1M = 1 * 10**6
-BW_3M = 3 * 10**6
-BW_5M = 5 * 10**6
-BW_25M = 25 * 10**6
-BW_50M = 50 * 10**6
-BW_100M = 100 * 10**6
-BW_200M = 200 * 10**6
-BW_300M = 300 * 10**6
-BW_500M = 500 * 10**6
-BW_1000M = 1 * 10**9
-BW_2000M = 2 * 10**9
-BW_2500M = 2.5 * 10**9
-BW_5000M = 5 * 10**9
 
 logger = logging.getLogger(__name__)
 logger_csv = logging.getLogger("csv")
@@ -60,26 +62,11 @@ class Tester(object):
 
     def testhttpdown(self, callback_update_speed=None, bw=BW_100M):
         url = f"http://{self._host.ip}:{self._host.port}/file.rnd"
-        if bw <= BW_1M:
-            num_sessions = 1
-        elif bw <= BW_5M:
-            num_sessions = 4
-        elif bw <= BW_100M:
-            num_sessions = 8
-        elif bw <= BW_500M:
-            num_sessions = 16
-        elif bw <= BW_1000M:
-            num_sessions = 20
-        else:
-            num_sessions = 24
-            if utils.is_darwin():
-                num_sessions = 32
-
         buffer_size = int(bw / (4 * 10**3))
 
-        logger.debug(f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, buffer_size={buffer_size:,}")
-        logger_csv.debug(f"down;{bw:,};{num_sessions};{buffer_size:,}")
-        return self._testerhttpdown.test(url, callback_update_speed, num_sessions=num_sessions, buffer_size=buffer_size)
+        logger.debug(f"Variabili di misura per banda={bw:,}: buffer_size={buffer_size:,}")
+        logger_csv.debug(f"down;{bw:,};{buffer_size:,}")
+        return self._testerhttpdown.test(url, callback_update_speed, buffer_size=buffer_size)
 
     def testhttpup(self, callback_update_speed=None, bw=BW_100M):
         url = f"http://{self._host.ip}:{self._host.port}/file.rnd"
