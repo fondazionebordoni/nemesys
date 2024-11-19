@@ -136,7 +136,7 @@ class Downloader(threading.Thread):
 
                 if END_STRING in my_buffer:
                     # Put the result in the queue and send the stop event for all other threads
-                    self.stop_event.set()
+                    # self.stop_event.set()
                     self.result_queue.put(Result(n_bytes=filebytes, received_end=True))
                     return
 
@@ -235,9 +235,8 @@ class Consumer(threading.Thread):
             if result.error:
                 self.errors.append(result.error)
 
-            else:
-                self.total_read_bytes += result.n_bytes
-                has_received_end = has_received_end or result.received_end
+            self.total_read_bytes += result.n_bytes
+            has_received_end = has_received_end or result.received_end
 
             finished += 1
 
@@ -342,8 +341,8 @@ class HttpTesterDown(object):
 
         if consumer.errors:
             logger.debug("Errori: %s", consumer.errors)
-            first_error = consumer.errors[0]
-            raise nem_exceptions.MeasurementException(first_error.get("message"), first_error.get("code"))
+            # first_error = consumer.errors[0]
+            # raise nem_exceptions.MeasurementException(first_error.get("message"), first_error.get("code"))
 
         if observer.starttime is None or observer.endtime is None:
             raise nem_exceptions.MeasurementException("Misura non completata", nem_exceptions.BROKEN_CONNECTION)
