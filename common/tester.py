@@ -63,17 +63,13 @@ class Tester(object):
         if bw <= BW_1M:
             num_sessions = 1
         elif bw <= BW_5M:
-            num_sessions = 4
+            num_sessions = 2
         elif bw <= BW_100M:
-            num_sessions = 8
+            num_sessions = 4
         elif bw <= BW_500M:
-            num_sessions = 16
-        elif bw <= BW_1000M:
-            num_sessions = 20
+            num_sessions = 8
         else:
-            num_sessions = 24
-            if utils.is_darwin():
-                num_sessions = 32
+            num_sessions = 16
 
         buffer_size = int(bw / (4 * 10**3))
 
