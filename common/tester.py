@@ -69,7 +69,8 @@ class Tester(object):
         return self._testerhttpdown.test(url, callback_update_speed, buffer_size=buffer_size)
 
     def testhttpup(self, callback_update_speed=None, bw=BW_100M):
-        url = f"http://{self._host.ip}:{self._host.port}/file.rnd"
+        # TODO manage upload port
+        url = f"http://{self._host.ip}:8080/file.rnd"
 
         if bw <= BW_1M:
             num_sessions = 1
