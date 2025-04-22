@@ -111,8 +111,8 @@ class Downloader(threading.Thread):
         self.buffer_size = buffer_size
 
         self.headers = {
-                "X-requested-file-size": str(MAX_TRANSFERED_BYTES),
-                "X-requested-measurement-time": str(MEASURE_TIME + RAMPUP_SECS),
+                "X-requested-file-size": int(MAX_TRANSFERED_BYTES),
+                "X-requested-measurement-time": int(MEASURE_TIME + RAMPUP_SECS),
                 "X-measurement-id": self.measurement_id,
             }
 
