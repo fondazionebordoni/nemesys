@@ -64,7 +64,7 @@ class Tester(object):
         url = f"http://{self._host.ip}:{self._host.port}/file.rnd"
         buffer_size = int(bw / (4 * 10**3))
 
-        logger.debug(f"Variabili di misura per banda={bw:,}: buffer_size={buffer_size:,}")
+        logger.debug(f"Variabili di misura in download su {url} per banda={bw:,}: buffer_size={buffer_size:,}")
         logger_csv.debug(f"down;{bw:,};{buffer_size:,}")
         return self._testerhttpdown.test(url, callback_update_speed, buffer_size=buffer_size)
 
@@ -93,7 +93,7 @@ class Tester(object):
         buffer_size = int(bw / (2 * 10**3)) * int(32 / num_sessions)
 
         logger.debug(
-            f"Variabili di misura per banda={bw:,}: num_session={num_sessions}, tcp_window_size={tcp_window_size}, buffer_size={buffer_size:,}"
+            f"Variabili di misura in upload su {url} per banda={bw:,}: num_session={num_sessions}, tcp_window_size={tcp_window_size}, buffer_size={buffer_size:,}"
         )
         logger_csv.debug(f"up;{bw:,};{num_sessions};{buffer_size:,}")
         return self._testerhttpup.test(
