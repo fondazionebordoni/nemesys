@@ -24,6 +24,7 @@ import threading
 import time
 import urllib3
 import io
+import uuid
 from datetime import datetime
 
 from common import iptools
@@ -37,8 +38,8 @@ MEASURE_TIME = 10
 RAMPUP_SECS = 2
 # Wait another secs in case end of file has not arrived
 TIMEOUT_DELAY = 5
-# 10 Gbps for measuring time seconds
-MAX_TRANSFERED_BYTES = 10 * 1000000 * 1000 * (MEASURE_TIME + RAMPUP_SECS + TIMEOUT_DELAY) / 8
+# 100 Mbps for measuring time seconds
+MAX_TRANSFERED_BYTES = 100 * 1000000 * (MEASURE_TIME + RAMPUP_SECS + TIMEOUT_DELAY) / 8
 # 10 seconds timeout on open and read operations
 HTTP_TIMEOUT = 2.0
 END_STRING = b"_ThisIsTheEnd_"
@@ -55,7 +56,6 @@ def noop(*args, **kwargs):
 
 def get_threads_for_rate(rate):
     rate = rate * 1000
-    return 2
 
     if rate < BW_5M:
         return 1
@@ -64,16 +64,16 @@ def get_threads_for_rate(rate):
         return 2
 
     if rate < BW_100M:
-        return 4
+        return 3
 
     if rate < BW_200M:
-        return 8
+        return 4
 
     if rate < BW_500M:
-        return 8
+        return 4
 
     if rate < BW_1000M:
-        return 8
+        return 4
 
     return MAX_CONNECTIONS
 
@@ -90,7 +90,7 @@ class Downloader(threading.Thread):
     Downloader is a subclass of threading.Thread that downloads a file from a given URL over HTTP.
     """
 
-    def __init__(self, pool, url, stop_event, result_queue, measurement_id, buffer_size):
+    def __init__(self, uuid, pool, url, stop_event, result_queue, measurement_id, buffer_size):
         """
         Initializes a Downloader object.
 
@@ -103,6 +103,7 @@ class Downloader(threading.Thread):
         """
         threading.Thread.__init__(self)
 
+        self.id = uuid
         self.pool = pool
         self.url = url
         self.result_queue = result_queue
@@ -111,11 +112,10 @@ class Downloader(threading.Thread):
         self.buffer_size = buffer_size
 
         self.headers = {
-                "X-requested-file-size": int(MAX_TRANSFERED_BYTES),
-                "X-requested-measurement-time": int(MEASURE_TIME + RAMPUP_SECS),
-                "X-measurement-id": self.measurement_id,
-            }
-
+            "X-requested-file-size": int(MAX_TRANSFERED_BYTES),
+            "X-requested-measurement-time": int(MEASURE_TIME + RAMPUP_SECS),
+            "X-measurement-id": self.measurement_id,
+        }
 
     def run(self):
         """
@@ -130,8 +130,10 @@ class Downloader(threading.Thread):
         """
 
         while not self.stop_event.isSet():
+            filebytes = 0
+
             try:
-                logger.debug("Downloading from %s", self.url)
+                logger.debug(f"[{self.id}] Downloading from {self.url} with headers {self.headers}")
                 response = self.pool.request("GET", self.url, headers=self.headers, timeout=HTTP_TIMEOUT, preload_content=False)
             except Exception as e:
                 error = {
@@ -149,14 +151,13 @@ class Downloader(threading.Thread):
                 self.result_queue.put(Result(error=error))
                 return
 
-            filebytes = 0
-            reader = io.BufferedReader(response, self.buffer_size * 2)
-            my_buffer = b''
+            reader = io.BufferedReader(response, self.buffer_size)
+            my_buffer = b""
 
             # Read from socket until an error occurs or the end of file marker is reached
             while END_STRING not in my_buffer and not self.stop_event.isSet():
                 try:
-                    my_buffer = reader.read()
+                    my_buffer = reader.read(self.buffer_size)
                     filebytes += len(my_buffer)
 
                     if filebytes <= 0:
@@ -165,11 +166,7 @@ class Downloader(threading.Thread):
                             "code": nem_exceptions.SERVER_ERROR,
                         }
                         self.result_queue.put(Result(n_bytes=filebytes, error=error))
-                        continue
-
-                    # Put the result in the queue
-                    self.result_queue.put(Result(n_bytes=filebytes, received_end=True))
-                    continue
+                        break
 
                 except socket.timeout:
                     # Exit the loop if the timeout is reached
@@ -178,7 +175,7 @@ class Downloader(threading.Thread):
                         "code": nem_exceptions.SERVER_ERROR,
                     }
                     self.result_queue.put(Result(n_bytes=filebytes, error=error))
-                    continue
+                    break
 
                 except Exception as e:
                     error = {
@@ -186,9 +183,10 @@ class Downloader(threading.Thread):
                         "code": nem_exceptions.SERVER_ERROR,
                     }
                     self.result_queue.put(Result(n_bytes=filebytes, error=error))
-                    continue
+                    break
 
             response.release_conn()
+            logging.debug(f"[{self.id}] Download finished, bytes received: {filebytes}")
             self.result_queue.put(Result(n_bytes=filebytes))
 
         return
@@ -228,7 +226,7 @@ class Consumer(threading.Thread):
 
                 self.total_read_bytes += result.n_bytes
                 has_received_end = has_received_end or result.received_end
-                
+
             except queue.Empty:
                 message = f"Nessun risultato ricevuto entro il tempo di timeout ({HTTP_TIMEOUT})"
                 self.errors.append({"message": message, "code": nem_exceptions.ZERO_SPEED})
@@ -253,6 +251,7 @@ class Orchestrator(threading.Thread):
         callback=noop,
     ):
         threading.Thread.__init__(self)
+        logger.debug(f"Orchestrator thread started with URL: {url} and buffer size: {buffer_size}")
 
         self.url = url
         self.netstat = netstat
@@ -263,7 +262,7 @@ class Orchestrator(threading.Thread):
         self.max_threads = max_threads
         self.min_rate_diff = min_rate_diff
         self.frequency = frequency
-        
+
         if callback:
             self.callback = callback
         else:
@@ -347,9 +346,8 @@ class Orchestrator(threading.Thread):
         self.end_time = time.time()
 
         stop_event_timer.cancel()
-        
-        self.adjust_threads(0)
 
+        self.adjust_threads(0)
 
     def adjust_threads(self, required_threads):
         with self.lock:
@@ -362,6 +360,7 @@ class Orchestrator(threading.Thread):
                 for _ in range(diff):
                     stop_thread = threading.Event()
                     thread = Downloader(
+                        uuid.uuid4(),
                         self.pool,
                         self.url,
                         stop_thread,
@@ -440,13 +439,17 @@ class HttpTesterDown(object):
             overhead = float(orchestrator.total_rx_bytes - consumer.total_read_bytes) / float(orchestrator.total_rx_bytes)
         else:
             overhead = 0
+        
+        if overhead < 0:
+            logger.info(f"Overhead negativo: {overhead * 100:.2f}%, non calcolato")
+            overhead = 0
 
         bytes_nem = consumer.total_read_bytes
         bytes_tot = int(bytes_nem * (1 + overhead))
 
         logger.debug(f"Orchestrator: dati totali letti sulla scheda di rete: {orchestrator.total_rx_bytes:,} bytes")
         logger.debug(f"Consumer: dati totali ricevuti dal server di misura: {consumer.total_read_bytes:,} bytes")
-        logger.debug(f"Traffico spurio: {overhead*100:.2f}%")
+        logger.debug(f"Traffico spurio: {overhead * 100:.2f}%")
         logger.debug(f"Orchestrator: tempo di misura: {duration:,.2f} ms")
         logger.debug(f"Dati di misura: {bytes_nem:,} bytes")
         logger.debug(f"Dati totali (misura + overhead): {bytes_tot:,} bytes")
