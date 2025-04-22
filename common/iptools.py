@@ -28,7 +28,7 @@ from common import nem_exceptions
 logger = logging.getLogger(__name__)
 
 
-def getipaddr(host="finaluser.agcom244.fub.it", port=443):
+def getipaddr(host="misurainternet.it", port=443):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect((host, port))
@@ -71,7 +71,7 @@ def get_mac_address(dev=None):
     raise NemesysException("Impossibile ottenere l'indirizzo MAC dell'interfaccia %s" % ifname)
 
 
-def get_dev(host="finaluser.agcom244.fub.it", port=443, ip=None):
+def get_dev(host="misurainternet.it", port=443, ip=None):
     """
     restituisce scheda attiva (guid della scheda su Windows
     """
@@ -147,3 +147,19 @@ def is_ip_address(ip):
 
 def _mask_conversion(netmask):
     return sum([bin(int(x)).count("1") for x in netmask.split(".")])
+
+
+# Main function for testing purposes
+if __name__ == "__main__":
+    try:
+        print("Active IP Address:", getipaddr())
+        print("Active Interface:", get_dev())
+        print("MAC Address:", get_mac_address())
+        print("Network Mask:", get_network_mask(None))
+        print("Is Public IP:", is_public_ip(getipaddr()))
+        print("Is Loopback IP:", is_loopback_ip(getipaddr()))
+        print("Is IP Address:", is_ip_address(getipaddr()))
+    except NemesysException as e:
+        print("Error:", e)
+    except Exception as e:
+        print("Unexpected error:", e)
