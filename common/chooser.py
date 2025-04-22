@@ -39,7 +39,7 @@ class Chooser(object):
         self._httptimeout = timeout
 
     def get_servers(self):
-        params = {"clientid": self._client.id, "version": self._version}
+        params = {"clientid": self._client.id, "version": self._version, "format": "json"}
         response = requests.get(self._url, params=params, timeout=self._httptimeout)
         servers = []
 
