@@ -24,7 +24,6 @@ import threading
 
 from common import arp
 
-
 MAX_PING_HOSTS = 128
 TECHNICOLOR_MAC_REGEX = ('^F..94.E3|^F..91.14|^F..52.8D|^F..C1.14|'
                          '^E..B9.E5|^E..88.5D|^E..37.17|'
@@ -89,14 +88,14 @@ class PingSender(threading.Thread):
 
 
 def count_hosts(ip_address, netmask, bandwidth_up, bandwidth_down, provider='fub001', use_arp=False):
-    if ((provider == "fst001") or (provider.startswith('fub0'))) and (not bool(re.search('^192\.168\.', ip_address))):
+    if ((provider == "fst001") or (provider.startswith('fub0'))) and (not bool(re.search(r'^192\.168\.', ip_address))):
         real_subnet = False
-        if bandwidth_up == bandwidth_down and not bool(re.search('^10\.', ip_address)):
+        if bandwidth_up == bandwidth_down and not bool(re.search(r'^10\.', ip_address)):
             # profilo fibra
             netmask_to_use = 29
             logger.debug('Sospetto profilo Fastweb in Fibra. Modificata sottorete in %d', netmask_to_use)
         else:
-            # profilo ADSL
+             # profilo ADSL
             netmask_to_use = 30
             logger.debug('Sospetto profilo Fastweb ADSL o Fibra con indirizzo 10.*. Modificata sottorete in %d',
                          netmask_to_use)
@@ -145,8 +144,6 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
         for key in ip_table:
             hosts += '[{}|{}] '.format(ip_table[key], key)
         logger.info(hosts)
-        # Check for router that responds with 2 IP addresses
-        # with slightly different Ethernet addresses
         n_hosts = filter_out_technicolor(ip_table)
     else:
         ping_threads = []
@@ -165,7 +162,6 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
 
         for ping_thread in ping_threads:
             ping_thread.join()
-
             if ping_thread.status:
                 logger.info('Trovato dispositivo: %s (in %.2f ms)', ping_thread.ip, ping_thread.elapsed * 1000)
                 n_hosts += 1
