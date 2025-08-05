@@ -30,10 +30,9 @@ logger = logging.getLogger(__name__)
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
-class Task(object):
-    def __init__(self, start=None, server=None, upload=1,
-                 download=1, ping=4, nicmp=1, delay=1,
-                 now=False, message=None, is_wait=False):
+class Task:
+    def __init__(self, start=None, server=None, upload=1, download=1, ping=4,
+                 nicmp=1, delay=1, now=False, message=None, is_wait=False):
         self._start = start
         self._server = server
         self._upload = upload
@@ -87,27 +86,11 @@ class Task(object):
 
     def __str__(self):
         if self.is_wait:
-            return 'delay: %s; message: %s' % (self.delay, self.message)
-        if self.server is not None:
-            ip = self.server.ip
-        else:
-            ip = None
-        return "start: {0}; " \
-               "serverip: {1}; " \
-               "upload: {2}; " \
-               "download: {3}; " \
-               "ping {4}; " \
-               "delay: {5}; " \
-               "now {6}; " \
-               "message: {7}" \
-               "".format(self.start,
-                         ip,
-                         self.upload,
-                         self.download,
-                         self.ping,
-                         self.delay,
-                         self.now,
-                         self.message)
+            return f'delay: {self.delay}; message: {self.message}'
+        ip = self.server.ip if self.server else None
+        return (f"start: {self.start}; serverip: {ip}; upload: {self.upload}; "
+                f"download: {self.download}; ping: {self.ping}; delay: {self.delay}; "
+                f"now: {self.now}; message: {self.message}")
 
 
 def new_wait_task(wait_secs, message=None):
@@ -116,63 +99,55 @@ def new_wait_task(wait_secs, message=None):
 
 def xml2task(xml):
     try:
+        if isinstance(xml, bytes):
+            xml = xml.decode('utf-8')
         xml_dict = xmltodict.parse(xml)
     except Exception as e:
         logger.error('Impossibile fare parsing del task: %s', xml)
-        raise TaskException("Impossibile fare il "
-                            "parsing del task ricevuto: %s" % e)
+        raise TaskException(f"Impossibile fare il parsing del task ricevuto: {e}")
 
     if not xml_dict or 'calendar' not in xml_dict:
         raise TaskException("Ricevuto task invalido")
     if not xml_dict['calendar'] or 'task' not in xml_dict['calendar']:
-        raise TaskException('Ricevuto task vuoto: %s', xml)
+        raise TaskException(f"Ricevuto task vuoto: {xml}")
+
     task_dict = xml_dict['calendar']['task']
     message = task_dict.get('message') or ""
-    if '@wait' in task_dict and task_dict['@wait'].lower() == 'true':
-        # wait task, just get delay and message
-        if 'delay' in task_dict:
-            delay = task_dict['delay']
-        else:
-            logger.warning("Task di attesa, ma manca il tempo di attesa, "
-                        "uso il default 5 minuti")
-            delay = 5 * 60
+
+    if task_dict.get('@wait', '').lower() == 'true':
+        delay = task_dict.get('delay', 300)
         return new_wait_task(int(delay), message)
-    nup = (task_dict.get('nup') or
-           task_dict.get('nhttpup') or
-           task_dict.get('nftpup') or
-           0)
+
+    nup = task_dict.get('nup') or task_dict.get('nhttpup') or task_dict.get('nftpup') or 0
     if isinstance(nup, OrderedDict):
         nup = nup.get('#text')
-    ndown = (task_dict.get('ndown') or
-             task_dict.get('nhttpdown') or
-             task_dict.get('nftpdown') or
-             0)
+    ndown = task_dict.get('ndown') or task_dict.get('nhttpdown') or task_dict.get('nftpdown') or 0
     if isinstance(ndown, OrderedDict):
         ndown = ndown.get('#text')
     nping = task_dict.get('nping')
     if isinstance(nping, OrderedDict):
         nping = nping.get('#text')
+
     start = task_dict.get('start')
     now = False
     if isinstance(start, OrderedDict):
-        if '@now' in start:
-            now = ((start.get('@now') == '1') or
-                   (start.get('@now').lower() == 'true'))
+        now = start.get('@now') in ['1', 'true', 'True']
         start = start.get('#text')
-    # Date
+
     try:
         starttime = datetime.strptime(start, DATE_TIME_FORMAT)
-    except ValueError:
-        logger.debug('XML: %s', start)
+    except Exception:
+        logger.debug('XML start time value: %s', start)
         raise TaskException('Le informazioni orarie per la programmazione delle misure sono errate.')
-    # TODO: scartare se id mancante?
+
     srvid = task_dict.get('srvid') or "id-server-mancante"
-    if 'srvip' not in task_dict:
-        raise TaskException('Nel task manca l\'indirizzo IP  del server di misura')
-    else:
-        srvip = task_dict.get('srvip')
+    srvip = task_dict.get('srvip')
+    if not srvip:
+        raise TaskException("Nel task manca l'indirizzo IP del server di misura")
     srvname = task_dict.get('srvname')
+
     server = Server(srvid, srvip, srvname)
+
     return Task(start=starttime,
                 server=server,
                 upload=int(nup),
