@@ -90,16 +90,8 @@ class Task(object):
             ip = self.server.ip
         else:
             ip = None
-        return (
-            "start: {0}; "
-            "serverip: {1}; "
-            "upload: {2}; "
-            "download: {3}; "
-            "ping {4}; "
-            "delay: {5}; "
-            "now {6}; "
-            "message: {7}"
-            "".format(self.start, ip, self.upload, self.download, self.ping, self.delay, self.now, self.message)
+        return "start: {0}; serverip: {1}; upload: {2}; download: {3}; ping {4}; delay: {5}; now {6}; message: {7}".format(
+            self.start, ip, self.upload, self.download, self.ping, self.delay, self.now, self.message
         )
 
 
@@ -112,7 +104,7 @@ def xml2task(xml):
         xml_dict = xmltodict.parse(xml)
     except Exception as e:
         logger.error("Impossibile fare parsing del task: %s", xml)
-        raise TaskException("Impossibile fare il " "parsing del task ricevuto: %s" % e)
+        raise TaskException("Impossibile fare il parsing del task ricevuto: %s" % e)
 
     if not xml_dict or "calendar" not in xml_dict:
         raise TaskException("Ricevuto task invalido")
@@ -125,21 +117,21 @@ def xml2task(xml):
         if "delay" in task_dict:
             delay = task_dict["delay"]
         else:
-            logger.warning("Task di attesa, ma manca il tempo di attesa, " "uso il default 5 minuti")
+            logger.warning("Task di attesa, ma manca il tempo di attesa, uso il default 5 minuti")
             delay = 5 * 60
         return new_wait_task(int(delay), message)
     nup = task_dict.get("nup") or task_dict.get("nhttpup") or task_dict.get("nftpup") or 0
-    if isinstance(nup, OrderedDict):
+    if isinstance(nup, dict) or isinstance(nup, OrderedDict):
         nup = nup.get("#text")
     ndown = task_dict.get("ndown") or task_dict.get("nhttpdown") or task_dict.get("nftpdown") or 0
-    if isinstance(ndown, OrderedDict):
+    if isinstance(ndown, dict) or isinstance(ndown, OrderedDict):
         ndown = ndown.get("#text")
     nping = task_dict.get("nping")
-    if isinstance(nping, OrderedDict):
+    if isinstance(nping, dict) or isinstance(nping, OrderedDict):
         nping = nping.get("#text")
     start = task_dict.get("start")
     now = False
-    if isinstance(start, OrderedDict):
+    if isinstance(start, dict) or isinstance(start, OrderedDict):
         if "@now" in start:
             now = (start.get("@now") == "1") or (start.get("@now").lower() == "true")
         start = start.get("#text")
