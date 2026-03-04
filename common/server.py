@@ -21,8 +21,10 @@ from common.host import Host
 
 
 class Server(Host):
-    def __init__(self, uuid, ip, name=None, location=None):
-        Host.__init__(self, ip=ip, name=name)
+    def __init__(self, uuid, ip, name=None, location=None, port=None):
+        # Port defaults to 80 if not specified (backward compatible)
+        port = port if port is not None else 80
+        Host.__init__(self, ip=ip, port=port, name=name)
         self.uuid = uuid
         self.location = location
 

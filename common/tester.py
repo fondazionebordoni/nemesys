@@ -69,8 +69,10 @@ class Tester(object):
         return self._testerhttpdown.test(url, callback_update_speed, buffer_size=buffer_size)
 
     def testhttpup(self, callback_update_speed=None, bw=BW_100M):
-        # TODO manage upload port
-        url = f"http://{self._host.ip}:8080/file.rnd"
+        # Use server port if custom (not 80), otherwise fallback to 8080 (legacy upload server)
+        # This maintains backward compatibility with production while allowing custom ports for testing
+        upload_port = self._host.port if self._host.port != 80 else 8080
+        url = f"http://{self._host.ip}:{upload_port}/file.rnd"
 
         if bw <= BW_1M:
             num_sessions = 1
