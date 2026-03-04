@@ -35,7 +35,6 @@ import threading
 from common import nem_exceptions, _generated_version, task
 from common.deliverer import Deliverer
 from common.server import Server
-from nemesys import nem_options
 from nemesys.executer import Executer
 from nemesys.sysmonitor import SysProfiler
 from nemesys import restart
@@ -174,14 +173,30 @@ def main():
     
     Avvia una sequenza di test su tutti i server containerizzati.
     Premi Invio per fermare i test.
+    
+    NOTA: Non richiede login o configurazione - usa valori di default per test locali.
     """
     from . import log_conf
     log_conf.init_log()
 
-    (options, _, md5conf) = nem_options.parse_args(_generated_version.__version__)
+    # Crea un client di test con valori di default (senza richiedere login)
+    from common.client import Client
+    from common.profile import Profile
+    from common.isp import Isp
     
-    from common import client
-    c = client.getclient(options)
+    logger.info("Inizializzazione client di test (no login richiesto)...")
+    c = Client(
+        client_id='test-lab-local',
+        profile=Profile(
+            profile_id='lab-profile',
+            upload=100000,      # 100 Mbps
+            download=100000,    # 100 Mbps
+            upload_min=10000,   # 10 Mbps
+            download_min=10000  # 10 Mbps
+        ),
+        isp=Isp(isp_id='lab-isp', certificate=None),
+        geocode='0.0,0.0'
+    )
     
     sys_profiler = SysProfiler(
         c.profile.upload,
