@@ -20,10 +20,10 @@
 Executer test configurato per i server Docker locali del misurainternet-lab.
 
 Questo file è una variante di executer_test.py specificamente configurata
-per testare i tre server containerizzati:
-- agcom-httpserver-fastify (porta 3000)
-- nemesys-httpserver (porta 8081) 
-- nemesys-httpd-up (porta 8080)
+per testare i server containerizzati:
+- agcom-httpserver-fastify (porta 3000) - download/upload/ping
+- nemesys-httpd-up (porta 8080) - upload legacy
+- nemesys-httpserver (porta 8081) - download legacy
 
 Uso:
     python -m nemesys.executer_test_lab
@@ -47,9 +47,9 @@ class DockerLabScheduler(object):
     Scheduler configurato per testare tutti i server Docker locali.
     
     Esegue una sequenza di test su:
-    1. Fastify Server (porta 3000) - download e upload
-    2. Java Server (porta 8081) - download legacy
-    3. Python Server (porta 8080) - upload legacy
+    1. Fastify Server (porta 3000) - download, upload e ping
+    2. Python Server (porta 8080) - upload legacy
+    3. Java Server (porta 8081) - download legacy
     """
     
     def __init__(self):
@@ -61,20 +61,20 @@ class DockerLabScheduler(object):
             port=3000
         )
         
-        # Server Java - legacy download
-        self.server_java = Server(
-            uuid='localhost-java',
-            ip='127.0.0.1',
-            name='Java Download Server (Docker)',
-            port=8081
-        )
-        
         # Server Python - legacy upload  
         self.server_python = Server(
             uuid='localhost-python',
             ip='127.0.0.1',
             name='Python Upload Server (Docker)',
             port=8080
+        )
+        
+        # Server Java - legacy download
+        self.server_java = Server(
+            uuid='localhost-java',
+            ip='127.0.0.1',
+            name='Java Download Server (Docker)',
+            port=8081
         )
         
         # Task di attesa tra i test
@@ -108,16 +108,6 @@ class DockerLabScheduler(object):
             message='Fastify: Ping test'
         )
         
-        # Test su Java (legacy download)
-        self.task_java_down = task.Task(
-            now=True,
-            server=self.server_java,
-            upload=0,
-            download=1,
-            ping=0,
-            message='Java: Download test (legacy)'
-        )
-        
         # Test su Python (legacy upload)
         self.task_python_up = task.Task(
             now=True,
@@ -128,8 +118,18 @@ class DockerLabScheduler(object):
             message='Python: Upload test (legacy)'
         )
         
+        # Test su Java (legacy download)
+        self.task_java_down = task.Task(
+            now=True,
+            server=self.server_java,
+            upload=0,
+            download=1,
+            ping=0,
+            message='Java: Download test (legacy)'
+        )
+        
         # Sequenza completa dei test
-        # Testa tutti i server in successione
+        # Testa tutti e tre i server: Fastify, Python e Java
         self._tasks = [
             self.task_wait,
             self.task_fastify_ping,
@@ -138,16 +138,17 @@ class DockerLabScheduler(object):
             self.task_wait,
             self.task_fastify_up,
             self.task_wait,
-            self.task_java_down,
-            self.task_wait,
             self.task_python_up,
+            self.task_wait,
+            self.task_java_down,
             self.task_wait,
         ]
         self._i = -1
 
-    def download_task(self):
+    def download_task(self, server=None):
         """
         Restituisce il prossimo task da eseguire in modo ciclico.
+        Il parametro server viene ignorato in quanto usiamo una sequenza prefissata.
         """
         self._i += 1
         if self._i >= len(self._tasks):
@@ -161,6 +162,18 @@ class MockDeliverer(object):
     def uploadall_and_move(self, from_dir=None, to_dir=None, do_remove=False):
         logger.info("Mock: Move all from %s to %s, do remove is %s", from_dir, to_dir, do_remove)
         return True
+
+
+class MockChooser(object):
+    """Mock chooser per test senza connessione al backend."""
+    
+    def get_servers(self):
+        logger.info("Mock: get_servers() called - returning empty list")
+        return []
+    
+    def choose_server(self, callback):
+        logger.info("Mock: choose_server() called - no action")
+        return None
 
     def upload_and_move(self, f=None, to_dir=None, do_remove=False):
         logger.info("Mock: Move file %s to %s, do remove is %s", f, to_dir, do_remove)
@@ -207,8 +220,9 @@ def main():
         bw_download_min=c.profile.download_min
     )
     
-    # Usa mock deliverer per evitare invio dati reali
+    # Usa mock deliverer e chooser per evitare connessioni al backend
     d = MockDeliverer()
+    chooser = MockChooser()
     
     # Scheduler configurato per Docker Lab
     scheduler = DockerLabScheduler()
@@ -217,13 +231,14 @@ def main():
     logger.info("Nemesys Docker Lab Test Suite")
     logger.info("=" * 80)
     logger.info("Configured servers:")
-    logger.info("  - Fastify Server: http://127.0.0.1:3000")
-    logger.info("  - Java Server:    http://127.0.0.1:8081")
-    logger.info("  - Python Server:  http://127.0.0.1:8080")
+    logger.info("  - Fastify Server: http://127.0.0.1:3000 (download/upload/ping)")
+    logger.info("  - Python Server:  http://127.0.0.1:8080 (upload legacy)")
+    logger.info("  - Java Server:    http://127.0.0.1:8081 (download legacy)")
     logger.info("=" * 80)
     
     exe = Executer(
         client=c,
+        chooser=chooser,
         scheduler=scheduler,
         deliverer=d,
         sys_profiler=sys_profiler,
