@@ -280,6 +280,7 @@ class Orchestrator(threading.Thread):
         self.rate = 0
         self.clock = time.time()
         self.start_time = self.clock
+        self.measure_start_time = None  # Will be set after rampup
         self.end_time = self.start_time
         self.rx_bytes = self.netstat.get_rx_bytes()
         self.initial_rx_bytes = 0  # It will be set after the waiting time
@@ -333,6 +334,7 @@ class Orchestrator(threading.Thread):
         stop_event_timer.start()
 
         self.initial_rx_bytes = self.netstat.get_rx_bytes()
+        self.measure_start_time = time.time()  # Start of actual measurement (after rampup)
 
         while not self.stop_event.isSet():
             rate = self.get_rate()
@@ -429,13 +431,13 @@ class HttpTesterDown(object):
             first_error = consumer.errors[0]
             raise nem_exceptions.MeasurementException(first_error.get("message"), first_error.get("code"))
 
-        if not orchestrator.start_time or not orchestrator.end_time:
+        if not orchestrator.measure_start_time or not orchestrator.end_time:
             raise nem_exceptions.MeasurementException("Misura non completata", nem_exceptions.BROKEN_CONNECTION)
 
         if consumer.total_read_bytes <= 0:
             raise nem_exceptions.MeasurementException("Ottenuto banda zero", nem_exceptions.ZERO_SPEED)
 
-        duration = (orchestrator.end_time - orchestrator.start_time) * 1000.0
+        duration = (orchestrator.end_time - orchestrator.measure_start_time) * 1000.0
 
         bytes_nem = consumer.total_read_bytes
         bytes_tot = orchestrator.total_rx_bytes
