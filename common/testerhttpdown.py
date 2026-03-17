@@ -32,7 +32,7 @@ from common import nem_exceptions
 from common import ntptime
 from common.netstat import Netstat
 from common.proof import Proof
-from common.profile import BW_5M, BW_50M, BW_100M, BW_200M, BW_500M, BW_1000M
+from common.profile import BW_5M, BW_50M, BW_100M, BW_200M, BW_500M, BW_1000M, BW_2000M
 
 MEASURE_TIME = 10
 RAMPUP_SECS = 2
@@ -70,10 +70,13 @@ def get_threads_for_rate(rate):
         return 4
 
     if rate < BW_500M:
-        return 4
+        return 6
 
     if rate < BW_1000M:
-        return 4
+        return 8
+
+    if rate < BW_2000M:
+        return 12
 
     return MAX_CONNECTIONS
 
@@ -288,18 +291,20 @@ class Orchestrator(threading.Thread):
 
     def get_rate(self):
         clock = time.time()
-        clock_diff = (clock - self.clock) * 1000.0
-
+        
         rx_bytes = self.netstat.get_rx_bytes()
-        rx_diff = rx_bytes - self.rx_bytes
-
-        rate = float(rx_diff * 8) / float(clock_diff)
-
-        self.clock = clock
-        self.rx_bytes = rx_bytes
-        if self.initial_rx_bytes > 0:
-            self.total_rx_bytes = rx_bytes - self.initial_rx_bytes
-
+        
+        with self.lock:
+            clock_diff = (clock - self.clock) * 1000.0
+            rx_diff = rx_bytes - self.rx_bytes
+            
+            rate = float(rx_diff * 8) / float(clock_diff)
+            
+            self.clock = clock
+            self.rx_bytes = rx_bytes
+            if self.initial_rx_bytes > 0:
+                self.total_rx_bytes = rx_bytes - self.initial_rx_bytes
+        
         return rate
 
     def run(self):
@@ -311,13 +316,18 @@ class Orchestrator(threading.Thread):
         * Calcola la velocità media
         """
 
+        # Bootstrap aggressivo: partiamo con 4 threads per accelerare il rampup
+        self.adjust_threads(4)
+
         # Set and alarm for stop_event after MEASURE_TIME seconds
         measuring_event_timer = threading.Timer(RAMPUP_SECS, lambda: self.measuring_event.set())
         measuring_event_timer.start()
 
         while not self.measuring_event.isSet():
             rate = self.get_rate()
-            self.adjust_threads(get_threads_for_rate(rate))
+            # Durante il rampup, usa un minimo di 4 threads
+            required_threads = max(4, get_threads_for_rate(rate))
+            self.adjust_threads(required_threads)
             self.callback(second=time.time() - self.start_time, speed=rate)
 
             logger.debug(f"[HTTP] {self.status} Time = {time.time() - self.start_time:.2f}; Speed = {int(rate):,}.0 kbps")
@@ -440,14 +450,17 @@ class HttpTesterDown(object):
         duration = (orchestrator.end_time - orchestrator.measure_start_time) * 1000.0
 
         bytes_nem = consumer.total_read_bytes
-        bytes_tot = orchestrator.total_rx_bytes
+        with orchestrator.lock:
+            bytes_tot = orchestrator.total_rx_bytes
 
         if bytes_tot > 0:
             overhead = float(bytes_tot - bytes_nem) / float(bytes_tot)
         else:
             overhead = 0
         
-        logger.debug(f"Orchestrator: dati totali letti sulla scheda di rete: {orchestrator.total_rx_bytes:,} bytes")
+        logger.info(f"DEBUG - Orchestrator: measure_start_time={orchestrator.measure_start_time:.2f}, end_time={orchestrator.end_time:.2f}, duration={duration:.2f} ms")
+        logger.info(f"DEBUG - Dati: bytes_tot={bytes_tot:,}, bytes_nem={bytes_nem:,}, overhead={overhead*100:.2f}%")
+        logger.debug(f"Orchestrator: dati totali letti sulla scheda di rete: {bytes_tot:,} bytes")
         logger.debug(f"Consumer: dati totali ricevuti dal server di misura: {consumer.total_read_bytes:,} bytes")
         logger.debug(f"Traffico spurio: {overhead * 100:.2f}%")
         logger.debug(f"Orchestrator: tempo di misura: {duration:,.2f} ms")
