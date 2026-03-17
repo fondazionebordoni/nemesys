@@ -324,7 +324,11 @@ class Orchestrator(threading.Thread):
         measuring_event_timer = threading.Timer(RAMPUP_SECS, lambda: self.measuring_event.set())
         measuring_event_timer.start()
 
-        rampup_elapsed = 0
+        # Aspetta un po' prima del primo campionamento per dare tempo alle connessioni 
+        # HTTP di attivarsi ed evitare il primo campione a zero
+        time.sleep(0.3)
+
+        rampup_elapsed = 0.3  # Inizializza con il tempo già trascorso
         while not self.measuring_event.isSet():
             rate = self.get_rate()
             required_threads = get_threads_for_rate(rate)
