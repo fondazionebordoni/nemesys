@@ -316,24 +316,32 @@ class Orchestrator(threading.Thread):
         * Calcola la velocità media
         """
 
-        # Bootstrap aggressivo: partiamo con 4 threads per accelerare il rampup
-        self.adjust_threads(4)
+        # Bootstrap: partiamo con 2 threads come compromesso
+        # (abbastanza per scalare velocemente, non troppo per linee lente)
+        self.adjust_threads(2)
 
         # Set and alarm for stop_event after MEASURE_TIME seconds
         measuring_event_timer = threading.Timer(RAMPUP_SECS, lambda: self.measuring_event.set())
         measuring_event_timer.start()
 
+        rampup_elapsed = 0
         while not self.measuring_event.isSet():
             rate = self.get_rate()
-            # Durante il rampup, usa un minimo di 4 threads
-            required_threads = max(4, get_threads_for_rate(rate))
+            required_threads = get_threads_for_rate(rate)
+            
+            # Bootstrap dinamico: nei primi 0.5 secondi, mantieni un minimo per aiutare la scalata
+            # Dopo, lascia che l'algoritmo si adatti liberamente anche verso il basso
+            if rampup_elapsed < 0.5:
+                required_threads = max(2, required_threads)
+            
             self.adjust_threads(required_threads)
             self.callback(second=time.time() - self.start_time, speed=rate)
 
-            logger.debug(f"[HTTP] {self.status} Time = {time.time() - self.start_time:.2f}; Speed = {int(rate):,}.0 kbps")
+            logger.debug(f"[HTTP] {self.status} Time = {time.time() - self.start_time:.2f}; Speed = {int(rate):,}.0 kbps; Threads = {len(self.threads)}")
             logger_csv.debug(";%d" % int(rate))
 
             time.sleep(self.frequency)
+            rampup_elapsed += self.frequency
 
         self.status = "Measuring"
 
