@@ -313,9 +313,9 @@ class HttpTesterUp(object):
             timeout.cancel()
 
         if consumer.errors:
-            logger.debug("Errori: %s", consumer.errors)
-            # first_error = consumer.errors[0]
-            # raise nem_exceptions.MeasurementException(first_error.get("message"), first_error.get("code"))
+            logger.error("Errori durante la misura: %s", consumer.errors)
+            first_error = consumer.errors[0]
+            raise nem_exceptions.MeasurementException(first_error.get("message"), first_error.get("code"))
 
         if consumer.duration < (MEASURE_TIME * 1000) - 1:
             raise nem_exceptions.MeasurementException("Durata del test insufficiente", nem_exceptions.SERVER_ERROR)
@@ -325,10 +325,14 @@ class HttpTesterUp(object):
 
         total_bytes = self.netstat.get_tx_bytes() - start_bytes
         produced_bytes = observer.total_bytes
-        overhead = max(float(total_bytes - produced_bytes) / float(total_bytes), 0)
-
+        
         bytes_nem = consumer.bytes_transferred
-        bytes_tot = int(bytes_nem * (1 + overhead))
+        bytes_tot = total_bytes
+
+        if bytes_tot > 0:
+            overhead = float(bytes_tot - bytes_nem) / float(bytes_tot)
+        else:
+            overhead = 0
 
         logger.debug(f"Netstat: dati letti sulla scheda di rete: {total_bytes:,} bytes")
         logger.debug(f"Observer: dati prodotti dal generatore: {observer.total_bytes:,} bytes")

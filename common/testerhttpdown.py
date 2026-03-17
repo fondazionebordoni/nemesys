@@ -158,15 +158,16 @@ class Downloader(threading.Thread):
             while END_STRING not in my_buffer and not self.stop_event.isSet():
                 try:
                     my_buffer = reader.read(self.buffer_size)
-                    filebytes += len(my_buffer)
-
-                    if filebytes <= 0:
+                    
+                    if len(my_buffer) == 0:
                         error = {
                             "message": "Non ricevuti dati sufficienti per completare la misura",
                             "code": nem_exceptions.SERVER_ERROR,
                         }
                         self.result_queue.put(Result(n_bytes=filebytes, error=error))
                         break
+                    
+                    filebytes += len(my_buffer)
 
                 except socket.timeout:
                     # Exit the loop if the timeout is reached
@@ -186,8 +187,9 @@ class Downloader(threading.Thread):
                     break
 
             response.release_conn()
-            logging.debug(f"[{self.id}] Download finished, bytes received: {filebytes}")
-            self.result_queue.put(Result(n_bytes=filebytes))
+            received_end = END_STRING in my_buffer
+            logging.debug(f"[{self.id}] Download finished, bytes received: {filebytes}, received_end: {received_end}")
+            self.result_queue.put(Result(n_bytes=filebytes, received_end=received_end))
 
         return
 
@@ -423,30 +425,26 @@ class HttpTesterDown(object):
         timeout.cancel()
 
         if consumer.errors:
-            logger.debug("Errori: %s", consumer.errors)
-            # first_error = consumer.errors[0]
-            # raise nem_exceptions.MeasurementException(first_error.get("message"), first_error.get("code"))
+            logger.error("Errori durante la misura: %s", consumer.errors)
+            first_error = consumer.errors[0]
+            raise nem_exceptions.MeasurementException(first_error.get("message"), first_error.get("code"))
 
         if not orchestrator.start_time or not orchestrator.end_time:
             raise nem_exceptions.MeasurementException("Misura non completata", nem_exceptions.BROKEN_CONNECTION)
 
-        if consumer.total_read_bytes == 0:
+        if consumer.total_read_bytes <= 0:
             raise nem_exceptions.MeasurementException("Ottenuto banda zero", nem_exceptions.ZERO_SPEED)
 
         duration = (orchestrator.end_time - orchestrator.start_time) * 1000.0
 
-        if orchestrator.total_rx_bytes > 0:
-            overhead = float(orchestrator.total_rx_bytes - consumer.total_read_bytes) / float(orchestrator.total_rx_bytes)
+        bytes_nem = consumer.total_read_bytes
+        bytes_tot = orchestrator.total_rx_bytes
+
+        if bytes_tot > 0:
+            overhead = float(bytes_tot - bytes_nem) / float(bytes_tot)
         else:
             overhead = 0
         
-        if overhead < 0:
-            logger.info(f"Overhead negativo: {overhead * 100:.2f}%, non calcolato")
-            overhead = 0
-
-        bytes_nem = consumer.total_read_bytes
-        bytes_tot = int(bytes_nem * (1 + overhead))
-
         logger.debug(f"Orchestrator: dati totali letti sulla scheda di rete: {orchestrator.total_rx_bytes:,} bytes")
         logger.debug(f"Consumer: dati totali ricevuti dal server di misura: {consumer.total_read_bytes:,} bytes")
         logger.debug(f"Traffico spurio: {overhead * 100:.2f}%")
