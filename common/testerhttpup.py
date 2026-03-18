@@ -81,11 +81,25 @@ class Writer(threading.Thread):
     def run(self):
         while not self.stop_event.isSet():
             data = b"A" * self.chunk_generator.maxsize
-            self.chunk_generator.write(data)
-            self.live_queue.put(len(data))
+            try:
+                # Use timeout to avoid blocking indefinitely if queue is full
+                self.chunk_generator.put(data, timeout=0.5)
+                self.live_queue.put(len(data))
+            except queue.Full:
+                # Queue is full, slow down and retry
+                time.sleep(0.05)
+                continue
             time.sleep(0.1)
 
-        self.chunk_generator.close()
+        # Close the generator by sending END_STRING and None
+        # Use timeout to avoid blocking if Uploader is slow
+        try:
+            self.chunk_generator.put(END_STRING, timeout=1.0)
+            self.chunk_generator.put(None, timeout=1.0)
+        except queue.Full:
+            logger.warning("Writer: could not close chunk_generator cleanly (queue full)")
+        
+        logger.debug("Writer thread stopped")
 
 
 class Uploader(threading.Thread):
@@ -173,22 +187,23 @@ class Observer(threading.Thread):
             self.callback = noop
         self.total_bytes = 0
         self.rampup_complete = threading.Event()  # Signal when rampup phase ends
+        self.rampup_timer = None
+        self.measure_timer = None
 
     def run(self):
         start_measure_time = time.time()
         last_measured_time = time.time()
         measure_count = 0
 
+        # Set timer for rampup completion (precise timing)
+        self.rampup_timer = threading.Timer(RAMPUP_SECS, self._complete_rampup)
+        self.rampup_timer.start()
+
         while not self.stop_event.isSet():
             time.sleep(1.0)
             current_time = time.time()
             elapsed = current_time - last_measured_time
             measure_count += 1
-            
-            # Signal that rampup is complete after RAMPUP_SECS
-            if measure_count == RAMPUP_SECS:
-                self.rampup_complete.set()
-                logger.info(f"========== UPLOAD RAMPUP COMPLETE (after {RAMPUP_SECS}s) ==========")
 
             tx_bytes = 0
             while not self.live_queue.empty():
@@ -204,10 +219,23 @@ class Observer(threading.Thread):
 
             self.callback(second=measure_count, speed=rate_tot)
 
-            if current_time - start_measure_time >= MEASURE_TIME + RAMPUP_SECS:
-                self.stop_event.set()
-
         logger.debug("Observer thread stopped")
+        
+        # Cancel timers if still active
+        if self.rampup_timer:
+            self.rampup_timer.cancel()
+        if self.measure_timer:
+            self.measure_timer.cancel()
+    
+    def _complete_rampup(self):
+        """Called by rampup timer after RAMPUP_SECS"""
+        self.rampup_complete.set()
+        logger.info(f"========== UPLOAD RAMPUP COMPLETE (after {RAMPUP_SECS}s) ==========")
+        
+        # Now start the measurement timer (precise MEASURE_TIME)
+        self.measure_timer = threading.Timer(MEASURE_TIME, lambda: self.stop_event.set())
+        self.measure_timer.start()
+        logger.info(f"========== UPLOAD MEASUREMENT PHASE STARTED (will run for {MEASURE_TIME}s) ==========")
 
 
 def parse_response(response):

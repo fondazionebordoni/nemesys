@@ -444,15 +444,18 @@ class Orchestrator(threading.Thread):
 
         logger.debug("Stop event reached")
         
-        # Register timestamp before thread termination (correct duration)
-        self.end_time = time.time()
-        
         stop_event_timer.cancel()
 
-        # CRITICAL: Terminate threads BEFORE final Netstat reading
-        # This ensures bytes_tot includes ALL bytes that threads will report
-        # Threads may continue downloading for ~0.5s after stop_event before depositing results
+        # CRITICAL: Terminate threads FIRST, then register end_time
+        # Threads may continue downloading for 1-2 seconds after stop_event is set
+        # We must wait for them to finish and deposit all Results before recording end_time
         self.adjust_threads(0)
+        
+        # Register timestamp AFTER thread termination
+        # This ensures duration includes the time threads took to finish downloading
+        # Without this, on 1 Gbps lines threads download ~171 MB after stop_event but before termination
+        # causing bytes_nem > bytes_tot (negative overhead)
+        self.end_time = time.time()
         
         # Final Netstat reading AFTER threads are terminated
         # Now total_rx_bytes will match what Consumer collected from threads
