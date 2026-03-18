@@ -376,14 +376,16 @@ class Orchestrator(threading.Thread):
 
         measuring_event_timer.cancel()
 
-        # Svuota la result_queue dai risultati del rampup per sincronizzare
-        # bytes_nem (Consumer) con bytes_tot (Netstat) che partono entrambi da qui
-        while not self.result_queue.empty():
-            try:
-                self.result_queue.get_nowait()
-            except queue.Empty:
-                break
-        logger.debug("Result queue cleared after rampup")
+        # CRITICAL: Restart all threads to ensure filebytes counters start fresh
+        # If we don't restart, threads that started downloading during rampup will
+        # deposit Result with filebytes that include rampup bytes, causing negative overhead
+        current_thread_count = len(self.threads)
+        logger.debug(f"Restarting {current_thread_count} threads after rampup to reset byte counters")
+        self.adjust_threads(0)  # Terminate all
+        self.adjust_threads(current_thread_count)  # Restart same number
+        
+        # Now the result_queue is empty and all threads have fresh filebytes=0
+        # No need to clear queue since adjust_threads(0) caused threads to exit cleanly
 
         # Set and alarm for stop_event after MEASURE_TIME seconds
         stop_event_timer = threading.Timer(MEASURE_TIME, lambda: self.stop_event.set())
