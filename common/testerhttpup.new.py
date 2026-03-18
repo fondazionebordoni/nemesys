@@ -58,13 +58,43 @@ class Result(object):
 
 
 class ChunkGenerator(queue.Queue):
+    def __init__(self, maxsize, stop_event):
+        super().__init__(maxsize)
+        self.stop_event = stop_event
+    
     def write(self, data):
         # An empty string would be interpreted as EOF by the receiving server
         if data:
             self.put(data)
 
     def __iter__(self):
-        return iter(self.get, None)
+        """
+        Custom iterator that respects stop_event.
+        When stop_event is set, immediately sends END_STRING and stops,
+        without draining the entire queue.
+        """
+        while True:
+            # CRITICAL: Check stop_event BEFORE reading from queue
+            # This prevents consuming hundreds of queued chunks after stop
+            if self.stop_event.isSet():
+                logger.debug("ChunkGenerator: stop_event detected, sending END_STRING immediately")
+                yield END_STRING
+                break
+            
+            try:
+                # Use very short timeout (10ms) to check stop_event frequently
+                # This ensures we react within 10-20ms when stop_event is set
+                chunk = self.get(timeout=0.01)
+                
+                if chunk is None:
+                    # Normal termination (Writer sent None)
+                    break
+                    
+                yield chunk
+                
+            except queue.Empty:
+                # No chunk available, loop back to check stop_event (10ms later)
+                continue
 
     def close(self):
         self.put(END_STRING)
@@ -81,11 +111,26 @@ class Writer(threading.Thread):
     def run(self):
         while not self.stop_event.isSet():
             data = b"A" * self.chunk_generator.maxsize
-            self.chunk_generator.write(data)
-            self.live_queue.put(len(data))
+            try:
+                # Use timeout to avoid blocking indefinitely if queue is full
+                self.chunk_generator.put(data, timeout=0.5)
+                self.live_queue.put(len(data))
+            except queue.Full:
+                # Queue is full, slow down and retry
+                time.sleep(0.05)
+                continue
             time.sleep(0.1)
 
-        self.chunk_generator.close()
+        # When stop_event is set, ChunkGenerator.__iter__ will automatically
+        # send END_STRING and stop. We don't need to close manually.
+        # Just drain any remaining items from live_queue to avoid blocking Observer
+        try:
+            while not self.live_queue.empty():
+                self.live_queue.get_nowait()
+        except queue.Empty:
+            pass
+        
+        logger.debug("Writer thread stopped")
 
 
 class Uploader(threading.Thread):
@@ -150,7 +195,7 @@ class Producer(threading.Thread):
     def run(self):
         measurement_id = "sess-%d" % random.randint(0, 100000)
         for _ in range(0, self.num_sessions):
-            chunk_generator = ChunkGenerator(self.buffer_size)
+            chunk_generator = ChunkGenerator(self.buffer_size, self.stop_event)
             writer = Writer(self.stop_event, chunk_generator, self.live_queue)
             uploader = Uploader(
                 self.stop_event, self.url, measurement_id, self.result_queue, self.tcp_window_size, chunk_generator
@@ -172,11 +217,18 @@ class Observer(threading.Thread):
         else:
             self.callback = noop
         self.total_bytes = 0
+        self.rampup_complete = threading.Event()  # Signal when rampup phase ends
+        self.rampup_timer = None
+        self.measure_timer = None
 
     def run(self):
         start_measure_time = time.time()
         last_measured_time = time.time()
         measure_count = 0
+
+        # Set timer for rampup completion (precise timing)
+        self.rampup_timer = threading.Timer(RAMPUP_SECS, self._complete_rampup)
+        self.rampup_timer.start()
 
         while not self.stop_event.isSet():
             time.sleep(1.0)
@@ -198,10 +250,31 @@ class Observer(threading.Thread):
 
             self.callback(second=measure_count, speed=rate_tot)
 
-            if current_time - start_measure_time >= MEASURE_TIME + RAMPUP_SECS:
-                self.stop_event.set()
-
         logger.debug("Observer thread stopped")
+        
+        # Cancel timers if still active
+        if self.rampup_timer:
+            self.rampup_timer.cancel()
+        if self.measure_timer:
+            self.measure_timer.cancel()
+    
+    def _complete_rampup(self):
+        """Called by rampup timer after RAMPUP_SECS"""
+        self.rampup_complete.set()
+        logger.info(f"========== UPLOAD RAMPUP COMPLETE (after {RAMPUP_SECS}s) ==========")
+        
+        # Start the measurement timer much earlier (9.0s instead of 10s)
+        # Server has hard timeout of 12s total (RAMPUP=2s + MEASURE=10s)
+        # With 10+ parallel sessions, we need 1+ second buffer for:
+        # - ChunkGenerator to see stop_event (10-20ms per session)
+        # - END_STRING to be sent (network latency)
+        # - requests.post() to flush buffers and complete
+        # - Server to process responses
+        # This reduces measurement time by 10% but ensures stability
+        measure_duration = MEASURE_TIME - 1.0
+        self.measure_timer = threading.Timer(measure_duration, lambda: self.stop_event.set())
+        self.measure_timer.start()
+        logger.info(f"========== UPLOAD MEASUREMENT PHASE STARTED (will run for {measure_duration:.1f}s) ==========")
 
 
 def parse_response(response):
@@ -290,17 +363,25 @@ class HttpTesterUp(object):
             lambda: stop_event.set(),
         )
 
-        # Start the timers and counters for overall measurement
-        start_bytes = self.netstat.get_tx_bytes()
+        # Start the timestamp for the overall measurement
         start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
 
-        # Start the measurement
+        # Start threads
         producer.start()
         consumer.start()
         observer.start()
 
         # Activate the alarm
         timeout.start()
+
+        # CRITICAL: Wait for rampup to complete before measuring start_bytes
+        # This ensures bytes_tot and bytes_nem are synchronized (both measure same time window)
+        logger.info("Waiting for upload rampup to complete...")
+        observer.rampup_complete.wait()
+        
+        # NOW read start_bytes AFTER rampup, so bytes_tot only includes measurement phase
+        start_bytes = self.netstat.get_tx_bytes()
+        logger.info(f"Upload rampup complete, measurement phase starts now. start_bytes={start_bytes:,}")
 
         # Wait for the measurement to finish
         producer.join()
@@ -313,9 +394,9 @@ class HttpTesterUp(object):
             timeout.cancel()
 
         if consumer.errors:
-            logger.debug("Errori: %s", consumer.errors)
-            # first_error = consumer.errors[0]
-            # raise nem_exceptions.MeasurementException(first_error.get("message"), first_error.get("code"))
+            logger.error("Errori durante la misura: %s", consumer.errors)
+            first_error = consumer.errors[0]
+            raise nem_exceptions.MeasurementException(first_error.get("message"), first_error.get("code"))
 
         if consumer.duration < (MEASURE_TIME * 1000) - 1:
             raise nem_exceptions.MeasurementException("Durata del test insufficiente", nem_exceptions.SERVER_ERROR)
@@ -325,11 +406,16 @@ class HttpTesterUp(object):
 
         total_bytes = self.netstat.get_tx_bytes() - start_bytes
         produced_bytes = observer.total_bytes
-        overhead = max(float(total_bytes - produced_bytes) / float(total_bytes), 0)
-
+        
         bytes_nem = consumer.bytes_transferred
-        bytes_tot = int(bytes_nem * (1 + overhead))
+        bytes_tot = total_bytes
 
+        if bytes_tot > 0:
+            overhead = float(bytes_tot - bytes_nem) / float(bytes_tot)
+        else:
+            overhead = 0
+        
+        logger.info(f"DEBUG - Upload results: bytes_tot={bytes_tot:,}, bytes_nem={bytes_nem:,}, overhead={overhead*100:.2f}%")
         logger.debug(f"Netstat: dati letti sulla scheda di rete: {total_bytes:,} bytes")
         logger.debug(f"Observer: dati prodotti dal generatore: {observer.total_bytes:,} bytes")
         logger.debug(f"Consumer: dati ricevuti dal server di misura: {consumer.bytes_transferred:,} bytes")
