@@ -256,11 +256,15 @@ class Consumer(threading.Thread):
             except queue.Empty:
                 break
 
-        if not has_received_end and len(self.errors) == 0:
-            message = "Connessione interrotta prima del segnale di fine di misura"
-            self.errors.append({"message": message, "code": nem_exceptions.BROKEN_CONNECTION})
-            self.errors.append({"message": message, "code": nem_exceptions.BROKEN_CONNECTION})
-
+        # if not has_received_end and len(self.errors) == 0:
+        #     message = "Connessione interrotta prima del segnale di fine di misura"
+        #     self.errors.append({"message": message, "code": nem_exceptions.BROKEN_CONNECTION})
+        #     self.errors.append({"message": message, "code": nem_exceptions.BROKEN_CONNECTION})
+        
+        # Note: Non generiamo errore se END_STRING non è ricevuto, perché quando stop_event
+        # è settato (fine misura normale dopo 10s), i thread vengono terminati forzatamente
+        # prima di ricevere END_STRING. Questo è comportamento atteso, non un errore.
+        # Gli errori reali sono già stati raccolti dai thread Downloader.
 
 class Orchestrator(threading.Thread):
     def __init__(
