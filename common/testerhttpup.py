@@ -82,8 +82,9 @@ class ChunkGenerator(queue.Queue):
                 break
             
             try:
-                # Use short timeout to check stop_event frequently
-                chunk = self.get(timeout=0.1)
+                # Use very short timeout (10ms) to check stop_event frequently
+                # This ensures we react within 10-20ms when stop_event is set
+                chunk = self.get(timeout=0.01)
                 
                 if chunk is None:
                     # Normal termination (Writer sent None)
@@ -92,7 +93,7 @@ class ChunkGenerator(queue.Queue):
                 yield chunk
                 
             except queue.Empty:
-                # No chunk available, loop back to check stop_event
+                # No chunk available, loop back to check stop_event (10ms later)
                 continue
 
     def close(self):
@@ -262,10 +263,13 @@ class Observer(threading.Thread):
         self.rampup_complete.set()
         logger.info(f"========== UPLOAD RAMPUP COMPLETE (after {RAMPUP_SECS}s) ==========")
         
-        # Now start the measurement timer (precise MEASURE_TIME)
-        self.measure_timer = threading.Timer(MEASURE_TIME, lambda: self.stop_event.set())
+        # Start the measurement timer slightly early (9.8s instead of 10s)
+        # This gives Uploaders ~200ms to send END_STRING and complete POST cleanly
+        # before server times out
+        measure_duration = MEASURE_TIME - 0.2
+        self.measure_timer = threading.Timer(measure_duration, lambda: self.stop_event.set())
         self.measure_timer.start()
-        logger.info(f"========== UPLOAD MEASUREMENT PHASE STARTED (will run for {MEASURE_TIME}s) ==========")
+        logger.info(f"========== UPLOAD MEASUREMENT PHASE STARTED (will run for {measure_duration:.1f}s) ==========")
 
 
 def parse_response(response):
