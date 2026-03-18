@@ -444,23 +444,25 @@ class Orchestrator(threading.Thread):
 
         logger.debug("Stop event reached")
         
-        stop_event_timer.cancel()
-
-        # CRITICAL: Terminate threads FIRST, then register end_time
-        # Threads may continue downloading for 1-2 seconds after stop_event is set
-        # We must wait for them to finish and deposit all Results before recording end_time
-        self.adjust_threads(0)
-        
-        # Register timestamp AFTER thread termination
-        # This ensures duration includes the time threads took to finish downloading
-        # Without this, on 1 Gbps lines threads download ~171 MB after stop_event but before termination
-        # causing bytes_nem > bytes_tot (negative overhead)
+        # CRITICAL: Register end_time IMMEDIATELY after stop_event
+        # This ensures duration is exactly MEASURE_TIME (10s)
         self.end_time = time.time()
         
-        # Final Netstat reading AFTER threads are terminated
-        # Now total_rx_bytes will match what Consumer collected from threads
+        stop_event_timer.cancel()
+        
+        # Give threads a moment to finish downloading and deposit their last Results
+        # Threads are still running but have seen stop_event
+        time.sleep(0.5)
+        
+        # Final Netstat reading BEFORE terminating threads
+        # This reads total_rx_bytes while threads have finished downloading but not yet terminated
         final_rate = self.get_rate()
-        logger.debug(f"[HTTP] Final Netstat reading after thread termination: {self.total_rx_bytes:,} bytes")
+        logger.debug(f"[HTTP] Final Netstat reading (threads still alive): {self.total_rx_bytes:,} bytes")
+        
+        # NOW terminate threads (this may take 1-2s on fast lines)
+        # We do this AFTER reading bytes_tot so termination time doesn't affect measurement
+        self.adjust_threads(0)
+        logger.debug("All threads terminated")
 
     def adjust_threads(self, required_threads):
         with self.lock:
@@ -483,8 +485,9 @@ class Orchestrator(threading.Thread):
                     )
                     self.threads.append((thread, stop_thread))
                     thread.start()
-                    # Wait some time before starting other threads
-                    time.sleep(0.2)
+                    # Reduced delay: 0.05s instead of 0.2s
+                    # On 1 Gbps lines, fast restart is critical (16 threads = 0.8s instead of 3.2s)
+                    time.sleep(0.05)
 
             # Kill excess threads if needed
             elif diff < 0:

@@ -58,13 +58,42 @@ class Result(object):
 
 
 class ChunkGenerator(queue.Queue):
+    def __init__(self, maxsize, stop_event):
+        super().__init__(maxsize)
+        self.stop_event = stop_event
+    
     def write(self, data):
         # An empty string would be interpreted as EOF by the receiving server
         if data:
             self.put(data)
 
     def __iter__(self):
-        return iter(self.get, None)
+        """
+        Custom iterator that respects stop_event.
+        When stop_event is set, immediately sends END_STRING and stops,
+        without draining the entire queue.
+        """
+        while True:
+            # CRITICAL: Check stop_event BEFORE reading from queue
+            # This prevents consuming hundreds of queued chunks after stop
+            if self.stop_event.isSet():
+                logger.debug("ChunkGenerator: stop_event detected, sending END_STRING immediately")
+                yield END_STRING
+                break
+            
+            try:
+                # Use short timeout to check stop_event frequently
+                chunk = self.get(timeout=0.1)
+                
+                if chunk is None:
+                    # Normal termination (Writer sent None)
+                    break
+                    
+                yield chunk
+                
+            except queue.Empty:
+                # No chunk available, loop back to check stop_event
+                continue
 
     def close(self):
         self.put(END_STRING)
@@ -91,13 +120,14 @@ class Writer(threading.Thread):
                 continue
             time.sleep(0.1)
 
-        # Close the generator by sending END_STRING and None
-        # Use timeout to avoid blocking if Uploader is slow
+        # When stop_event is set, ChunkGenerator.__iter__ will automatically
+        # send END_STRING and stop. We don't need to close manually.
+        # Just drain any remaining items from live_queue to avoid blocking Observer
         try:
-            self.chunk_generator.put(END_STRING, timeout=1.0)
-            self.chunk_generator.put(None, timeout=1.0)
-        except queue.Full:
-            logger.warning("Writer: could not close chunk_generator cleanly (queue full)")
+            while not self.live_queue.empty():
+                self.live_queue.get_nowait()
+        except queue.Empty:
+            pass
         
         logger.debug("Writer thread stopped")
 
@@ -164,7 +194,7 @@ class Producer(threading.Thread):
     def run(self):
         measurement_id = "sess-%d" % random.randint(0, 100000)
         for _ in range(0, self.num_sessions):
-            chunk_generator = ChunkGenerator(self.buffer_size)
+            chunk_generator = ChunkGenerator(self.buffer_size, self.stop_event)
             writer = Writer(self.stop_event, chunk_generator, self.live_queue)
             uploader = Uploader(
                 self.stop_event, self.url, measurement_id, self.result_queue, self.tcp_window_size, chunk_generator
