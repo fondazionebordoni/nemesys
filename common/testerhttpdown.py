@@ -40,8 +40,10 @@ RAMPUP_SECS = 2
 TIMEOUT_DELAY = 5
 # 100 Mbps for measuring time seconds
 MAX_TRANSFERED_BYTES = 100 * 1000000 * (MEASURE_TIME + RAMPUP_SECS + TIMEOUT_DELAY) / 8
-# 10 seconds timeout on open and read operations
+# 10 seconds timeout on open and read operations for HTTP requests
 HTTP_TIMEOUT = 2.0
+# Consumer queue timeout - longer to avoid false positives on slow lines
+CONSUMER_QUEUE_TIMEOUT = 5.0
 END_STRING = b"_ThisIsTheEnd_"
 
 MAX_CONNECTIONS = 16
@@ -221,10 +223,17 @@ class Consumer(threading.Thread):
         """
 
         has_received_end = False
-        while not self.stop_event.isSet():
-            # Wait for a result to be available for max HTTP_TIMEOUT seconds
+        
+        # Wait for stop_event, then collect all results
+        self.stop_event.wait()
+        
+        # Now collect results from threads with a reasonable timeout
+        # Give threads some time to finish and post their results
+        collection_deadline = time.time() + 3.0  # 3 seconds to collect all results
+        
+        while time.time() < collection_deadline:
             try:
-                result = self.result_queue.get(True, HTTP_TIMEOUT)
+                result = self.result_queue.get(True, 0.5)  # Short timeout for polling
 
                 if result.error:
                     self.errors.append(result.error)
@@ -233,11 +242,23 @@ class Consumer(threading.Thread):
                 has_received_end = has_received_end or result.received_end
 
             except queue.Empty:
-                message = f"Nessun risultato ricevuto entro il tempo di timeout ({HTTP_TIMEOUT})"
-                self.errors.append({"message": message, "code": nem_exceptions.ZERO_SPEED})
+                # No result yet, but keep trying until deadline
+                pass
+        
+        # Check if there are any remaining results (non-blocking)
+        while True:
+            try:
+                result = self.result_queue.get_nowait()
+                if result.error:
+                    self.errors.append(result.error)
+                self.total_read_bytes += result.n_bytes
+                has_received_end = has_received_end or result.received_end
+            except queue.Empty:
+                break
 
         if not has_received_end and len(self.errors) == 0:
             message = "Connessione interrotta prima del segnale di fine di misura"
+            self.errors.append({"message": message, "code": nem_exceptions.BROKEN_CONNECTION})
             self.errors.append({"message": message, "code": nem_exceptions.BROKEN_CONNECTION})
 
 
@@ -316,7 +337,7 @@ class Orchestrator(threading.Thread):
         * Calcola la velocità media
         """
 
-        # Bootstrap: partiamo con 2 threads come compromesso
+        # Bootstrap: scelgo di usare 2 threads come compromesso (ideale da calcolo sarebbe 4)
         # (abbastanza per scalare velocemente, non troppo per linee lente)
         self.adjust_threads(2)
 

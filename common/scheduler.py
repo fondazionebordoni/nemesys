@@ -52,7 +52,9 @@ class Scheduler(object):
             request_string = f"{request_string}&serverUuid={server.uuid}"
         connection = None
         try:
-            connection = httputils.get_verified_connection(url=url, certificate=certificate, timeout=self._httptimeout)
+            connection = httputils.get_verified_connection(
+                url=url, certificate=certificate, timeout=self._httptimeout
+            )
             connection.request("GET", request_string)
             data = connection.getresponse().read()
         except Exception as e:
@@ -65,6 +67,14 @@ class Scheduler(object):
                 except Exception:
                     pass
 
-        # TODO
-        logger.debug("Task scaricato: %s", data)
-        return task.xml2task(data)
+        # Validazione e parsing del task scaricato
+        logger.debug("Task scaricato (lunghezza: %d bytes)", len(data))
+        
+        try:
+            task_obj = task.xml2task(data)
+            logger.info("Task parsato con successo: %s", task_obj)
+            return task_obj
+        except Exception as e:
+            logger.error("Errore nel parsing del task: %s", e)
+            logger.debug("XML problematico: %s", data)
+            raise TaskException("Task XML malformato")
