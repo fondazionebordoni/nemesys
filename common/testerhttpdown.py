@@ -380,12 +380,40 @@ class Orchestrator(threading.Thread):
         # If we don't restart, threads that started downloading during rampup will
         # deposit Result with filebytes that include rampup bytes, causing negative overhead
         current_thread_count = len(self.threads)
-        logger.debug(f"Restarting {current_thread_count} threads after rampup to reset byte counters")
-        self.adjust_threads(0)  # Terminate all
-        self.adjust_threads(current_thread_count)  # Restart same number
+        logger.info(f"========== THREAD RESTART START ==========")
+        logger.info(f"Threads BEFORE restart (count={current_thread_count}):")
+        for idx, (thread, stop_event) in enumerate(self.threads):
+            logger.info(f"  [{idx}] Thread ID: {thread.id}, alive: {thread.is_alive()}, stop_event.isSet: {stop_event.isSet()}")
         
-        # Now the result_queue is empty and all threads have fresh filebytes=0
-        # No need to clear queue since adjust_threads(0) caused threads to exit cleanly
+        logger.debug(f"Terminating {current_thread_count} threads from rampup...")
+        self.adjust_threads(0)  # Terminate all (they will deposit their rampup Results)
+        
+        logger.info(f"Threads AFTER termination (count={len(self.threads)}):")
+        for idx, (thread, stop_event) in enumerate(self.threads):
+            logger.info(f"  [{idx}] Thread ID: {thread.id}, alive: {thread.is_alive()}")
+        
+        # CRITICAL: Clear queue AFTER terminating threads to discard rampup Results
+        # The terminated threads deposited Results before exiting, we must discard them
+        discarded_count = 0
+        discarded_bytes = 0
+        while not self.result_queue.empty():
+            try:
+                result = self.result_queue.get_nowait()
+                discarded_bytes += result.n_bytes
+                discarded_count += 1
+            except queue.Empty:
+                break
+        logger.info(f"Discarded {discarded_count} rampup results from queue (total bytes: {discarded_bytes:,})")
+        
+        logger.debug(f"Restarting {current_thread_count} fresh threads...")
+        self.adjust_threads(current_thread_count)  # Restart same number with fresh counters
+        
+        logger.info(f"Threads AFTER restart (count={len(self.threads)}):")
+        for idx, (thread, stop_event) in enumerate(self.threads):
+            logger.info(f"  [{idx}] Thread ID: {thread.id}, alive: {thread.is_alive()}, stop_event.isSet: {stop_event.isSet()}")
+        logger.info(f"========== THREAD RESTART COMPLETE ==========")
+        
+        # Now queue is empty and threads have filebytes=0, perfect synchronization!
 
         # Set and alarm for stop_event after MEASURE_TIME seconds
         stop_event_timer = threading.Timer(MEASURE_TIME, lambda: self.stop_event.set())
