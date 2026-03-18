@@ -376,6 +376,15 @@ class Orchestrator(threading.Thread):
 
         measuring_event_timer.cancel()
 
+        # Svuota la result_queue dai risultati del rampup per sincronizzare
+        # bytes_nem (Consumer) con bytes_tot (Netstat) che partono entrambi da qui
+        while not self.result_queue.empty():
+            try:
+                self.result_queue.get_nowait()
+            except queue.Empty:
+                break
+        logger.debug("Result queue cleared after rampup")
+
         # Set and alarm for stop_event after MEASURE_TIME seconds
         stop_event_timer = threading.Timer(MEASURE_TIME, lambda: self.stop_event.set())
         stop_event_timer.start()
