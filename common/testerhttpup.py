@@ -263,10 +263,10 @@ class Observer(threading.Thread):
         self.rampup_complete.set()
         logger.info(f"========== UPLOAD RAMPUP COMPLETE (after {RAMPUP_SECS}s) ==========")
         
-        # Start the measurement timer slightly early (9.8s instead of 10s)
-        # This gives Uploaders ~200ms to send END_STRING and complete POST cleanly
-        # before server times out
-        measure_duration = MEASURE_TIME - 0.2
+        # Start the measurement timer early (9.5s instead of 10s)
+        # This gives Uploaders ~500ms to send END_STRING and complete POST cleanly
+        # With 10+ parallel sessions, we need more buffer time before server times out
+        measure_duration = MEASURE_TIME - 0.5
         self.measure_timer = threading.Timer(measure_duration, lambda: self.stop_event.set())
         self.measure_timer.start()
         logger.info(f"========== UPLOAD MEASUREMENT PHASE STARTED (will run for {measure_duration:.1f}s) ==========")
