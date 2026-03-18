@@ -32,10 +32,10 @@ from common import nem_exceptions
 from common import ntptime
 from common.netstat import Netstat
 from common.proof import Proof
-from common.profile import BW_5M, BW_50M, BW_100M, BW_200M, BW_500M, BW_1000M, BW_2000M
+from common.profile import BW_5M, BW_50M, BW_100M, BW_200M, BW_500M, BW_1000M, BW_2000M, BW_5000M
 
 MEASURE_TIME = 10
-RAMPUP_SECS = 2
+RAMPUP_SECS = 1  # Reduced from 2s: faster restart = more time to scale on fast lines
 # Wait another secs in case end of file has not arrived
 TIMEOUT_DELAY = 5
 # 100 Mbps for measuring time seconds
@@ -46,7 +46,7 @@ HTTP_TIMEOUT = 2.0
 CONSUMER_QUEUE_TIMEOUT = 5.0
 END_STRING = b"_ThisIsTheEnd_"
 
-MAX_CONNECTIONS = 16
+MAX_CONNECTIONS = 20  # Increased from 16 to support up to 5 Gbps lines
 
 logger = logging.getLogger(__name__)
 logger_csv = logging.getLogger("csv")
@@ -79,6 +79,9 @@ def get_threads_for_rate(rate):
 
     if rate < BW_2000M:
         return 12
+    
+    if rate < BW_5000M:
+        return 16
 
     return MAX_CONNECTIONS
 
@@ -341,27 +344,33 @@ class Orchestrator(threading.Thread):
         * Calcola la velocità media
         """
 
-        # Bootstrap: scelgo di usare 2 threads come compromesso (ideale da calcolo sarebbe 4)
-        # (abbastanza per scalare velocemente, non troppo per linee lente)
+        # Bootstrap: start conservatively with 2 threads (good for both slow and fast lines)
+        # Algorithm will scale up quickly on fast lines during rampup
         self.adjust_threads(2)
 
         # Set and alarm for stop_event after MEASURE_TIME seconds
         measuring_event_timer = threading.Timer(RAMPUP_SECS, lambda: self.measuring_event.set())
         measuring_event_timer.start()
 
-        # Aspetta un po' prima del primo campionamento per dare tempo alle connessioni 
-        # HTTP di attivarsi ed evitare il primo campione a zero
-        time.sleep(0.3)
+        # Wait shorter time for first sample (faster reaction)
+        time.sleep(0.2)
 
-        rampup_elapsed = 0.3  # Inizializza con il tempo già trascorso
+        rampup_elapsed = 0.2  # Track elapsed time
         while not self.measuring_event.isSet():
             rate = self.get_rate()
             required_threads = get_threads_for_rate(rate)
             
-            # Bootstrap dinamico: nei primi 0.5 secondi, mantieni un minimo per aiutare la scalata
-            # Dopo, lascia che l'algoritmo si adatti liberamente anche verso il basso
-            if rampup_elapsed < 0.5:
-                required_threads = max(2, required_threads)
+            # Aggressive boost for ultra-fast and fast lines detected early
+            if rampup_elapsed < 0.4:
+                if rate > 800000:  # >800 Mbps = ultra-fast line (1+ Gbps capable)
+                    required_threads = MAX_CONNECTIONS
+                    logger.info(f"Ultra-fast line detected ({int(rate)} kbps), boosting to {MAX_CONNECTIONS} threads")
+                elif rate > 400000:  # >400 Mbps = fast line
+                    required_threads = min(16, MAX_CONNECTIONS)
+                    logger.info(f"Fast line detected ({int(rate)} kbps), boosting to {required_threads} threads")
+            
+            # During early rampup on slow lines, allow reduction to 1 thread
+            # No artificial minimum - let algorithm adapt naturally
             
             self.adjust_threads(required_threads)
             self.callback(second=time.time() - self.start_time, speed=rate)
@@ -376,24 +385,32 @@ class Orchestrator(threading.Thread):
 
         measuring_event_timer.cancel()
 
-        # CRITICAL: Restart all threads to ensure filebytes counters start fresh
-        # If we don't restart, threads that started downloading during rampup will
-        # deposit Result with filebytes that include rampup bytes, causing negative overhead
+        # CRITICAL: Restart threads with smart scaling based on measured speed
+        # Fast lines (500+ Mbps): boost to max threads immediately
+        # Medium lines (50-500 Mbps): scale proportionally  
+        # Slow lines (5-50 Mbps): keep conservative thread count
         current_thread_count = len(self.threads)
-        logger.info(f"========== THREAD RESTART START ==========")
-        logger.info(f"Threads BEFORE restart (count={current_thread_count}):")
-        for idx, (thread, stop_event) in enumerate(self.threads):
-            logger.info(f"  [{idx}] Thread ID: {thread.id}, alive: {thread.is_alive()}, stop_event.isSet: {stop_event.isSet()}")
         
-        logger.debug(f"Terminating {current_thread_count} threads from rampup...")
-        self.adjust_threads(0)  # Terminate all (they will deposit their rampup Results)
+        # Get current rate to determine target threads
+        rate = self.get_rate()
         
-        logger.info(f"Threads AFTER termination (count={len(self.threads)}):")
-        for idx, (thread, stop_event) in enumerate(self.threads):
-            logger.info(f"  [{idx}] Thread ID: {thread.id}, alive: {thread.is_alive()}")
+        # Determine target threads based on achieved rate during rampup
+        if rate > 1000000:  # >1 Gbps - ultra-fast line, use maximum threads
+            target_threads = MAX_CONNECTIONS
+        elif rate > 500000:  # >500 Mbps - very fast line
+            target_threads = min(16, MAX_CONNECTIONS)
+        elif rate > 200000:  # >200 Mbps - fast line, scale up aggressively
+            target_threads = min(12, MAX_CONNECTIONS)
+        elif rate > 50000:  # >50 Mbps - moderate scaling
+            target_threads = get_threads_for_rate(rate)
+        else:  # Slow line - keep conservative
+            target_threads = max(1, get_threads_for_rate(rate))
         
-        # CRITICAL: Clear queue AFTER terminating threads to discard rampup Results
-        # The terminated threads deposited Results before exiting, we must discard them
+        logger.info(f"========== RESTART: {current_thread_count} → {target_threads} threads (speed={int(rate)} kbps) ==========")
+        
+        self.adjust_threads(0)  # Terminate all
+        
+        # Clear queue to discard rampup Results
         discarded_count = 0
         discarded_bytes = 0
         while not self.result_queue.empty():
@@ -403,17 +420,10 @@ class Orchestrator(threading.Thread):
                 discarded_count += 1
             except queue.Empty:
                 break
-        logger.info(f"Discarded {discarded_count} rampup results from queue (total bytes: {discarded_bytes:,})")
+        logger.info(f"Discarded {discarded_count} rampup results ({discarded_bytes:,} bytes)")
         
-        logger.debug(f"Restarting {current_thread_count} fresh threads...")
-        self.adjust_threads(current_thread_count)  # Restart same number with fresh counters
-        
-        logger.info(f"Threads AFTER restart (count={len(self.threads)}):")
-        for idx, (thread, stop_event) in enumerate(self.threads):
-            logger.info(f"  [{idx}] Thread ID: {thread.id}, alive: {thread.is_alive()}, stop_event.isSet: {stop_event.isSet()}")
-        logger.info(f"========== THREAD RESTART COMPLETE ==========")
-        
-        # Now queue is empty and threads have filebytes=0, perfect synchronization!
+        self.adjust_threads(target_threads)
+        logger.info(f"========== RESTART COMPLETE ==========")
 
         # Set and alarm for stop_event after MEASURE_TIME seconds
         stop_event_timer = threading.Timer(MEASURE_TIME, lambda: self.stop_event.set())

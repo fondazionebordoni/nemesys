@@ -172,6 +172,7 @@ class Observer(threading.Thread):
         else:
             self.callback = noop
         self.total_bytes = 0
+        self.rampup_complete = threading.Event()  # Signal when rampup phase ends
 
     def run(self):
         start_measure_time = time.time()
@@ -183,6 +184,11 @@ class Observer(threading.Thread):
             current_time = time.time()
             elapsed = current_time - last_measured_time
             measure_count += 1
+            
+            # Signal that rampup is complete after RAMPUP_SECS
+            if measure_count == RAMPUP_SECS:
+                self.rampup_complete.set()
+                logger.info(f"========== UPLOAD RAMPUP COMPLETE (after {RAMPUP_SECS}s) ==========")
 
             tx_bytes = 0
             while not self.live_queue.empty():
@@ -290,17 +296,25 @@ class HttpTesterUp(object):
             lambda: stop_event.set(),
         )
 
-        # Start the timers and counters for overall measurement
-        start_bytes = self.netstat.get_tx_bytes()
+        # Start the timestamp for the overall measurement
         start_timestamp = datetime.fromtimestamp(ntptime.timestamp())
 
-        # Start the measurement
+        # Start threads
         producer.start()
         consumer.start()
         observer.start()
 
         # Activate the alarm
         timeout.start()
+
+        # CRITICAL: Wait for rampup to complete before measuring start_bytes
+        # This ensures bytes_tot and bytes_nem are synchronized (both measure same time window)
+        logger.info("Waiting for upload rampup to complete...")
+        observer.rampup_complete.wait()
+        
+        # NOW read start_bytes AFTER rampup, so bytes_tot only includes measurement phase
+        start_bytes = self.netstat.get_tx_bytes()
+        logger.info(f"Upload rampup complete, measurement phase starts now. start_bytes={start_bytes:,}")
 
         # Wait for the measurement to finish
         producer.join()
@@ -333,7 +347,8 @@ class HttpTesterUp(object):
             overhead = float(bytes_tot - bytes_nem) / float(bytes_tot)
         else:
             overhead = 0
-
+        
+        logger.info(f"DEBUG - Upload results: bytes_tot={bytes_tot:,}, bytes_nem={bytes_nem:,}, overhead={overhead*100:.2f}%")
         logger.debug(f"Netstat: dati letti sulla scheda di rete: {total_bytes:,} bytes")
         logger.debug(f"Observer: dati prodotti dal generatore: {observer.total_bytes:,} bytes")
         logger.debug(f"Consumer: dati ricevuti dal server di misura: {consumer.bytes_transferred:,} bytes")
