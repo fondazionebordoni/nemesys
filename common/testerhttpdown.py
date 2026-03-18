@@ -403,11 +403,21 @@ class Orchestrator(threading.Thread):
             time.sleep(self.frequency)
 
         logger.debug("Stop event reached")
+        
+        # Register timestamp before thread termination (correct duration)
         self.end_time = time.time()
-
+        
         stop_event_timer.cancel()
 
+        # CRITICAL: Terminate threads BEFORE final Netstat reading
+        # This ensures bytes_tot includes ALL bytes that threads will report
+        # Threads may continue downloading for ~0.5s after stop_event before depositing results
         self.adjust_threads(0)
+        
+        # Final Netstat reading AFTER threads are terminated
+        # Now total_rx_bytes will match what Consumer collected from threads
+        final_rate = self.get_rate()
+        logger.debug(f"[HTTP] Final Netstat reading after thread termination: {self.total_rx_bytes:,} bytes")
 
     def adjust_threads(self, required_threads):
         with self.lock:
