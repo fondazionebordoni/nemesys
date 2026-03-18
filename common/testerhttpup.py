@@ -22,11 +22,12 @@
 import queue
 import logging
 import random
+import requests
 import socket
 import threading
 import time
 from datetime import datetime
-import requests
+
 import re
 import json
 
@@ -42,7 +43,9 @@ RAMPUP_SECS = 2
 # Wait another secs in case end of file has not arrived
 TIMEOUT_DELAY = 5
 # 10 Gbps for measuring time seconds
-MAX_TRANSFERED_BYTES = 10 * 1000000 * 1000 * (MEASURE_TIME + RAMPUP_SECS + TIMEOUT_DELAY) / 8
+MAX_TRANSFERED_BYTES = (
+    10 * 1000000 * 1000 * (MEASURE_TIME + RAMPUP_SECS + TIMEOUT_DELAY) / 8
+)
 HTTP_TIMEOUT = 8
 END_STRING = b"_ThisIsTheEnd_"
 
@@ -92,7 +95,15 @@ class Writer(threading.Thread):
 
 
 class Uploader(threading.Thread):
-    def __init__(self, stop_event, url, measurement_id, result_queue, tcp_window_size, chunk_generator):
+    def __init__(
+        self,
+        stop_event,
+        url,
+        measurement_id,
+        result_queue,
+        tcp_window_size,
+        chunk_generator,
+    ):
         threading.Thread.__init__(self)
         self.stop_event = stop_event
         self.url = url
@@ -106,14 +117,24 @@ class Uploader(threading.Thread):
         try:
             headers = {"X-measurement-id": self.measurement_id}
             # Rimosso stream=True per evitare ConnectionReset anticipati
-            response = requests.post(self.url, data=self.chunk_generator, headers=headers, timeout=HTTP_TIMEOUT)
+            response = requests.post(
+                self.url,
+                data=self.chunk_generator,
+                headers=headers,
+                timeout=HTTP_TIMEOUT,
+            )
 
             logger.debug("Upload completed! Sending stop signal")
             self.stop_event.set()
 
             if response is None:
                 self.result_queue.put(
-                    Result(error={"message": "Nessuna risposta dal server", "code": nem_exceptions.BROKEN_CONNECTION})
+                    Result(
+                        error={
+                            "message": "Nessuna risposta dal server",
+                            "code": nem_exceptions.BROKEN_CONNECTION,
+                        }
+                    )
                 )
             elif response.status_code != 200:
                 self.result_queue.put(
@@ -129,15 +150,33 @@ class Uploader(threading.Thread):
                 logger.debug("Risposta dal server: %s", content)
                 self.result_queue.put(Result(response=content))
 
-        except (requests.exceptions.ConnectionError, requests.exceptions.ChunkedEncodingError, socket.error) as e:
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.ChunkedEncodingError,
+            socket.error,
+        ) as e:
             # FIX: Se il test è finito temporalmente, l'errore di connessione è considerato chiusura prevista
             if self.stop_event.isSet():
                 logger.debug("Connessione interrotta a fine test (previsto): %s", e)
-                self.result_queue.put(Result(response="[0]")) 
+                self.result_queue.put(Result(response="[0]"))
             else:
-                self.result_queue.put(Result(error={"message": f"Errore: {e}", "code": nem_exceptions.CONNECTION_FAILED}))
+                self.result_queue.put(
+                    Result(
+                        error={
+                            "message": f"Errore: {e}",
+                            "code": nem_exceptions.CONNECTION_FAILED,
+                        }
+                    )
+                )
         except Exception as e:
-            self.result_queue.put(Result(error={"message": f"Errore: {e}", "code": nem_exceptions.CONNECTION_FAILED}))
+            self.result_queue.put(
+                Result(
+                    error={
+                        "message": f"Errore: {e}",
+                        "code": nem_exceptions.CONNECTION_FAILED,
+                    }
+                )
+            )
         finally:
             if response:
                 response.close()
@@ -146,7 +185,16 @@ class Uploader(threading.Thread):
 
 
 class Producer(threading.Thread):
-    def __init__(self, url, stop_event, live_queue, result_queue, num_sessions, tcp_window_size, buffer_size=8192):
+    def __init__(
+        self,
+        url,
+        stop_event,
+        live_queue,
+        result_queue,
+        num_sessions,
+        tcp_window_size,
+        buffer_size=8192,
+    ):
         super(Producer, self).__init__()
         self.url = url
         self.stop_event = stop_event
@@ -162,7 +210,12 @@ class Producer(threading.Thread):
             chunk_generator = ChunkGenerator(self.buffer_size)
             writer = Writer(self.stop_event, chunk_generator, self.live_queue)
             uploader = Uploader(
-                self.stop_event, self.url, measurement_id, self.result_queue, self.tcp_window_size, chunk_generator
+                self.stop_event,
+                self.url,
+                measurement_id,
+                self.result_queue,
+                self.tcp_window_size,
+                chunk_generator,
             )
 
             writer.start()
@@ -202,7 +255,9 @@ class Observer(threading.Thread):
             rate_tot = float(tx_bytes * 8) / float(elapsed * 1000)
             last_measured_time = current_time
 
-            logger.debug(f"[HTTP] Sending... Count = {measure_count}; Speed = {int(rate_tot):,} kbps")
+            logger.debug(
+                f"[HTTP] Sending... Count = {measure_count}; Speed = {int(rate_tot):,} kbps"
+            )
             logger_csv.debug(";%d" % int(rate_tot))
 
             self.callback(second=measure_count, speed=rate_tot)
@@ -224,7 +279,9 @@ def parse_response(response):
         bytes_array = [int(match.group("bytes")) for match in matches]
         bytes_transferred = sum(bytes_array)
         duration = len(bytes_array) * 1000
-        logger.debug("Risultato ottenuto: %d bytes in %d ms", bytes_transferred, duration)
+        logger.debug(
+            "Risultato ottenuto: %d bytes in %d ms", bytes_transferred, duration
+        )
         return duration, bytes_transferred, False
 
     result = json.loads(response)
@@ -253,23 +310,32 @@ class Consumer(threading.Thread):
                 self.errors.append(result.error)
             elif result.response:
                 try:
-                    duration, bytes_transferred, incremental = parse_response(result.response)
+                    duration, bytes_transferred, incremental = parse_response(
+                        result.response
+                    )
 
                     if duration and bytes_transferred:
                         self.duration = max(self.duration, duration)
                         if incremental:
                             self.bytes_transferred += bytes_transferred
                         else:
-                            self.bytes_transferred = max(self.bytes_transferred, bytes_transferred)
+                            self.bytes_transferred = max(
+                                self.bytes_transferred, bytes_transferred
+                            )
 
                 except nem_exceptions.MeasurementException as e:
                     self.errors.append({"message": e.message, "code": e.errorcode})
                 except Exception as exception:
                     error_code = nem_exceptions.errorcode_from_exception(exception)
-                    msg = getattr(exception, 'message', str(exception))
+                    msg = getattr(exception, "message", str(exception))
                     self.errors.append({"message": msg, "code": error_code})
             else:
-                self.errors.append({"message": "No response from server", "code": nem_exceptions.BROKEN_CONNECTION})
+                self.errors.append(
+                    {
+                        "message": "No response from server",
+                        "code": nem_exceptions.BROKEN_CONNECTION,
+                    }
+                )
 
         if self.errors:
             logger.error("Consumer thread stopped with errors: %s" % self.errors)
@@ -282,12 +348,27 @@ class HttpTesterUp(object):
         self.dev = dev
         self.netstat = Netstat(self.dev)
 
-    def test(self, url, callback_update_speed=noop, num_sessions=1, tcp_window_size=-1, buffer_size=8192):
+    def test(
+        self,
+        url,
+        callback_update_speed=noop,
+        num_sessions=1,
+        tcp_window_size=-1,
+        buffer_size=8192,
+    ):
         stop_event = threading.Event()
         result_queue = queue.Queue()
         live_queue = queue.Queue()
 
-        producer = Producer(url, stop_event, live_queue, result_queue, num_sessions, tcp_window_size, buffer_size)
+        producer = Producer(
+            url,
+            stop_event,
+            live_queue,
+            result_queue,
+            num_sessions,
+            tcp_window_size,
+            buffer_size,
+        )
         consumer = Consumer(stop_event, result_queue, num_sessions)
         observer = Observer(stop_event, live_queue, callback_update_speed)
 
@@ -320,21 +401,33 @@ class HttpTesterUp(object):
             consumer.bytes_transferred = observer.total_bytes
 
         if consumer.duration < (MEASURE_TIME * 1000) - 1:
-            raise nem_exceptions.MeasurementException("Durata del test insufficiente", nem_exceptions.SERVER_ERROR)
+            raise nem_exceptions.MeasurementException(
+                "Durata del test insufficiente", nem_exceptions.SERVER_ERROR
+            )
 
         if consumer.bytes_transferred <= 0:
-            raise nem_exceptions.MeasurementException("Ottenuto banda zero", nem_exceptions.ZERO_SPEED)
+            raise nem_exceptions.MeasurementException(
+                "Ottenuto banda zero", nem_exceptions.ZERO_SPEED
+            )
 
         total_bytes = self.netstat.get_tx_bytes() - start_bytes
         produced_bytes = observer.total_bytes
-        overhead = max(float(total_bytes - produced_bytes) / float(total_bytes), 0) if total_bytes > 0 else 0
+        overhead = (
+            max(float(total_bytes - produced_bytes) / float(total_bytes), 0)
+            if total_bytes > 0
+            else 0
+        )
 
         bytes_nem = consumer.bytes_transferred
         bytes_tot = int(bytes_nem * (1 + overhead))
 
         logger.debug(f"Netstat: dati letti sulla scheda di rete: {total_bytes:,} bytes")
-        logger.debug(f"Observer: dati prodotti dal generatore: {observer.total_bytes:,} bytes")
-        logger.debug(f"Consumer: dati ricevuti dal server di misura: {consumer.bytes_transferred:,} bytes")
+        logger.debug(
+            f"Observer: dati prodotti dal generatore: {observer.total_bytes:,} bytes"
+        )
+        logger.debug(
+            f"Consumer: dati ricevuti dal server di misura: {consumer.bytes_transferred:,} bytes"
+        )
         logger.debug(f"Consumer: tempo di misura: {consumer.duration:,} s")
         logger.debug(f"Dati di misura: {bytes_nem:,} bytes")
         logger.debug(f"Traffico spurio: {overhead*100:.2f}%")
@@ -345,13 +438,19 @@ class HttpTesterUp(object):
         )
 
         if overhead < 0:
-            raise nem_exceptions.MeasurementException("Traffico spurio negativo", nem_exceptions.NEGATIVE_SPEED)
+            raise nem_exceptions.MeasurementException(
+                "Traffico spurio negativo", nem_exceptions.NEGATIVE_SPEED
+            )
 
         if bytes_nem < 0:
-            raise nem_exceptions.MeasurementException("Byte di misura trasferiti negativi", nem_exceptions.NEGATIVE_SPEED)
+            raise nem_exceptions.MeasurementException(
+                "Byte di misura trasferiti negativi", nem_exceptions.NEGATIVE_SPEED
+            )
 
         if bytes_tot < 0:
-            raise nem_exceptions.MeasurementException("Byte totali trasferiti negativi", nem_exceptions.NEGATIVE_SPEED)
+            raise nem_exceptions.MeasurementException(
+                "Byte totali trasferiti negativi", nem_exceptions.NEGATIVE_SPEED
+            )
 
         return Proof(
             test_type="upload_http",
