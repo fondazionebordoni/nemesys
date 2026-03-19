@@ -377,8 +377,10 @@ class Orchestrator(threading.Thread):
             logger.debug(f"[HTTP] {self.status} Time = {time.time() - self.start_time:.2f}; Speed = {int(rate):,}.0 kbps; Threads = {len(self.threads)}")
             logger_csv.debug(";%d" % int(rate))
 
-            time.sleep(self.frequency)
-            rampup_elapsed += self.frequency
+            # Use measuring_event.wait() instead of time.sleep() to exit immediately when rampup completes
+            self.measuring_event.wait(self.frequency)
+            if not self.measuring_event.isSet():
+                rampup_elapsed += self.frequency
 
         self.status = "Measuring"
 
@@ -439,7 +441,9 @@ class Orchestrator(threading.Thread):
             logger.debug(f"[HTTP] {self.status} Time = {time.time() - self.start_time:.2f}; Speed = {int(rate):,}.0 kbps")
             logger_csv.debug(";%d" % int(rate))
 
-            time.sleep(self.frequency)
+            # Use stop_event.wait() instead of time.sleep() to exit immediately when stop_event is set
+            # This prevents up to 1 second delay after stop_event, which causes overhead negative
+            self.stop_event.wait(self.frequency)
 
         logger.debug("Stop event reached")
         
