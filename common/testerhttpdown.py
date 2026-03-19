@@ -35,8 +35,7 @@ from common.proof import Proof
 from common.profile import BW_5M, BW_50M, BW_100M, BW_200M, BW_500M, BW_1000M, BW_2000M, BW_5000M
 
 MEASURE_TIME = 10
-RAMPUP_SECS = 1  # Reduced from 2s: faster restart = more time to scale on fast lines
-# Wait another secs in case end of file has not arrived
+RAMPUP_SECS = 2
 TIMEOUT_DELAY = 5
 # 100 Mbps for measuring time seconds
 MAX_TRANSFERED_BYTES = 100 * 1000000 * (MEASURE_TIME + RAMPUP_SECS + TIMEOUT_DELAY) / 8
