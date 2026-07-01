@@ -56,7 +56,7 @@ class TestTask(unittest.TestCase):
         self.assertNotEqual(None, res.server)
         self.assertEqual(res.server.name, 'NAMEX')
         self.assertEqual(res.server.ip, '193.104.137.133')
-        self.assertEqual(res.server.id, 'fubsrvrmnmx03')
+        self.assertEqual(res.server.uuid, 'fubsrvrmnmx03')
         self.assertEqual(res.now, True)
         self.assertEqual('2010-01-01 00:01:00',
                          res.start.strftime("%Y-%m-%d %H:%M:%S"))
@@ -83,7 +83,7 @@ class TestTask(unittest.TestCase):
         self.assertNotEqual(None, res.server)
         self.assertEqual(res.server.name, 'NAMEX')
         self.assertEqual(res.server.ip, '193.104.137.133')
-        self.assertEqual(res.server.id, 'fubsrvrmnmx03')
+        self.assertEqual(res.server.uuid, 'fubsrvrmnmx03')
         self.assertEqual(res.now, True)
         self.assertEqual('2010-01-01 00:01:00',
                          res.start.strftime("%Y-%m-%d %H:%M:%S"))
@@ -110,7 +110,7 @@ class TestTask(unittest.TestCase):
         self.assertNotEqual(None, res.server)
         self.assertEqual(res.server.name, 'NAMEX')
         self.assertEqual(res.server.ip, '193.104.137.133')
-        self.assertEqual(res.server.id, 'fubsrvrmnmx03')
+        self.assertEqual(res.server.uuid, 'fubsrvrmnmx03')
         self.assertEqual(res.now, False)
         self.assertEqual('2010-01-01 00:01:00',
                          res.start.strftime("%Y-%m-%d %H:%M:%S"))
@@ -137,7 +137,7 @@ class TestTask(unittest.TestCase):
         self.assertNotEqual(None, res.server)
         self.assertEqual(res.server.name, 'NAMEX')
         self.assertEqual(res.server.ip, '193.104.137.133')
-        self.assertEqual(res.server.id, 'fubsrvrmnmx03')
+        self.assertEqual(res.server.uuid, 'fubsrvrmnmx03')
         self.assertEqual(res.now, False)
 
     def test_wait_task(self):
@@ -236,7 +236,7 @@ class TestTask(unittest.TestCase):
         self.assertNotEqual(None, res.server)
         self.assertEqual(res.server.name, 'NAMEX')
         self.assertEqual(res.server.ip, '193.104.137.133')
-        self.assertEqual(res.server.id, 'fubsrvrmnmx03')
+        self.assertEqual(res.server.uuid, 'fubsrvrmnmx03')
         self.assertEqual(res.now, True)
         self.assertEqual('2010-01-01 00:01:00',
                          res.start.strftime("%Y-%m-%d %H:%M:%S"))

@@ -138,7 +138,7 @@ def xml2task(xml):
     # Date
     try:
         starttime = datetime.fromisoformat(start)
-    except ValueError:
+    except (ValueError, TypeError):
         logger.debug("XML: %s", start)
         raise TaskException("Le informazioni orarie per la programmazione delle misure sono errate.")
     # TODO: scartare se id mancante?

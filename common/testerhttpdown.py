@@ -32,7 +32,7 @@ from common import nem_exceptions
 from common import ntptime
 from common.netstat import Netstat
 from common.proof import Proof
-from common.profile import BW_5M, BW_50M, BW_100M, BW_200M, BW_500M, BW_1000M, BW_2000M, BW_5000M
+from common.profile import BW_5M, BW_50M, BW_100M, BW_200M, BW_300M, BW_500M, BW_1000M, BW_2000M, BW_5000M
 
 MEASURE_TIME = 10
 RAMPUP_SECS = 2
@@ -55,33 +55,24 @@ def noop(*args, **kwargs):
     pass
 
 
+_THREAD_TABLE = [
+    (BW_5M,    1),
+    (BW_50M,   2),
+    (BW_100M,  3),
+    (BW_200M,  4),
+    (BW_300M,  5),
+    (BW_500M,  6),
+    (BW_1000M, 8),
+    (BW_2000M, 12),
+    (BW_5000M, 16),
+]
+
+
 def get_threads_for_rate(rate):
-    rate = rate * 1000
-
-    if rate < BW_5M:
-        return 1
-
-    if rate < BW_50M:
-        return 2
-
-    if rate < BW_100M:
-        return 3
-
-    if rate < BW_200M:
-        return 4
-
-    if rate < BW_500M:
-        return 6
-
-    if rate < BW_1000M:
-        return 8
-
-    if rate < BW_2000M:
-        return 12
-    
-    if rate < BW_5000M:
-        return 16
-
+    bps = rate * 1000
+    for threshold, threads in _THREAD_TABLE:
+        if bps < threshold:
+            return threads
     return MAX_CONNECTIONS
 
 
