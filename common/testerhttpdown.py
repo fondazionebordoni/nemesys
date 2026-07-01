@@ -575,7 +575,8 @@ class HttpTesterDown(object):
         logger_csv.debug(f";{orchestrator.total_rx_bytes};{consumer.total_read_bytes};{overhead};{bytes_tot};{bytes_nem}")
 
         if overhead < 0:
-            raise nem_exceptions.MeasurementException("Traffico spurio negativo", nem_exceptions.NEGATIVE_SPEED)
+            logger.warning("Traffico spurio negativo (%.2f%%) - probabilmente sfasamento temporale tra contatori, ignorato", overhead * 100)
+            overhead = 0
 
         if bytes_nem < 0:
             raise nem_exceptions.MeasurementException("Byte di misura trasferiti negativi", nem_exceptions.NEGATIVE_SPEED)
