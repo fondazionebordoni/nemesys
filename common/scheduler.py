@@ -19,8 +19,9 @@ Created on 13/giu/2016
 
 @author: ewedlund
 """
+
 import logging
-import urllib.parse
+from urllib.parse import urlparse
 
 from common import httputils, task
 from common.nem_exceptions import TaskException
@@ -33,8 +34,8 @@ class Scheduler(object):
     Handles the download of tasks
     """
 
-    def __init__(self, scheduler_url, client, md5conf, version, timeout):
-        self._url = scheduler_url
+    def __init__(self, url, client, md5conf, version, timeout):
+        self._url = url
         self._client = client
         self._md5conf = md5conf
         self._version = version
@@ -44,29 +45,36 @@ class Scheduler(object):
         """
         Download task from scheduler, returns a Task
         """
-        url = urllib.parse.urlparse(self._url)
+        url = urlparse(self._url)
         certificate = self._client.isp.certificate
-        request_string = '{path}?clientid={client_id}&version={version}&confid={conf_id}'.format(
-            path=url.path,
-            client_id=self._client.id,
-            version=self._version,
-            conf_id=self._md5conf)
+        request_string = f"{url.path}?clientid={self._client.id}&version={self._version}&confid={self._md5conf}"
         if server:
-            request_string = '{str}&server={server}'.format(str=request_string, server=server.ip)
+            request_string = f"{request_string}&serverUuid={server.uuid}"
         connection = None
         try:
-            connection = httputils.get_verified_connection(url=url,
-                                                           certificate=certificate,
-                                                           timeout=self._httptimeout)
-            connection.request('GET', request_string)
+            connection = httputils.get_verified_connection(
+                url=url, certificate=certificate, timeout=self._httptimeout
+            )
+            connection.request("GET", request_string)
             data = connection.getresponse().read()
         except Exception as e:
-            logger.error('Impossibile scaricare lo scheduling: %s', e)
-            raise TaskException('Download del task fallito')
+            logger.error("Impossibile scaricare lo scheduling: %s", e)
+            raise TaskException("Download del task fallito")
         finally:
             if connection:
                 try:
                     connection.close()
                 except Exception:
                     pass
-        return task.xml2task(data)
+
+        # Validazione e parsing del task scaricato
+        logger.debug("Task scaricato (lunghezza: %d bytes)", len(data))
+        
+        try:
+            task_obj = task.xml2task(data)
+            logger.info("Task parsato con successo: %s", task_obj)
+            return task_obj
+        except Exception as e:
+            logger.error("Errore nel parsing del task: %s", e)
+            logger.debug("XML problematico: %s", data)
+            raise TaskException("Task XML malformato")

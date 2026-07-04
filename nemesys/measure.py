@@ -99,7 +99,7 @@ class Measure(object):
 
         # Server
         server = xml.createElement('server')
-        server.setAttribute('id', str(self._server.id))
+        server.setAttribute('id', str(self._server.uuid))
         header.appendChild(server)
 
         measure.appendChild(header)

@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 class MockScheduler(object):
     def __init__(self):
-        server = Server('fubsrvrmnmx03', '193.104.137.133', 'Namex server')
+        server = Server(uuid='fubsrvrmnmx03', ip='193.104.137.133', name='Namex server')
         self.task_default = task.Task(now=True,
                                       server=server,
                                       upload=1,

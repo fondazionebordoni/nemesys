@@ -36,18 +36,18 @@ keys=console,file
 keys=formatter
 
 [logger_root]
-level=INFO
+level=DEBUG
 handlers=console,file
 
 [handler_console]
 class=StreamHandler
-level=INFO
+level=DEBUG
 formatter=formatter
 args=(sys.stdout,)
 
 [handler_file]
 class=FileHandler
-level=INFO
+level=DEBUG
 formatter=formatter
 args=(''' + repr(logfile) + ''',)
 
@@ -67,7 +67,7 @@ keys=console,file
 keys=formatter
 
 [logger_root]
-level=INFO
+level=DEBUG
 handlers=console,file
 
 [handler_console]
@@ -78,7 +78,7 @@ args=(sys.stdout,)
 
 [handler_file]
 class=FileHandler
-level=INFO
+level=DEBUG
 formatter=formatter
 args=(''' + repr(logfile) + ''',)
 
@@ -90,9 +90,11 @@ datefmt=%b %d %H:%M:%S
 
 def init_log(level=logging.INFO, use_name='Nemesys'):
     paths.create_dirs(dirs=[paths.LOG_DIR, paths._CONF_DIR])
+    # Se non esiste il file di configurazione, crealo con valori di default
     if not os.path.isfile(configfile):
         with open(configfile, 'w') as f:
-            s = str(default_no_stdout)
+            s = str(default)
             f.write(s)
-
+    
+    # Usa il file log.conf (quello del repository o quello appena creato)
     logging.config.fileConfig(configfile, disable_existing_loggers=False)

@@ -33,6 +33,7 @@ from common.nem_exceptions import SysmonitorException, TaskException
 from common.proof import Proof
 from common.scheduler import Scheduler
 from common.tester import Tester
+from common.chooser import Chooser
 from nemesys import gui_server
 from nemesys import nem_options
 from nemesys import restart
@@ -51,11 +52,11 @@ SLEEP_SECS_AFTER_TASK = 30
 
 
 class Executer(object):
-    def __init__(self, client, scheduler, deliverer, sys_profiler,
-                 polling=300.0, tasktimeout=60,
-                 testtimeout=30, isprobe=True):
-
+    def __init__(
+        self, client, chooser, scheduler, deliverer, sys_profiler, polling=300.0, tasktimeout=60, testtimeout=30, isprobe=True
+    ):
         self._client = client
+        self._chooser = chooser
         self._scheduler = scheduler
         self._deliverer = deliverer
         self._sys_profiler = sys_profiler
@@ -70,25 +71,22 @@ class Executer(object):
 
         self._time_to_stop = False
 
-
     def _do_task(self, task, dev):
         """
         Esegue il complesso di test prescritti dal task
         In presenza di errori ri-tenta per un massimo di 5 volte
         """
-        logger.info('Inizio task di misura verso il server %s', task.server)
+        logger.info("Inizio task di misura verso il server %s", task.server)
         try:
             t = Tester(dev=dev, host=task.server, timeout=self._testtimeout)
             # TODO: Pensare ad un'altra soluzione per la generazione
             # del progressivo di misura
             start = datetime.fromtimestamp(ntptime.timestamp())
-            m_id = start.strftime('%y%m%d%H%M')
-            m = Measure(m_id, task.server,
-                        self._client, _generated_version.__version__,
-                        start.isoformat())
+            m_id = start.strftime("%y%m%d%H%M")
+            m = Measure(m_id, task.server, self._client, _generated_version.__version__, start.isoformat())
 
-            for test_type in ['ping', 'download', 'upload']:
-                if test_type == 'ping':
+            for test_type in ["ping", "download", "upload"]:
+                if test_type == "ping":
                     n_reps = task.ping
                     self._gui_server.measure(test_type)
                     sleep_secs = 1
@@ -104,25 +102,20 @@ class Executer(object):
                     sleep_secs = 10
                 proofs = self._do_tests(test_type, n_reps, sleep_secs, t)
                 m.add_proofs(proofs)
-            sec = datetime.fromtimestamp(ntptime.timestamp()).strftime('%S')
-            f = open('%s/measure_%s%s.xml' % (self._outbox, m.id, sec), 'w')
+            sec = datetime.fromtimestamp(ntptime.timestamp()).strftime("%S")
+            f = open("%s/measure_%s%s.xml" % (self._outbox, m.id, sec), "w")
             f.write(str(m))
-            f.write('\n<!-- [finished] %s -->'
-                    % datetime.fromtimestamp(ntptime.timestamp()).isoformat())
+            f.write("\n<!-- [finished] %s -->" % datetime.fromtimestamp(ntptime.timestamp()).isoformat())
             f.close()
 
             try:
-                self._deliverer.upload_and_move(f.name,
-                                                self._sent,
-                                                (not self._isprobe))
+                self._deliverer.upload_and_move(f.name, self._sent, (not self._isprobe))
             except Exception as e:
-                self._gui_server.notification(nem_exceptions.DELIVERY_ERROR,
-                                              'Misura terminata ma non salvata. %s' % str(e))
-            logger.info('Fine task di misura.')
+                self._gui_server.notification(nem_exceptions.DELIVERY_ERROR, "Misura terminata ma non salvata. %s" % str(e))
+            logger.info("Fine task di misura.")
 
         except Exception as e:
-            logger.error('Task interrotto per eccezione durante l\'esecuzione di un test: %s',
-                         str(e), exc_info=True)
+            logger.error("Task interrotto per eccezione durante l'esecuzione di un test: %s", str(e), exc_info=True)
             error_code = nem_exceptions.errorcode_from_exception(e)
             self._gui_server.notification(error_code, str(e))
 
@@ -135,54 +128,51 @@ class Executer(object):
             n_errors = 0
             while n_errors < MAX_ERRORS:
                 if n_errors > 0:
-                    logger.info('Misura in ripresa '
-                                'dopo sospensione per errore.')
+                    logger.info("Misura in ripresa dopo sospensione per errore.")
                 logger.info("Esecuzione Test %d su %d di %s", i, n_reps, test_type)
                 self._gui_server.test(test_type, i, n_reps, (n_errors > 0))
                 try:
-                    if test_type == 'ping':
+                    if test_type == "ping":
                         proof = t.testping()
-                        logger.info('Ping result: %.3f', proof.duration)
+                        logger.info("Ping result: %.3f", proof.duration)
                         self._gui_server.speed(proof.duration)
                         if i == n_reps:
                             self._gui_server.result(test_type, proof.duration)
-                    elif test_type == 'download':
+                    elif test_type == "download":
                         proof = t.testhttpdown(self.callback_httptest, bw=download_bw)
                         kbps = proof.bytes_tot * 8.0 / proof.duration
-                        logger.info('Download result: %.3f kbps', kbps)
-                        logger.info('Percentuale di traffico spurio: %.2f%%', proof.spurious * 100)
+                        logger.info("Download result: %.3f kbps", kbps)
+                        logger.info("Percentuale di traffico spurio: %.2f%%", proof.spurious * 100)
                         self._check_spurious_traffic(proof)
                         result = int(proof.bytes_tot * 8.0 / proof.duration)
-                        self._gui_server.result(test_type,
-                                                result=result,
-                                                spurious=proof.spurious)
+                        self._gui_server.result(test_type, result=result, spurious=proof.spurious)
                     else:
                         proof = t.testhttpup(self.callback_httptest, upload_bw)
                         kbps = proof.bytes_tot * 8.0 / proof.duration
-                        logger.info('Upload result: %.3f kbps', kbps)
-                        logger.info('Percentuale di traffico spurio: %.2f%%', proof.spurious * 100)
+                        logger.info("Upload result: %.3f kbps", kbps)
+                        logger.info("Percentuale di traffico spurio: %.2f%%", proof.spurious * 100)
                         self._check_spurious_traffic(proof)
                         res = int(proof.bytes_tot * 8.0 / proof.duration)
-                        self._gui_server.result(test_type,
-                                                result=res,
-                                                spurious=proof.spurious)
+                        self._gui_server.result(test_type, result=res, spurious=proof.spurious)
                     proofs.append(proof)
                     break
                 except Exception as e:
                     n_errors += 1
                     if n_errors >= MAX_ERRORS:
-                        logger.warning('Il massimo numero di errori è stato raggiunto, sospendo la misura')
+                        logger.warning("Il massimo numero di errori è stato raggiunto, sospendo la misura")
                         if self._isprobe:
-                            proof = Proof(test_type=test_type,
-                                          start_time=datetime.now(),
-                                          duration=0,
-                                          errorcode=nem_exceptions.errorcode_from_exception(e))
+                            proof = Proof(
+                                test_type=test_type,
+                                start_time=datetime.now(),
+                                duration=0,
+                                errorcode=nem_exceptions.errorcode_from_exception(e),
+                            )
                             proofs.append(proof)
                             break
                         else:
                             raise e
                     else:
-                        logger.warning('Misura sospesa per eccezione, e\' errore n. %d: %s', n_errors, e, exc_info=True)
+                        logger.warning("Misura sospesa per eccezione, e' errore n. %d: %s", n_errors, e, exc_info=True)
                         self._gui_server.result(test_type, error=str(e))
                 sleep(sleep_secs)
             sleep(sleep_secs)
@@ -191,7 +181,7 @@ class Executer(object):
 
     def _handle_task(self, task):
         """
-          Follows the directions found in the task
+        Follows the directions found in the task
         """
         if task.now:
             secs_to_next_measurement = 0
@@ -204,10 +194,9 @@ class Executer(object):
                 wait_secs = task.delay
             else:
                 wait_secs = self._polling
-                logger.debug('Prossimo task tra: %s minuti'
-                             % (secs_to_next_measurement / 60))
-            logger.info('Faccio una pausa per %d minuti (%d secondi)', wait_secs / 60, wait_secs)
-            logger.debug('Trovato messaggio: %s', task.message)
+                logger.debug("Prossimo task tra: %s minuti" % (secs_to_next_measurement / 60))
+            logger.info("Faccio una pausa per %d minuti (%d secondi)", wait_secs / 60, wait_secs)
+            logger.debug("Trovato messaggio: %s", task.message)
             self._gui_server.wait(wait_secs, task.message)
             self._sleep_and_wait(wait_secs)
         else:
@@ -217,7 +206,7 @@ class Executer(object):
                 self._gui_server.notification(0, task.message)
             if secs_to_next_measurement >= 0:
                 if task.download > 0 or task.upload > 0 or task.ping > 0:
-                    logger.debug('Impostazione di un nuovo task tra: %d minuti', secs_to_next_measurement / 60)
+                    logger.debug("Impostazione di un nuovo task tra: %d minuti", secs_to_next_measurement / 60)
                     self._sleep_and_wait(secs_to_next_measurement)
                     if self._isprobe:
                         dev = iptools.get_dev(task.server.ip, 80)
@@ -226,10 +215,9 @@ class Executer(object):
                     if dev:
                         self._do_task(task, dev)
                 else:
-                    logger.warning('Ricevuto task senza azioni da svolgere')
+                    logger.warning("Ricevuto task senza azioni da svolgere")
             else:
-                logger.warning('Tempo di attesa prima della misura anomalo: '
-                            '%d minuti', secs_to_next_measurement / 60)
+                logger.warning("Tempo di attesa prima della misura anomalo: %d minuti", secs_to_next_measurement / 60)
 
     def _profile_system(self, server_ip, port):
         """
@@ -245,7 +233,7 @@ class Executer(object):
             dev = iptools.get_dev(server_ip, port)
             return dev
         except SysmonitorException as e:
-            logger.error('La profilazione del sistema ha rivelato un problema: %s', e)
+            logger.error("La profilazione del sistema ha rivelato un problema: %s", e)
             sleep(2)
             self._gui_server.profilation(done=True)
             return None
@@ -253,7 +241,7 @@ class Executer(object):
     def _sleep_and_wait(self, seconds):
         event_status = self._wakeup_event.wait(seconds)
         if event_status is True:
-            logger.debug('Ricevuto evento durante attesa')
+            logger.debug("Ricevuto evento durante attesa")
             self._wakeup_event.clear()
 
     def _check_spurious_traffic(self, test):
@@ -262,21 +250,21 @@ class Executer(object):
         """
         if not self._isprobe:
             if test.spurious < 0:
-                raise Exception('Errore durante la verifica del traffico di '
-                                'misura: impossibile salvare i dati.')
+                raise Exception("Errore durante la verifica del traffico di misura: impossibile salvare i dati.")
             if test.spurious >= TH_TRAFFIC:
-                raise Exception('Eccessiva presenza di traffico non '
-                                'legato alla misura: percentuali {}%.'.format(round(test.spurious * 100)))
+                raise Exception(
+                    "Eccessiva presenza di traffico non legato alla misura: percentuali {}%.".format(round(test.spurious * 100))
+                )
 
     def callback_sys_prof(self, resource, status, info="", errorcode=0):
         # Is called by sysmonitor for each resource
         if status is True:
-            status = 'ok'
+            status = "ok"
         else:
-            status = 'error'
-        logger.debug('Callback dal system profiler: %s, %s, %s', resource, status, info)
+            status = "error"
+        logger.debug("Callback dal system profiler: %s, %s, %s", resource, status, info)
         self._gui_server.sys_res(resource, status, info)
-        if status == 'error':
+        if status == "error":
             self._gui_server.notification(errorcode, message=info)
 
     def callback_httptest(self, second, speed):
@@ -286,57 +274,63 @@ class Executer(object):
         """
         self._gui_server.speed(speed / 1000.0)
 
+    def callback_chooser(self, message):
+        self._gui_server.notification(0, message=message)
+
     def loop(self):
         """
         Main loop.
         """
         try:
             if self._isprobe:
-                logger.info('Inizializzato software per sonda.')
+                logger.info("Inizializzato software per sonda.")
                 self._gui_server = gui_server.DummyGuiServer()
             else:
-                logger.info('Inizializzato software per misure d\'utente con ISP id = %s', self._client.isp.id)
-                logger.info('Con profilo [%s]', self._client.profile)
-                self._gui_server = gui_server.Communicator(serial=self._client.id,
-                                                           logdir=paths.LOG_DIR,
-                                                           version=_generated_version.__version__)
+                logger.info("Inizializzato software per misure d'utente con ISP id = %s", self._client.isp.id)
+                logger.info("Con profilo [%s]", self._client.profile)
+                self._gui_server = gui_server.Communicator(
+                    serial=self._client.id, logdir=paths.LOG_DIR, version=_generated_version.__version__
+                )
                 self._gui_server.start()
             try:
                 self._sys_profiler.log_interfaces()
             except Exception as e:
-                msg = 'Impossibile rilevare le schede di rete: {}'.format(e)
+                msg = "Impossibile rilevare le schede di rete: {}".format(e)
                 logger.error(msg, exc_info=True)
                 self._gui_server.notification(nem_exceptions.FAILPROF, message=msg)
             while not self._time_to_stop:
-                logger.debug('Inizio del loop principale')
+                logger.debug("Inizio del loop principale")
                 if self._isprobe:
                     # Try to send any unsent measures (only probe)
                     self._deliverer.uploadall_and_move(self._outbox, self._sent, do_remove=False)
+
+                server = self._chooser.choose_server(self.callback_chooser)
                 # Try to download task
                 task = None
                 tries = 0
                 while not task:
                     try:
-                        task = self._scheduler.download_task()
+                        task = self._scheduler.download_task(server=server)
                     except TaskException as e:
                         tries += 1
                         if tries >= 3:
-                            logger.error('Impossibile scaricare il task: %s', e)
+                            logger.error("Impossibile scaricare il task: %s", e)
                             self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
                             break
                 if task:
                     # Task found, now do it
-                    logger.info('Trovato task %s', task)
+                    logger.info("Trovato task %s", task)
                     try:
                         self._handle_task(task)
                     except Exception as e:
-                        logger.error('Errore durante la gestione del task per le misure: %s', e, exc_info=True)
+                        logger.error("Errore durante la gestione del task per le misure: %s", e, exc_info=True)
                         self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
                 # TODO: check if this is how it is supposed to be
-                self._gui_server.wait(SLEEP_SECS_AFTER_TASK,
-                                      'Aspetto {} secondi prima di continuare'.format(SLEEP_SECS_AFTER_TASK))
+                self._gui_server.wait(
+                    SLEEP_SECS_AFTER_TASK, "Aspetto {} secondi prima di continuare".format(SLEEP_SECS_AFTER_TASK)
+                )
                 sleep(SLEEP_SECS_AFTER_TASK)
-            logger.info('Uscita dal loop')
+            logger.info("Uscita dal loop")
             if self._gui_server:
                 self._gui_server.stop(5.0)
         except Exception as e:
@@ -346,14 +340,14 @@ class Executer(object):
             sleep(5)
             os._exit(1)
 
-
     def stop(self):
         self._time_to_stop = True
 
 
 def get_log_streams(from_logger):
-    """ Get a list of filehandle numbers from logger
-        to be handed to DaemonContext.files_preserve
+    """
+    Get a list of filehandle numbers from logger
+    to be handed to DaemonContext.files_preserve
     """
     handles = []
     for handler in from_logger.handlers:
@@ -365,47 +359,52 @@ def get_log_streams(from_logger):
 
 def main():
     from nemesys import log_conf
+
     log_conf.init_log()
 
-    logger.info('Avvio di Nemesys v.%s on %s', _generated_version.FULL_VERSION, platform.platform())
-    logger.info('Pacchetto Nemesys generato su %s in data %s', _generated_version.PLATFORM,
-                _generated_version.__updated__)
+    logger.info("Avvio di Nemesys v.%s on %s", _generated_version.FULL_VERSION, platform.platform())
+    logger.info("Pacchetto Nemesys generato su %s in data %s", _generated_version.PLATFORM, _generated_version.__updated__)
     paths.create_nemesys_dirs()
     (options, _, md5conf) = nem_options.parse_args(_generated_version.__version__)
     logger.debug(f"Ricevuta configurazione: {options}")
 
     c = client.getclient(options)
-    isprobe = (c.isp.certificate is not None)
-    sys_profiler = SysProfiler(c.profile.upload,
-                               c.profile.download,
-                               c.isp.id,
-                               bypass=not options.killonerror,
-                               bw_upload_min=c.profile.upload_min,
-                               bw_download_min=c.profile.download_min)
+    isprobe = c.isp.certificate is not None
+    sys_profiler = SysProfiler(
+        c.profile.upload,
+        c.profile.download,
+        c.isp.id,
+        bypass=not options.killonerror,
+        bw_upload_min=c.profile.upload_min,
+        bw_download_min=c.profile.download_min,
+    )
 
-    e = Executer(client=c,
-                 scheduler=Scheduler(options.scheduler,
-                                     c,
-                                     md5conf,
-                                     _generated_version.__version__,
-                                     options.httptimeout),
-                 deliverer=Deliverer(options.repository,
-                                     c.isp.certificate,
-                                     options.httptimeout),
-                 sys_profiler=sys_profiler,
-                 polling=options.polling,
-                 tasktimeout=options.tasktimeout,
-                 testtimeout=options.testtimeout,
-                 isprobe=isprobe)
+    e = Executer(
+        client=c,
+        chooser=Chooser(url=options.chooser, client=c, version=_generated_version.__version__, timeout=options.httptimeout),
+        scheduler=Scheduler(
+            url=options.scheduler,
+            client=c,
+            md5conf=md5conf,
+            version=_generated_version.__version__,
+            timeout=options.httptimeout,
+        ),
+        deliverer=Deliverer(url=options.repository, certificate=c.isp.certificate, timeout=options.httptimeout),
+        sys_profiler=sys_profiler,
+        polling=options.polling,
+        tasktimeout=options.tasktimeout,
+        testtimeout=options.testtimeout,
+        isprobe=isprobe,
+    )
 
     restart_scheduler = restart.RestartScheduler()
     restart_scheduler.start()
 
-    if not utils.is_linux():
-        logger.debug('Inizio il loop.')
+    if utils.is_linux():
+        logger.debug("Inizio il loop.")
         e.loop()
     else:
-        logger.info('Avvio il demone Nemesys')
+        logger.info("Avvio il demone Nemesys")
         pidf = pidfile.TimeoutPIDLockFile(options.pidfile, -1)
         log_streams = get_log_streams(logger)
         context = daemon.DaemonContext(
@@ -417,8 +416,8 @@ def main():
         # But need to fix sleep wakeup etc first
         with context:
             e.loop()
-            logger.info('Loop exit')
+            logger.info("Loop exit")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

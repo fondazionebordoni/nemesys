@@ -97,11 +97,10 @@ class Communicator(threading.Thread):
 
     def run(self):
         try:
-            self.ioLoop = IOLoop()
-            self.ioLoop.make_current()
+            self.ioLoop = IOLoop.current()
             self.application = tornado.web.Application([(r'/ws', gui_web_socket_factory(self.ioLoop))])
             self.application.listen(WEBSOCKET_PORT)
-            IOLoop.current().start()
+            self.ioLoop.start()
             # close() viene eseguito solo dopo che start esce dal loop,
             # ovvero dopo che riceve il comando stop(). Rilascia le risorse.
             self.ioLoop.close(all_fds=True)

@@ -105,22 +105,31 @@ def parse_args(version):
                       help='timeout (in seconds as float number) for each test in a task [%s]' % value)
 
     option = 'repository'
-    value = 'https://finaluser.agcom244.fub.it/Upload'
+    value = 'https://finaluser.misurainternet.it/measure'
     try:
         value = config.get(section, option)
     except (ValueError, NoOptionError):
         config.set(section, option, value)
-    parser.add_option('-r', '--repository', dest=option, default=value,
+    parser.add_option('--repository', dest=option, default=value,
                       help='upload URL for deliver measures\' files [%s]' % value)
 
     option = 'scheduler'
-    value = 'https://finaluser.agcom244.fub.it/Scheduler'
+    value = 'https://finaluser.misurainternet.it/task'
     try:
         value = config.get(section, option)
     except (ValueError, NoOptionError):
         config.set(section, option, value)
-    parser.add_option('-s', '--scheduler', dest=option, default=value,
+    parser.add_option('--scheduler', dest=option, default=value,
                       help='complete url for schedule download [%s]' % value)
+
+    option = 'chooser'
+    value = 'https://finaluser.misurainternet.it/servers'
+    try:
+        value = config.get(section, option)
+    except (ValueError, NoOptionError):
+        config.set(section, option, value)
+    parser.add_option('--chooser', dest=option, default=value,
+                      help='complete url for chooser [%s]' % value)
 
     option = 'httptimeout'
     value = '60'
@@ -152,7 +161,7 @@ def parse_args(version):
         value = config.get(section, option)
     except (ValueError, NoOptionError):
         pass
-    parser.add_option('-c', '--clientid', dest=option, default=value,
+    parser.add_option('--clientid', dest=option, default=value,
                       help='client identification string [%s]' % value)
 
     option = 'geocode'
