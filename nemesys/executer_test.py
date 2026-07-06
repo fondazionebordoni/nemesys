@@ -68,12 +68,19 @@ class MockScheduler(object):
         self._tasks = [self.task_default, self.task_wait]
         self._i = -1
 
-    def download_task(self):
-        #         return self.task_wait
+    def download_task(self, **kwargs):
         self._i += 1
         if self._i == len(self._tasks):
             self._i = 0
         return self._tasks[self._i]
+
+
+class MockChooser(object):
+    def __init__(self, server):
+        self._server = server
+
+    def choose_server(self, _callback):
+        return self._server
 
 
 class MockDeliverer(object):
@@ -120,7 +127,9 @@ def main():
                   c.isp.certificate,
                   options.httptimeout)
     scheduler = MockScheduler()
+    chooser = MockChooser(scheduler.task_default.server)
     exe = Executer(client=c,
+                   chooser=chooser,
                    scheduler=scheduler,
                    deliverer=d,
                    sys_profiler=sys_profiler,

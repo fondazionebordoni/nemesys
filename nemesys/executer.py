@@ -400,8 +400,8 @@ def main():
     restart_scheduler = restart.RestartScheduler()
     restart_scheduler.start()
 
-    if utils.is_linux():
-        logger.debug("Inizio il loop.")
+    if utils.is_windows():
+        # La daemonizzazione è gestita da Nemesys.py tramite il servizio Windows.
         e.loop()
     else:
         logger.info("Avvio il demone Nemesys")
@@ -412,8 +412,6 @@ def main():
             pidfile=pidf,
             files_preserve=log_streams,
         )
-        # TODO: context.signal_map = {signal.SIGTERM: do_exit}
-        # But need to fix sleep wakeup etc first
         with context:
             e.loop()
             logger.info("Loop exit")

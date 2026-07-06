@@ -9,7 +9,6 @@ from distutils.core import setup
 from glob import glob
 
 sys.path.append('C:\\Microsoft.VC90.CRT')
-sys.path.append(os.path.join('.', 'mist'))
 sys.path.append(os.path.join('.', 'nemesys'))
 sys.path.append(os.path.join('.', 'common'))
 
@@ -29,7 +28,6 @@ def get_version():
             break
 
     # Fix version in Inno Setup file too!
-    sub_iss_file(os.path.join('.', 'mist.iss'), ver)
     sub_iss_file(os.path.join('.', 'nemesys.iss'), ver)
 
     return ver
@@ -74,7 +72,8 @@ setup(
     data_files=data_files,
     options={
         'py2exe': {
-            'packages': 'encodings',
+            'packages': ['encodings', 'common', 'nemesys', 'charset_normalizer'],
+            'includes': ['_cffi_backend'],
             'optimize': 2,
         }
     },
