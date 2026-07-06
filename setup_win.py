@@ -72,7 +72,7 @@ setup(
     data_files=data_files,
     options={
         'py2exe': {
-            'packages': 'encodings',
+            'packages': ['encodings', 'common', 'nemesys'],
             'optimize': 2,
         }
     },
