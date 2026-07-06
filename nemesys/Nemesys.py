@@ -27,81 +27,74 @@ except ImportError:
 import logging
 import os
 import sys
-import time
-from threading import Thread
+from threading import Thread, Event
 
 from nemesys import executer
 
-###  DISCOVERING PATH  ###
+### Rilevamento del path dell'eseguibile ###
+# sys.argv[0] punta all'exe compilato da py2exe; usato per scrivere il log
+# nella stessa cartella dell'eseguibile.
 try:
     _PATH = os.path.dirname(sys.argv[0])
     if _PATH == '':
         _PATH = "." + os.sep
     if _PATH[len(_PATH) - 1] != os.sep:
         _PATH = _PATH + os.sep
-except Exception as e:
+except Exception:
     _PATH = "." + os.sep
 
+### Logging ###
+# Log dedicato al wrapper del servizio Windows, separato dal log di executer.
+# time non è necessario: i timestamp sono gestiti internamente da logging.Formatter.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+_fh = logging.FileHandler(_PATH + 'log_nemesys.log')
+_fh.setLevel(logging.DEBUG)
+_fh.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+logger.addHandler(_fh)
+logger.info('PATH: %s', _PATH)
 
-### Logging Functionality ###
-# quando esegui da linea di comando il file di prop e' in C:\Python26\Lib\site-packages\win32\cfg !!
-nemesys = logging.getLogger("nemesys")
-nemesys.setLevel(logging.DEBUG)
-fh1 = logging.FileHandler(_PATH + 'log_nemesys.log')
-fh1.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-fh1.setFormatter(formatter)
-nemesys.addHandler(fh1)
-nemesys.info('PATH: ' + _PATH)
 
-
-### Executer Thread ###
+### Thread che esegue il loop principale di Nemesys ###
 class execThread(Thread):
     def __init__(self):
         Thread.__init__(self)
-        self.pid = os.getpid()
+        # daemon=True: il thread viene terminato automaticamente quando il
+        # processo principale esce, senza bisogno di un kill esplicito.
+        self.daemon = True
 
     def run(self):
         executer.main()
 
-### Service Running ###
 
-
+### Definizione del servizio Windows ###
 class aservice(win32serviceutil.ServiceFramework):
     _svc_name_ = "NeMeSys"
     _svc_display_name_ = "NeMeSys Service"
     _svc_description_ = "Sistema per la valutazione della connessione broadband"
+    # Avvio automatico: dichiarato nella classe così che bastı "install" senza
+    # "--startup auto", evitando la ChangeServiceConfig che falliva su py2exe.
+    _svc_start_type_ = win32service.SERVICE_AUTO_START
 
     def __init__(self, args):
         win32serviceutil.ServiceFramework.__init__(self, args)
-        self.isAlive = True
+        self._stop_event = Event()
 
     def SvcDoRun(self):
         servicemanager.LogInfoMsg("NeMeSys Service - started")
+        # Notifica al SCM che il servizio è in esecuzione prima di bloccarsi.
+        self.ReportServiceStatus(win32service.SERVICE_RUNNING)
         ex = execThread()
         ex.start()
-        pid = ex.pid
-        servicemanager.LogInfoMsg("NeMeSys Service - executer started - " + str(pid))
-        i = 1
-        while self.isAlive:
-            # Aspetta il segnale di stop per il tempo di timeout (30 secs)
-            #rc = win32event.WaitForSingleObject(self.hWaitStop, 30000)
-            time.sleep(1)
-            i += 0
-            #servicemanager.LogInfoMsg("NeMeSys Service Up&Running")
-
-        if self.isAlive is False:
-            # Stop Signal received
-            servicemanager.LogInfoMsg("NeMeSys Service Stopped")
-            # disalloco la memoria COM prima di uccidere il processo
-            # ex.couni()
-            os.popen('taskkill /pid ' + str(pid))
+        servicemanager.LogInfoMsg("NeMeSys Service - executer started")
+        # Attende il segnale di stop senza busy-wait.
+        self._stop_event.wait()
+        servicemanager.LogInfoMsg("NeMeSys Service - stopped")
 
     def SvcStop(self):
-        servicemanager.LogInfoMsg("Stopping NeMeSys Service - stop signal received ")
+        servicemanager.LogInfoMsg("NeMeSys Service - stop signal received")
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
-        self.isAlive = False
-        # win32event.SetEvent(self.hWaitStop)
+        self._stop_event.set()
 
     SvcShutdown = SvcStop
 
@@ -110,22 +103,15 @@ def ctrlHandler(ctrlType):
     return True
 
 
-def mainArg(argv):
-    if len(argv) == 1:
-        start = 'start'
-        sys.argv.append(start)
-        es = os.popen('Net START EventSystem').read()
-        nemesys.info('Starting EventSystem - %s', es)
-    elif 'start' in argv:
-        es = os.popen('Net START EventSystem').read()
-        nemesys.info('Starting EventSystem - %s', es)
-    elif 'restart' in argv:
-        es = os.popen('Net START EventSystem').read()
-        nemesys.info('Starting EventSystem - %s', es)
-
-
+### Entry point ###
 if __name__ == '__main__':
-    mainArg(sys.argv)
-    # Lancio il servizio Nemesys
-    win32api.SetConsoleCtrlHandler(ctrlHandler, True)
-    win32serviceutil.HandleCommandLine(aservice)
+    if len(sys.argv) == 1:
+        # Lanciato dal SCM (Service Control Manager): avvia il dispatcher.
+        # Pattern corretto per eseguibili py2exe con pywin32.
+        servicemanager.Initialize()
+        servicemanager.PrepareToHostSingle(aservice)
+        servicemanager.StartServiceCtrlDispatcher()
+    else:
+        # Lanciato da riga di comando (install / start / stop / remove).
+        win32api.SetConsoleCtrlHandler(ctrlHandler, True)
+        win32serviceutil.HandleCommandLine(aservice)
