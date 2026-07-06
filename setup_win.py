@@ -73,6 +73,7 @@ setup(
     options={
         'py2exe': {
             'packages': ['encodings', 'common', 'nemesys'],
+            'includes': ['_cffi_backend'],
             'optimize': 2,
         }
     },
