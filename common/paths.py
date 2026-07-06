@@ -41,23 +41,11 @@ _CONF_DIR = path.join(_APP_PATH, 'config')
 LOG_DIR = path.join(_APP_PATH, 'logs')
 NEMESYS_LOG_FILE = path.join(LOG_DIR, 'nemesys.log')
 NEMESYS_PID_FILE = '/var/run/nemesys_daemon.pid'
-MIST_LOG_FILE = path.join(LOG_DIR, 'misurainternet-speedtest.log')
-
 CONF_LOG = path.join(_CONF_DIR, 'log.conf')
 CONF_MAIN = path.join(_CONF_DIR, 'client.conf')
 
-# Resources path
-if utils.is_darwin():
-    ICONS = path.join(_APP_PATH, 'Resources', 'icons')
-else:
-    ICONS = path.join(_APP_PATH, 'mist', 'resources', 'icons')
-
 def create_nemesys_dirs():
     create_dirs(dirs=[LOG_DIR, OUTBOX_DIR, SENT_DIR, _CONF_DIR])
-
-
-def create_mist_dirs():
-    create_dirs(dirs=[LOG_DIR, OUTBOX_DIR, _CONF_DIR])
 
 
 def create_dirs(dirs=[]):

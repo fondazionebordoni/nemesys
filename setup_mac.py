@@ -52,25 +52,6 @@ version = get_version()
 print("version: ", version)
 
 COPYRIGHT = 'Copyright 2012-2017 Fondazione Ugo Bordoni'
-APP_MIST = ['mist/mist_main.py']
-APP_NAME_MIST = 'Mist'
-DATA_FILES_MIST = ['mist/mist_main.py']
-OPTIONS_MIST = {'argv_emulation': True,
-                # 'plist': 'Info_mist.plist',
-                'plist': {
-                    'CFBundlePackageType': 'APPL',
-                    'CFBundleName': APP_NAME_MIST,
-                    'CFBundleDisplayName': APP_NAME_MIST,
-                    'CFBundleIdentifier': 'it.fub.mist',
-                    'CFBundleVersion': version,
-                    'CFBundleShortVersionString': version,
-                    'NSHumanReadableCopyright': COPYRIGHT,
-                    'CFBundleIconFile': 'icons/mist.icns'
-                },
-                'resources': 'mist/resources/icons',
-                'iconfile': 'icons/mist.icns',
-                'semi_standalone': False,
-                }
 
 APP_EXECUTER = ['nemesys/executer.py']
 APP_NAME_EXECUTER = 'executer'
@@ -92,27 +73,9 @@ OPTIONS_EXECUTER = {'argv_emulation': True,
                     'extra_scripts': 'nemesys/login.py',
                     }
 
-# Hitch hike on sys.argv to choose which target to build,
-# then remove it to avoid errors in py2app
-target = 'nemesys'
-if len(sys.argv) >= 3:
-    target = sys.argv[len(sys.argv) - 1]
-    if target in ('mist', 'nemesys'):
-        del sys.argv[len(sys.argv) - 1]
-
-if target == 'mist':
-    setup(
-        app=APP_MIST,
-        name='Mist',
-        version='%s' % version,
-        data_files=DATA_FILES_MIST,
-        options={'py2app': OPTIONS_MIST},
-        setup_requires=['py2app'],
-    )
-else:
-    setup(
-        app=APP_EXECUTER,
-        data_files=DATA_FILES,
-        options={'py2app': OPTIONS_EXECUTER},
-        setup_requires=['py2app'],
-    )
+setup(
+    app=APP_EXECUTER,
+    data_files=DATA_FILES,
+    options={'py2app': OPTIONS_EXECUTER},
+    setup_requires=['py2app'],
+)
