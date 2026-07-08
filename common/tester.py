@@ -199,7 +199,7 @@ def main():
 
 def printout_http(res):
     speed = int(res.bytes_tot * 8 / float(res.duration))
-    logger.info(f"Medium speed: {speed:,} kbps")
+    logger.info(f"RISULTATO MISURA - Medium speed: {speed:,} kbps")
     logger.info("Spurious traffic: %.2f%%" % (res.spurious * 100.0))
     logger_csv.debug(f";{speed:,}")
     logger_csv.debug(";%.2f%%" % (res.spurious * 100.0))
