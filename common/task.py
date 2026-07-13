@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 class Task(object):
     def __init__(
-        self, start=None, server=None, upload=1, download=1, ping=4, nicmp=1, delay=1, now=False, message=None, is_wait=False
+        self, start=None, server=None, upload=1, download=1, ping=10, nicmp=1, delay=1, now=False, message=None, is_wait=False
     ):
         self._start = start
         self._server = server

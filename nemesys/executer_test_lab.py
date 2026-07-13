@@ -104,7 +104,7 @@ class DockerLabScheduler(object):
             server=self.server_fastify,
             upload=0,
             download=0,
-            ping=4,
+            ping=10,
             message='Fastify: Ping test'
         )
         
