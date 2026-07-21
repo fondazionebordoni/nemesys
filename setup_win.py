@@ -6,13 +6,9 @@ import py2exe  # noqa
 import re
 import sys
 from distutils.core import setup
-from glob import glob
 
-sys.path.append('C:\\Microsoft.VC90.CRT')
 sys.path.append(os.path.join('.', 'nemesys'))
 sys.path.append(os.path.join('.', 'common'))
-
-data_files = [('Microsoft.VC90.CRT', glob(r'C:\Microsoft.VC90.CRT\*.*'))]
 
 
 def get_version():
@@ -69,7 +65,6 @@ nemesys_service = Target(
 
 
 setup(
-    data_files=data_files,
     options={
         'py2exe': {
             'packages': ['encodings', 'common', 'nemesys', 'charset_normalizer'],

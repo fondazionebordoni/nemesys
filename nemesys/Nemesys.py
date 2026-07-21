@@ -72,9 +72,6 @@ class aservice(win32serviceutil.ServiceFramework):
     _svc_name_ = "NeMeSys"
     _svc_display_name_ = "NeMeSys Service"
     _svc_description_ = "Sistema per la valutazione della connessione broadband"
-    # Avvio automatico: dichiarato nella classe così che bastı "install" senza
-    # "--startup auto", evitando la ChangeServiceConfig che falliva su py2exe.
-    _svc_start_type_ = win32service.SERVICE_AUTO_START
 
     def __init__(self, args):
         win32serviceutil.ServiceFramework.__init__(self, args)
