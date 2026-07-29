@@ -30,7 +30,7 @@ import urllib3
 
 from common import iptools, nem_exceptions, ntptime
 from common.netstat import Netstat
-from common.profile import BW_5M, BW_50M, BW_100M, BW_200M, BW_300M, BW_500M, BW_1000M, BW_2000M, BW_5000M
+from common.profile import BW_5M, BW_25M, BW_50M, BW_100M, BW_200M, BW_300M, BW_500M, BW_1000M, BW_2000M, BW_5000M
 from common.proof import Proof
 
 MEASURE_TIME = 10
@@ -56,7 +56,8 @@ def noop(*args, **kwargs):
 
 _THREAD_TABLE = [
     (BW_5M, 1),
-    (BW_50M, 2),
+    (BW_25M, 2),
+    (BW_50M, 3),
     (BW_100M, 4),
     (BW_1000M, 8),
     (BW_2000M, 12),
@@ -68,7 +69,7 @@ def get_threads_for_rate(rate):
     bps = rate * 1000
     for threshold, threads in _THREAD_TABLE:
         if bps <= threshold:
-            return threads
+            return threads + random.randint(0, 1)
     return MAX_CONNECTIONS
 
 
