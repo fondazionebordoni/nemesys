@@ -16,23 +16,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import queue
+import io
 import logging
+import queue
 import random
 import socket
 import threading
 import time
-import urllib3
-import io
 import uuid
 from datetime import datetime
 
-from common import iptools
-from common import nem_exceptions
-from common import ntptime
+import urllib3
+
+from common import iptools, nem_exceptions, ntptime
 from common.netstat import Netstat
-from common.proof import Proof
 from common.profile import BW_5M, BW_50M, BW_100M, BW_200M, BW_300M, BW_500M, BW_1000M, BW_2000M, BW_5000M
+from common.proof import Proof
 
 MEASURE_TIME = 10
 RAMPUP_SECS = 2
@@ -56,12 +55,9 @@ def noop(*args, **kwargs):
 
 
 _THREAD_TABLE = [
-    (BW_5M,    1),
-    (BW_50M,   2),
-    (BW_100M,  3),
-    (BW_200M,  4),
-    (BW_300M,  5),
-    (BW_500M,  6),
+    (BW_5M, 1),
+    (BW_50M, 2),
+    (BW_100M, 4),
     (BW_1000M, 8),
     (BW_2000M, 12),
     (BW_5000M, 16),
@@ -71,7 +67,7 @@ _THREAD_TABLE = [
 def get_threads_for_rate(rate):
     bps = rate * 1000
     for threshold, threads in _THREAD_TABLE:
-        if bps < threshold:
+        if bps <= threshold:
             return threads
     return MAX_CONNECTIONS
 
@@ -259,6 +255,7 @@ class Consumer(threading.Thread):
         # prima di ricevere END_STRING. Questo è comportamento atteso, non un errore.
         # Gli errori reali sono già stati raccolti dai thread Downloader.
 
+
 class Orchestrator(threading.Thread):
     def __init__(
         self,
@@ -353,7 +350,9 @@ class Orchestrator(threading.Thread):
             self.adjust_threads(required_threads)
             self.callback(second=time.time() - self.start_time, speed=rate)
 
-            logger.debug(f"[HTTP] {self.status} Time = {time.time() - self.start_time:.2f}; Speed = {int(rate):,}.0 kbps; Threads = {len(self.threads)}")
+            logger.debug(
+                f"[HTTP] {self.status} Time = {time.time() - self.start_time:.2f}; Speed = {int(rate):,}.0 kbps; Threads = {len(self.threads)}"
+            )
             logger_csv.debug(";%d" % int(rate))
 
             # Use measuring_event.wait() instead of time.sleep() to exit immediately when rampup completes
@@ -364,46 +363,6 @@ class Orchestrator(threading.Thread):
         self.status = "Measuring"
 
         measuring_event_timer.cancel()
-
-        # CRITICAL: Restart threads with smart scaling based on measured speed
-        # Fast lines (500+ Mbps): boost to max threads immediately
-        # Medium lines (50-500 Mbps): scale proportionally
-        # Slow lines (5-50 Mbps): keep conservative thread count
-        current_thread_count = len(self.threads)
-
-        # Get current rate to determine target threads
-        rate = self.get_rate()
-
-        # Determine target threads based on achieved rate during rampup
-        if rate > 1000000:  # >1 Gbps - ultra-fast line, use maximum threads
-            target_threads = MAX_CONNECTIONS
-        elif rate > 500000:  # >500 Mbps - very fast line
-            target_threads = min(16, MAX_CONNECTIONS)
-        elif rate > 200000:  # >200 Mbps - fast line, scale up aggressively
-            target_threads = min(12, MAX_CONNECTIONS)
-        elif rate > 50000:  # >50 Mbps - moderate scaling
-            target_threads = get_threads_for_rate(rate)
-        else:  # Slow line - keep conservative
-            target_threads = max(1, get_threads_for_rate(rate))
-
-        logger.info(f"========== RESTART: {current_thread_count} → {target_threads} threads (speed={int(rate)} kbps) ==========")
-
-        self.adjust_threads(0)  # Terminate all
-
-        # Clear queue to discard rampup Results
-        discarded_count = 0
-        discarded_bytes = 0
-        while not self.result_queue.empty():
-            try:
-                result = self.result_queue.get_nowait()
-                discarded_bytes += result.n_bytes
-                discarded_count += 1
-            except queue.Empty:
-                break
-        logger.info(f"Discarded {discarded_count} rampup results ({discarded_bytes:,} bytes)")
-
-        self.adjust_threads(target_threads)
-        logger.info(f"========== RESTART COMPLETE ==========")
 
         # Set and alarm for stop_event after MEASURE_TIME seconds
         stop_event_timer = threading.Timer(MEASURE_TIME, lambda: self.stop_event.set())
@@ -431,10 +390,6 @@ class Orchestrator(threading.Thread):
         self.end_time = time.time()
 
         stop_event_timer.cancel()
-
-        # Give threads a moment to finish downloading and deposit their last Results
-        # Threads are still running but have seen stop_event
-        time.sleep(0.5)
 
         # Final Netstat reading BEFORE terminating threads
         # This reads total_rx_bytes while threads have finished downloading but not yet terminated
@@ -542,8 +497,10 @@ class HttpTesterDown(object):
         else:
             overhead = 0
 
-        logger.info(f"DEBUG - Orchestrator: measure_start_time={orchestrator.measure_start_time:.2f}, end_time={orchestrator.end_time:.2f}, duration={duration:.2f} ms")
-        logger.info(f"DEBUG - Dati: bytes_tot={bytes_tot:,}, bytes_nem={bytes_nem:,}, overhead={overhead*100:.2f}%")
+        logger.info(
+            f"DEBUG - Orchestrator: measure_start_time={orchestrator.measure_start_time:.2f}, end_time={orchestrator.end_time:.2f}, duration={duration:.2f} ms"
+        )
+        logger.info(f"DEBUG - Dati: bytes_tot={bytes_tot:,}, bytes_nem={bytes_nem:,}, overhead={overhead * 100:.2f}%")
         logger.debug(f"Orchestrator: dati totali letti sulla scheda di rete: {bytes_tot:,} bytes")
         logger.debug(f"Consumer: dati totali ricevuti dal server di misura: {consumer.total_read_bytes:,} bytes")
         logger.debug(f"Traffico spurio: {overhead * 100:.2f}%")
@@ -554,7 +511,9 @@ class HttpTesterDown(object):
         logger_csv.debug(f";{orchestrator.total_rx_bytes};{consumer.total_read_bytes};{overhead};{bytes_tot};{bytes_nem}")
 
         if overhead < 0:
-            logger.warning("Traffico spurio negativo (%.2f%%) - probabilmente sfasamento temporale tra contatori, ignorato", overhead * 100)
+            logger.warning(
+                "Traffico spurio negativo (%.2f%%) - probabilmente sfasamento temporale tra contatori, ignorato", overhead * 100
+            )
             overhead = 0
 
         if bytes_nem < 0:
