@@ -1,5 +1,4 @@
 # login.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -16,18 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import tkinter
 import hashlib
 import logging
 import os
 import sys
+import tkinter
 import tkinter.messagebox
-import urllib.request, urllib.error, urllib.parse
 
-from common import httputils
-from common import utils
+from common import httputils, paths, utils
 from nemesys import log_conf
-from common import paths
 
 CANCEL_MESSAGE = '''L'autenticazione non e' andata a buon fine.
 Procedere con la disinstallazione e reinstallare nuovamente Ne.Me.Sys. \
@@ -111,8 +107,7 @@ def write_properties(filename, properties):
     (over)writes properties to a file
     """
     with open(filename, "w") as inf:
-        for key in properties:
-            inf.write("\r\n" + key + " = " + properties[key])
+        inf.writelines("\r\n" + key + " = " + properties[key] for key in properties)
 
 
 def getCode():
@@ -184,7 +179,7 @@ def getActivationFile(client_type, token, path):
                 logger.info('File di configurazione scaricato con successo')
                 if client_type is None:
                     OkDialog()
-        except IOError as e:
+        except OSError as e:
             logger.error('Impossible scrivere il file di configurazione: %s', e)
             raise LoginException('Impossibile scrivere il file di configurazione: %s' % e)
     elif 'non valido' in str(data):
@@ -347,9 +342,9 @@ def main():
                 logger.info('Rimuovo: %s', config_file)
                 os.remove(config_file)
                 _prop = []
-            except IOError:
+            except OSError:
                 ErrorDialog('File di configurazione danneggiato, '
-                            'impossibile procedere con l\'installazione'.format(config_file))
+                            'impossibile procedere con l\'installazione')
                 sys.exit(1)
     else:
         _prop = []

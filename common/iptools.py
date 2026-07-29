@@ -1,5 +1,4 @@
 # iptools.py
-# -*- coding: utf-8 -*-
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -19,11 +18,12 @@
 
 import ipaddress
 import logging
-import psutil
 import socket
 
-from common.nem_exceptions import NemesysException
+import psutil
+
 from common import nem_exceptions
+from common.nem_exceptions import NemesysException
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,6 @@ import os
 import platform
 import subprocess
 import time
-
 from os import path
 
 TAG_PREFIX = "release-"
@@ -38,7 +37,7 @@ def update_version_py():
                               "--tags", "--always"],
                              stdout=subprocess.PIPE,
                              text=True)
-    except EnvironmentError:
+    except OSError:
         print("unable to run git, leaving %s alone" % VERSION_FILE)
         return
     stdout = p.communicate()[0]

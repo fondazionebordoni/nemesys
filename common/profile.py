@@ -1,5 +1,4 @@
 # profile.py
-# -*- coding: utf8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -31,7 +30,7 @@ BW_2500M = 2.5 * 10**9
 BW_5000M = 5 * 10**9
 
 
-class Profile(object):
+class Profile:
     def __init__(self, profile_id, upload, download, upload_min=None, download_min=None):
         self._id = profile_id
         self._upload = upload

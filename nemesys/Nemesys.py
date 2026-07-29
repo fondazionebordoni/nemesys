@@ -1,5 +1,4 @@
 # Nemesys.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -17,17 +16,17 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 try:
-    import win32serviceutil
-    import win32service
-    import win32api
     import servicemanager
+    import win32api
+    import win32service
+    import win32serviceutil
 except ImportError:
     raise Exception("Non trovo le librerie necessarie su Windows, impossibile continuare")
 
 import logging
 import os
 import sys
-from threading import Thread, Event
+from threading import Event, Thread
 
 from nemesys import executer
 

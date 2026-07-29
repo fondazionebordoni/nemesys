@@ -1,5 +1,4 @@
 # chooser.py
-# -*- coding: utf-8 -*-
 # Copyright (c) 2024 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -21,13 +20,13 @@ from time import sleep
 import requests
 
 from common import ping
-from common.server import Server
 from common.nem_exceptions import NO_AVAILABLE_SERVERS, NemesysException
+from common.server import Server
 
 logger = logging.getLogger(__name__)
 
 
-class Chooser(object):
+class Chooser:
     """
     Handles the download of tasks
     """

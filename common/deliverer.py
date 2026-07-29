@@ -1,5 +1,4 @@
 # deliverer.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
 #
@@ -28,18 +27,17 @@ from ssl import SSLError
 from urllib.parse import urlparse
 
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
-from common import ntptime, backend_response
+from common import backend_response, ntptime
 from common.httputils import post_multipart
 from common.nem_exceptions import DeliveryException
 
 logger = logging.getLogger(__name__)
 
 
-class Deliverer(object):
+class Deliverer:
     def __init__(self, url, certificate, timeout=60):
         self._url = url
         self._timeout = timeout

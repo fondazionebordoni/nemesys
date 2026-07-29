@@ -1,5 +1,4 @@
 # measure.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -23,7 +22,7 @@ from xml.dom.minidom import parseString
 from common import ntptime
 
 
-class Measure(object):
+class Measure:
     def __init__(self, measure_id, server, client, version=None,
                  start=datetime.fromtimestamp(ntptime.timestamp()).isoformat()):
         """

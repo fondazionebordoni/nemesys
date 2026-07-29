@@ -1,5 +1,4 @@
 # httptesterdown.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2015-2017 Fondazione Ugo Bordoni.
 #
@@ -16,23 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import queue
+import io
 import logging
+import queue
 import random
 import socket
 import threading
 import time
-import urllib3
-import io
 import uuid
 from datetime import datetime
 
-from common import iptools
-from common import nem_exceptions
-from common import ntptime
+import urllib3
+
+from common import iptools, nem_exceptions, ntptime
 from common.netstat import Netstat
-from common.proof import Proof
 from common.profile import BW_5M, BW_50M, BW_100M, BW_200M, BW_300M, BW_500M, BW_1000M, BW_2000M, BW_5000M
+from common.proof import Proof
 
 MEASURE_TIME = 10
 RAMPUP_SECS = 2
@@ -76,7 +74,7 @@ def get_threads_for_rate(rate):
     return MAX_CONNECTIONS
 
 
-class Result(object):
+class Result:
     def __init__(self, n_bytes=0, received_end=False, error=None):
         self.n_bytes = n_bytes
         self.received_end = received_end
@@ -135,7 +133,7 @@ class Downloader(threading.Thread):
                 response = self.pool.request("GET", self.url, headers=self.headers, timeout=HTTP_TIMEOUT, preload_content=False)
             except Exception as e:
                 error = {
-                    "message": "Impossibile creare connessione: {}".format(e),
+                    "message": f"Impossibile creare connessione: {e}",
                     "code": nem_exceptions.CONNECTION_FAILED,
                 }
                 self.result_queue.put(Result(error=error))
@@ -167,7 +165,7 @@ class Downloader(threading.Thread):
                     
                     filebytes += len(my_buffer)
 
-                except socket.timeout:
+                except TimeoutError:
                     # Exit the loop if the timeout is reached
                     error = {
                         "message": "Non ricevuti dati sufficienti per completare la misura",
@@ -178,7 +176,7 @@ class Downloader(threading.Thread):
 
                 except Exception as e:
                     error = {
-                        "message": "Errore durante la ricezione dei dati: {}".format(e),
+                        "message": f"Errore durante la ricezione dei dati: {e}",
                         "code": nem_exceptions.SERVER_ERROR,
                     }
                     self.result_queue.put(Result(n_bytes=filebytes, error=error))
@@ -292,7 +290,7 @@ class Orchestrator(threading.Thread):
             self.callback = noop
 
         self.pool = urllib3.PoolManager(num_pools=MAX_CONNECTIONS, maxsize=MAX_CONNECTIONS, block=True)
-        self.measurement_id = "sess-{}".format(random.randint(0, 100000))
+        self.measurement_id = f"sess-{random.randint(0, 100000)}"
         self.lock = threading.Lock()
         self.measuring_event = threading.Event()
         self.threads = []
@@ -415,7 +413,7 @@ class Orchestrator(threading.Thread):
         logger.info(f"Discarded {discarded_count} rampup results ({discarded_bytes:,} bytes)")
         
         self.adjust_threads(target_threads)
-        logger.info(f"========== RESTART COMPLETE ==========")
+        logger.info("========== RESTART COMPLETE ==========")
 
         # Set and alarm for stop_event after MEASURE_TIME seconds
         stop_event_timer = threading.Timer(MEASURE_TIME, lambda: self.stop_event.set())
@@ -491,7 +489,7 @@ class Orchestrator(threading.Thread):
                     thread.join()
 
 
-class HttpTesterDown(object):
+class HttpTesterDown:
     def __init__(self, dev):
         self.dev = dev
 

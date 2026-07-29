@@ -1,5 +1,4 @@
 # executer.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2011-2016 Fondazione Ugo Bordoni.
 #
@@ -17,28 +16,23 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import os
 import platform
+import traceback
 from datetime import datetime
 from threading import Event
 from time import sleep
-import traceback
-import os
 
-from common import client, ntptime, _generated_version, utils
-from common import iptools
-from common import nem_exceptions
-from common import paths
+from common import _generated_version, client, iptools, nem_exceptions, ntptime, paths, utils
+from common.chooser import Chooser
 from common.deliverer import Deliverer
 from common.nem_exceptions import SysmonitorException, TaskException
 from common.proof import Proof
 from common.scheduler import Scheduler
 from common.tester import Tester
-from common.chooser import Chooser
-from nemesys import gui_server
-from nemesys import nem_options
+from nemesys import gui_server, nem_options
 from nemesys.measure import Measure
 from nemesys.sysmonitor import SysProfiler
-
 
 if not utils.is_windows():
     from daemon import daemon, pidfile
@@ -50,7 +44,7 @@ MAX_ERRORS = 3
 SLEEP_SECS_AFTER_TASK = 30
 
 
-class Executer(object):
+class Executer:
     def __init__(
         self, client, chooser, scheduler, deliverer, sys_profiler, polling=300.0, tasktimeout=60, testtimeout=30, isprobe=True
     ):
@@ -252,7 +246,7 @@ class Executer(object):
                 raise Exception("Errore durante la verifica del traffico di misura: impossibile salvare i dati.")
             if test.spurious >= TH_TRAFFIC:
                 raise Exception(
-                    "Eccessiva presenza di traffico non legato alla misura: percentuali {}%.".format(round(test.spurious * 100))
+                    f"Eccessiva presenza di traffico non legato alla misura: percentuali {round(test.spurious * 100)}%."
                 )
 
     def callback_sys_prof(self, resource, status, info="", errorcode=0):
@@ -294,7 +288,7 @@ class Executer(object):
             try:
                 self._sys_profiler.log_interfaces()
             except Exception as e:
-                msg = "Impossibile rilevare le schede di rete: {}".format(e)
+                msg = f"Impossibile rilevare le schede di rete: {e}"
                 logger.error(msg, exc_info=True)
                 self._gui_server.notification(nem_exceptions.FAILPROF, message=msg)
             while not self._time_to_stop:
@@ -326,7 +320,7 @@ class Executer(object):
                         self._gui_server.notification(nem_exceptions.TASK_ERROR, message=str(e))
                 # TODO: check if this is how it is supposed to be
                 self._gui_server.wait(
-                    SLEEP_SECS_AFTER_TASK, "Aspetto {} secondi prima di continuare".format(SLEEP_SECS_AFTER_TASK)
+                    SLEEP_SECS_AFTER_TASK, f"Aspetto {SLEEP_SECS_AFTER_TASK} secondi prima di continuare"
                 )
                 sleep(SLEEP_SECS_AFTER_TASK)
             logger.info("Uscita dal loop")

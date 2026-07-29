@@ -1,5 +1,4 @@
 # executer_test.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
@@ -20,7 +19,7 @@
 import logging
 import threading
 
-from common import nem_exceptions, _generated_version, task
+from common import _generated_version, nem_exceptions, task
 from common.deliverer import Deliverer
 from common.server import Server
 from nemesys import nem_options
@@ -30,7 +29,7 @@ from nemesys.sysmonitor import SysProfiler
 logger = logging.getLogger(__name__)
 
 
-class MockScheduler(object):
+class MockScheduler:
     def __init__(self):
         server = Server(uuid='fubsrvrmnmx03', ip='193.104.137.133', name='Namex server')
         self.task_default = task.Task(now=True,
@@ -74,7 +73,7 @@ class MockScheduler(object):
         return self._tasks[self._i]
 
 
-class MockChooser(object):
+class MockChooser:
     def __init__(self, server):
         self._server = server
 
@@ -82,7 +81,7 @@ class MockChooser(object):
         return self._server
 
 
-class MockDeliverer(object):
+class MockDeliverer:
     def uploadall_and_move(self, from_dir=None, to_dir=None, do_remove=False):
         logger.info("Move all from %s to %s, do remove is %s", from_dir, to_dir, do_remove)
         return True
@@ -92,7 +91,7 @@ class MockDeliverer(object):
         return True
 
 
-class MockDysfunctDeliverer(object):
+class MockDysfunctDeliverer:
     def uploadall_and_move(self, from_dir=None, to_dir=None, do_remove=False):
         logger.info("Move all from %s to %s, do remove is %s", from_dir, to_dir, do_remove)
         msg = ("Misura terminata ma "

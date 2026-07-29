@@ -1,5 +1,4 @@
 # testerhttpup.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2015-2017 Fondazione Ugo Bordoni.
 #
@@ -19,24 +18,21 @@
 # testerhttpup.py
 # -*- coding: utf-8 -*-
 
-import queue
+import json
 import logging
+import queue
 import random
-import requests
+import re
 import socket
 import threading
 import time
 from datetime import datetime
 
-import re
-import json
+import requests
 
-from common import iptools
-from common import nem_exceptions
-from common import ntptime
+from common import iptools, nem_exceptions, ntptime
 from common.netstat import Netstat
 from common.proof import Proof
-
 
 MEASURE_TIME = 10
 RAMPUP_SECS = 2
@@ -57,7 +53,7 @@ def noop(*args, **kwargs):
     pass
 
 
-class Result(object):
+class Result:
     def __init__(self, response=None, error=None):
         self.response = response
         self.error = error
@@ -150,11 +146,7 @@ class Uploader(threading.Thread):
                 logger.debug("Risposta dal server: %s", content)
                 self.result_queue.put(Result(response=content))
 
-        except (
-            requests.exceptions.ConnectionError,
-            requests.exceptions.ChunkedEncodingError,
-            socket.error,
-        ) as e:
+        except (OSError, requests.exceptions.ConnectionError, requests.exceptions.ChunkedEncodingError) as e:
             # FIX: Se il test è finito temporalmente, l'errore di connessione è considerato chiusura prevista
             if self.stop_event.isSet():
                 logger.debug("Connessione interrotta a fine test (previsto): %s", e)
@@ -195,7 +187,7 @@ class Producer(threading.Thread):
         tcp_window_size,
         buffer_size=8192,
     ):
-        super(Producer, self).__init__()
+        super().__init__()
         self.url = url
         self.stop_event = stop_event
         self.live_queue = live_queue
@@ -206,7 +198,7 @@ class Producer(threading.Thread):
 
     def run(self):
         measurement_id = "sess-%d" % random.randint(0, 100000)
-        for _ in range(0, self.num_sessions):
+        for _ in range(self.num_sessions):
             chunk_generator = ChunkGenerator(self.buffer_size)
             writer = Writer(self.stop_event, chunk_generator, self.live_queue)
             uploader = Uploader(
@@ -226,7 +218,7 @@ class Producer(threading.Thread):
 
 class Observer(threading.Thread):
     def __init__(self, stop_event, live_queue, callback=noop):
-        super(Observer, self).__init__()
+        super().__init__()
         self.stop_event = stop_event
         self.live_queue = live_queue
         if callback:
@@ -291,7 +283,7 @@ def parse_response(response):
 
 class Consumer(threading.Thread):
     def __init__(self, stop_event, result_queue, num_sessions):
-        super(Consumer, self).__init__()
+        super().__init__()
 
         self.stop_event = stop_event
         self.result_queue = result_queue
@@ -343,7 +335,7 @@ class Consumer(threading.Thread):
         logger.debug("Consumer thread stopped")
 
 
-class HttpTesterUp(object):
+class HttpTesterUp:
     def __init__(self, dev):
         self.dev = dev
         self.netstat = Netstat(self.dev)

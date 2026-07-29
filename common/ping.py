@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -28,7 +27,6 @@ import random
 import select
 import socket
 import struct
-import sys
 import time
 
 ICMP_ECHO_REQUEST = 8  # Seems to be the same on Solaris.
@@ -152,13 +150,13 @@ def do_one(dest_addr, timeout):
     try:
         my_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
         my_socket.settimeout(timeout)
-    except socket.error as xxx_todo_changeme:
+    except OSError as xxx_todo_changeme:
         (errno, msg) = xxx_todo_changeme.args
         if errno == 1:
             # Operation not permitted
 
             msg += ' - Note that ICMP messages can only be sent from processes running as root.'
-            raise socket.error(msg)
+            raise OSError(msg)
         raise  # raise the original error
 
     my_ID = random.randint(1, 65535) & 65535

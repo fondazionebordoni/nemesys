@@ -1,5 +1,4 @@
 # logger.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
 #
@@ -20,7 +19,6 @@ import logging.config
 import os
 
 from common import paths
-
 
 configfile = paths.CONF_LOG
 logfile = paths.NEMESYS_LOG_FILE

@@ -1,5 +1,4 @@
 # client.py
-# -*- coding: utf8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -20,7 +19,7 @@ from common.isp import Isp
 from common.profile import Profile
 
 
-class Client(object):
+class Client:
     # TODO: Spostare il certificato dall'ISP al Client
 
     def __init__(self, client_id, profile, isp, geocode, username='anonymous', password='anonymous@'):

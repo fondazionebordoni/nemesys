@@ -1,5 +1,4 @@
 # checkhosts.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -18,12 +17,12 @@
 
 import ipaddress
 import logging
-from . import ping
 import re
 import threading
 
 from common import arp
 
+from . import ping
 
 MAX_PING_HOSTS = 128
 TECHNICOLOR_MAC_REGEX = ('^F..94.E3|^F..91.14|^F..52.8D|^F..C1.14|'
@@ -63,7 +62,7 @@ def filter_out_technicolor(ip_table):
     temp_table = []
     for ip_address in ip_table:
         mac_address = ip_table[ip_address]
-        if re.search(TECHNICOLOR_MAC_REGEX, mac_address, re.I):
+        if re.search(TECHNICOLOR_MAC_REGEX, mac_address, re.IGNORECASE):
             logger.warning('Trovato possibile router Technicolor: [%s, %s]', ip_address, mac_address)
             temp_table.append(mac_address[3:14])
         else:
@@ -139,7 +138,7 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
             return 0
         hosts = 'HOSTS: '
         for key in ip_table:
-            hosts += '[{}|{}] '.format(ip_table[key], key)
+            hosts += f'[{ip_table[key]}|{key}] '
         logger.info(hosts)
         # Check for router that responds with 2 IP addresses
         # with slightly different Ethernet addresses
@@ -174,6 +173,7 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
 
 if __name__ == '__main__':
     import log_conf
+
     from . import iptools
     log_conf.init_log()
     ip = iptools.getipaddr('www.fub.it', 80)

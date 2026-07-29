@@ -1,5 +1,4 @@
 # isp.py
-# -*- coding: utf8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -17,7 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-class Isp(object):
+class Isp:
 
     # TODO: Spostare il certificato dall'ISP al Client
     def __init__(self, isp_id, certificate=None):

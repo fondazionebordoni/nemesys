@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2013 Fondazione Ugo Bordoni.
 #
@@ -20,13 +19,13 @@
 # Original version:
 #   -> https://pypi.python.org/pypi/arprequest
 
-import queue
 import logging
 import platform
+import queue
 import re
 import socket
 import struct
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 from threading import Thread
 
 from common import ping
@@ -145,7 +144,7 @@ def _send_one_win_arp(ip_address, result_queue):
 
     if error:
         if (int(error) != 31) and (int(error) != 67):
-            logger.error("Invio di ARP fallito! Errore: {}".format(error))
+            logger.error(f"Invio di ARP fallito! Errore: {error}")
     else:
         mac_str = mac_straddr(mac_addr, True, ":")
         result_queue.put((ip_address, mac_str))

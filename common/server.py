@@ -1,5 +1,4 @@
 # server.py
-# -*- coding: utf8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #

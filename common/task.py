@@ -1,5 +1,4 @@
 # task.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
 #
@@ -28,7 +27,7 @@ from common.server import Server
 logger = logging.getLogger(__name__)
 
 
-class Task(object):
+class Task:
     def __init__(
         self, start=None, server=None, upload=1, download=1, ping=10, nicmp=1, delay=1, now=False, message=None, is_wait=False
     ):
@@ -90,9 +89,7 @@ class Task(object):
             ip = self.server.ip
         else:
             ip = None
-        return "start: {0}; serverip: {1}; upload: {2}; download: {3}; ping {4}; delay: {5}; now {6}; message: {7}".format(
-            self.start, ip, self.upload, self.download, self.ping, self.delay, self.now, self.message
-        )
+        return f"start: {self.start}; serverip: {ip}; upload: {self.upload}; download: {self.download}; ping {self.ping}; delay: {self.delay}; now {self.now}; message: {self.message}"
 
 
 def new_wait_task(wait_secs, message=None):

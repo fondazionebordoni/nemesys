@@ -6,13 +6,21 @@ on:
 
 jobs:
   pytest:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # 3.11: versione target attuale (Debian 12/bookworm).
-        # 3.14: versione target sulle sonde Debian sid/forky.
+        # ubuntu: sonde Debian (11/12 -> 3.11, sid/forky -> 3.14).
+        # windows/macos: le altre due piattaforme supportate dal pacchetto
+        # (build py2exe/py2app), qui copriamo solo import e test automatici,
+        # non la build/packaging vera e propria.
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.11", "3.14"]
+    defaults:
+      run:
+        # Uniforma la sintassi delle shell su tutti e tre gli OS (su Windows
+        # lo shell di default sarebbe PowerShell, sintassi incompatibile).
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 

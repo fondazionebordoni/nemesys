@@ -1,5 +1,4 @@
 # nem_exceptions.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
@@ -136,10 +135,8 @@ class TaskException(NemesysException):
 class ProfilerException(NemesysException):
     """Exception from Profiler"""
 
-    pass
 
 
 class DeliveryException(NemesysException):
     """Exception from deliverer"""
 
-    pass
