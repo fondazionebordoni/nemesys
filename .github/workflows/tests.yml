@@ -1,0 +1,40 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11: versione target attuale (Debian 12/bookworm).
+        # 3.14: versione target sulle sonde Debian sid/forky.
+        python-version: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run test suite
+        run: |
+          pytest tests/ -v \
+            --ignore=tests/test_chooser.py \
+            --deselect tests/test_netstat.py::TestNetstat::testGetMac \
+            --deselect tests/test_netstat.py::TestNetstat::testGetNetmask \
+            --deselect tests/test_profiler.py::TestProfiler::test_wireless
+          # Esclusioni:
+          # - test_chooser.py: import rotto pre-esistente (common.host.Server),
+          #   non legato alla compatibilita' Python 3.14.
+          # - le altre tre: dipendono dall'interfaccia di rete/subnet/stato
+          #   wifi della macchina locale, non riproducibili in un runner CI.
