@@ -156,7 +156,7 @@ class Downloader(threading.Thread):
             while END_STRING not in my_buffer and not self.stop_event.isSet():
                 try:
                     my_buffer = reader.read(self.buffer_size)
-                    
+
                     if len(my_buffer) == 0:
                         error = {
                             "message": "Non ricevuti dati sufficienti per completare la misura",
@@ -164,7 +164,7 @@ class Downloader(threading.Thread):
                         }
                         self.result_queue.put(Result(n_bytes=filebytes, error=error))
                         break
-                    
+
                     filebytes += len(my_buffer)
 
                 except socket.timeout:
@@ -216,14 +216,14 @@ class Consumer(threading.Thread):
         """
 
         has_received_end = False
-        
+
         # Wait for stop_event, then collect all results
         self.stop_event.wait()
-        
+
         # Now collect results from threads with a reasonable timeout
         # Give threads some time to finish and post their results
         collection_deadline = time.time() + 3.0  # 3 seconds to collect all results
-        
+
         while time.time() < collection_deadline:
             try:
                 result = self.result_queue.get(True, 0.5)  # Short timeout for polling
@@ -237,7 +237,7 @@ class Consumer(threading.Thread):
             except queue.Empty:
                 # No result yet, but keep trying until deadline
                 pass
-        
+
         # Check if there are any remaining results (non-blocking)
         while True:
             try:
@@ -253,7 +253,7 @@ class Consumer(threading.Thread):
         #     message = "Connessione interrotta prima del segnale di fine di misura"
         #     self.errors.append({"message": message, "code": nem_exceptions.BROKEN_CONNECTION})
         #     self.errors.append({"message": message, "code": nem_exceptions.BROKEN_CONNECTION})
-        
+
         # Note: Non generiamo errore se END_STRING non è ricevuto, perché quando stop_event
         # è settato (fine misura normale dopo 10s), i thread vengono terminati forzatamente
         # prima di ricevere END_STRING. Questo è comportamento atteso, non un errore.
@@ -309,20 +309,20 @@ class Orchestrator(threading.Thread):
 
     def get_rate(self):
         clock = time.time()
-        
+
         rx_bytes = self.netstat.get_rx_bytes()
-        
+
         with self.lock:
             clock_diff = (clock - self.clock) * 1000.0
             rx_diff = rx_bytes - self.rx_bytes
-            
+
             rate = float(rx_diff * 8) / float(clock_diff)
-            
+
             self.clock = clock
             self.rx_bytes = rx_bytes
             if self.initial_rx_bytes > 0:
                 self.total_rx_bytes = rx_bytes - self.initial_rx_bytes
-        
+
         return rate
 
     def run(self):
@@ -349,19 +349,7 @@ class Orchestrator(threading.Thread):
         while not self.measuring_event.isSet():
             rate = self.get_rate()
             required_threads = get_threads_for_rate(rate)
-            
-            # Aggressive boost for ultra-fast and fast lines detected early
-            if rampup_elapsed < 0.4:
-                if rate > 800000:  # >800 Mbps = ultra-fast line (1+ Gbps capable)
-                    required_threads = MAX_CONNECTIONS
-                    logger.info(f"Ultra-fast line detected ({int(rate)} kbps), boosting to {MAX_CONNECTIONS} threads")
-                elif rate > 400000:  # >400 Mbps = fast line
-                    required_threads = min(16, MAX_CONNECTIONS)
-                    logger.info(f"Fast line detected ({int(rate)} kbps), boosting to {required_threads} threads")
-            
-            # During early rampup on slow lines, allow reduction to 1 thread
-            # No artificial minimum - let algorithm adapt naturally
-            
+
             self.adjust_threads(required_threads)
             self.callback(second=time.time() - self.start_time, speed=rate)
 
@@ -379,13 +367,13 @@ class Orchestrator(threading.Thread):
 
         # CRITICAL: Restart threads with smart scaling based on measured speed
         # Fast lines (500+ Mbps): boost to max threads immediately
-        # Medium lines (50-500 Mbps): scale proportionally  
+        # Medium lines (50-500 Mbps): scale proportionally
         # Slow lines (5-50 Mbps): keep conservative thread count
         current_thread_count = len(self.threads)
-        
+
         # Get current rate to determine target threads
         rate = self.get_rate()
-        
+
         # Determine target threads based on achieved rate during rampup
         if rate > 1000000:  # >1 Gbps - ultra-fast line, use maximum threads
             target_threads = MAX_CONNECTIONS
@@ -397,11 +385,11 @@ class Orchestrator(threading.Thread):
             target_threads = get_threads_for_rate(rate)
         else:  # Slow line - keep conservative
             target_threads = max(1, get_threads_for_rate(rate))
-        
+
         logger.info(f"========== RESTART: {current_thread_count} → {target_threads} threads (speed={int(rate)} kbps) ==========")
-        
+
         self.adjust_threads(0)  # Terminate all
-        
+
         # Clear queue to discard rampup Results
         discarded_count = 0
         discarded_bytes = 0
@@ -413,7 +401,7 @@ class Orchestrator(threading.Thread):
             except queue.Empty:
                 break
         logger.info(f"Discarded {discarded_count} rampup results ({discarded_bytes:,} bytes)")
-        
+
         self.adjust_threads(target_threads)
         logger.info(f"========== RESTART COMPLETE ==========")
 
@@ -437,22 +425,22 @@ class Orchestrator(threading.Thread):
             self.stop_event.wait(self.frequency)
 
         logger.debug("Stop event reached")
-        
+
         # CRITICAL: Register end_time IMMEDIATELY after stop_event
         # This ensures duration is exactly MEASURE_TIME (10s)
         self.end_time = time.time()
-        
+
         stop_event_timer.cancel()
-        
+
         # Give threads a moment to finish downloading and deposit their last Results
         # Threads are still running but have seen stop_event
         time.sleep(0.5)
-        
+
         # Final Netstat reading BEFORE terminating threads
         # This reads total_rx_bytes while threads have finished downloading but not yet terminated
         final_rate = self.get_rate()
         logger.debug(f"[HTTP] Final Netstat reading (threads still alive): {self.total_rx_bytes:,} bytes")
-        
+
         # NOW terminate threads (this may take 1-2s on fast lines)
         # We do this AFTER reading bytes_tot so termination time doesn't affect measurement
         self.adjust_threads(0)
@@ -553,7 +541,7 @@ class HttpTesterDown(object):
             overhead = float(bytes_tot - bytes_nem) / float(bytes_tot)
         else:
             overhead = 0
-        
+
         logger.info(f"DEBUG - Orchestrator: measure_start_time={orchestrator.measure_start_time:.2f}, end_time={orchestrator.end_time:.2f}, duration={duration:.2f} ms")
         logger.info(f"DEBUG - Dati: bytes_tot={bytes_tot:,}, bytes_nem={bytes_nem:,}, overhead={overhead*100:.2f}%")
         logger.debug(f"Orchestrator: dati totali letti sulla scheda di rete: {bytes_tot:,} bytes")
