@@ -54,22 +54,25 @@ def noop(*args, **kwargs):
     pass
 
 
+# The first element is upper bound bandwidth (BW),
+# second is the ideal number of connections for correctly measuring that BW,
+# and third indicates a random connection offset to add during measurement.
 _THREAD_TABLE = [
-    (BW_5M, 1),
-    (BW_25M, 2),
-    (BW_50M, 3),
-    (BW_100M, 4),
-    (BW_1000M, 8),
-    (BW_2000M, 12),
-    (BW_5000M, 16),
+    (BW_5M, 1, 0),
+    (BW_25M, 2, 0),
+    (BW_50M, 3, 1),
+    (BW_100M, 4, 1),
+    (BW_1000M, 8, 2),
+    (BW_2000M, 12, 2),
+    (BW_5000M, 16, 2),
 ]
 
 
 def get_threads_for_rate(rate):
     bps = rate * 1000
-    for threshold, threads in _THREAD_TABLE:
+    for threshold, threads, rand in _THREAD_TABLE:
         if bps <= threshold:
-            return threads + random.randint(0, 1)
+            return threads + random.randint(0, rand)
     return MAX_CONNECTIONS
 
 
