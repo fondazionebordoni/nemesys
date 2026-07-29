@@ -37,7 +37,6 @@ from common.deliverer import Deliverer
 from common.server import Server
 from nemesys.executer import Executer
 from nemesys.sysmonitor import SysProfiler
-from nemesys import restart
 
 logger = logging.getLogger(__name__)
 
@@ -244,9 +243,6 @@ def main():
         sys_profiler=sys_profiler,
         isprobe=False
     )
-
-    restart_scheduler = restart.RestartScheduler()
-    restart_scheduler.start()
 
     loop_thread = threading.Thread(target=exe.loop)
     loop_thread.start()

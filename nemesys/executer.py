@@ -36,7 +36,6 @@ from common.tester import Tester
 from common.chooser import Chooser
 from nemesys import gui_server
 from nemesys import nem_options
-from nemesys import restart
 from nemesys.measure import Measure
 from nemesys.sysmonitor import SysProfiler
 
@@ -396,9 +395,6 @@ def main():
         testtimeout=options.testtimeout,
         isprobe=isprobe,
     )
-
-    restart_scheduler = restart.RestartScheduler()
-    restart_scheduler.start()
 
     if utils.is_windows():
         # La daemonizzazione è gestita da Nemesys.py tramite il servizio Windows.
