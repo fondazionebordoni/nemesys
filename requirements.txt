@@ -2,10 +2,8 @@ python-daemon==2.3.0; sys_platform != 'win32'
 pywin32==312; sys_platform == 'win32'
 py2exe==0.14.2.0; sys_platform == 'win32'
 py2app==0.27; sys_platform == 'darwin'
-ipcalc==1.99.0
 ntplib==0.4.0
 psutil==7.2.2
-six==1.16.0  # dipendenza non dichiarata di ipcalc (vedi ipcalc.py: "import six")
 xmltodict==1.0.4
 tornado==6.5.7
 cryptography==40.0.2

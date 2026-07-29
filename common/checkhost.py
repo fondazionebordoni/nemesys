@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import ipcalc
+import ipaddress
 import logging
 from . import ping
 import re
@@ -89,9 +89,9 @@ class PingSender(threading.Thread):
 
 
 def count_hosts(ip_address, netmask, bandwidth_up, bandwidth_down, provider='fub001', use_arp=False):
-    if ((provider == "fst001") or (provider.startswith('fub0'))) and (not bool(re.search('^192\.168\.', ip_address))):
+    if ((provider == "fst001") or (provider.startswith('fub0'))) and (not bool(re.search(r'^192\.168\.', ip_address))):
         real_subnet = False
-        if bandwidth_up == bandwidth_down and not bool(re.search('^10\.', ip_address)):
+        if bandwidth_up == bandwidth_down and not bool(re.search(r'^10\.', ip_address)):
             # profilo fibra
             netmask_to_use = 29
             logger.debug('Sospetto profilo Fastweb in Fibra. Modificata sottorete in %d', netmask_to_use)
@@ -121,15 +121,11 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
     primo e ultimo ip).
     """
     n_hosts = 0
-    ip_network = ipcalc.Network('%s/%d' % (dev_ip_address, netmask))
-    net = ip_network.network()
-    bcast = ip_network.broadcast()
+    ip_network = ipaddress.ip_network('%s/%d' % (dev_ip_address, netmask), strict=False)
 
     ip_destinations = []
-    for ip_address in ip_network:
-        if (ip_address.hex() == net.hex() or ip_address.hex() == bcast.hex()) and real_subnet:
-            logger.debug('Saltato ip %s', ip_address)
-        elif ip_address.dq == dev_ip_address:
+    for ip_address in ip_network.hosts():
+        if str(ip_address) == dev_ip_address:
             logger.debug('Salto il mio ip %s', dev_ip_address)
         else:
             ip_destinations.append(ip_address)

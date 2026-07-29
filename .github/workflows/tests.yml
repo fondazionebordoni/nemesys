@@ -29,12 +29,14 @@ jobs:
       - name: Run test suite
         run: |
           pytest tests/ -v \
-            --ignore=tests/test_chooser.py \
+            --deselect tests/test_chooser.py::TestChooser::test_get_servers \
             --deselect tests/test_netstat.py::TestNetstat::testGetMac \
             --deselect tests/test_netstat.py::TestNetstat::testGetNetmask \
             --deselect tests/test_profiler.py::TestProfiler::test_wireless
           # Esclusioni:
-          # - test_chooser.py: import rotto pre-esistente (common.host.Server),
-          #   non legato alla compatibilita' Python 3.14.
+          # - test_get_servers: richiede un server HTTP mock su 127.0.0.1:5000
+          #   (non presente in questo repo) e passa un client fasullo (stringa
+          #   invece di un oggetto client) - bug pre-esistente indipendente
+          #   dall'import rotto gia' corretto in tests/test_chooser.py.
           # - le altre tre: dipendono dall'interfaccia di rete/subnet/stato
           #   wifi della macchina locale, non riproducibili in un runner CI.
