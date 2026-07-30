@@ -62,7 +62,7 @@ class HttpClient:
             s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         try:
             s.connect((server, port))
-        except:
+        except OSError:
             raise HttpException(("Impossibile connettersi al server %s sulla porta %d" % (server, port)).encode('utf-8'))
         post_request = "POST /misurainternet.txt HTTP/1.0\r\n"
         if (tcp_window_size is not None) and (tcp_window_size > 0):

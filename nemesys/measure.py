@@ -23,8 +23,7 @@ from common import ntptime
 
 
 class Measure:
-    def __init__(self, measure_id, server, client, version=None,
-                 start=datetime.fromtimestamp(ntptime.timestamp()).isoformat()):
+    def __init__(self, measure_id, server, client, version=None, start=None):
         """
         Costruisce un oggetto Measure utilizzando i parametri ricevuti nella
         chiamata.
@@ -40,7 +39,10 @@ class Measure:
         self._server = server
         self._client = client
         self._version = version
-        self._start = start
+        # Il timestamp va calcolato qui, non come default dell'argomento: un default
+        # verrebbe valutato una sola volta al caricamento del modulo, restituendo lo
+        # stesso valore congelato per ogni Measure() creata senza start esplicito.
+        self._start = start if start is not None else datetime.fromtimestamp(ntptime.timestamp()).isoformat()
         self._xml = self.getxml()
 
     def getxml(self):

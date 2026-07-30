@@ -96,10 +96,9 @@ class Executer:
                 proofs = self._do_tests(test_type, n_reps, sleep_secs, t)
                 m.add_proofs(proofs)
             sec = datetime.fromtimestamp(ntptime.timestamp()).strftime("%S")
-            f = open("%s/measure_%s%s.xml" % (self._outbox, m.id, sec), "w")
-            f.write(str(m))
-            f.write("\n<!-- [finished] %s -->" % datetime.fromtimestamp(ntptime.timestamp()).isoformat())
-            f.close()
+            with open("%s/measure_%s%s.xml" % (self._outbox, m.id, sec), "w") as f:
+                f.write(str(m))
+                f.write("\n<!-- [finished] %s -->" % datetime.fromtimestamp(ntptime.timestamp()).isoformat())
 
             try:
                 self._deliverer.upload_and_move(f.name, self._sent, (not self._isprobe))
