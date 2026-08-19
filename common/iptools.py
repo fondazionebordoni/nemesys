@@ -126,7 +126,7 @@ def get_network_mask(ip):
 
 
 def is_public_ip(ip):
-    return bool(re.search("^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.", ip)) is False
+    return bool(re.search(r"^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.", ip)) is False
 
 
 def is_loopback_ip(ip):

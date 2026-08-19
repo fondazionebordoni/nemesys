@@ -89,9 +89,9 @@ class PingSender(threading.Thread):
 
 
 def count_hosts(ip_address, netmask, bandwidth_up, bandwidth_down, provider='fub001', use_arp=False):
-    if ((provider == "fst001") or (provider.startswith('fub0'))) and (not bool(re.search('^192\.168\.', ip_address))):
+    if ((provider == "fst001") or (provider.startswith('fub0'))) and (not bool(re.search(r'^192\.168\.', ip_address))):
         real_subnet = False
-        if bandwidth_up == bandwidth_down and not bool(re.search('^10\.', ip_address)):
+        if bandwidth_up == bandwidth_down and not bool(re.search(r'^10\.', ip_address)):
             # profilo fibra
             netmask_to_use = 29
             logger.debug('Sospetto profilo Fastweb in Fibra. Modificata sottorete in %d', netmask_to_use)
