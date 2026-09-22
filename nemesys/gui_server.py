@@ -1,5 +1,4 @@
 # gui_server.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
 #
@@ -21,12 +20,11 @@ import datetime
 import json
 import logging
 import threading
-import traceback
 import urllib.parse
 
 import tornado.web
-from tornado.websocket import WebSocketHandler
 from tornado.ioloop import IOLoop
+from tornado.websocket import WebSocketHandler
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +41,7 @@ RES_TRANSLATION = {'Wireless': 'wifistatus',
                    'RAM': 'ramstatus'}
 
 
-class DummyGuiServer(object):
+class DummyGuiServer:
     def start(self):
         pass
 
@@ -206,7 +204,7 @@ class Communicator(threading.Thread):
                         logger.warning('Errore inviando messaggio alla GUI: %s', e)
 
 
-class GuiMessage(object):
+class GuiMessage:
 
     START = 'start'
     SYS_RESOURCE = 'sys_resource'
@@ -230,7 +228,7 @@ class GuiMessage(object):
         return {'type': self.message_type, 'content': self.content}
 
     def __str__(self):
-        return '{}, message: {}'.format(self.message_type, self.content)
+        return f'{self.message_type}, message: {self.content}'
 
 
 handler_lock = threading.Lock()

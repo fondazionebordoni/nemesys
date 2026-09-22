@@ -5,23 +5,10 @@
 
 import os
 import sys
+import shutil
 import subprocess
 
-## Python 2.6 subprocess.check_output compatibility. Thanks Greg Hewgill!
-if 'check_output' not in dir(subprocess):
-    def check_output(cmd_args, *args, **kwargs):
-        proc = subprocess.Popen(
-            cmd_args, *args,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
-        out, err = proc.communicate()
-        if proc.returncode != 0:
-            raise subprocess.CalledProcessError(args)
-        return out
-    subprocess.check_output = check_output
-
 from setuptools import setup, find_packages
-from setuptools.command.test import test as TestCommand
-from distutils import spawn
 
 try:
     import colorama
@@ -86,7 +73,7 @@ def is_git_project():
 
 
 def has_git():
-    return bool(spawn.find_executable("git"))
+    return bool(shutil.which("git"))
 
 
 def get_git_project_files():
@@ -198,34 +185,8 @@ def _test_all():
     return _lint() + _test()
 
 
-# The following code is to allow tests to be run with `python setup.py test'.
-# The main reason to make this possible is to allow tests to be run as part of
-# Setuptools' automatic run of 2to3 on the source code. The recommended way to
-# run tests is still `paver test_all'.
-# See <http://pythonhosted.org/setuptools/python3.html>
-# Code based on <http://pytest.org/latest/goodpractises.html#integration-with-setuptools-test-commands>  # NOPEP8
-class TestAllCommand(TestCommand):
-    def finalize_options(self):
-        TestCommand.finalize_options(self)
-        # These are fake, and just set to appease distutils and setuptools.
-        self.test_suite = True
-        self.test_args = []
-
-    def run_tests(self):
-        raise SystemExit(_test_all())
-
-
-# define install_requires for specific Python versions
-python_version_specific_requires = []
-
-# as of Python >= 2.7 and >= 3.2, the argparse module is maintained within
-# the Python standard library, otherwise we install it as a separate package
-if sys.version_info < (2, 7) or (3, 0) <= sys.version_info < (3, 3):
-    python_version_specific_requires.append('argparse')
-
-
 # See here for more options:
-# <http://pythonhosted.org/setuptools/setuptools.html>
+# <https://setuptools.pypa.io/en/latest/references/keywords.html>
 setup_dict = dict(
     # name=metadata.package,
     # version=metadata.version,
@@ -236,19 +197,22 @@ setup_dict = dict(
     # url=metadata.url,
     # description=metadata.description,
     long_description=read('README.rst'),
+    # Licenza dichiarata come espressione SPDX (il file LICENSE e l'header di
+    # tutti i sorgenti sono GNU GPL v3 "or later" - il vecchio classifier
+    # indicava erroneamente MIT, mai allineato al progetto reale).
+    license='GPL-3.0-or-later',
+    license_files=['LICENSE'],
     # Find a list of classifiers here:
     # <http://pypi.python.org/pypi?%3Aaction=list_classifiers>
     classifiers=[
         'Development Status :: 1 - Planning',
         'Environment :: Console',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: Implementation :: PyPy',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.14',
         'Topic :: Documentation',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Installation/Setup',
@@ -257,14 +221,7 @@ setup_dict = dict(
     packages=find_packages(exclude=(TESTS_DIRECTORY,)),
     install_requires=[
         # your module dependencies
-    ] + python_version_specific_requires,
-    # Allow tests to be run with `python setup.py test'.
-    tests_require=[
-        'pytest',
-        # 'mock==1.0.1',
-        'flake8',
     ],
-    cmdclass={'test': TestAllCommand},
     zip_safe=False,  # don't use eggs
     entry_points={
         'console_scripts': [

@@ -1,5 +1,4 @@
 # netstat.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2013-2016 Fondazione Ugo Bordoni.
 #
@@ -27,7 +26,7 @@ class NetstatException(Exception):
         Exception.__init__(self, message)
 
 
-class Netstat(object):
+class Netstat:
 
     def __init__(self, if_device):
         self.if_device = if_device

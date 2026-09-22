@@ -1,5 +1,4 @@
 # ntptime.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -16,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 import threading
+import time
 
 import ntplib
-import time
 
 NTP_SERVERS = ['time.ien.it',
                '0.pool.ntp.org',

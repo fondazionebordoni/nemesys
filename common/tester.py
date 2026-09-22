@@ -1,5 +1,4 @@
 # tester.py
-# -*- coding: utf8 -*-
 
 # Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
 #
@@ -21,27 +20,18 @@ import socket
 from datetime import datetime
 from optparse import OptionParser
 
-from common import iptools
-from common import nem_exceptions
-from common import ntptime
-from common import ping
+from common import iptools, nem_exceptions, ntptime, ping
+from common.host import Host
+from common.nem_exceptions import MeasurementException
 from common.profile import (
     BW_1M,
-    BW_3M,
     BW_5M,
-    BW_25M,
     BW_50M,
     BW_100M,
-    BW_200M,
     BW_300M,
     BW_500M,
     BW_1000M,
-    BW_2000M,
-    BW_2500M,
-    BW_5000M,
 )
-from common.host import Host
-from common.nem_exceptions import MeasurementException
 from common.proof import Proof
 from common.testerhttpdown import HttpTesterDown
 from common.testerhttpup import HttpTesterUp
@@ -52,7 +42,7 @@ logger = logging.getLogger(__name__)
 logger_csv = logging.getLogger("csv")
 
 
-class Tester(object):
+class Tester:
     def __init__(self, dev, host, timeout=11):
         self._host = host
         self._timeout = timeout
@@ -199,7 +189,7 @@ def main():
 
 def printout_http(res):
     speed = int(res.bytes_tot * 8 / float(res.duration))
-    logger.info(f"Medium speed: {speed:,} kbps")
+    logger.info(f"RISULTATO MISURA - Medium speed: {speed:,} kbps")
     logger.info("Spurious traffic: %.2f%%" % (res.spurious * 100.0))
     logger_csv.debug(f";{speed:,}")
     logger_csv.debug(";%.2f%%" % (res.spurious * 100.0))

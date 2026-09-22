@@ -19,7 +19,7 @@
 import unittest
 
 from common.chooser import Chooser
-from common.host import Server
+from common.server import Server
 
 from common.nem_exceptions import NemesysException
 

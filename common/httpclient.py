@@ -1,5 +1,4 @@
 # httpclient.py
-# -*- coding: utf-8 -*-
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -24,7 +23,6 @@ import socket
 import threading
 import urllib.parse
 
-
 END_STRING = b'_ThisIsTheEnd_'
 
 logger = logging.getLogger(__name__)
@@ -41,7 +39,7 @@ class HttpException(Exception):
         return self._message
 
 
-class HttpClient(object):
+class HttpClient:
 
     def __init__(self):
         self._http_response = None
@@ -64,7 +62,7 @@ class HttpClient(object):
             s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         try:
             s.connect((server, port))
-        except:
+        except OSError:
             raise HttpException(("Impossibile connettersi al server %s sulla porta %d" % (server, port)).encode('utf-8'))
         post_request = "POST /misurainternet.txt HTTP/1.0\r\n"
         if (tcp_window_size is not None) and (tcp_window_size > 0):
@@ -89,14 +87,14 @@ class HttpClient(object):
                             s.send(END_STRING * 2)
                         s.shutdown(socket.SHUT_RDWR)
                         s.close()
-                    except socket.error:
+                    except OSError:
                         pass
                     break
                 if not data_chunk:
                     try:
                         s.send(b"0\r\n")
                         s.send(b"\r\n")
-                    except socket.error:
+                    except OSError:
                         pass
                     break
                 try:
@@ -127,7 +125,7 @@ class HttpClient(object):
                 if b']' in data and start_body_found:
                     self._response_received = True
                     break
-            except socket.timeout:
+            except TimeoutError:
                 pass
             except Exception:
                 break
@@ -161,7 +159,7 @@ class HttpClient(object):
                                            content)
 
 
-class HttpResponse(object):
+class HttpResponse:
     """Read from socket and parse something like this
 
     HTTP/1.1 200 OK

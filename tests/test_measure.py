@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
+from datetime import datetime, timezone
 import unittest
 
 from common.client import Client
@@ -43,7 +43,7 @@ class TestMeasure(unittest.TestCase):
         m = Measure(1,
                     Server(uuid='fubsrvnmx01', ip='127.0.0.1', name='Test server'),
                     c)
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         p = Proof(test_type='download_http',
                   start_time=start_time,
                   duration=10000,
@@ -61,7 +61,7 @@ class TestMeasure(unittest.TestCase):
         m = Measure(1,
                     Server(uuid='fubsrvnmx01', ip='127.0.0.1', name='Test server'),
                     c)
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         p = Proof(test_type='download_http',
                   start_time=start_time,
                   duration=10000)

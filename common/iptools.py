@@ -1,5 +1,4 @@
 # iptools.py
-# -*- coding: utf-8 -*-
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,13 +16,14 @@
 
 """Some useful functions for IP and Ethernet"""
 
+import ipaddress
 import logging
-import psutil
-import re
 import socket
 
-from common.nem_exceptions import NemesysException
+import psutil
+
 from common import nem_exceptions
+from common.nem_exceptions import NemesysException
 
 logger = logging.getLogger(__name__)
 
@@ -124,10 +124,25 @@ def get_network_mask(ip):
     logger.warning("Impossibile calcolare il netmask, uso il default")
     return _mask_conversion(default_netmask)
 
+# Aggiornamento da ipcalc a ipadress - refactor di is_public_ip con lo standard IETF ("Address Allocation for Private Internets", 1996) 
+# che riserva tre intervalli di indirizzi IPv4 per le reti private (LAN domestiche/aziendali), 
+# non instradabili su Internet pubblico:
+
+# 10.0.0.0/8 → da 10.0.0.0 a 10.255.255.255
+# 172.16.0.0/12 → da 172.16.0.0 a 172.31.255.255
+# 192.168.0.0/16 → da 192.168.0.0 a 192.168.255.255
+
+_RFC1918_NETWORKS = (
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+)
+
 
 def is_public_ip(ip):
-    return bool(re.search("^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.", ip)) is False
-
+    address = ipaddress.ip_address(ip)
+    return not any(address in network for network in _RFC1918_NETWORKS)
+    #return bool(re.search(r"^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\.", ip)) is False
 
 def is_loopback_ip(ip):
     return ip.startswith("127")
@@ -146,7 +161,7 @@ def is_ip_address(ip):
 
 
 def _mask_conversion(netmask):
-    return sum([bin(int(x)).count("1") for x in netmask.split(".")])
+    return ipaddress.ip_network(f"0.0.0.0/{netmask}").prefixlen
 
 
 # Main function for testing purposes

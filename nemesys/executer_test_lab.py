@@ -1,5 +1,4 @@
 # executer_test_lab.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
@@ -32,17 +31,15 @@ Uso:
 import logging
 import threading
 
-from common import nem_exceptions, _generated_version, task
-from common.deliverer import Deliverer
+from common import task
 from common.server import Server
 from nemesys.executer import Executer
 from nemesys.sysmonitor import SysProfiler
-from nemesys import restart
 
 logger = logging.getLogger(__name__)
 
 
-class DockerLabScheduler(object):
+class DockerLabScheduler:
     """
     Scheduler configurato per testare tutti i server Docker locali.
     
@@ -104,7 +101,7 @@ class DockerLabScheduler(object):
             server=self.server_fastify,
             upload=0,
             download=0,
-            ping=4,
+            ping=10,
             message='Fastify: Ping test'
         )
         
@@ -156,7 +153,7 @@ class DockerLabScheduler(object):
         return self._tasks[self._i]
 
 
-class MockDeliverer(object):
+class MockDeliverer:
     """Mock deliverer per test senza invio dati al backend."""
     
     def uploadall_and_move(self, from_dir=None, to_dir=None, do_remove=False):
@@ -164,7 +161,7 @@ class MockDeliverer(object):
         return True
 
 
-class MockChooser(object):
+class MockChooser:
     """Mock chooser per test senza connessione al backend."""
     
     def get_servers(self):
@@ -173,7 +170,6 @@ class MockChooser(object):
     
     def choose_server(self, callback):
         logger.info("Mock: choose_server() called - no action")
-        return None
 
     def upload_and_move(self, f=None, to_dir=None, do_remove=False):
         logger.info("Mock: Move file %s to %s, do remove is %s", f, to_dir, do_remove)
@@ -194,8 +190,8 @@ def main():
 
     # Crea un client di test con valori di default (senza richiedere login)
     from common.client import Client
-    from common.profile import Profile
     from common.isp import Isp
+    from common.profile import Profile
     
     logger.info("Inizializzazione client di test (no login richiesto)...")
     c = Client(
@@ -244,9 +240,6 @@ def main():
         sys_profiler=sys_profiler,
         isprobe=False
     )
-
-    restart_scheduler = restart.RestartScheduler()
-    restart_scheduler.start()
 
     loop_thread = threading.Thread(target=exe.loop)
     loop_thread.start()

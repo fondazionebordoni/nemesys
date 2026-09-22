@@ -1,5 +1,4 @@
 # host.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -17,7 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-class Host(object):
+class Host:
 
     def __init__(self, ip, port=80, name=None):
         self._ip = ip

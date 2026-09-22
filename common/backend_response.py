@@ -1,5 +1,4 @@
 # backend_response.py
-# -*- coding: utf8 -*-
 # Copyright (c) 2018 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify

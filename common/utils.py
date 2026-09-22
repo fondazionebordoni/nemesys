@@ -1,5 +1,4 @@
 # utils.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2014 Fondazione Ugo Bordoni.
 #

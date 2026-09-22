@@ -77,8 +77,8 @@ Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dis
 Filename: {sys}\netsh.exe; Parameters: " firewall add allowedprogram ""{app}\dist\login.exe"" ""Nemesys"" ENABLE CUSTOM 193.104.137.0/24 ALL"; Description: "Enable Nemesys login"; Flags: RunHidden RunAsCurrentUser; 
 ;Filename: {sys}\netsh.exe; Parameters: " advfirewall firewall add rule name=""Nemesys"" dir=out action=allow program=""{app}\dist\Nemesys.exe"" enable=yes"; Description: "Enable Nemesys traffic"; Flags: RunHidden RunAsCurrentUser; MinVersion: ,6.1.7600; 
 Filename: {app}\dist\login.exe; Parameters: """{srcexe}"""; Description: "Autenticazione per il servizio Nemesys."; StatusMsg: "Autenticazione per il servizio Nemesys"; Flags: RunHidden RunAsCurrentUser;
-Filename: {app}\dist\Nemesys.exe; Parameters: "install"; Description: "Installazione del servizio Nemesys."; StatusMsg: "Installazione del servizio Nemesys"; Flags: RunHidden RunAsCurrentUser;
-Filename: {app}\dist\Nemesys.exe; Parameters: start; Description: "Avvia il servizio Nemesys"; Flags: PostInstall RunHidden RunAsCurrentUser; StatusMsg: "Avvia il servizio Nemesys"; 
+Filename: {app}\dist\Nemesys.exe; Parameters: "--startup delayed install"; Description: "Installazione del servizio Nemesys."; StatusMsg: "Installazione del servizio Nemesys"; Flags: RunHidden;
+Filename: {app}\dist\Nemesys.exe; Parameters: start; Description: "Avvia il servizio Nemesys"; Flags: PostInstall RunHidden; StatusMsg: "Avvia il servizio Nemesys";
  
 [UninstallRun]
 Filename: {sys}\netsh.exe; Parameters: " firewall delete allowedprogram program=""{app}\dist\Nemesys.exe"""; Flags: RunHidden RunAsCurrentUser; 
@@ -108,9 +108,6 @@ Type: dirifempty; Name: {app}\logs
 Type: dirifempty; Name: {app}
 
 [Registry]
-root: HKLM; subkey: SYSTEM\CurrentControlSet\Services\Nemesys; valuetype: expandsz; valuename: ImagePath; valuedata: {app}; Flags: UninsDeleteKey DeleteKey
-root: HKLM; subkey: SYSTEM\CurrentControlSet\Services\Nemesys; valuetype: multisz; valuename: DependOnService; valuedata: EventSystem{break}Tcpip{break}Netman{break}EventLog{break}; Flags: UninsDeleteKey DeleteKey
-root: HKLM; subkey: SYSTEM\CurrentControlSet\Services\Nemesys; valuetype: binary; valuename: FailureActions; Flags: UninsDeleteKey DeleteKey; ValueData: 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 53 00 65 00 01 00 00 00 60 ea 00 00 01 00 00 00 60 ea 00 00 01 00 00 00 60 ea 00 00 
 root: HKLM; subkey: SYSTEM\CurrentControlSet\Services\EventSystem; valuetype: dword; valuename: Start; valuedata: 2
 root: HKLM; subkey: SYSTEM\CurrentControlSet\Services\Tcpip\Parameters; valuetype: dword; valuename: DisableTaskOffload; valuedata: 1; 
 

@@ -1,5 +1,4 @@
 # checkhosts.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -16,14 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import ipcalc
+import ipaddress
 import logging
-from . import ping
 import re
 import threading
 
 from common import arp
 
+from . import ping
 
 MAX_PING_HOSTS = 128
 TECHNICOLOR_MAC_REGEX = ('^F..94.E3|^F..91.14|^F..52.8D|^F..C1.14|'
@@ -63,7 +62,7 @@ def filter_out_technicolor(ip_table):
     temp_table = []
     for ip_address in ip_table:
         mac_address = ip_table[ip_address]
-        if re.search(TECHNICOLOR_MAC_REGEX, mac_address, re.I):
+        if re.search(TECHNICOLOR_MAC_REGEX, mac_address, re.IGNORECASE):
             logger.warning('Trovato possibile router Technicolor: [%s, %s]', ip_address, mac_address)
             temp_table.append(mac_address[3:14])
         else:
@@ -89,9 +88,9 @@ class PingSender(threading.Thread):
 
 
 def count_hosts(ip_address, netmask, bandwidth_up, bandwidth_down, provider='fub001', use_arp=False):
-    if ((provider == "fst001") or (provider.startswith('fub0'))) and (not bool(re.search('^192\.168\.', ip_address))):
+    if ((provider == "fst001") or (provider.startswith('fub0'))) and (not bool(re.search(r'^192\.168\.', ip_address))):
         real_subnet = False
-        if bandwidth_up == bandwidth_down and not bool(re.search('^10\.', ip_address)):
+        if bandwidth_up == bandwidth_down and not bool(re.search(r'^10\.', ip_address)):
             # profilo fibra
             netmask_to_use = 29
             logger.debug('Sospetto profilo Fastweb in Fibra. Modificata sottorete in %d', netmask_to_use)
@@ -121,15 +120,11 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
     primo e ultimo ip).
     """
     n_hosts = 0
-    ip_network = ipcalc.Network('%s/%d' % (dev_ip_address, netmask))
-    net = ip_network.network()
-    bcast = ip_network.broadcast()
+    ip_network = ipaddress.ip_network('%s/%d' % (dev_ip_address, netmask), strict=False)
 
     ip_destinations = []
-    for ip_address in ip_network:
-        if (ip_address.hex() == net.hex() or ip_address.hex() == bcast.hex()) and real_subnet:
-            logger.debug('Saltato ip %s', ip_address)
-        elif ip_address.dq == dev_ip_address:
+    for ip_address in ip_network.hosts():
+        if str(ip_address) == dev_ip_address:
             logger.debug('Salto il mio ip %s', dev_ip_address)
         else:
             ip_destinations.append(ip_address)
@@ -143,7 +138,7 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
             return 0
         hosts = 'HOSTS: '
         for key in ip_table:
-            hosts += '[{}|{}] '.format(ip_table[key], key)
+            hosts += f'[{ip_table[key]}|{key}] '
         logger.info(hosts)
         # Check for router that responds with 2 IP addresses
         # with slightly different Ethernet addresses
@@ -178,6 +173,7 @@ def _count_net_hosts(dev_ip_address, netmask, real_subnet=True, use_arp=False):
 
 if __name__ == '__main__':
     import log_conf
+
     from . import iptools
     log_conf.init_log()
     ip = iptools.getipaddr('www.fub.it', 80)

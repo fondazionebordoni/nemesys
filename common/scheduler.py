@@ -1,5 +1,4 @@
 # getconf.py
-# -*- coding: utf-8 -*-
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -29,7 +28,7 @@ from common.nem_exceptions import TaskException
 logger = logging.getLogger(__name__)
 
 
-class Scheduler(object):
+class Scheduler:
     """
     Handles the download of tasks
     """

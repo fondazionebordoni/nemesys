@@ -1,5 +1,4 @@
 # profiler.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2019 Fondazione Ugo Bordoni.
 #
@@ -23,8 +22,7 @@ from collections import OrderedDict
 
 import psutil
 
-from common import iptools, utils
-from common import nem_exceptions
+from common import iptools, nem_exceptions, utils
 
 IF_TYPE_ETHERNET = 'Ethernet 802.3'
 WIFI_WORDS = ['wireless', 'wifi', 'wi-fi', 'wlan', 'fili', 'airport']
@@ -33,7 +31,7 @@ NETWORK_INTERFACES_PLIST = '/Library/Preferences/SystemConfiguration/NetworkInte
 NETWORK_SETUP_CMD = 'networksetup'
 
 
-class Device(object):
+class Device:
     def __init__(self, name):
         self._name = name
         self._ipaddr = 'Unknown'
@@ -162,15 +160,13 @@ def is_wireless_active_darwin():
                     except OSError:
                         # Command not found, what to do?
                         raise nem_exceptions.NemesysException(
-                            'Impossibile determinare se il Wi-Fi e\' attivo, comando \'{}\' mancante'.format(
-                                NETWORK_SETUP_CMD), nem_exceptions.WARNWLAN)
+                            f'Impossibile determinare se il Wi-Fi e\' attivo, comando \'{NETWORK_SETUP_CMD}\' mancante', nem_exceptions.WARNWLAN)
             except AttributeError:
                 pass
             return False
-    except IOError:
+    except OSError:
         raise nem_exceptions.NemesysException(
-            'Impossibile ottenere informazioni sull\'interfaccia Wi-Fi, file {} mancante'.format(
-                NETWORK_INTERFACES_PLIST), nem_exceptions.WARNWLAN)
+            f'Impossibile ottenere informazioni sull\'interfaccia Wi-Fi, file {NETWORK_INTERFACES_PLIST} mancante', nem_exceptions.WARNWLAN)
 
 
 def is_wireless(if_name):

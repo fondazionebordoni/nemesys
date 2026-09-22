@@ -1,5 +1,4 @@
 # proof.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010-2016 Fondazione Ugo Bordoni.
 #
@@ -17,7 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-class Proof(object):
+class Proof:
 
     def __init__(self, test_type, start_time, duration, bytes_nem=0, bytes_tot=0, spurious=0, errorcode=0):
         if 'down' in test_type:
@@ -71,17 +70,10 @@ class Proof(object):
         self._errorcode = errorcode
 
     def __str__(self):
-        return ('type: {0}; '
-                'start: {1}; '
-                'duration: {2:.0f}; '
-                'bytes nem: {3}; '
-                'bytes tot: {4}; '
-                'spurious: {5:.2f}; '
-                'errorcode: {6}'
-                '').format(self.type,
-                           self.start,
-                           self.duration,
-                           self.bytes_nem,
-                           self.bytes_tot,
-                           self.spurious,
-                           self.errorcode)
+        return (f'type: {self.type}; '
+                f'start: {self.start}; '
+                f'duration: {self.duration:.0f}; '
+                f'bytes nem: {self.bytes_nem}; '
+                f'bytes tot: {self.bytes_tot}; '
+                f'spurious: {self.spurious:.2f}; '
+                f'errorcode: {self.errorcode}')

@@ -1,5 +1,4 @@
 # sysmonitor.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2016 Fondazione Ugo Bordoni.
 #
@@ -19,10 +18,7 @@
 import logging
 from collections import OrderedDict
 
-from common import checkhost
-from common import iptools
-from common import nem_exceptions
-from common import profiler
+from common import checkhost, iptools, nem_exceptions, profiler
 from common.nem_exceptions import SysmonitorException
 
 logger = logging.getLogger(__name__)
@@ -51,7 +47,7 @@ RES_HOSTS = 'Hosts'
 RES_TRAFFIC = 'Traffic'
 
 
-class SysProfiler(object):
+class SysProfiler:
     def __init__(self, bw_upload, bw_download, isp_id, bypass=False, bw_upload_min=None, bw_download_min=None):
         self._bw_upload = bw_upload
         self._bw_upload_min = bw_upload_min
@@ -82,32 +78,30 @@ class SysProfiler(object):
             iptools.get_network_mask(ip)
         except Exception as e:
             raise SysmonitorException('Impossibile ottenere indirizzo IP '
-                                      'della scheda di rete attiva: {}'.format(e), nem_exceptions.UNKDEV)
+                                      f'della scheda di rete attiva: {e}', nem_exceptions.UNKDEV)
         if iptools.is_loopback_ip(ip):
-            raise SysmonitorException('Indirizzo IP {0} punta sull\'interfaccia'
+            raise SysmonitorException(f'Indirizzo IP {ip} punta sull\'interfaccia'
                                       ' di loopback - Firewall attivo?'
-                                      .format(ip), nem_exceptions.LOOPBACK)
+                                      , nem_exceptions.LOOPBACK)
         try:
             dev_name = iptools.get_dev(ip=ip)
         except Exception as e:
             raise SysmonitorException('Impossibile identificare '
-                                      'la scheda di rete attiva: {}'.format(e), nem_exceptions.UNKDEV)
+                                      f'la scheda di rete attiva: {e}', nem_exceptions.UNKDEV)
         device_speed = iptools.get_if_speed(dev_name)
 
         if self._bw_download_min is not None:
           if device_speed < (self._bw_download_min / 1000):
               raise SysmonitorException('La velocita\' della scheda di rete e\' '
-                                        '{0} Mb/s, che e\' minore della '
-                                        'velocita\' minima garantita del profilo: {1} Mb/s'
-                                        .format(device_speed,
-                                                self._bw_download_min / 1000))
+                                        f'{device_speed} Mb/s, che e\' minore della '
+                                        f'velocita\' minima garantita del profilo: {self._bw_download_min / 1000} Mb/s'
+                                        )
 
         elif device_speed < (self._bw_download / 1000):
             raise SysmonitorException('La velocita\' della scheda di rete e\' '
-                                      '{0} Mb/s, che e\' minore della '
-                                      'velocita\' del profilo: {1} Mb/s'
-                                      .format(device_speed,
-                                              self._bw_download / 1000))
+                                      f'{device_speed} Mb/s, che e\' minore della '
+                                      f'velocita\' del profilo: {self._bw_download / 1000} Mb/s'
+                                      )
 
         return dev_name
 
@@ -154,12 +148,12 @@ class SysProfiler(object):
         except Exception as e:
             logger.error('Errore ottenendo informazioni sulla scheda di rete: %s', e)
             raise SysmonitorException('Impossibile ottenere informazioni '
-                                      'sulla scheda di rete attiva: {}'.format(e),
+                                      f'sulla scheda di rete attiva: {e}',
                                       errorcode=nem_exceptions.UNKDEV)
         if iptools.is_loopback_ip(ip):
-            raise SysmonitorException('Indirizzo IP {0} punta sull\'interfaccia'
+            raise SysmonitorException(f'Indirizzo IP {ip} punta sull\'interfaccia'
                                       ' di loopback - Firewall attivo?'
-                                      .format(ip), nem_exceptions.LOOPBACK)
+                                      , nem_exceptions.LOOPBACK)
         logger.info('Indirizzo ip/mask: %s/%d, device: %s, provider: %s', ip, mask, dev, self._isp_id)
         if not iptools.is_public_ip(ip):
             value = checkhost.count_hosts(ip,
@@ -181,8 +175,8 @@ class SysProfiler(object):
                                               'verifica connessione al router.',
                                               nem_exceptions.BADHOST)
             elif value > MAX_HOSTS:
-                raise SysmonitorException('Ci sono {} altri dispositivi collegati alla tua '
-                                          'rete, scollegali.'.format(value - 1),
+                raise SysmonitorException(f'Ci sono {value - 1} altri dispositivi collegati alla tua '
+                                          'rete, scollegali.',
                                           nem_exceptions.TOOHOST)
 
     def checkall(self, callback=None):
@@ -206,4 +200,4 @@ class SysProfiler(object):
             if error_code:
                 raise SysmonitorException(error_msg, error_code)
             raise SysmonitorException('Profilazione del sistema fallito, '
-                                      'ultimo errore: {}'.format(e), nem_exceptions.FAILPROF)
+                                      f'ultimo errore: {e}', nem_exceptions.FAILPROF)

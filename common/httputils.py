@@ -1,5 +1,4 @@
 # httputils.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -24,7 +23,9 @@
 import http.client
 import mimetypes
 import ssl
-import urllib.request, urllib.error, urllib.parse
+import urllib.error
+import urllib.parse
+import urllib.request
 
 
 def no_verify_ssl_context():

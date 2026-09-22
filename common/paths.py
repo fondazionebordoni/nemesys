@@ -1,5 +1,4 @@
 # paths.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2018 Fondazione Ugo Bordoni.
 #
@@ -19,8 +18,6 @@
 import logging
 import sys
 from os import mkdir, path
-
-from common import utils
 
 logger = logging.getLogger(__name__)
 

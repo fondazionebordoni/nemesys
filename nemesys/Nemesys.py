@@ -1,5 +1,4 @@
 # Nemesys.py
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Fondazione Ugo Bordoni.
 #
@@ -17,17 +16,17 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 try:
-    import win32serviceutil
-    import win32service
-    import win32api
     import servicemanager
+    import win32api
+    import win32service
+    import win32serviceutil
 except ImportError:
     raise Exception("Non trovo le librerie necessarie su Windows, impossibile continuare")
 
 import logging
 import os
 import sys
-from threading import Thread, Event
+from threading import Event, Thread
 
 from nemesys import executer
 
@@ -72,9 +71,7 @@ class aservice(win32serviceutil.ServiceFramework):
     _svc_name_ = "NeMeSys"
     _svc_display_name_ = "NeMeSys Service"
     _svc_description_ = "Sistema per la valutazione della connessione broadband"
-    # Avvio automatico: dichiarato nella classe così che bastı "install" senza
-    # "--startup auto", evitando la ChangeServiceConfig che falliva su py2exe.
-    _svc_start_type_ = win32service.SERVICE_AUTO_START
+    _svc_deps_ = ["EventSystem", "Tcpip", "Netman", "EventLog"]
 
     def __init__(self, args):
         win32serviceutil.ServiceFramework.__init__(self, args)
@@ -103,6 +100,33 @@ def ctrlHandler(ctrlType):
     return True
 
 
+def _set_failure_actions(opts):
+    # Riavvia il servizio automaticamente in caso di crash (3 tentativi, 60s di
+    # ritardo); richiamato da HandleCommandLine dopo install/update.
+    hscm = win32service.OpenSCManager(None, None, win32service.SC_MANAGER_ALL_ACCESS)
+    try:
+        hs = win32service.OpenService(hscm, aservice._svc_name_, win32service.SERVICE_ALL_ACCESS)
+        try:
+            win32service.ChangeServiceConfig2(
+                hs, win32service.SERVICE_CONFIG_FAILURE_ACTIONS_FLAG, True)
+            win32service.ChangeServiceConfig2(
+                hs, win32service.SERVICE_CONFIG_FAILURE_ACTIONS,
+                {
+                    'ResetPeriod': 0,
+                    'RebootMsg': '',
+                    'Command': '',
+                    'Actions': [
+                        (win32service.SC_ACTION_RESTART, 60000),
+                        (win32service.SC_ACTION_RESTART, 60000),
+                        (win32service.SC_ACTION_RESTART, 60000),
+                    ],
+                })
+        finally:
+            win32service.CloseServiceHandle(hs)
+    finally:
+        win32service.CloseServiceHandle(hscm)
+
+
 ### Entry point ###
 if __name__ == '__main__':
     if len(sys.argv) == 1:
@@ -114,4 +138,4 @@ if __name__ == '__main__':
     else:
         # Lanciato da riga di comando (install / start / stop / remove).
         win32api.SetConsoleCtrlHandler(ctrlHandler, True)
-        win32serviceutil.HandleCommandLine(aservice)
+        win32serviceutil.HandleCommandLine(aservice, customOptionHandler=_set_failure_actions)

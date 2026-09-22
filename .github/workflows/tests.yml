@@ -1,0 +1,50 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # ubuntu: sonde Debian (11/12 -> 3.11, sid/forky -> 3.14).
+        # windows/macos: le altre due piattaforme supportate dal pacchetto
+        # (build py2exe/py2app), qui copriamo solo import e test automatici,
+        # non la build/packaging vera e propria.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.14"]
+    defaults:
+      run:
+        # Uniforma la sintassi delle shell su tutti e tre gli OS (su Windows
+        # lo shell di default sarebbe PowerShell, sintassi incompatibile).
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run test suite
+        run: |
+          pytest tests/ -v \
+            --deselect tests/test_chooser.py::TestChooser::test_get_servers \
+            --deselect tests/test_netstat.py::TestNetstat::testGetMac \
+            --deselect tests/test_netstat.py::TestNetstat::testGetNetmask \
+            --deselect tests/test_profiler.py::TestProfiler::test_wireless
+          # Esclusioni:
+          # - test_get_servers: richiede un server HTTP mock su 127.0.0.1:5000
+          #   (non presente in questo repo) e passa un client fasullo (stringa
+          #   invece di un oggetto client) - bug pre-esistente indipendente
+          #   dall'import rotto gia' corretto in tests/test_chooser.py.
+          # - le altre tre: dipendono dall'interfaccia di rete/subnet/stato
+          #   wifi della macchina locale, non riproducibili in un runner CI.
