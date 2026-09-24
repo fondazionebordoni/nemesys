@@ -26,6 +26,7 @@ except ImportError:
 import logging
 import os
 import sys
+import traceback
 from threading import Event, Thread
 
 from nemesys import executer
@@ -78,15 +79,22 @@ class aservice(win32serviceutil.ServiceFramework):
         self._stop_event = Event()
 
     def SvcDoRun(self):
-        servicemanager.LogInfoMsg("NeMeSys Service - started")
-        # Notifica al SCM che il servizio è in esecuzione prima di bloccarsi.
-        self.ReportServiceStatus(win32service.SERVICE_RUNNING)
-        ex = execThread()
-        ex.start()
-        servicemanager.LogInfoMsg("NeMeSys Service - executer started")
-        # Attende il segnale di stop senza busy-wait.
-        self._stop_event.wait()
-        servicemanager.LogInfoMsg("NeMeSys Service - stopped")
+        try:
+            servicemanager.LogInfoMsg("NeMeSys Service - started")
+            # Notifica al SCM che il servizio è in esecuzione prima di bloccarsi.
+            self.ReportServiceStatus(win32service.SERVICE_RUNNING)
+            ex = execThread()
+            ex.start()
+            servicemanager.LogInfoMsg("NeMeSys Service - executer started")
+            # Attende il segnale di stop senza busy-wait.
+            self._stop_event.wait()
+            servicemanager.LogInfoMsg("NeMeSys Service - stopped")
+        except Exception:
+            # Senza questo log, un'eccezione qui termina il servizio senza
+            # lasciare traccia diagnosticabile nell'Application log.
+            servicemanager.LogErrorMsg(
+                "NeMeSys Service - crash in SvcDoRun:\n" + traceback.format_exc())
+            raise
 
     def SvcStop(self):
         servicemanager.LogInfoMsg("NeMeSys Service - stop signal received")
@@ -103,6 +111,11 @@ def ctrlHandler(ctrlType):
 def _set_failure_actions(opts):
     # Riavvia il servizio automaticamente in caso di crash (3 tentativi, 60s di
     # ritardo); richiamato da HandleCommandLine dopo install/update.
+    # ResetPeriod in secondi: azzera il contatore dei fallimenti se il
+    # servizio resta su per questo tempo senza crashare di nuovo (qui: 1
+    # giorno). Va specificato un valore esplicito: 0 è un caso limite della
+    # SCM Win32 API il cui comportamento pratico non è ben documentato.
+    ONE_DAY_SECONDS = 24 * 60 * 60
     hscm = win32service.OpenSCManager(None, None, win32service.SC_MANAGER_ALL_ACCESS)
     try:
         hs = win32service.OpenService(hscm, aservice._svc_name_, win32service.SERVICE_ALL_ACCESS)
@@ -112,7 +125,7 @@ def _set_failure_actions(opts):
             win32service.ChangeServiceConfig2(
                 hs, win32service.SERVICE_CONFIG_FAILURE_ACTIONS,
                 {
-                    'ResetPeriod': 0,
+                    'ResetPeriod': ONE_DAY_SECONDS,
                     'RebootMsg': '',
                     'Command': '',
                     'Actions': [
